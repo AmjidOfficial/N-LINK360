@@ -1,114 +1,52 @@
-# N-LINK 360 - Gemini AI Studio Master Build Prompt v2
+# N-LINK 360 - Gemini AI Studio Master Build Prompt v3
 
-You are the lead product architect and senior full-stack engineer for **N-LINK 360**, the business management platform for **National Lights**, a manufacturer of lights.
+You are the lead product architect, database architect, senior full-stack engineer, UX designer and QA engineer for **N-LINK 360**, the business management platform for **National Lights**, a manufacturer of lights.
 
 Repository: `AmjidOfficial/N-LINK360`
 Project owner email: `nationallights2026@gmail.com`
 
-## CRITICAL CORRECTION
+## NON-NEGOTIABLE PRODUCT DIRECTION
 
-The previous UI was too rushed and looked like a large ERP with too many people and too many roles. Correct this architecture before adding more features.
+Build a real, calm, role-based business system. Do not make it look like a rushed ERP demo.
 
-N-LINK 360 must be **permission based and role based**, but it must NOT assume one employee per job.
+The system must be simple for users and powerful behind the scenes.
 
-A role describes what a person is allowed to do. A person may perform multiple jobs through a simple workspace with multiple buttons.
+A role means permission. It does NOT mean one employee per function.
 
-### Factory staffing rule
+National Lights may have very few employees. One person can have multiple work modes/buttons.
 
-National Lights may have only **ONE person at the factory**.
+## BUSINESS HEADS
 
-Do NOT create separate factory users for:
-- Factory Manager
-- Production Officer
-- QC Officer
-- Finished Goods Officer
-- Factory Store Officer
+The system must support these heads:
 
-Instead use one role:
+1. MANUFACTURER
+2. SALES_RECOVERY
+3. DEALERSHIP
+4. DISTRIBUTOR
+5. LOGISTICS
 
-**FACTORY_OPERATOR / FACTORY_INCHARGE**
+Internal work areas such as Management, Factory, Warehouse, Accounts and Dispatch are permissions/workspaces inside the company. Do not create unnecessary employees merely to represent every function.
 
-That one user gets a Factory Workspace with buttons:
+## LEAN STAFFING
 
-1. Production Entry
-2. QC / Inspection
-3. Finished Goods Stock-In
-4. Factory Stock
-5. Stock Transfer / Handover
-6. Returns / Damage
-7. Daily Factory Report
+### Factory
 
-Each button opens a controlled work mode. The same authenticated user performs the work. Backend permissions still control access.
+Assume **one Factory In-Charge** initially.
 
-Apply the same lean-staffing principle to warehouse, accounts and dispatch where appropriate.
+One login. One employee. Multiple work buttons:
 
-## BUSINESS MODEL
-
-National Lights manufactures lights and sells to Distributors and Dealers.
-
-Distributors and Dealers are customer accounts. They do not need to operate the core system.
-
-The Sales and Recovery Team is ONE combined field role. The same person handles:
-
-- Customer visits
-- Order booking
-- Outstanding review
-- Recovery collection
-- Follow-up
-- Return reporting
-- Damage reporting
-- Dispatch follow-up
-
-## TWO MAIN INTERFACES
-
-### Company Web Portal
-
-Desktop/tablet focused. It is used by authorized company users. The first screen must be a **Role Workspace**, not a giant ERP menu.
-
-### Sales & Recovery App
-
-Mobile-first. It should be simple, fast and field friendly.
-
-## ROLE WORKSPACE MODEL
-
-After login, show only the user's allowed workspace.
-
-### Super Admin
-
-Buttons:
-- Company Setup
-- Users & Permissions
-- All Operations
-- Reports
-- Audit
-- System Settings
-
-### Management
-
-Buttons:
-- Executive Dashboard
-- Sales
-- Recovery
-- Outstanding
-- Inventory
-- Dispatch
-- Customer Performance
-- Reports
-
-### Factory Operator / In-Charge
-
-Buttons:
 - Production Entry
 - QC / Inspection
-- Finished Goods
+- Finished Goods Stock-In
 - Factory Stock
 - Transfer / Handover
 - Returns / Damage
-- Daily Report
+- Daily Factory Report
 
-### Warehouse In-Charge
+### Warehouse
 
-Buttons:
+One Warehouse In-Charge can have:
+
 - Receive Stock
 - Stock Issue
 - Transfers
@@ -119,7 +57,8 @@ Buttons:
 
 ### Accounts
 
-Buttons:
+One Accounts user can have:
+
 - Customer Ledger
 - Recovery Verification
 - Outstanding / Aging
@@ -127,11 +66,14 @@ Buttons:
 - Debit Notes
 - Statements
 
-### Sales / Recovery Officer
+### Sales/Recovery
+
+Sales and Recovery are the SAME person/role.
 
 Buttons:
+
 - My Customers
-- Visit
+- Customer Visit
 - New Order
 - Recovery
 - Outstanding
@@ -140,9 +82,10 @@ Buttons:
 - Follow-up
 - My Performance
 
-### Dispatch / Logistics
+### Dispatch
 
-Buttons:
+One Dispatch/Logistics user can have:
+
 - Dispatch Planning
 - Vehicle
 - Driver
@@ -151,206 +94,447 @@ Buttons:
 - Delivery Status
 - GRN
 
-## UI RULE
+## ROLE LIST
 
-Do not show every module to every user.
+Keep the initial role set small:
 
-Do not use a production role-switcher in the application.
+- SUPER_ADMIN
+- MANAGEMENT
+- FACTORY_INCHARGE
+- WAREHOUSE_INCHARGE
+- ACCOUNTS
+- SALES_MANAGER
+- SALES_RECOVERY
+- DISPATCH_INCHARGE
 
-The current role switcher is only a development/demo tool and must be removed from production.
+Do not create separate Production Officer, QC Officer, Finished Goods Officer, Factory Store Officer, Recovery Officer, etc. unless the owner explicitly requests more employees later.
 
-Do not show fake employees for every role. Seed only a small realistic organization.
+## UNIQUE SIMPLE IDs
 
-The home screen should feel calm, clear and practical. Use large action buttons, small KPI cards and pending-work lists.
+Every important master must have two identifiers:
 
-Avoid a wall of tabs.
+1. Internal UUID primary key
+2. Human-readable short business ID
 
-## CORE TRANSACTION FLOW
+Use these prefixes:
 
-Factory → Finished Goods → Inventory → Sales/Recovery → Customer Order → Credit Check → Invoice → Stock Out → Dispatch/Bility → Delivery/GRN → Recovery → Customer Ledger
+- CMP001 Company
+- BR001 Branch
+- FAC001 Factory
+- WH001 Warehouse
+- EMP001 Employee
+- USR001 User
+- ROL001 Role
+- CAT001 Category
+- BRD001 Brand
+- PRD001 Product
+- SKU001 SKU
+- DST001 Distributor
+- DLR001 Dealer
+- ORD000001 Order
+- INV000001 Invoice
+- DSP000001 Dispatch
+- BIL000001 Bility
+- REC000001 Recovery
+- LGR000001 Ledger
+- RET000001 Return
+- DMG000001 Damage
+- GRN000001 Goods Receipt
+
+Never expose UUIDs to normal users.
+
+IDs must be unique, sequential per entity, easy to read and easy to communicate by phone/WhatsApp.
+
+## ALL MASTERS MUST EXIST
+
+Build proper master screens and database support for:
+
+### Organization
+- Company
+- Branch
+- Factory
+- Warehouse
+- Region
+- Area
+- Territory
+- City
+
+### People
+- Employees
+- Users
+- Roles
+- Permissions
+- Sales/Recovery Team
+
+### Product
+- Product Categories
+- Brands
+- Products
+- SKUs
+- Barcodes
+- Packing
+- Prices
+- Tax
+- Reorder Level
+
+### Customers
+- Distributors
+- Dealers
+- Customer Contacts
+- Customer Assignments
+- Credit Limits
+- Credit Days
+- Opening Balances
+
+### Logistics
+- Transporters
+- Addas
+- Vehicles
+- Drivers
+- Bility
+
+Do not hard-code a small fake list of customers, employees or SKUs as the real system. Seed data is only demo data.
+
+## SKU MASTER
+
+SKU is the inventory and ordering unit.
+
+Every SKU needs:
+
+- SKU ID
+- SKU Name
+- Brand
+- Product
+- Category
+- Barcode
+- Packing Unit
+- Units Per Carton
+- Unit Weight
+- Carton Weight
+- Cost Price
+- Trade Price
+- Dealer Price
+- Sale Price
+- Tax Rate
+- Reorder Level
+- Active/Inactive
+
+The system must support any number of SKUs.
+
+## TWO APPLICATIONS
+
+### Company Web Portal
+
+Desktop/tablet focused. After login, show only the user's allowed workspace.
+
+### Sales & Recovery App
+
+Mobile-first. Extremely simple and fast.
+
+## SALES/RECOVERY ORDERING SHEET - TOP PRIORITY
+
+This is one of the most important screens in N-LINK 360.
+
+Do NOT make a complicated sales order form.
+
+The field user should complete the normal order with minimum typing.
+
+### Step 1: Customer
+
+Show one large search/select control:
+
+**Distributor / Dealer: [ Select Customer ▼ ]**
+
+Search by:
+- Customer ID
+- Customer name
+- Mobile
+- Area
+
+Show the short ID next to the customer name.
+
+Example:
+
+`DST001 - ABC Distribution`
+
+or
+
+`DLR014 - City Lights Dealer`
+
+### Step 2: Customer Balance
+
+Immediately show three simple values:
+
+**Opening Balance | Recovery | Net Balance**
+
+Example:
+
+`Rs 250,000 | Rs 50,000 | Rs 200,000`
+
+Definitions:
+
+- Opening Balance = balance before this session
+- Recovery = recovery entered in this session
+- Net Balance = Opening Balance - Recovery
+
+After invoice posting:
+
+**Final Balance = Net Balance + Invoice - Credits + Debits**
+
+### Step 3: SKU Grid
+
+The normal order screen should be exactly this style:
+
+| # | SKU Name | Available Qty | Order Qty |
+|---:|---|---:|---:|
+| 1 | SKU 1 | 120 | [  ] |
+| 2 | SKU 2 | 85 | [  ] |
+| 3 | SKU 3 | 40 | [  ] |
+| 4 | SKU 4 | 200 | [  ] |
+| 5 | SKU 5 | 65 | [  ] |
+| 6 | SKU 6 | 0 | [  ] |
+| 7 | SKU 7 | 90 | [  ] |
+| 8 | SKU 8 | 35 | [  ] |
+| 9 | SKU 9 | 110 | [  ] |
+| 10 | SKU 10 | 25 | [  ] |
+
+Rules:
+
+1. Available Qty is read-only.
+2. Order Qty is the normal entry field.
+3. Order Qty cannot exceed Available Qty unless backorders are explicitly enabled.
+4. Zero stock means zero available.
+5. Load active SKUs dynamically from the SKU master.
+6. Ten rows are the initial quick-entry view, not a database limit.
+7. Add search/filter for more SKUs.
+8. Show total quantity and estimated value.
+9. Show credit warning before submission.
+10. Keep the layout phone friendly.
+
+### Step 4: Recovery shortcut
+
+On the same customer/order screen, show a **Recovery** button.
+
+The user can enter:
+
+- Amount
+- Payment method
+- Reference/instrument number where needed
+- Remarks
+
+After saving the recovery, refresh:
+
+**Opening Balance | Recovery | Net Balance**
+
+Sales and recovery must feel like one customer workflow.
+
+### Step 5: Submit
+
+Primary action:
+
+**SUBMIT ORDER**
+
+Confirmation must show:
+
+- Customer
+- Customer ID
+- Opening Balance
+- Recovery
+- Net Balance
+- Total SKU lines
+- Total quantity
+- Estimated order value
+- Credit warning if applicable
+
+## CORE BUSINESS FLOW
+
+**Factory → Finished Goods → Inventory → Sales/Recovery → Customer Order → Credit Check → Invoice → Stock Out → Dispatch/Bility → Delivery/GRN → Recovery → Customer Ledger**
 
 Reverse:
 
-Customer → Return/Damage → Approval → Inspection → Inventory/Credit Note → Ledger
+**Customer → Return/Damage → Approval → Inspection → Inventory/Credit Note → Ledger**
 
-## DATABASE
+## INVENTORY
 
-Use PostgreSQL.
+Use transaction-based inventory.
 
-Core entities:
-- companies
-- branches
-- factories
-- warehouses
-- users
-- roles
-- permissions
-- role_permissions
-- user_permissions if needed
-- products
-- categories
-- brands
-- skus
-- production_batches
-- production_items
-- inventory_transactions
-- inventory_balances
-- customers
-- customer_assignments
-- customer_visits
-- sales_orders
-- sales_order_items
-- invoices
-- invoice_items
-- transporters
-- addas
-- vehicles
-- drivers
-- bility
-- dispatches
-- goods_receipts
-- goods_receipt_items
-- recoveries
-- ledger_entries
-- stock_returns
-- stock_return_items
-- damage_stock
-- credit_notes
-- debit_notes
-- notifications
-- audit_logs
+Opening Stock + Stock In - Stock Out = Current Stock.
 
-Use UUID primary keys and human-readable business numbers.
+Never let normal users type a new current stock balance.
 
-## INVENTORY RULE
+## LEDGER
 
-Inventory is transaction based.
-
-Opening Stock + Stock In - Stock Out = Current Stock
-
-Never allow normal users to directly edit current stock.
-
-## CUSTOMER LEDGER RULE
-
-Opening Balance + Debits - Credits = Closing Balance
+Opening Balance + Debits - Credits = Closing Balance.
 
 Invoices create debits.
 Verified recoveries create credits.
 Approved returns/credit notes create credits.
 Debit notes create debits.
 
-Never let a user simply type a new customer balance.
+## CREDIT CHECK
 
-## ORDER / CREDIT / INVOICE
+Before order approval calculate:
 
-Sales/Recovery user creates order.
+Current Outstanding + Proposed Invoice <= Credit Limit
 
-System checks:
-- Current outstanding
-- Credit limit
-- Overdue
-- Credit days
-- Available inventory
-- Pending orders
+Also check overdue and credit days.
 
-Order approval then creates invoice.
+Show:
 
-Invoice posting must atomically:
-1. Validate order
-2. Validate stock
-3. Create invoice
-4. Create invoice items
-5. Stock out
-6. Customer ledger debit
-7. Commit
+- GREEN: proceed
+- AMBER: approval required
+- RED: hold/reject
 
-No silent deletion of posted invoices.
+Make thresholds configurable.
 
-## RECOVERY
+## INVOICE
 
-The same Sales/Recovery person who sells also records recovery.
+Approved Order → Invoice → Stock Out → Ledger Debit → Dispatch.
 
-Recovery is initially pending verification if company policy requires verification.
+Invoice must show:
 
-Verified recovery creates the customer ledger credit.
+Previous Balance
+Invoice Amount
+New Balance
+
+Never silently delete posted invoices.
 
 ## DISPATCH
 
-Invoice → Warehouse Preparation → Vehicle/Transporter → Adda/Bility → Dispatch → In Transit → Delivered → GRN
+Invoice → Warehouse Preparation → Vehicle/Transporter → Adda/Bility → Dispatch → In Transit → Delivered → GRN.
 
-Capture freight, other charges, destination and contact information.
+Capture destination, contact, charges, vehicle, driver, adda, transporter and bility.
 
-## RETURNS / DAMAGE
+## RECOVERY
+
+The same Sales/Recovery user books orders and records recovery.
+
+Recovery may be pending verification.
+
+Verified recovery posts the ledger credit.
+
+## RETURNS AND DAMAGE
 
 Return:
-Customer report → Approval → Warehouse receipt → Inspection → Saleable/Damaged → Inventory update → Credit note where approved → Ledger update
+Customer report → Approval → Warehouse receipt → Inspection → Saleable/Damaged → Inventory update → Credit note → Ledger.
 
-Damage must be separate from saleable inventory.
+Damage is separate from saleable stock.
 
 ## SECURITY
 
 Server-side permission checks are mandatory.
 
-Never expose service-role database keys in the browser.
+Never expose service-role database credentials in the browser.
 
 Never commit secrets.
 
 Use environment variables.
 
-Development and production databases must be separate.
+Keep development and production databases separate.
 
-## FREE-FIRST INFRASTRUCTURE
+## DATABASE
 
-For initial development use free tiers only:
+PostgreSQL.
+
+Use the core schema already committed under `database/migrations/001_nlink360_core.sql` as the baseline. Extend it through migrations, not destructive rewrites.
+
+Core tables include organization, employees/users/roles, product/category/brand/SKU, customers, orders, invoices, inventory transactions, logistics, recovery, ledger, returns, damage, credit/debit notes, notifications and audit logs.
+
+## FREE-FIRST
+
+Initial infrastructure should stay free:
+
 - GitHub Free
-- Supabase Free for PostgreSQL/Auth/Storage where suitable
-- Cloudflare Free for hosting/API where suitable
+- Supabase Free
+- Cloudflare Free
 - Google AI Studio/Gemini free access
 
-Do not enable paid billing unless the owner explicitly asks.
+Do not enable paid billing unless the owner explicitly requests it.
 
-## DEVELOPMENT APPROACH
+## PHASE PRIORITY
 
-Do NOT try to build the whole ERP in one prompt.
+Complete the project in this order, but do not sacrifice architecture for speed:
 
-Work in controlled phases:
+### P0 - Foundation
+Repository, database migration, IDs, master data model, auth, roles, permissions.
 
-Phase 1: Auth + Role Workspace + Masters
-Phase 2: Factory + Inventory
-Phase 3: Sales/Recovery App
-Phase 4: Orders + Credit + Invoice
-Phase 5: Dispatch + Bility + GRN
-Phase 6: Recovery + Ledger
-Phase 7: Returns + Damage
-Phase 8: Dashboards + Reports
-Phase 9: Notifications
-Phase 10: Testing + Production
+### P1 - Role Workspaces
+Calm role-based home screens. No production role switcher.
 
-## FIRST PRIORITY
+### P2 - Factory
+One Factory In-Charge can perform all factory jobs through buttons.
 
-Refactor the current rushed demo UI into the Role Workspace model before adding more business features.
+### P3 - Inventory
+Finished goods stock-in, stock ledger, transfers, stock out, returns, damage.
 
-Specifically:
+### P4 - Sales/Recovery
+Mobile customer list, customer profile, balance, simple order sheet, recovery.
 
-1. Remove the production role-switcher.
-2. Replace the giant Company Portal first screen with role-based workspaces.
-3. Add Factory Operator workspace with the seven factory work buttons listed above.
-4. Make one factory user capable of performing all factory jobs through these buttons.
-5. Keep backend permissions strict.
-6. Keep existing transaction logic where valid.
-7. Remove fake staffing assumptions from demo data.
-8. Keep Sales + Recovery unified.
-9. Make the UI responsive and calm.
-10. Then continue development phase by phase.
+### P5 - Orders/Credit/Invoice
+Credit checks, approval, invoice, stock out and ledger integration.
 
-Before changing code, inspect the existing repository. Preserve working code. Use migrations for database changes. Do not destructively rewrite the project.
+### P6 - Dispatch
+Bility, adda, vehicle, driver, charges, destination, dispatch and GRN.
 
-After each task report:
-- What changed
-- Files changed
-- Database changes
-- Tests run
-- Known limitations
-- Next step
+### P7 - Ledger/Accounts
+Opening balance, invoices, recovery, returns, credit/debit notes, aging and statements.
 
-Do not call a visual mockup a completed feature.
+### P8 - Reports
+Management, sales, recovery, inventory, customer, SKU and logistics dashboards.
+
+### P9 - Notifications
+In-app alerts for low stock, overdue, approval, recovery, dispatch and returns.
+
+### P10 - Production Readiness
+Testing, permissions review, transaction reconciliation, security review, backups and deployment.
+
+## DEVELOPMENT RULE
+
+Before changing code:
+
+1. Inspect the current repository.
+2. Inspect existing components and services.
+3. Inspect database migrations.
+4. Preserve valid existing work.
+5. Implement the smallest safe change.
+6. Add tests.
+7. Verify calculations.
+8. Verify role permissions.
+9. Do not call a visual mockup a completed feature.
+
+Do not build fake data as a substitute for database functionality once a module is implemented.
+
+Do not create one user for every button.
+
+Do not create separate Sales and Recovery people.
+
+Do not create separate factory employees for each factory function.
+
+## UI QUALITY RULE
+
+The interface must be calm and practical:
+
+- large action buttons
+- small KPI cards
+- clear pending work
+- simple forms
+- strong search
+- mobile-first field screens
+- no wall of tabs
+- no giant dashboard full of unrelated cards
+- no unnecessary animation
+- no visible role switching in production
+
+## COMPLETION REPORT
+
+After every implementation batch report:
+
+1. Completed
+2. Files changed
+3. Database changes
+4. Business rules implemented
+5. Tests run
+6. Known limitations
+7. Next phase
+
+The goal is a real N-LINK 360 system for National Lights, not a collection of UI mockups.
