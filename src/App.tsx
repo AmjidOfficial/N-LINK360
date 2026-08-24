@@ -11,6 +11,7 @@ import { DocsViewer } from './components/DocsViewer';
 import { Header } from './components/Header';
 import { SalesRecoveryApp } from './components/SalesRecoveryApp';
 import { inMemoryStore } from './services/store';
+import { workspaceForRole } from './lib/permissions';
 import {
   Customer,
   CustomerVisit,
@@ -24,44 +25,27 @@ import {
   SKU,
   StockReturn,
   User,
-  UserRole,
 } from './types';
 
 export default function App() {
-  const [activeApp, setActiveApp] = useState<'PORTAL' | 'MOBILE_APP' | 'DOCS' | 'VALIDATOR'>('PORTAL');
-  
-  // Store reactive state snapshots
-  const [users, setUsers] = useState<User[]>(inMemoryStore.getUsers());
-  const [currentUser, setCurrentUser] = useState<User>(
-    users.find((u) => u.role === 'SUPER_ADMIN') || users[0]
-  );
+  // Temporary development identity. This is deliberately isolated here so the
+  // next milestone can replace it with Supabase Auth without changing the
+  // workspace components. Production must never expose a role switcher.
+  const [users] = useState<User[]>(inMemoryStore.getUsers());
+  const [currentUser] = useState<User>(users.find((u) => u.role === 'SUPER_ADMIN') || users[0]);
+  const activeApp = workspaceForRole(currentUser.role);
 
   const [customers, setCustomers] = useState<Customer[]>(inMemoryStore.getCustomers());
   const [skus, setSkus] = useState<SKU[]>(inMemoryStore.getSKUs());
-  const [inventoryBalances, setInventoryBalances] = useState<InventoryBalance[]>(
-    inMemoryStore.getInventoryBalances()
-  );
+  const [inventoryBalances, setInventoryBalances] = useState<InventoryBalance[]>(inMemoryStore.getInventoryBalances());
   const [salesOrders, setSalesOrders] = useState<SalesOrder[]>(inMemoryStore.getSalesOrders());
   const [invoices, setInvoices] = useState<Invoice[]>(inMemoryStore.getInvoices());
   const [recoveries, setRecoveries] = useState<Recovery[]>(inMemoryStore.getRecoveries());
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(inMemoryStore.getLedgerEntries());
-  const [dispatches, setDispatches] = useState<Dispatch[]>(inMemoryStore.getDispatches());
-  const [stockReturns, setStockReturns] = useState<StockReturn[]>(inMemoryStore.getStockReturns());
+  const [dispatches] = useState<Dispatch[]>(inMemoryStore.getDispatches());
+  const [stockReturns] = useState<StockReturn[]>(inMemoryStore.getStockReturns());
   const [visits, setVisits] = useState<CustomerVisit[]>(inMemoryStore.getVisits());
 
-  // Role Switcher Handler
-  const handleRoleChange = (role: UserRole) => {
-    const matchingUser = users.find((u) => u.role === role);
-    if (matchingUser) {
-      setCurrentUser(matchingUser);
-      // If switching to field role, smoothly activate the mobile app view
-      if (role === 'SALES_RECOVERY') {
-        setActiveApp('MOBILE_APP');
-      }
-    }
-  };
-
-  // Synchronize state from store
   const syncStore = () => {
     setCustomers([...inMemoryStore.getCustomers()]);
     setSkus([...inMemoryStore.getSKUs()]);
@@ -73,38 +57,24 @@ export default function App() {
     setVisits([...inMemoryStore.getVisits()]);
   };
 
-  // Actions
   const handlePostInvoice = (orderId: string) => {
     const result = inMemoryStore.postInvoice(orderId, currentUser.id);
-    if (result.success) {
-      syncStore();
-    } else {
-      alert(`Invoice generation failed: ${result.error}`);
-    }
+    if (result.success) syncStore();
+    else alert(`Invoice generation failed: ${result.error}`);
   };
 
   const handleVerifyRecovery = (recoveryId: string) => {
     const result = inMemoryStore.verifyRecovery(recoveryId, currentUser.id);
-    if (result.success) {
-      syncStore();
-    } else {
-      alert(`Recovery verification failed: ${result.error}`);
-    }
+    if (result.success) syncStore();
+    else alert(`Recovery verification failed: ${result.error}`);
   };
 
   const handleBookOrder = (orderData: Partial<SalesOrder>) => {
-    const created = inMemoryStore.createSalesOrder(orderData);
+    inMemoryStore.createSalesOrder(orderData);
     syncStore();
   };
 
-  const handleRecordRecovery = (data: {
-    customerId: string;
-    amount: number;
-    paymentMode: PaymentMode;
-    instrumentNumber?: string;
-    bankName?: string;
-    remarks?: string;
-  }) => {
+  const handleRecordRecovery = (data: { customerId: string; amount: number; paymentMode: PaymentMode; instrumentNumber?: string; bankName?: string; remarks?: string }) => {
     const cust = customers.find((c) => c.id === data.customerId);
     const recNumber = `REC-2026-${String(recoveries.length + 1).padStart(3, '0')}`;
     inMemoryStore.recordRecovery({
@@ -130,18 +100,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col antialiased">
-      {/* Top Global Header */}
-      <Header
-        activeApp={activeApp}
-        setActiveApp={setActiveApp}
-        currentUser={currentUser}
-        onRoleChange={handleRoleChange}
-        users={users}
-      />
-
-      {/* Main View Router */}
-      <main className="flex-1">
+    <div className="min-h-screen bg-slate-50 text-slate-900 antialiased">
+      <Header currentUser={currentUser} />
+      <main className="min-h-[calc(100vh-4rem)]">
         {activeApp === 'PORTAL' && (
           <CompanyPortal
             currentUser={currentUser}
@@ -158,14 +119,8 @@ export default function App() {
             onVerifyRecovery={handleVerifyRecovery}
           />
         )}
-
         {activeApp === 'MOBILE_APP' && (
-          <div className="py-6 px-4">
-            <div className="text-center mb-4">
-              <span className="text-xs font-mono font-bold bg-amber-500/10 text-amber-800 border border-amber-500/20 px-3 py-1 rounded-full">
-                Unified Sales & Recovery Field Terminal Simulator
-              </span>
-            </div>
+          <div className="px-4 py-5 sm:px-6 lg:px-8">
             <SalesRecoveryApp
               currentUser={currentUser}
               customers={customers}
@@ -178,22 +133,9 @@ export default function App() {
             />
           </div>
         )}
-
-        {activeApp === 'DOCS' && <DocsViewer />}
-
-        {activeApp === 'VALIDATOR' && <CalculationValidator />}
       </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-3 text-xs text-slate-500 text-center font-mono">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>N-LINK 360 &copy; 2026 National Lights. All rights reserved.</span>
-          <div className="flex items-center gap-4 text-slate-400">
-            <span>Branch: Lahore Central (BR-LHR)</span>
-            <span>Currency: PKR (₨)</span>
-            <span>Security: Zero Floating-Point Precision</span>
-          </div>
-        </div>
+      <footer className="border-t border-slate-200 bg-white px-4 py-3 text-center text-xs text-slate-500">
+        N-LINK 360 · National Lights · {currentUser.id}
       </footer>
     </div>
   );
