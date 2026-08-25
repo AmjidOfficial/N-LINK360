@@ -1,11 +1,10 @@
 -- N-LINK 360 authentication and baseline security
--- Supabase Auth owns passwords/sessions. The public users row links an Auth UUID
--- to the N-LINK user record. The existing 001 schema is the source of truth.
+-- Source of truth: database/migrations/001_nlink360_core.sql
 
 alter table public.users
   add column if not exists auth_user_id uuid unique;
 
-insert into public.roles (code, name, description) values
+insert into public.roles (role_code, name, description) values
 ('SUPER_ADMIN','Super Admin','Full system administration'),
 ('MANAGEMENT','Management','Management dashboard and approved reports'),
 ('FACTORY_MANAGER','Factory In-Charge','Factory work modes'),
@@ -14,25 +13,49 @@ insert into public.roles (code, name, description) values
 ('SALES_MANAGER','Sales Manager','Sales team supervision'),
 ('SALES_RECOVERY','Sales & Recovery','Customer ordering, recovery, visits and follow-up'),
 ('DISPATCH_OFFICER','Dispatch & Logistics','Dispatch, vehicle, adda, bility and GRN')
-on conflict (code) do update
+on conflict (role_code) do update
 set name = excluded.name,
     description = excluded.description;
 
 create or replace function public.nlink_current_user_id()
 returns uuid
-language sql
-stable
-security definer
-set search_path = public
+language sql stable security definer set search_path = public
 as $$
-  select id
-  from public.users
-  where auth_user_id = auth.uid()
-    and is_active = true
+  select id from public.users
+  where auth_user_id = auth.uid() and status = true
   limit 1;
 $$;
 
 grant execute on function public.nlink_current_user_id() to authenticated;
+
+create or replace function public.nlink_current_employee_id()
+returns uuid
+language sql stable security definer set search_path = public
+as $$
+  select employee_id from public.users
+  where auth_user_id = auth.uid() and status = true
+  limit 1;
+$$;
+
+grant execute on function public.nlink_current_employee_id() to authenticated;
+
+create or replace function public.nlink_has_role(required_role text)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.users u
+    join public.employees e on e.id = u.employee_id
+    join public.roles r on r.id = e.role_id
+    where u.auth_user_id = auth.uid()
+      and u.status = true
+      and e.status = true
+      and r.role_code = required_role
+  );
+$$;
+
+grant execute on function public.nlink_has_role(text) to authenticated;
 
 alter table public.users enable row level security;
 alter table public.roles enable row level security;
@@ -52,46 +75,10 @@ using (true);
 
 create policy users_admin_manage on public.users
 for all to authenticated
-using (
-  exists (
-    select 1
-    from public.users u
-    join public.roles r on r.id = u.role_id
-    where u.auth_user_id = auth.uid()
-      and u.is_active = true
-      and r.code = 'SUPER_ADMIN'
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.users u
-    join public.roles r on r.id = u.role_id
-    where u.auth_user_id = auth.uid()
-      and u.is_active = true
-      and r.code = 'SUPER_ADMIN'
-  )
-);
+using (public.nlink_has_role('SUPER_ADMIN'))
+with check (public.nlink_has_role('SUPER_ADMIN'));
 
 create policy roles_admin_manage on public.roles
 for all to authenticated
-using (
-  exists (
-    select 1
-    from public.users u
-    join public.roles r on r.id = u.role_id
-    where u.auth_user_id = auth.uid()
-      and u.is_active = true
-      and r.code = 'SUPER_ADMIN'
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.users u
-    join public.roles r on r.id = u.role_id
-    where u.auth_user_id = auth.uid()
-      and u.is_active = true
-      and r.code = 'SUPER_ADMIN'
-  )
-);
+using (public.nlink_has_role('SUPER_ADMIN'))
+with check (public.nlink_has_role('SUPER_ADMIN'));
