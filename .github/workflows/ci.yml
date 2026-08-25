@@ -17,10 +17,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
+      # The repository currently has package.json but no committed lockfile.
+      # Use npm install until package-lock.json is generated and committed.
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: TypeScript check
         run: npm run lint
