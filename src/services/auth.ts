@@ -27,35 +27,36 @@ export async function signOut() {
 
 export async function getCurrentUser(): Promise<User | null> {
   if (!supabase) return null;
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
   const { data, error } = await supabase
     .from('users')
-    .select('user_code, status, last_login_at, employee:employees!users_employee_id_fkey(employee_code, full_name, mobile, branch_id, role:roles!employees_role_id_fkey(role_code), branch:branches!employees_branch_id_fkey(name))')
+    .select('id,email,full_name,phone,branch_id,is_active,last_login_at,created_at,role:roles!users_role_id_fkey(code,name),branch:branches!users_branch_id_fkey(name)')
     .eq('auth_user_id', user.id)
-    .eq('status', true)
+    .eq('is_active', true)
     .maybeSingle();
 
   if (error) throw error;
-  if (!data?.employee) throw new Error('Your login exists, but no active N-LINK employee profile is linked to it.');
+  if (!data) throw new Error('Your login exists, but no active N-LINK user profile is linked to it.');
 
-  const employee = Array.isArray(data.employee) ? data.employee[0] : data.employee;
-  const role = Array.isArray(employee.role) ? employee.role[0] : employee.role;
-  const branch = Array.isArray(employee.branch) ? employee.branch[0] : employee.branch;
-  const mappedRole = roleMap[role?.role_code || ''];
+  const role = Array.isArray(data.role) ? data.role[0] : data.role;
+  const branch = Array.isArray(data.branch) ? data.branch[0] : data.branch;
+  const mappedRole = roleMap[role?.code || ''];
+
   if (!mappedRole) throw new Error('Your N-LINK role is not configured.');
 
   return {
-    id: data.user_code,
-    email: user.email || '',
-    fullName: employee.full_name,
-    phone: employee.mobile || '',
+    id: data.id,
+    email: data.email || user.email || '',
+    fullName: data.full_name,
+    phone: data.phone || '',
     role: mappedRole,
-    branchId: employee.branch_id || '',
+    branchId: data.branch_id || '',
     branchName: branch?.name,
-    isActive: Boolean(data.status),
+    isActive: Boolean(data.is_active),
     lastLoginAt: data.last_login_at || undefined,
-    createdAt: user.created_at,
+    createdAt: data.created_at,
   };
 }
