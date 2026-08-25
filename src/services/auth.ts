@@ -31,32 +31,57 @@ export async function getCurrentUser(): Promise<User | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
+  const { data: account, error: accountError } = await supabase
     .from('users')
-    .select('id,email,full_name,phone,branch_id,is_active,last_login_at,created_at,role:roles!users_role_id_fkey(code,name),branch:branches!users_branch_id_fkey(name)')
+    .select('id,user_code,employee_id,status,last_login_at,created_at')
     .eq('auth_user_id', user.id)
-    .eq('is_active', true)
+    .eq('status', true)
     .maybeSingle();
 
-  if (error) throw error;
-  if (!data) throw new Error('Your login exists, but no active N-LINK user profile is linked to it.');
+  if (accountError) throw accountError;
+  if (!account?.employee_id) throw new Error('Your login exists, but no active N-LINK employee profile is linked to it.');
 
-  const role = Array.isArray(data.role) ? data.role[0] : data.role;
-  const branch = Array.isArray(data.branch) ? data.branch[0] : data.branch;
-  const mappedRole = roleMap[role?.code || ''];
+  const { data: employee, error: employeeError } = await supabase
+    .from('employees')
+    .select('id,full_name,mobile,email,role_id,branch_id,status')
+    .eq('id', account.employee_id)
+    .eq('status', true)
+    .maybeSingle();
 
+  if (employeeError) throw employeeError;
+  if (!employee) throw new Error('Your employee profile is inactive or missing.');
+
+  const { data: role, error: roleError } = await supabase
+    .from('roles')
+    .select('role_code,name')
+    .eq('id', employee.role_id)
+    .maybeSingle();
+
+  if (roleError) throw roleError;
+  const mappedRole = roleMap[role?.role_code || ''];
   if (!mappedRole) throw new Error('Your N-LINK role is not configured.');
 
+  let branchName: string | undefined;
+  if (employee.branch_id) {
+    const { data: branch, error: branchError } = await supabase
+      .from('branches')
+      .select('name')
+      .eq('id', employee.branch_id)
+      .maybeSingle();
+    if (branchError) throw branchError;
+    branchName = branch?.name;
+  }
+
   return {
-    id: data.id,
-    email: data.email || user.email || '',
-    fullName: data.full_name,
-    phone: data.phone || '',
+    id: account.id,
+    email: employee.email || user.email || '',
+    fullName: employee.full_name,
+    phone: employee.mobile || '',
     role: mappedRole,
-    branchId: data.branch_id || '',
-    branchName: branch?.name,
-    isActive: Boolean(data.is_active),
-    lastLoginAt: data.last_login_at || undefined,
-    createdAt: data.created_at,
+    branchId: employee.branch_id || '',
+    branchName,
+    isActive: Boolean(account.status && employee.status),
+    lastLoginAt: account.last_login_at || undefined,
+    createdAt: account.created_at,
   };
 }
