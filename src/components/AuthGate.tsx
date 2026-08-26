@@ -54,12 +54,59 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
             <div><h1 className="text-xl font-black tracking-tight text-slate-950">N-LINK 360</h1><p className="text-xs text-slate-500">National Lights</p></div>
           </div>
           <div className="mb-6"><h2 className="text-2xl font-bold text-slate-950">Sign in</h2><p className="mt-1 text-sm text-slate-500">Use your National Lights account.</p></div>
-          {!isSupabaseConfigured && <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Supabase is not configured yet. Add the two Vite environment variables before using production login.</div>}
+          {!isSupabaseConfigured && (
+            <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50/75 p-4 text-xs text-amber-900">
+              <p className="font-bold mb-2">💡 Offline Sandbox Active</p>
+              <p className="mb-3 leading-relaxed">Supabase is not connected. You can sign in using any of the sandbox accounts below (click an account to autofill):</p>
+              <div className="space-y-1.5 font-mono">
+                <button
+                  type="button"
+                  onClick={() => { setEmail('nationallights2026@gmail.com'); setPassword('admin123'); }}
+                  className="w-full text-left p-1.5 rounded bg-amber-100 border border-amber-300 hover:bg-amber-200 transition flex justify-between text-[10px]"
+                >
+                  <span className="font-bold">nationallights2026@gmail.com</span>
+                  <span className="font-sans font-bold text-amber-900">Your Account (Admin) ★</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEmail('admin@nationallights.com'); setPassword('admin123'); }}
+                  className="w-full text-left p-1.5 rounded bg-amber-100/50 hover:bg-amber-100 transition flex justify-between text-[10px]"
+                >
+                  <span>admin@nationallights.com</span>
+                  <span className="font-sans font-bold text-slate-600">Super Admin →</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEmail('field.lahore@nationallights.com'); setPassword('field123'); }}
+                  className="w-full text-left p-1.5 rounded bg-amber-100/50 hover:bg-amber-100 transition flex justify-between text-[10px]"
+                >
+                  <span>field.lahore@nationallights.com</span>
+                  <span className="font-sans font-bold text-slate-600">Sales/Recovery →</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEmail('accounts@nationallights.com'); setPassword('accounts123'); }}
+                  className="w-full text-left p-1.5 rounded bg-amber-100/50 hover:bg-amber-100 transition flex justify-between text-[10px]"
+                >
+                  <span>accounts@nationallights.com</span>
+                  <span className="font-sans font-bold text-slate-600">Accounts →</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEmail('warehouse@nationallights.com'); setPassword('warehouse123'); }}
+                  className="w-full text-left p-1.5 rounded bg-amber-100/50 hover:bg-amber-100 transition flex justify-between text-[10px]"
+                >
+                  <span>warehouse@nationallights.com</span>
+                  <span className="font-sans font-bold text-slate-600">Warehouse →</span>
+                </button>
+              </div>
+            </div>
+          )}
           {error && <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
           <form onSubmit={handleLogin} className="space-y-4">
             <label className="block text-sm font-semibold text-slate-700">Email<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" autoComplete="email" /></label>
             <label className="block text-sm font-semibold text-slate-700">Password<input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" autoComplete="current-password" /></label>
-            <button disabled={submitting || !isSupabaseConfigured} className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"><LogIn className="h-4 w-4" />{submitting ? 'Signing in…' : 'Sign in'}</button>
+            <button disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"><LogIn className="h-4 w-4" />{submitting ? 'Signing in…' : 'Sign in'}</button>
           </form>
           <p className="mt-6 flex items-center justify-center gap-2 text-[11px] text-slate-400"><LockKeyhole className="h-3.5 w-3.5" /> Access is controlled by your N-LINK role and permissions.</p>
         </section>

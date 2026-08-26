@@ -184,6 +184,33 @@ export interface CustomerVisit {
   orderPlaced: boolean;
   recoveryCollected: boolean;
   nextFollowupDate?: string;
+  photoUrl?: string;
+}
+
+export type RegistrationRequestStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+
+export interface CustomerRegistrationRequest {
+  id: string;
+  businessName: string;
+  ownerName: string;
+  contactNumber: string;
+  cnic: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  city: string;
+  region: string;
+  type: CustomerType;
+  proposedCreditLimit: number;
+  proposedCreditDays: number;
+  proposedOpeningBalance: number;
+  additionalNotes?: string;
+  salesUserId: string;
+  salesUserName: string;
+  status: RegistrationRequestStatus;
+  rejectionReason?: string;
+  createdAt: string;
+  approvedAt?: string;
 }
 
 // ==============================================================================

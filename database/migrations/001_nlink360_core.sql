@@ -4,13 +4,30 @@
 
 create extension if not exists pgcrypto;
 
-create type customer_type as enum ('DISTRIBUTOR','DEALER');
-create type party_head as enum ('MANUFACTURER','SALES_RECOVERY','DEALERSHIP','DISTRIBUTOR','LOGISTICS');
-create type order_status as enum ('DRAFT','SUBMITTED','UNDER_REVIEW','APPROVED','PARTIALLY_APPROVED','ON_HOLD','REJECTED','INVOICED','CANCELLED');
-create type invoice_status as enum ('DRAFT','POSTED','CANCELLED');
-create type recovery_status as enum ('PENDING_VERIFICATION','VERIFIED','REJECTED','CANCELLED');
-create type inventory_txn_type as enum ('PRODUCTION_IN','SALES_OUT','TRANSFER_IN','TRANSFER_OUT','RETURN_IN','DAMAGE_OUT','DAMAGE_RECOVERY','ADJUSTMENT_IN','ADJUSTMENT_OUT');
-create type payment_method as enum ('CASH','BANK_TRANSFER','CHEQUE','ONLINE_TRANSFER','OTHER');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'customer_type') then
+    create type customer_type as enum ('DISTRIBUTOR','DEALER');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'party_head') then
+    create type party_head as enum ('MANUFACTURER','SALES_RECOVERY','DEALERSHIP','DISTRIBUTOR','LOGISTICS');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'order_status') then
+    create type order_status as enum ('DRAFT','SUBMITTED','UNDER_REVIEW','APPROVED','PARTIALLY_APPROVED','ON_HOLD','REJECTED','INVOICED','CANCELLED');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'invoice_status') then
+    create type invoice_status as enum ('DRAFT','POSTED','CANCELLED');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'recovery_status') then
+    create type recovery_status as enum ('PENDING_VERIFICATION','VERIFIED','REJECTED','CANCELLED');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'inventory_txn_type') then
+    create type inventory_txn_type as enum ('PRODUCTION_IN','SALES_OUT','TRANSFER_IN','TRANSFER_OUT','RETURN_IN','DAMAGE_OUT','DAMAGE_RECOVERY','ADJUSTMENT_IN','ADJUSTMENT_OUT');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'payment_method') then
+    create type payment_method as enum ('CASH','BANK_TRANSFER','CHEQUE','ONLINE_TRANSFER','OTHER');
+  end if;
+end $$;
 
 create table if not exists companies (
   id uuid primary key default gen_random_uuid(),
