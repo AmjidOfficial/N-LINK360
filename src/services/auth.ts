@@ -10,6 +10,14 @@ const roleMap: Record<string, UserRole> = {
   SALES_MANAGER: 'SALES_MANAGER',
   SALES_RECOVERY: 'SALES_RECOVERY',
   DISPATCH_OFFICER: 'DISPATCH_OFFICER',
+  RSM: 'RSM',
+  ASM: 'ASM',
+  TSM: 'TSM',
+  SS: 'SS',
+  OB: 'OB',
+  FACTORY: 'FACTORY',
+  WAREHOUSE: 'WAREHOUSE',
+  DISPATCH: 'DISPATCH',
 };
 
 let currentLocalUser: User | null = null;
@@ -176,3 +184,22 @@ export async function getCurrentUser(): Promise<User | null> {
     createdAt: account.created_at,
   };
 }
+
+export async function resetPassword(email: string): Promise<void> {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!supabase) {
+    // Safe offline sandbox behavior
+    return;
+  }
+  const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+    redirectTo: `${window.location.origin}/`,
+  });
+  if (error) throw error;
+}
+
+export async function updatePassword(password: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+}
+

@@ -84,3 +84,139 @@ export async function logVisit(visit: Partial<CustomerVisit>) {
   if (error) throw error;
   return data.id as string;
 }
+
+export async function getRoles() {
+  const client = db();
+  const { data, error } = await client.from('roles').select('id, role_code, name, description');
+  if (error) throw error;
+  return data;
+}
+
+export async function createEmployee(data: {
+  employeeCode: string;
+  fullName: string;
+  mobile: string;
+  email: string;
+  roleCode: string;
+  head: 'MANUFACTURER' | 'SALES_RECOVERY' | 'DEALERSHIP' | 'DISTRIBUTOR' | 'LOGISTICS';
+  branchId?: string;
+  factoryId?: string;
+  warehouseId?: string;
+}) {
+  const client = db();
+  
+  const { data: role, error: roleError } = await client
+    .from('roles')
+    .select('id')
+    .eq('role_code', data.roleCode)
+    .single();
+    
+  if (roleError) throw new Error(`Role ${data.roleCode} not found in database.`);
+
+  const { data: inserted, error } = await client
+    .from('employees')
+    .insert({
+      employee_code: data.employeeCode,
+      full_name: data.fullName,
+      mobile: data.mobile,
+      email: data.email,
+      role_id: role.id,
+      head: data.head,
+      branch_id: data.branchId || null,
+      factory_id: data.factoryId || null,
+      warehouse_id: data.warehouseId || null,
+      status: true
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  return inserted.id as string;
+}
+
+export async function linkAuthToUser(employeeId: string, email: string, username: string, authUserId: string) {
+  const client = db();
+  const userCode = `USR-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+  
+  const { data, error } = await client
+    .from('users')
+    .insert({
+      user_code: userCode,
+      employee_id: employeeId,
+      auth_user_id: authUserId,
+      username: username || email,
+      status: true
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  return data.id as string;
+}
+
+export async function updateEmployeeRole(employeeId: string, roleCode: string) {
+  const client = db();
+  
+  const { data: role, error: roleError } = await client
+    .from('roles')
+    .select('id')
+    .eq('role_code', roleCode)
+    .single();
+    
+  if (roleError) throw new Error(`Role ${roleCode} not found in database.`);
+
+  const { error } = await client
+    .from('employees')
+    .update({ role_id: role.id })
+    .eq('id', employeeId);
+
+  if (error) throw error;
+  return true;
+}
+
+export async function toggleEmployeeStatus(employeeId: string, isActive: boolean) {
+  const client = db();
+  const { error: employeeError } = await client
+    .from('employees')
+    .update({ status: isActive })
+    .eq('id', employeeId);
+
+  if (employeeError) throw employeeError;
+
+  const { error: userError } = await client
+    .from('users')
+    .update({ status: isActive })
+    .eq('employee_id', employeeId);
+
+  if (userError) return true; // Fail gracefully if no linked user record exists
+  return true;
+}
+
+export async function assignEmployeeHierarchy(employeeId: string, level: string, referenceId: string) {
+  const client = db();
+  const { data, error } = await client
+    .from('employee_hierarchy_assignments')
+    .insert({
+      employee_id: employeeId,
+      hierarchy_level: level,
+      reference_id: referenceId,
+      status: true
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  return data.id as string;
+}
+
+export async function assignCustomerRepresentative(customerId: string, employeeId: string | null) {
+  const client = db();
+  const { error } = await client
+    .from('customers')
+    .update({ assigned_employee_id: employeeId })
+    .eq('id', customerId);
+
+  if (error) throw error;
+  return true;
+}
+

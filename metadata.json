@@ -1,6 +1,6 @@
 {
   "name": "N-LINK 360",
   "description": "National Lights Integrated Sales, Recovery, Inventory & Distribution Management System",
-  "requestFramePermissions": ["camera"],
+  "requestFramePermissions": ["camera", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

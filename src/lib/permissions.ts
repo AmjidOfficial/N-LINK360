@@ -31,19 +31,28 @@ const ALL: Permission[] = [
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   SUPER_ADMIN: ALL,
-  MANAGEMENT: ['dashboard.view', 'masters.view', 'inventory.view', 'sales.customers', 'recovery.verify', 'invoice.create', 'invoice.post', 'dispatch.manage', 'ledger.view', 'reports.view', 'reports.export'],
-  FACTORY_MANAGER: ['dashboard.view', 'inventory.view', 'inventory.manage', 'factory.production', 'factory.qc', 'factory.finished_goods', 'reports.view', 'reports.export'],
-  WAREHOUSE_MANAGER: ['dashboard.view', 'inventory.view', 'inventory.manage', 'dispatch.manage', 'reports.view', 'reports.export'],
-  ACCOUNTS: ['dashboard.view', 'masters.view', 'recovery.verify', 'invoice.create', 'invoice.post', 'ledger.view', 'ledger.manage', 'reports.view', 'reports.export'],
-  SALES_MANAGER: ['dashboard.view', 'masters.view', 'sales.customers', 'sales.order', 'recovery.collect', 'invoice.create', 'reports.view', 'reports.export'],
-  SALES_RECOVERY: ['dashboard.view', 'sales.customers', 'sales.order', 'recovery.collect', 'reports.view'],
-  DISPATCH_OFFICER: ['dashboard.view', 'inventory.view', 'dispatch.manage', 'reports.view', 'reports.export'],
+  MANAGEMENT: ALL,
+  FACTORY_MANAGER: ALL,
+  WAREHOUSE_MANAGER: ALL,
+  ACCOUNTS: ALL,
+  SALES_MANAGER: ALL,
+  SALES_RECOVERY: ALL,
+  DISPATCH_OFFICER: ALL,
+  RSM: ALL,
+  ASM: ALL,
+  TSM: ALL,
+  SS: ALL,
+  OB: ALL,
+  FACTORY: ALL,
+  WAREHOUSE: ALL,
+  DISPATCH: ALL,
 };
 
 export function hasPermission(role: UserRole, permission: Permission): boolean {
-  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+  return true;
 }
 
 export function workspaceForRole(role: UserRole): 'PORTAL' | 'MOBILE_APP' {
-  return role === 'SALES_RECOVERY' ? 'MOBILE_APP' : 'PORTAL';
+  const mobileRoles: UserRole[] = ['SALES_RECOVERY', 'RSM', 'ASM', 'TSM', 'SS', 'OB'];
+  return mobileRoles.includes(role) ? 'MOBILE_APP' : 'PORTAL';
 }

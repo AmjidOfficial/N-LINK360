@@ -16,7 +16,15 @@ export type UserRole =
   | 'ACCOUNTS'
   | 'SALES_MANAGER'
   | 'SALES_RECOVERY'
-  | 'DISPATCH_OFFICER';
+  | 'DISPATCH_OFFICER'
+  | 'RSM'
+  | 'ASM'
+  | 'TSM'
+  | 'SS'
+  | 'OB'
+  | 'FACTORY'
+  | 'WAREHOUSE'
+  | 'DISPATCH';
 
 export interface User {
   id: string;
@@ -139,12 +147,20 @@ export interface SKU {
   minimumPrice: number;
   reorderLevel: number;
   isActive: boolean;
+  // Extended packaging & master attributes
+  brandName?: string;
+  categoryName?: string;
+  unitsPerPack?: number;
+  packsPerCarton?: number;
+  weight?: number;
+  taxRate?: number;
+  status?: 'ACTIVE' | 'DISCONTINUED' | 'UPCOMING';
 }
 
 // ==============================================================================
 // 4. Customers & Visits
 // ==============================================================================
-export type CustomerType = 'DISTRIBUTOR' | 'DEALER';
+export type CustomerType = 'DISTRIBUTOR' | 'DEALER' | 'CUSTOMER' | 'SHOP';
 
 export interface Customer {
   id: string;
@@ -167,6 +183,14 @@ export interface Customer {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // Extended territory & hierarchy attributes
+  zone?: string;
+  area?: string;
+  territory?: string;
+  town?: string;
+  route?: string;
+  assignedEmployee?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 }
 
 export interface CustomerVisit {
@@ -533,10 +557,15 @@ export interface AuditLog {
   id: string;
   userId?: string;
   userName?: string;
+  userEmail?: string;
   action: string;
   module: string;
-  recordType: string;
+  recordType?: string;
   recordId: string;
+  details?: string;
+  timestamp?: string;
+  beforeValue?: Record<string, unknown> | string;
+  afterValue?: Record<string, unknown> | string;
   previousState?: Record<string, unknown>;
   newState?: Record<string, unknown>;
   createdAt: string;

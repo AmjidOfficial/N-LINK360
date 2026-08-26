@@ -185,13 +185,25 @@ alter table import_errors enable row level security;
 alter table import_audit enable row level security;
 
 -- 9. Setup RLS policies
+DROP POLICY IF EXISTS regions_auth_read ON regions;
 create policy regions_auth_read on regions for select to authenticated using (true);
+
+DROP POLICY IF EXISTS zones_auth_read ON zones;
 create policy zones_auth_read on zones for select to authenticated using (true);
+
+DROP POLICY IF EXISTS areas_auth_read ON areas;
 create policy areas_auth_read on areas for select to authenticated using (true);
+
+DROP POLICY IF EXISTS territories_auth_read ON territories;
 create policy territories_auth_read on territories for select to authenticated using (true);
+
+DROP POLICY IF EXISTS towns_auth_read ON towns;
 create policy towns_auth_read on towns for select to authenticated using (true);
+
+DROP POLICY IF EXISTS routes_auth_read ON routes;
 create policy routes_auth_read on routes for select to authenticated using (true);
 
+DROP POLICY IF EXISTS employee_hierarchy_auth_read ON employee_hierarchy_assignments;
 create policy employee_hierarchy_auth_read on employee_hierarchy_assignments 
   for select to authenticated 
   using (
@@ -200,14 +212,17 @@ create policy employee_hierarchy_auth_read on employee_hierarchy_assignments
     employee_id = public.nlink_current_employee_id()
   );
 
+DROP POLICY IF EXISTS sales_targets_auth_read ON sales_targets;
 create policy sales_targets_auth_read on sales_targets 
   for select to authenticated 
   using (true);
 
+DROP POLICY IF EXISTS sales_target_items_auth_read ON sales_target_items;
 create policy sales_target_items_auth_read on sales_target_items 
   for select to authenticated 
   using (true);
 
+DROP POLICY IF EXISTS sales_activities_all ON sales_activities;
 create policy sales_activities_all on sales_activities 
   for all to authenticated 
   using (
@@ -217,6 +232,7 @@ create policy sales_activities_all on sales_activities
     employee_id = public.nlink_current_employee_id()
   );
 
+DROP POLICY IF EXISTS followups_all ON followups;
 create policy followups_all on followups 
   for all to authenticated 
   using (
@@ -226,16 +242,19 @@ create policy followups_all on followups
     employee_id = public.nlink_current_employee_id()
   );
 
+DROP POLICY IF EXISTS imports_admin_all ON import_batches;
 create policy imports_admin_all on import_batches 
   for all to authenticated 
   using (public.nlink_has_role('SUPER_ADMIN'))
   with check (public.nlink_has_role('SUPER_ADMIN'));
 
+DROP POLICY IF EXISTS import_rows_admin_all ON import_rows;
 create policy import_rows_admin_all on import_rows 
   for all to authenticated 
   using (public.nlink_has_role('SUPER_ADMIN'))
   with check (public.nlink_has_role('SUPER_ADMIN'));
 
+DROP POLICY IF EXISTS import_errors_admin_all ON import_errors;
 create policy import_errors_admin_all on import_errors 
   for all to authenticated 
   using (public.nlink_has_role('SUPER_ADMIN'))
