@@ -1,15 +1,16 @@
 # N-LINK 360 Supabase Installation
 
-## Current migration order
+## Complete migration order
 
 Run these files in Supabase SQL Editor, in this exact order:
 
-1. `database/migrations/001_nlink360_core.sql`
-2. `database/migrations/002_auth_and_security.sql`
-3. `database/migrations/003_operational_rls.sql`
-4. `database/migrations/004_transaction_engine.sql`
-5. `database/migrations/005_sales_hierarchy.sql`
-6. `database/migrations/006_nlink360_install_verification.sql`
+1. `database/migrations/001_nlink360_core.sql` - company, factory, warehouse, product, customer, order, invoice, inventory, dispatch, recovery and ledger foundation
+2. `database/migrations/002_auth_and_security.sql` - roles, auth mapping and security helpers
+3. `database/migrations/003_operational_rls.sql` - operational row-level security
+4. `database/migrations/004_transaction_engine.sql` - transaction posting functions and ledger/inventory rules
+5. `database/migrations/005_sales_hierarchy.sql` - region, zone, area, territory, route and employee assignments
+6. `database/migrations/007_nlink360_business_operations.sql` - targets, production, stock transfers, recovery allocation, field activity, contacts and audit log
+7. `database/migrations/006_nlink360_install_verification.sql` - read-only verification, run last
 
 ## Do not run
 
@@ -39,4 +40,4 @@ After the Auth user exists, link its UUID to the N-LINK `users.auth_user_id` fie
 
 ## Verification
 
-After migrations complete, run `006_nlink360_install_verification.sql` and confirm that the expected tables exist and the row counts return without errors.
+After all migrations complete, run `006_nlink360_install_verification.sql` and confirm that the expected tables exist and the row counts return without errors.
