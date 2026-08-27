@@ -1,0 +1,9 @@
+--- src/components/CompanyPortal.tsx
++++ src/components/CompanyPortal.tsx
+@@ -481,2 +481,27 @@
+-    <div className="nl-fluid-container py-6 space-y-6">
+-      
+-      {/* Sub-Navigation Bar for Company Portal */}
+-      <div className="bg-white rounded-xl border border-slate-200 p-2 shadow-sm overflow-x-auto flex items-center gap-1">
+-        <button
+-          onClick={() => setActiveTab('ROLE_SCOPED')}
