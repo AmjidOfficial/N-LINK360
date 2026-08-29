@@ -31,7 +31,7 @@ import {
   Lock
 } from 'lucide-react';
 import { OperationSubTab } from './NeumorphicHeader';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 import { isAdminUser, isFieldForceUser, getAssignedDealerIds } from '../services/production-users';
 
 interface OperationDomainProps {
@@ -51,17 +51,355 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
   const isField = isFieldForceUser(currentUser);
 
   // State Collections
-  const [branches, setBranches] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([
+    {
+      id: 'BR-01',
+      name: 'National Lights Head Office, Lahore',
+      city: 'Lahore',
+      code: 'HO-LHR',
+      phone: '+92 42 37350001',
+      address: 'Brandreth Road, Lahore, Punjab',
+      status: 'ACTIVE',
+    },
+    {
+      id: 'BR-02',
+      name: 'Karachi Regional Distribution Depot',
+      city: 'Karachi',
+      code: 'DEP-KHI',
+      phone: '+92 21 32410002',
+      address: 'Plaza Quarter, M.A. Jinnah Road, Karachi, Sindh',
+      status: 'ACTIVE',
+    },
+    {
+      id: 'BR-03',
+      name: 'Rawalpindi / Islamabad Hub',
+      city: 'Rawalpindi',
+      code: 'DEP-RWP',
+      phone: '+92 51 55310003',
+      address: 'Gawalmandi Auto Market, Rawalpindi, Punjab',
+      status: 'ACTIVE',
+    },
+    {
+      id: 'BR-04',
+      name: 'Peshawar North Depot',
+      city: 'Peshawar',
+      code: 'DEP-PEW',
+      phone: '+92 91 52710004',
+      address: 'Industrial Estate, Jamrud Road, Peshawar, KPK',
+      status: 'ACTIVE',
+    },
+  ]);
 
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([
+    {
+      id: 'SKU-NL-01',
+      brand: 'National Lights Auto',
+      name: 'H4 Heavy Duty Halogen Bulb 12V 60/55W (Gold Box)',
+      category: 'Automotive Bulbs',
+      tradePrice: 380,
+      retailPrice: 550,
+      cartonQty: 100,
+      stock: 4500,
+    },
+    {
+      id: 'SKU-NL-02',
+      brand: 'National Lights Auto',
+      name: 'LED Headlight Conversion Kit H7 Super Bright 6500K',
+      category: 'LED Lighting',
+      tradePrice: 2850,
+      retailPrice: 4200,
+      cartonQty: 20,
+      stock: 1200,
+    },
+    {
+      id: 'SKU-NL-03',
+      brand: 'National Lights Industrial',
+      name: 'Heavy Duty Fog Light Assembly Sealed Beam (Universal Fit)',
+      category: 'Auxiliary Lighting',
+      tradePrice: 1450,
+      retailPrice: 2100,
+      cartonQty: 30,
+      stock: 850,
+    },
+    {
+      id: 'SKU-NL-04',
+      brand: 'National Lights Auto',
+      name: 'T10 Wedge Bulb 12V 5W Amber Signal (Pack of 10)',
+      category: 'Miniature Bulbs',
+      tradePrice: 180,
+      retailPrice: 280,
+      cartonQty: 200,
+      stock: 8900,
+    },
+  ]);
 
-  const [dealers, setDealers] = useState<any[]>([]);
+  const [dealers, setDealers] = useState<any[]>([
+    {
+      id: 'DLR-101',
+      name: 'Al-Madina Auto Spares & Lighting',
+      customerType: 'DEALER',
+      region: 'Punjab Central',
+      area: 'Lahore Division',
+      territory: 'Brandreth Road Market',
+      assignedTsm: 'Ali Raza (TSM)',
+      assignedOfficerId: 'USR-ADMIN-01',
+      assignedOfficerName: 'Ali Raza (TSM)',
+      town: 'Lahore',
+      cnic: '35202-1234567-1',
+      contactPerson: 'Haji Muhammad Younas',
+      phone: '+92 300 4123456',
+      secondaryPhone: '+92 321 9876543',
+      email: 'almadina.auto@gmail.com',
+      address: 'Shop #42, Main Brandreth Road Market, Lahore',
+      ntn: '1234567-8',
+      strn: '32-77-8765-432-1',
+      creditLimit: 2500000,
+      creditDays: 30,
+      currentBalance: 1420000,
+      status: 'NORMAL',
+      bankName: 'Meezan Bank Ltd, Brandreth Branch',
+      bankIban: 'PK36MEZN0001020304050607',
+    },
+    {
+      id: 'DLR-102',
+      name: 'Khyber Auto Electric Store',
+      customerType: 'DISTRIBUTOR',
+      region: 'KPK West',
+      area: 'Peshawar Division',
+      territory: 'Karkhano Market',
+      assignedTsm: 'Tariq Mansoor (RSM)',
+      assignedOfficerId: 'USR-ADMIN-02',
+      assignedOfficerName: 'Tariq Mansoor (RSM)',
+      town: 'Peshawar',
+      cnic: '17301-9876543-3',
+      contactPerson: 'Gul Khan Afridi',
+      phone: '+92 345 9012345',
+      secondaryPhone: '+92 333 8877665',
+      email: 'khyberauto.pew@gmail.com',
+      address: 'Plaza #12, Karkhano Wholesale Market, Peshawar',
+      ntn: '9876543-2',
+      strn: '17-00-9876-543-2',
+      creditLimit: 5000000,
+      creditDays: 45,
+      currentBalance: 3850000,
+      status: 'NORMAL',
+      bankName: 'Bank of Khyber, Jamrud Road',
+      bankIban: 'PK12BOKH0009876543210000',
+    },
+    {
+      id: 'DLR-103',
+      name: 'Super Karachi Auto Traders',
+      customerType: 'DISTRIBUTOR',
+      region: 'Sindh South',
+      area: 'Karachi South Zone',
+      territory: 'Plaza Market Saddar',
+      assignedTsm: 'Farhan Siddiqui (TSM)',
+      assignedOfficerId: 'USR-ADMIN-03',
+      assignedOfficerName: 'Farhan Siddiqui (TSM)',
+      town: 'Karachi',
+      cnic: '42101-5544332-1',
+      contactPerson: 'Syed Tariq Ali',
+      phone: '+92 333 2145678',
+      secondaryPhone: '+92 300 5544332',
+      email: 'superkarachiauto@yahoo.com',
+      address: 'Shop #108, Plaza Auto Market, Saddar, Karachi',
+      ntn: '5544332-9',
+      strn: '42-10-5544-332-1',
+      creditLimit: 4000000,
+      creditDays: 30,
+      currentBalance: 2900000,
+      status: 'HIGH_RISK',
+      bankName: 'Habib Bank Ltd, Plaza Branch',
+      bankIban: 'PK99HABB0001122334455667',
+    },
+  ]);
 
-  const [targets, setTargets] = useState<any[]>([]);
+  const [targets, setTargets] = useState<any[]>([
+    {
+      id: 'TGT-01',
+      officerId: 'EMP-001',
+      officer: 'Ali Raza (TSM)',
+      territory: 'Brandreth Road Market, Lahore',
+      targetSales: 2500000,
+      achievedSales: 1850000,
+      targetRecovery: 2000000,
+      achievedRecovery: 1620000,
+      month: 'August 2026',
+    },
+    {
+      id: 'TGT-02',
+      officerId: 'EMP-002',
+      officer: 'Muhammad Usman (TSM)',
+      territory: 'Gujranwala Industrial Beat',
+      targetSales: 2200000,
+      achievedSales: 1780000,
+      targetRecovery: 1900000,
+      achievedRecovery: 1450000,
+      month: 'August 2026',
+    },
+    {
+      id: 'TGT-03',
+      officerId: 'EMP-003',
+      officer: 'Farhan Siddiqui (TSM)',
+      territory: 'Plaza Auto Market, Karachi',
+      targetSales: 3500000,
+      achievedSales: 2900000,
+      targetRecovery: 3000000,
+      achievedRecovery: 2400000,
+      month: 'August 2026',
+    },
+  ]);
 
-  const [salesTeam, setSalesTeam] = useState<any[]>([]);
+  const [salesTeam, setSalesTeam] = useState<any[]>([
+    {
+      id: 'EMP-001',
+      name: 'Ali Raza',
+      role: 'TSM',
+      employeeCode: 'NL-TSM-101',
+      cnic: '35202-9876543-1',
+      phone: '+92 300 8456101',
+      emergencyPhone: '+92 321 4455667',
+      email: 'aliraza@nationallights.com',
+      region: 'Punjab Central',
+      area: 'Lahore Division',
+      territory: 'Brandreth Road & Montgomery Road',
+      baseBranch: 'National Lights Head Office, Lahore',
+      targetMonthlySales: 2500000,
+      targetMonthlyRecovery: 2000000,
+      dateOfJoining: '2023-01-15',
+      designation: 'Territory Sales & Recovery Officer',
+      salaryGrade: 'Grade B2 + 1.5% Sales Commission',
+      address: 'Plot 45, Sector B, Bahria Town, Lahore',
+      status: 'ACTIVE',
+      beats: ['Monday: Brandreth Road', 'Tuesday: Montgomery Road', 'Wednesday: Badami Bagh', 'Thursday: Hall Road', 'Friday: Township Market'],
+    },
+    {
+      id: 'EMP-002',
+      name: 'Muhammad Usman',
+      role: 'TSM',
+      employeeCode: 'NL-TSM-102',
+      cnic: '34101-5544332-1',
+      phone: '+92 301 9876543',
+      emergencyPhone: '+92 300 1122334',
+      email: 'usman@nationallights.com',
+      region: 'Punjab Central',
+      area: 'Gujranwala Zone',
+      territory: 'Gondlanwala Road & Small Industrial Estate',
+      baseBranch: 'Gujranwala Regional Hub',
+      targetMonthlySales: 2200000,
+      targetMonthlyRecovery: 1900000,
+      dateOfJoining: '2023-05-10',
+      designation: 'Territory Sales Manager',
+      salaryGrade: 'Grade B2 + 1.5% Commission',
+      address: 'House #12, Model Town, Gujranwala',
+      status: 'ACTIVE',
+      beats: ['Monday: Gondlanwala Road', 'Tuesday: GT Road Market', 'Wednesday: Small Industrial Estate', 'Thursday: Sialkot Road'],
+    },
+    {
+      id: 'EMP-003',
+      name: 'Farhan Siddiqui',
+      role: 'TSM',
+      employeeCode: 'NL-TSM-103',
+      cnic: '42101-8877665-3',
+      phone: '+92 333 4567890',
+      emergencyPhone: '+92 334 9988776',
+      email: 'farhan@nationallights.com',
+      region: 'Sindh South',
+      area: 'Karachi South Zone',
+      territory: 'Plaza Auto Market & Saddar',
+      baseBranch: 'Karachi Central Branch',
+      targetMonthlySales: 3500000,
+      targetMonthlyRecovery: 3000000,
+      dateOfJoining: '2022-09-01',
+      designation: 'Senior Territory Manager',
+      salaryGrade: 'Grade B1 + 2.0% Commission',
+      address: 'Flat 4B, Clifton Block 5, Karachi',
+      status: 'ACTIVE',
+      beats: ['Monday: Plaza Market', 'Tuesday: Saddar Auto Market', 'Wednesday: Shershah Colony', 'Thursday: Tariq Road Market'],
+    },
+    {
+      id: 'EMP-004',
+      name: 'Zahid Mehmood',
+      role: 'ASM',
+      employeeCode: 'NL-ASM-201',
+      cnic: '37405-1122334-5',
+      phone: '+92 300 5566778',
+      emergencyPhone: '+92 301 8899001',
+      email: 'zahid@nationallights.com',
+      region: 'Punjab North',
+      area: 'Rawalpindi & Islamabad',
+      territory: 'Gawalmandi & I-9 Industrial Area',
+      baseBranch: 'Rawalpindi Depot',
+      targetMonthlySales: 4500000,
+      targetMonthlyRecovery: 4000000,
+      dateOfJoining: '2021-03-20',
+      designation: 'Area Sales Manager',
+      salaryGrade: 'Grade A2 Executive',
+      address: 'Street 9, F-11/2, Islamabad',
+      status: 'ACTIVE',
+      beats: ['Monday: Gawalmandi Rawalpindi', 'Tuesday: I-9 Industrial Area', 'Wednesday: Abpara Market', 'Thursday: Saddar Rawalpindi'],
+    },
+    {
+      id: 'EMP-005',
+      name: 'Tariq Mansoor',
+      role: 'RSM',
+      employeeCode: 'NL-RSM-301',
+      cnic: '17301-6655443-7',
+      phone: '+92 345 9876543',
+      emergencyPhone: '+92 346 1122334',
+      email: 'tariq@nationallights.com',
+      region: 'KPK West',
+      area: 'Peshawar & Mardan Region',
+      territory: 'Karkhano Market & Khyber Bazaar',
+      baseBranch: 'Peshawar Depot',
+      targetMonthlySales: 6000000,
+      targetMonthlyRecovery: 5500000,
+      dateOfJoining: '2020-06-15',
+      designation: 'Regional Sales Manager',
+      salaryGrade: 'Grade A1 Executive',
+      address: 'University Town, Peshawar',
+      status: 'ACTIVE',
+      beats: ['Monday: Karkhano Market', 'Tuesday: Khyber Bazaar', 'Wednesday: Mardan City Market', 'Thursday: Swabi Center'],
+    },
+  ]);
 
-  const [hierarchyNodes, setHierarchyNodes] = useState<any[]>([]);
+  const [hierarchyNodes, setHierarchyNodes] = useState<any[]>([
+    {
+      id: 'HN-01',
+      level: 'Tier 1: Executive Governance',
+      title: 'Head Office Board & Managing Administrator',
+      nodes: 3,
+      subNodes: ['National Lights Head Office, Lahore', 'Executive Board', 'IT & Operations Governance Panel'],
+    },
+    {
+      id: 'HN-02',
+      level: 'Tier 2: Regional Operations (RSM)',
+      title: 'Provincial Sales & Recovery Hubs',
+      nodes: 5,
+      subNodes: ['Punjab Central Region', 'Punjab North Region', 'Sindh South Region', 'KPK West Region', 'Balochistan Region'],
+    },
+    {
+      id: 'HN-03',
+      level: 'Tier 3: Area Divisions (ASM)',
+      title: 'Zonal & Divisional Field Boundaries',
+      nodes: 8,
+      subNodes: ['Lahore Division', 'Gujranwala Zone', 'Rawalpindi/Islamabad Zone', 'Karachi South Zone', 'Peshawar Division'],
+    },
+    {
+      id: 'HN-04',
+      level: 'Tier 4: Territory Beats (TSM)',
+      title: 'Territory Sales Managers & Recovery Officers',
+      nodes: 14,
+      subNodes: ['Brandreth Road Market', 'Montgomery Road Beat', 'Gawalmandi Rawalpindi', 'Plaza Market Karachi', 'Karkhano Market Peshawar'],
+    },
+    {
+      id: 'HN-05',
+      level: 'Tier 5: Commercial Outlets & Distributors',
+      title: 'Authorized Dealers, Distributors & Stockists',
+      nodes: 180,
+      subNodes: ['Active Outlets (180 Commercial Accounts)', 'Monitored Credit Portfolios', 'Weekly Geo-Tagged Beats'],
+    },
+  ]);
 
   // Modal States
   const [modalType, setModalType] = useState<
@@ -74,6 +412,9 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
     | 'EDIT_DEALER'
     | 'DEALER_DOSSIER'
     | 'ASSIGN_TARGET'
+    | 'ADD_SALES_MEMBER'
+    | 'EDIT_SALES_MEMBER'
+    | 'EMPLOYEE_DOSSIER'
     | 'VIEW_BEAT'
     | 'ADD_HIERARCHY_NODE'
   >(null);
@@ -87,9 +428,57 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
   // Form Fields
   const [branchForm, setBranchForm] = useState({ name: '', city: '', code: '', phone: '', address: '', status: 'ACTIVE' });
   const [productForm, setProductForm] = useState({ brand: 'National Lights Auto', name: '', category: 'Automotive Bulbs', tradePrice: 0, retailPrice: 0, cartonQty: 100, stock: 1000 });
-  const [dealerForm, setDealerForm] = useState({ name: '', town: '', region: 'Punjab Central', creditLimit: 1000000, currentBalance: 0, status: 'NORMAL', phone: '', contactPerson: '', creditDays: 30 });
-  const [targetForm, setTargetForm] = useState({ officer: 'Ali Raza (OB)', territory: 'Lahore Metro', targetSales: 2000000, targetRecovery: 1800000, month: 'August 2026' });
-  const [hierarchyNodeName, setHierarchyNodeName] = useState('');
+  const [dealerForm, setDealerForm] = useState({
+    name: '',
+    customerType: 'DEALER',
+    region: 'Punjab Central',
+    area: 'Lahore Division',
+    territory: 'Brandreth Road Market',
+    assignedTsm: 'Ali Raza (TSM)',
+    town: 'Lahore',
+    cnic: '35202-1234567-1',
+    contactPerson: '',
+    phone: '',
+    secondaryPhone: '',
+    email: '',
+    address: '',
+    ntn: '',
+    strn: '',
+    creditLimit: 1500000,
+    creditDays: 30,
+    currentBalance: 0,
+    status: 'NORMAL',
+    bankName: 'Meezan Bank Ltd',
+    bankIban: '',
+  });
+  const [employeeForm, setEmployeeForm] = useState({
+    name: '',
+    employeeCode: '',
+    cnic: '',
+    phone: '',
+    emergencyPhone: '',
+    email: '',
+    role: 'TSM' as UserRole,
+    designation: 'Territory Sales Manager',
+    region: 'Punjab Central',
+    area: 'Lahore Division',
+    territory: 'Brandreth Road Market',
+    baseBranch: 'National Lights Head Office, Lahore',
+    targetMonthlySales: 2500000,
+    targetMonthlyRecovery: 2000000,
+    dateOfJoining: '2024-01-01',
+    salaryGrade: 'Grade B2 + 1.5% Commission',
+    address: '',
+    status: 'ACTIVE',
+    beatsStr: 'Monday: Main Market, Tuesday: Auto Beat 1, Wednesday: Commercial Zone',
+  });
+  const [targetForm, setTargetForm] = useState({ officer: 'Ali Raza (TSM)', territory: 'Lahore Metro', targetSales: 2000000, targetRecovery: 1800000, month: 'August 2026' });
+  const [hierarchyForm, setHierarchyForm] = useState({
+    tierLevel: 'Tier 2: Regional Operations (RSM)',
+    nodeName: '',
+    assignedOfficer: 'Ali Raza (TSM)',
+    notes: '',
+  });
 
   // -------------------------------------------------------------
   // Data Filtering (Strict Scoping for Field Force)
@@ -213,17 +602,50 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
     setModalType(null);
   };
 
-  const handleAddHierarchyNode = (e: React.FormEvent) => {
+  const handleSaveEmployee = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hierarchyNodeName || !selectedHierarchyLevel) return;
+    const beatsList = employeeForm.beatsStr
+      ? employeeForm.beatsStr.split(',').map((b) => b.trim()).filter(Boolean)
+      : ['Monday: Main Market', 'Tuesday: Commercial Beat'];
+
+    if (modalType === 'ADD_SALES_MEMBER') {
+      const newEmp = {
+        id: `EMP-00${salesTeam.length + 1}`,
+        ...employeeForm,
+        beats: beatsList,
+      };
+      setSalesTeam((prev) => [...prev, newEmp]);
+    } else if (modalType === 'EDIT_SALES_MEMBER' && selectedSalesPerson) {
+      setSalesTeam((prev) =>
+        prev.map((s) => (s.id === selectedSalesPerson.id ? { ...s, ...employeeForm, beats: beatsList } : s))
+      );
+    }
+    setModalType(null);
+  };
+
+  const handleDeleteEmployee = (id: string) => {
+    if (!isAdmin) return;
+    setSalesTeam((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const handleSaveHierarchyNode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!hierarchyForm.nodeName) return;
+    const targetLevel = hierarchyNodes.find((h) => h.level === hierarchyForm.tierLevel) || hierarchyNodes[1];
+    
     setHierarchyNodes((prev) =>
       prev.map((h) =>
-        h.id === selectedHierarchyLevel.id
-          ? { ...h, nodes: h.nodes + 1, subNodes: [...h.subNodes, hierarchyNodeName] }
+        h.id === targetLevel.id
+          ? { ...h, nodes: h.nodes + 1, subNodes: [...h.subNodes, `${hierarchyForm.nodeName} (${hierarchyForm.assignedOfficer})`] }
           : h
       )
     );
-    setHierarchyNodeName('');
+    setHierarchyForm({
+      tierLevel: 'Tier 2: Regional Operations (RSM)',
+      nodeName: '',
+      assignedOfficer: 'Ali Raza (TSM)',
+      notes: '',
+    });
     setModalType(null);
   };
 
@@ -641,38 +1063,164 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
         <div className="space-y-6">
           <div className="nm-flat p-6 rounded-3xl border border-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-black text-slate-800">
-                {isField ? 'My Assigned Market Route & Beats' : 'Field Sales Force Directory & Route Beats'}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black text-slate-800">
+                  {isField ? 'My Field Personnel Profile & Route Beats' : 'Field Personnel Directory & Operations Roster'}
+                </h2>
+                <span className="nm-badge-teal text-[10px] px-2.5 py-0.5 rounded-full font-bold">A-to-Z Registered Force</span>
+              </div>
               <p className="text-xs text-slate-500">
-                {isField ? 'Weekly market route schedule and active dealer touchpoints.' : 'Field personnel roster, territory regions, and assigned commercial market beats.'}
+                {isField
+                  ? 'Weekly market route schedule and active territory beats.'
+                  : 'Complete employee credentials, CNIC records, contact numbers, assigned territories, target quotas, and salary grades.'}
               </p>
             </div>
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setEmployeeForm({
+                    name: '',
+                    employeeCode: `NL-TSM-${100 + salesTeam.length + 1}`,
+                    cnic: '',
+                    phone: '',
+                    emergencyPhone: '',
+                    email: '',
+                    role: 'TSM',
+                    designation: 'Territory Sales Manager',
+                    region: 'Punjab Central',
+                    area: 'Lahore Division',
+                    territory: 'Brandreth Road Market',
+                    baseBranch: 'National Lights Head Office, Lahore',
+                    targetMonthlySales: 2500000,
+                    targetMonthlyRecovery: 2000000,
+                    dateOfJoining: new Date().toISOString().split('T')[0],
+                    salaryGrade: 'Grade B2 + 1.5% Sales Commission',
+                    address: '',
+                    status: 'ACTIVE',
+                    beatsStr: 'Monday: Main Market, Tuesday: Auto Market, Wednesday: Commercial Zone',
+                  });
+                  setModalType('ADD_SALES_MEMBER');
+                }}
+                className="nm-btn-primary px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Register New Employee</span>
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibleSalesTeam.map((st) => (
               <div key={st.id} className="nm-flat p-5 rounded-3xl border border-white space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="nm-badge-teal text-[9px] px-2 py-0.5 rounded-full font-bold">{st.role}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="nm-badge-teal text-[9px] px-2.5 py-0.5 rounded-full font-extrabold">{st.role}</span>
+                    <span className="font-mono text-[10px] text-slate-500 font-bold bg-slate-200 px-2 py-0.5 rounded-md">
+                      {st.employeeCode || st.id}
+                    </span>
+                  </div>
                   <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                    ● {st.status.replace('_', ' ')}
+                    ● {st.status ? st.status.replace('_', ' ') : 'ACTIVE'}
                   </span>
                 </div>
+
                 <div>
-                  <h3 className="text-sm font-black text-slate-800">{st.name}</h3>
-                  <p className="text-xs text-slate-500 font-medium">{st.region} • {st.phone}</p>
+                  <h3 className="text-base font-black text-slate-800">{st.name}</h3>
+                  <p className="text-xs text-slate-500 font-semibold">{st.designation || 'Territory Officer'}</p>
                 </div>
-                <div className="nm-inset p-3 rounded-2xl space-y-1.5 text-xs text-slate-600">
-                  <div className="font-bold text-slate-700">Assigned Weekly Beats:</div>
+
+                <div className="space-y-1 text-xs text-slate-600 bg-slate-100/60 p-3 rounded-2xl nm-inset">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold text-[10px] uppercase">CNIC:</span>
+                    <span className="font-mono font-bold text-slate-800 text-[11px]">{st.cnic || '35202-1234567-1'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold text-[10px] uppercase">Phone:</span>
+                    <span className="font-bold text-slate-800 text-[11px]">{st.phone}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-bold text-[10px] uppercase">Region / Area:</span>
+                    <span className="font-bold text-teal-800 text-[11px]">{st.region} ({st.area || 'Central'})</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100">
+                    <span className="text-emerald-700 font-bold block">Monthly Sales Target</span>
+                    <span className="font-mono font-black text-emerald-900 text-xs">
+                      PKR {((st.targetMonthlySales || 2500000) / 100000).toFixed(1)} Lakh
+                    </span>
+                  </div>
+                  <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100">
+                    <span className="text-indigo-700 font-bold block">Recovery Target</span>
+                    <span className="font-mono font-black text-indigo-900 text-xs">
+                      PKR {((st.targetMonthlyRecovery || 2000000) / 100000).toFixed(1)} Lakh
+                    </span>
+                  </div>
+                </div>
+
+                <div className="nm-inset p-3 rounded-2xl space-y-1 text-xs text-slate-600">
+                  <div className="font-bold text-slate-700 text-[11px]">Assigned Weekly Beats:</div>
                   <ul className="space-y-1 text-[11px]">
-                    {st.beats.map((b, idx) => (
+                    {(st.beats || []).map((b: string, idx: number) => (
                       <li key={idx} className="flex items-center gap-1.5 text-teal-800 font-medium">
-                        <CheckCircle2 className="w-3 h-3 text-teal-600" />
-                        <span>{b}</span>
+                        <CheckCircle2 className="w-3 h-3 text-teal-600 shrink-0" />
+                        <span className="truncate">{b}</span>
                       </li>
                     ))}
                   </ul>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                  <button
+                    onClick={() => {
+                      setSelectedSalesPerson(st);
+                      setModalType('EMPLOYEE_DOSSIER');
+                    }}
+                    className="nm-btn px-3 py-1.5 rounded-xl text-[11px] font-bold text-teal-800"
+                  >
+                    View Personnel Dossier
+                  </button>
+                  {isAdmin && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          setSelectedSalesPerson(st);
+                          setEmployeeForm({
+                            name: st.name || '',
+                            employeeCode: st.employeeCode || st.id,
+                            cnic: st.cnic || '35202-1234567-1',
+                            phone: st.phone || '',
+                            emergencyPhone: st.emergencyPhone || '',
+                            email: st.email || '',
+                            role: st.role || 'TSM',
+                            designation: st.designation || 'Territory Sales Manager',
+                            region: st.region || 'Punjab Central',
+                            area: st.area || 'Lahore Division',
+                            territory: st.territory || 'Brandreth Road Market',
+                            baseBranch: st.baseBranch || 'National Lights Head Office, Lahore',
+                            targetMonthlySales: st.targetMonthlySales || 2500000,
+                            targetMonthlyRecovery: st.targetMonthlyRecovery || 2000000,
+                            dateOfJoining: st.dateOfJoining || '2023-01-15',
+                            salaryGrade: st.salaryGrade || 'Grade B2 + 1.5% Commission',
+                            address: st.address || '',
+                            status: st.status || 'ACTIVE',
+                            beatsStr: (st.beats || []).join(', '),
+                          });
+                          setModalType('EDIT_SALES_MEMBER');
+                        }}
+                        className="nm-btn p-1.5 rounded-lg text-slate-600 hover:text-teal-700"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEmployee(st.id)}
+                        className="nm-btn p-1.5 rounded-lg text-slate-600 hover:text-rose-600"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -685,11 +1233,31 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
         <div className="space-y-6">
           <div className="nm-flat p-6 rounded-3xl border border-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-black text-slate-800">5-Tier Commercial Territory Hierarchy</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-black text-slate-800">5-Tier Commercial Territory Hierarchy</h2>
+                <span className="nm-badge-teal text-[10px] px-2.5 py-0.5 rounded-full font-bold">Admin Governance Tree</span>
+              </div>
               <p className="text-xs text-slate-500">
-                National Distribution $\rightarrow$ Regions $\rightarrow$ Zones & Areas $\rightarrow$ Towns & Commercial Markets $\rightarrow$ Daily Beats.
+                National Executive Board $\rightarrow$ Regional Hubs (RSM) $\rightarrow$ Area Zones (ASM) $\rightarrow$ Territory Beats (TSM) $\rightarrow$ Commercial Outlets.
               </p>
             </div>
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setHierarchyForm({
+                    tierLevel: 'Tier 2: Regional Operations (RSM)',
+                    nodeName: '',
+                    assignedOfficer: 'Ali Raza (TSM)',
+                    notes: '',
+                  });
+                  setModalType('ADD_HIERARCHY_NODE');
+                }}
+                className="nm-btn-primary px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Hierarchy Node</span>
+              </button>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -711,7 +1279,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 pt-2">
-                  {hn.subNodes.map((sn, idx) => (
+                  {hn.subNodes.map((sn: string, idx: number) => (
                     <span key={idx} className="nm-inset px-3 py-1 rounded-xl text-[11px] font-bold text-slate-700">
                       {sn}
                     </span>
@@ -899,88 +1467,249 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
         </div>
       )}
 
-      {/* 3. Add / Edit Dealer */}
+      {/* 3. Add / Edit Dealer (Complete Registration Form) */}
       {(modalType === 'ADD_DEALER' || modalType === 'EDIT_DEALER') && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="nm-flat bg-[#E8ECF2] p-6 rounded-3xl border border-white max-w-md w-full space-y-4 shadow-2xl">
-            <h3 className="text-base font-black text-slate-800">
-              {modalType === 'ADD_DEALER' ? 'Register Commercial Dealer' : 'Edit Dealer Account'}
-            </h3>
-            <form onSubmit={handleSaveDealer} className="space-y-3 text-xs">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="nm-flat bg-[#E8ECF2] p-6 rounded-3xl border border-white max-w-2xl w-full space-y-4 shadow-2xl my-8">
+            <div className="flex items-center justify-between border-b border-slate-300 pb-3">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Business / Shop Name</label>
-                <input
-                  type="text"
-                  required
-                  value={dealerForm.name}
-                  onChange={(e) => setDealerForm({ ...dealerForm, name: e.target.value })}
-                  placeholder="e.g. Al-Madina Auto Spares"
-                  className="w-full p-2.5 rounded-xl nm-inset text-xs"
-                />
+                <h3 className="text-base font-black text-slate-800">
+                  {modalType === 'ADD_DEALER' ? 'Complete Dealer / Distributor Registration' : 'Edit Commercial Dealer Account'}
+                </h3>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Region &gt; Area &gt; Territory &gt; TSM &gt; Commercial & Tax Requirements
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setModalType(null)}
+                className="nm-btn w-8 h-8 rounded-full text-slate-600 font-bold hover:text-slate-900 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDealer} className="space-y-4 text-xs">
+              {/* Section 1: Geographical Hierarchy & Assignment */}
+              <div className="nm-inset p-3.5 rounded-2xl space-y-3">
+                <span className="text-[10px] font-black text-teal-800 uppercase tracking-wider block">
+                  1. Geographical Hierarchy &amp; TSM Assignment
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Region *</label>
+                    <select
+                      value={dealerForm.region}
+                      onChange={(e) => setDealerForm({ ...dealerForm, region: e.target.value })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    >
+                      <option value="Punjab Central">Punjab Central (Lahore, Gujranwala)</option>
+                      <option value="Punjab North">Punjab North (Rawalpindi, Islamabad)</option>
+                      <option value="Punjab South">Punjab South (Multan, Bahawalpur)</option>
+                      <option value="Sindh South">Sindh South (Karachi, Hyderabad)</option>
+                      <option value="KPK West">KPK West (Peshawar, Mardan)</option>
+                      <option value="Balochistan">Balochistan (Quetta)</option>
+                      <option value="Federal Capital">Federal Capital</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Area *</label>
+                    <input
+                      type="text"
+                      required
+                      value={dealerForm.area}
+                      onChange={(e) => setDealerForm({ ...dealerForm, area: e.target.value })}
+                      placeholder="e.g. Lahore Division / Karachi Zone"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Territory / Market Beat *</label>
+                    <input
+                      type="text"
+                      required
+                      value={dealerForm.territory}
+                      onChange={(e) => setDealerForm({ ...dealerForm, territory: e.target.value })}
+                      placeholder="e.g. Brandreth Road / Karkhano Market"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Assigned TSM / Sales Officer *</label>
+                    <select
+                      value={dealerForm.assignedTsm}
+                      onChange={(e) => setDealerForm({ ...dealerForm, assignedTsm: e.target.value })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold text-teal-800"
+                    >
+                      <option value="Ali Raza (TSM)">Ali Raza (TSM) - Central Lahore</option>
+                      <option value="Muhammad Usman (TSM)">Muhammad Usman (TSM) - Gujranwala & Sialkot</option>
+                      <option value="Farhan Siddiqui (TSM)">Farhan Siddiqui (TSM) - Karachi South</option>
+                      <option value="Zahid Mehmood (ASM)">Zahid Mehmood (ASM) - Rawalpindi Division</option>
+                      <option value="Tariq Mansoor (RSM)">Tariq Mansoor (RSM) - KPK Region</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Proprietor & Business Identity */}
+              <div className="nm-inset p-3.5 rounded-2xl space-y-3">
+                <span className="text-[10px] font-black text-teal-800 uppercase tracking-wider block">
+                  2. Firm Identity &amp; Contact Person
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Business / Shop Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={dealerForm.name}
+                      onChange={(e) => setDealerForm({ ...dealerForm, name: e.target.value })}
+                      placeholder="e.g. Al-Madina Auto Spares & Lighting"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Customer Category *</label>
+                    <select
+                      value={dealerForm.customerType}
+                      onChange={(e) => setDealerForm({ ...dealerForm, customerType: e.target.value })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    >
+                      <option value="DEALER">Authorized Dealer</option>
+                      <option value="DISTRIBUTOR">Regional Distributor</option>
+                      <option value="WHOLESALER">Wholesale Stockist</option>
+                      <option value="RETAIL_SHOP">Retail Store</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Proprietor / Contact Person *</label>
+                    <input
+                      type="text"
+                      required
+                      value={dealerForm.contactPerson}
+                      onChange={(e) => setDealerForm({ ...dealerForm, contactPerson: e.target.value })}
+                      placeholder="e.g. Haji Muhammad Younas"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">CNIC Number *</label>
+                    <input
+                      type="text"
+                      required
+                      value={dealerForm.cnic}
+                      onChange={(e) => setDealerForm({ ...dealerForm, cnic: e.target.value })}
+                      placeholder="e.g. 35202-1234567-1"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-mono font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Primary Phone / Mobile *</label>
+                    <input
+                      type="text"
+                      required
+                      value={dealerForm.phone}
+                      onChange={(e) => setDealerForm({ ...dealerForm, phone: e.target.value })}
+                      placeholder="e.g. +92 300 1234567"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">WhatsApp / Alt Phone</label>
+                    <input
+                      type="text"
+                      value={dealerForm.secondaryPhone}
+                      onChange={(e) => setDealerForm({ ...dealerForm, secondaryPhone: e.target.value })}
+                      placeholder="e.g. +92 321 7654321"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
+                    />
+                  </div>
+                </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Town / Market Beat</label>
+                  <label className="font-bold text-slate-700 block mb-1">Full Shop / Outlet Address *</label>
                   <input
                     type="text"
                     required
-                    value={dealerForm.town}
-                    onChange={(e) => setDealerForm({ ...dealerForm, town: e.target.value })}
-                    placeholder="e.g. Montgomery Road, Lahore"
-                    className="w-full p-2.5 rounded-xl nm-inset text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Region</label>
-                  <input
-                    type="text"
-                    value={dealerForm.region}
-                    onChange={(e) => setDealerForm({ ...dealerForm, region: e.target.value })}
-                    className="w-full p-2.5 rounded-xl nm-inset text-xs"
+                    value={dealerForm.address}
+                    onChange={(e) => setDealerForm({ ...dealerForm, address: e.target.value })}
+                    placeholder="e.g. Shop #42, Main Brandreth Road Market, Lahore"
+                    className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Credit Limit (PKR)</label>
-                  <input
-                    type="number"
-                    required
-                    value={dealerForm.creditLimit}
-                    onChange={(e) => setDealerForm({ ...dealerForm, creditLimit: Number(e.target.value) })}
-                    className="w-full p-2.5 rounded-xl nm-inset text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Credit Days Term</label>
-                  <input
-                    type="number"
-                    value={dealerForm.creditDays}
-                    onChange={(e) => setDealerForm({ ...dealerForm, creditDays: Number(e.target.value) })}
-                    className="w-full p-2.5 rounded-xl nm-inset text-xs"
-                  />
+
+              {/* Section 3: Tax, Credit & Financial Limit */}
+              <div className="nm-inset p-3.5 rounded-2xl space-y-3">
+                <span className="text-[10px] font-black text-teal-800 uppercase tracking-wider block">
+                  3. Commercial Terms, Credit Terms &amp; Bank Info
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Credit Limit (PKR) *</label>
+                    <input
+                      type="number"
+                      required
+                      value={dealerForm.creditLimit}
+                      onChange={(e) => setDealerForm({ ...dealerForm, creditLimit: Number(e.target.value) })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold text-teal-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Credit Term (Days) *</label>
+                    <input
+                      type="number"
+                      required
+                      value={dealerForm.creditDays}
+                      onChange={(e) => setDealerForm({ ...dealerForm, creditDays: Number(e.target.value) })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Operating Status</label>
+                    <select
+                      value={dealerForm.status}
+                      onChange={(e) => setDealerForm({ ...dealerForm, status: e.target.value })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    >
+                      <option value="NORMAL">NORMAL (Active Credit)</option>
+                      <option value="HIGH_RISK">HIGH_RISK (Watchlist)</option>
+                      <option value="CREDIT_LOCKED">CREDIT_LOCKED (Stopped)</option>
+                      <option value="SUSPENDED">SUSPENDED</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">NTN Number</label>
+                    <input
+                      type="text"
+                      value={dealerForm.ntn}
+                      onChange={(e) => setDealerForm({ ...dealerForm, ntn: e.target.value })}
+                      placeholder="e.g. 1234567-8"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">STRN (Sales Tax)</label>
+                    <input
+                      type="text"
+                      value={dealerForm.strn}
+                      onChange={(e) => setDealerForm({ ...dealerForm, strn: e.target.value })}
+                      placeholder="e.g. 32-77-8765-432-1"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Bank Name / Branch</label>
+                    <input
+                      type="text"
+                      value={dealerForm.bankName}
+                      onChange={(e) => setDealerForm({ ...dealerForm, bankName: e.target.value })}
+                      placeholder="e.g. Meezan Bank Ltd"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Contact Person</label>
-                  <input
-                    type="text"
-                    value={dealerForm.contactPerson}
-                    onChange={(e) => setDealerForm({ ...dealerForm, contactPerson: e.target.value })}
-                    className="w-full p-2.5 rounded-xl nm-inset text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    value={dealerForm.phone}
-                    onChange={(e) => setDealerForm({ ...dealerForm, phone: e.target.value })}
-                    className="w-full p-2.5 rounded-xl nm-inset text-xs"
-                  />
-                </div>
-              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -989,8 +1718,8 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
                 >
                   Cancel
                 </button>
-                <button type="submit" className="nm-btn-primary px-5 py-2 rounded-xl font-bold shadow-md">
-                  Save Dealer
+                <button type="submit" className="nm-btn-primary px-6 py-2.5 rounded-xl font-black shadow-md">
+                  Complete Registration &amp; Save
                 </button>
               </div>
             </form>
@@ -998,17 +1727,22 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
         </div>
       )}
 
-      {/* 4. Dealer Dossier Modal */}
+      {/* 4. Dealer Dossier Modal (Complete Enterprise Profile) */}
       {modalType === 'DEALER_DOSSIER' && selectedDealer && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="nm-flat bg-[#E8ECF2] p-6 rounded-3xl border border-white max-w-lg w-full space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="nm-flat bg-[#E8ECF2] p-6 rounded-3xl border border-white max-w-xl w-full space-y-4 shadow-2xl my-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-300">
               <div>
-                <span className="font-mono text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-md border border-teal-200">
-                  {selectedDealer.id}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-md border border-teal-200">
+                    {selectedDealer.id}
+                  </span>
+                  <span className="bg-slate-200 text-slate-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                    {selectedDealer.customerType || 'DEALER'}
+                  </span>
+                </div>
                 <h3 className="text-base font-black text-slate-800 mt-1">{selectedDealer.name}</h3>
-                <p className="text-xs text-slate-500">{selectedDealer.town} • {selectedDealer.region}</p>
+                <p className="text-xs text-slate-500 font-medium">{selectedDealer.town} • {selectedDealer.region}</p>
               </div>
               <button
                 onClick={() => setModalType(null)}
@@ -1026,7 +1760,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
                 </div>
               </div>
               <div className="nm-inset p-3 rounded-2xl space-y-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Credit Approved Limit</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Approved Credit Limit</span>
                 <div className="text-base font-black text-teal-700">
                   PKR {selectedDealer.creditLimit.toLocaleString()}
                 </div>
@@ -1034,21 +1768,33 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
             </div>
 
             <div className="nm-inset p-4 rounded-2xl space-y-2 text-xs text-slate-600">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Contact Proprietor:</span>
-                <span className="font-bold text-slate-800">{selectedDealer.contactPerson}</span>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Proprietor Contact:</span>
+                <span className="font-extrabold text-slate-800">{selectedDealer.contactPerson || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">CNIC Number:</span>
+                <span className="font-mono font-bold text-slate-800">{selectedDealer.cnic || '35202-1234567-1'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Phone Number:</span>
+                <span className="font-bold text-slate-800">{selectedDealer.phone || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Territory &amp; Area:</span>
+                <span className="font-bold text-slate-800">{selectedDealer.territory || selectedDealer.town} ({selectedDealer.area || selectedDealer.region})</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Assigned TSM / Officer:</span>
+                <span className="font-bold text-teal-700">{selectedDealer.assignedTsm || selectedDealer.assignedOfficerName}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Payment Term:</span>
+                <span className="font-bold text-slate-800">{selectedDealer.creditDays || 30} Days Credit</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Phone:</span>
-                <span className="font-bold text-slate-800">{selectedDealer.phone}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Payment Term:</span>
-                <span className="font-bold text-slate-800">{selectedDealer.creditDays} Days Credit</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Assigned Field Force:</span>
-                <span className="font-bold text-teal-700">{selectedDealer.assignedOfficerName}</span>
+                <span className="text-slate-500 font-bold">NTN / STRN Status:</span>
+                <span className="font-mono text-slate-800">{selectedDealer.ntn || 'REG-APPLIED'} / {selectedDealer.strn || 'EXEMPT'}</span>
               </div>
             </div>
 
@@ -1125,6 +1871,436 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
                 </button>
                 <button type="submit" className="nm-btn-primary px-5 py-2 rounded-xl font-bold shadow-md">
                   Assign Quota
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Add / Edit Employee Registration Form (Complete A-to-Z Information) */}
+      {(modalType === 'ADD_SALES_MEMBER' || modalType === 'EDIT_SALES_MEMBER') && isAdmin && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="nm-flat bg-[#E8ECF2] p-6 rounded-3xl border border-white max-w-2xl w-full space-y-4 shadow-2xl my-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-300">
+              <div>
+                <span className="nm-badge-teal text-[10px] px-2.5 py-0.5 rounded-full font-bold">
+                  Field Personnel Roster
+                </span>
+                <h3 className="text-lg font-black text-slate-800 mt-1">
+                  {modalType === 'ADD_SALES_MEMBER' ? 'Register New Field Personnel (A to Z Dossier)' : 'Edit Employee Registration Record'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setModalType(null)}
+                className="nm-btn w-8 h-8 rounded-full text-slate-600 font-bold hover:text-slate-900 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEmployee} className="space-y-4 text-xs">
+              {/* Section 1: Personal Identity & Contact */}
+              <div className="nm-inset p-3.5 rounded-2xl space-y-3">
+                <span className="text-[10px] font-black text-teal-800 uppercase tracking-wider block">
+                  1. Employee Personal Identity &amp; Contact Credentials
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Full Employee Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={employeeForm.name}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, name: e.target.value })}
+                      placeholder="e.g. Muhammad Amjid"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Employee Code / ID *</label>
+                    <input
+                      type="text"
+                      required
+                      value={employeeForm.employeeCode}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, employeeCode: e.target.value })}
+                      placeholder="e.g. NL-TSM-105"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-mono font-bold text-teal-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">CNIC Number (National ID) *</label>
+                    <input
+                      type="text"
+                      required
+                      value={employeeForm.cnic}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, cnic: e.target.value })}
+                      placeholder="e.g. 35202-9876543-1"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-mono font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Primary Mobile / Phone *</label>
+                    <input
+                      type="text"
+                      required
+                      value={employeeForm.phone}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
+                      placeholder="e.g. +92 300 8456101"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Emergency Alt Phone</label>
+                    <input
+                      type="text"
+                      value={employeeForm.emergencyPhone}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, emergencyPhone: e.target.value })}
+                      placeholder="e.g. +92 321 4455667"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Corporate Email Address *</label>
+                    <input
+                      type="email"
+                      required
+                      value={employeeForm.email}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
+                      placeholder="e.g. amjid@nationallights.com"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Role, Designation & Region */}
+              <div className="nm-inset p-3.5 rounded-2xl space-y-3">
+                <span className="text-[10px] font-black text-teal-800 uppercase tracking-wider block">
+                  2. Organizational Role &amp; Territory Boundaries
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">System User Role *</label>
+                    <select
+                      value={employeeForm.role}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, role: e.target.value as UserRole })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold text-teal-800"
+                    >
+                      <option value="TSM">TSM (Territory Sales Manager)</option>
+                      <option value="ASM">ASM (Area Sales Manager)</option>
+                      <option value="RSM">RSM (Regional Sales Manager)</option>
+                      <option value="ACCOUNTS_OFFICER">Accounts & Recovery Officer</option>
+                      <option value="WAREHOUSE_MANAGER">Warehouse Manager</option>
+                      <option value="FACTORY_MANAGER">Factory Operations</option>
+                      <option value="SUPER_ADMIN">Super Admin Executive</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Job Designation *</label>
+                    <input
+                      type="text"
+                      required
+                      value={employeeForm.designation}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, designation: e.target.value })}
+                      placeholder="e.g. Territory Sales & Recovery Manager"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Assigned Region *</label>
+                    <select
+                      value={employeeForm.region}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, region: e.target.value })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    >
+                      <option value="Punjab Central">Punjab Central (Lahore, Gujranwala)</option>
+                      <option value="Punjab North">Punjab North (Rawalpindi, Islamabad)</option>
+                      <option value="Punjab South">Punjab South (Multan, Bahawalpur)</option>
+                      <option value="Sindh South">Sindh South (Karachi, Hyderabad)</option>
+                      <option value="KPK West">KPK West (Peshawar, Mardan)</option>
+                      <option value="Balochistan">Balochistan (Quetta)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Area / Division *</label>
+                    <input
+                      type="text"
+                      required
+                      value={employeeForm.area}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, area: e.target.value })}
+                      placeholder="e.g. Lahore Division / Karachi Zone"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Primary Market Territory *</label>
+                    <input
+                      type="text"
+                      required
+                      value={employeeForm.territory}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, territory: e.target.value })}
+                      placeholder="e.g. Brandreth Road & Montgomery Road"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Home Branch / Depot *</label>
+                    <select
+                      value={employeeForm.baseBranch}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, baseBranch: e.target.value })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    >
+                      <option value="National Lights Head Office, Lahore">National Lights Head Office, Lahore</option>
+                      <option value="Karachi Regional Distribution Depot">Karachi Regional Distribution Depot</option>
+                      <option value="Rawalpindi / Islamabad Hub">Rawalpindi / Islamabad Hub</option>
+                      <option value="Peshawar North Depot">Peshawar North Depot</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Targets, Commission & Salary */}
+              <div className="nm-inset p-3.5 rounded-2xl space-y-3">
+                <span className="text-[10px] font-black text-teal-800 uppercase tracking-wider block">
+                  3. Monthly Targets, Salary Grade &amp; Route Schedule
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Monthly Sales Quota (PKR) *</label>
+                    <input
+                      type="number"
+                      required
+                      value={employeeForm.targetMonthlySales}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, targetMonthlySales: Number(e.target.value) })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold text-teal-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Monthly Recovery Quota (PKR) *</label>
+                    <input
+                      type="number"
+                      required
+                      value={employeeForm.targetMonthlyRecovery}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, targetMonthlyRecovery: Number(e.target.value) })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold text-indigo-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Salary &amp; Commission Grade</label>
+                    <input
+                      type="text"
+                      value={employeeForm.salaryGrade}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, salaryGrade: e.target.value })}
+                      placeholder="e.g. Grade B2 + 1.5% Commission"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Date of Joining *</label>
+                    <input
+                      type="date"
+                      required
+                      value={employeeForm.dateOfJoining}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, dateOfJoining: e.target.value })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Employment Status</label>
+                    <select
+                      value={employeeForm.status}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, status: e.target.value })}
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                    >
+                      <option value="ACTIVE">ACTIVE (On Field Duty)</option>
+                      <option value="ON_LEAVE">ON_LEAVE (Temporary Leave)</option>
+                      <option value="INACTIVE">INACTIVE (Deactivated)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Residential Address</label>
+                    <input
+                      type="text"
+                      value={employeeForm.address}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, address: e.target.value })}
+                      placeholder="e.g. House #12, Block B, Bahria Town, Lahore"
+                      className="w-full p-2.5 rounded-xl nm-inset text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Weekly Beat Schedule (Comma Separated)</label>
+                  <input
+                    type="text"
+                    value={employeeForm.beatsStr}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, beatsStr: e.target.value })}
+                    placeholder="Monday: Brandreth Road, Tuesday: Montgomery Road, Wednesday: Hall Road"
+                    className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalType(null)}
+                  className="nm-btn px-4 py-2 rounded-xl font-bold text-slate-600"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="nm-btn-primary px-6 py-2.5 rounded-xl font-black shadow-md">
+                  Save Personnel Record
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Employee Dossier Modal (Complete Personnel Profile) */}
+      {modalType === 'EMPLOYEE_DOSSIER' && selectedSalesPerson && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="nm-flat bg-[#E8ECF2] p-6 rounded-3xl border border-white max-w-xl w-full space-y-4 shadow-2xl my-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-300">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="nm-badge-teal text-[10px] px-2.5 py-0.5 rounded-full font-bold">
+                    {selectedSalesPerson.role || 'TSM'}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-slate-700 bg-slate-200 px-2.5 py-0.5 rounded-md">
+                    {selectedSalesPerson.employeeCode || selectedSalesPerson.id}
+                  </span>
+                </div>
+                <h3 className="text-base font-black text-slate-800 mt-1">{selectedSalesPerson.name}</h3>
+                <p className="text-xs text-slate-500 font-medium">{selectedSalesPerson.designation || 'Territory Sales Manager'}</p>
+              </div>
+              <button
+                onClick={() => setModalType(null)}
+                className="nm-btn w-8 h-8 rounded-full text-slate-600 font-bold hover:text-slate-900 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="nm-inset p-3 rounded-2xl space-y-1">
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Monthly Sales Target</span>
+                <div className="text-base font-black text-emerald-700">
+                  PKR {(selectedSalesPerson.targetMonthlySales || 2500000).toLocaleString()}
+                </div>
+              </div>
+              <div className="nm-inset p-3 rounded-2xl space-y-1">
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Monthly Recovery Quota</span>
+                <div className="text-base font-black text-indigo-700">
+                  PKR {(selectedSalesPerson.targetMonthlyRecovery || 2000000).toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            <div className="nm-inset p-4 rounded-2xl space-y-2 text-xs text-slate-600">
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">CNIC Number:</span>
+                <span className="font-mono font-bold text-slate-800">{selectedSalesPerson.cnic || '35202-9876543-1'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Primary Contact Phone:</span>
+                <span className="font-bold text-slate-800">{selectedSalesPerson.phone || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Emergency / Alt Contact:</span>
+                <span className="font-bold text-slate-800">{selectedSalesPerson.emergencyPhone || '+92 321 4455667'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Corporate Email:</span>
+                <span className="font-bold text-slate-800">{selectedSalesPerson.email || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Assigned Region &amp; Area:</span>
+                <span className="font-bold text-teal-800">{selectedSalesPerson.region} ({selectedSalesPerson.area || 'Central Area'})</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Territory &amp; Base Branch:</span>
+                <span className="font-bold text-slate-800">{selectedSalesPerson.territory || 'Main Beat'} • {selectedSalesPerson.baseBranch || 'Head Office'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Salary Grade / Commission:</span>
+                <span className="font-bold text-slate-800">{selectedSalesPerson.salaryGrade || 'Grade B2 + 1.5% Sales Commission'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500 font-bold">Date of Joining:</span>
+                <span className="font-mono text-slate-800">{selectedSalesPerson.dateOfJoining || '2023-01-15'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-bold">Residential Address:</span>
+                <span className="font-medium text-slate-800 truncate max-w-[240px]">{selectedSalesPerson.address || 'Lahore, Pakistan'}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setModalType(null)}
+                className="nm-btn px-5 py-2.5 rounded-xl text-xs font-bold text-slate-700"
+              >
+                Close Dossier
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. Add Hierarchy Node Modal (Admin Only) */}
+      {modalType === 'ADD_HIERARCHY_NODE' && isAdmin && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="nm-flat bg-[#E8ECF2] p-6 rounded-3xl border border-white max-w-md w-full space-y-4 shadow-2xl">
+            <h3 className="text-base font-black text-slate-800">Add Territory Hierarchy Node</h3>
+            <form onSubmit={handleSaveHierarchyNode} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Hierarchy Level Tier *</label>
+                <select
+                  value={hierarchyForm.tierLevel}
+                  onChange={(e) => setHierarchyForm({ ...hierarchyForm, tierLevel: e.target.value })}
+                  className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                >
+                  <option value="Tier 1: Executive Governance">Tier 1: Executive Governance</option>
+                  <option value="Tier 2: Regional Operations (RSM)">Tier 2: Regional Operations (RSM)</option>
+                  <option value="Tier 3: Area Divisions (ASM)">Tier 3: Area Divisions (ASM)</option>
+                  <option value="Tier 4: Territory Beats (TSM)">Tier 4: Territory Beats (TSM)</option>
+                  <option value="Tier 5: Commercial Outlets & Distributors">Tier 5: Commercial Outlets</option>
+                </select>
+              </div>
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Node / Zone Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={hierarchyForm.nodeName}
+                  onChange={(e) => setHierarchyForm({ ...hierarchyForm, nodeName: e.target.value })}
+                  placeholder="e.g. Multan & Bahawalpur Zonal Hub"
+                  className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
+                />
+              </div>
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Assigned Manager / TSM</label>
+                <input
+                  type="text"
+                  value={hierarchyForm.assignedOfficer}
+                  onChange={(e) => setHierarchyForm({ ...hierarchyForm, assignedOfficer: e.target.value })}
+                  placeholder="e.g. Muhammad Amjid (RSM)"
+                  className="w-full p-2.5 rounded-xl nm-inset text-xs"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalType(null)}
+                  className="nm-btn px-4 py-2 rounded-xl font-bold text-slate-600"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="nm-btn-primary px-5 py-2 rounded-xl font-bold shadow-md">
+                  Add Node
                 </button>
               </div>
             </form>

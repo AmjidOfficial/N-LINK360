@@ -12,15 +12,17 @@ import {
   Warehouse,
   Store,
   LayoutDashboard,
-  Search,
   Bell,
   RefreshCw,
   User,
   LogOut,
   CheckCircle2,
-  SlidersHorizontal,
   X,
-  Menu
+  Menu,
+  MapPin,
+  CalendarCheck,
+  TrendingUp,
+  ChevronRight
 } from 'lucide-react';
 import { User as UserType } from '../types';
 import { isAdminUser } from '../services/production-users';
@@ -54,8 +56,8 @@ interface HeaderProps {
   onSignOut: () => void;
   onOpenAuditLogs: () => void;
   onRefreshData: () => Promise<void>;
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
+  searchQuery?: string;
+  setSearchQuery?: (q: string) => void;
 }
 
 export const NeumorphicHeader: React.FC<HeaderProps> = ({
@@ -69,12 +71,10 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
   onSignOut,
   onOpenAuditLogs,
   onRefreshData,
-  searchQuery,
-  setSearchQuery,
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Operations domain is strictly restricted to Admins & Managers
   const canAccessOperations = isAdminUser(currentUser) || currentUser.role === 'ACCOUNTS' || currentUser.role === 'WAREHOUSE_MANAGER';
@@ -88,12 +88,28 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
     }
   };
 
+  const navTo = (domain: MainDomain, subTab?: string) => {
+    setActiveDomain(domain);
+    if (domain === 'OPERATIONS' && subTab) setActiveOpTab(subTab as OperationSubTab);
+    if (domain === 'REPORTS' && subTab) setActiveRepTab(subTab as ReportSubTab);
+    setIsDrawerOpen(false);
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-[#E8ECF2]/95 backdrop-blur-md border-b border-white/60 shadow-sm transition-all">
       {/* Top Command Bar */}
-      <div className="nm-container py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-3">
-        {/* Brand & Logo */}
-        <div className="flex items-center justify-between w-full md:w-auto">
+      <div className="nm-container py-3 flex items-center justify-between gap-3">
+        {/* Brand, Logo & Side Drawer Trigger */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="p-2.5 rounded-2xl nm-btn text-teal-800 flex items-center gap-2 hover:border-teal-500/40 transition-all cursor-pointer"
+            title="Open Main Navigation Drawer"
+          >
+            <Menu className="w-5 h-5 text-teal-700" />
+            <span className="text-xs font-black">Navigation Drawer</span>
+          </button>
+
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center nm-flat text-teal-700 font-black text-sm sm:text-base tracking-wider border border-white shrink-0">
               NL
@@ -107,283 +123,387 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
                   Enterprise
                 </span>
               </div>
-              <p className="hidden sm:block text-[10px] sm:text-[11px] text-slate-500 font-medium">National Lights Operations Platform</p>
+              <p className="hidden md:block text-[10px] text-slate-500 font-medium">National Lights Enterprise Workspace</p>
             </div>
-          </div>
-
-          {/* Mobile Side Drawer Toggle */}
-          <div className="flex items-center md:hidden">
-            <button
-              onClick={() => setIsMobileDrawerOpen(true)}
-              className="p-2.5 rounded-xl text-xs font-bold nm-btn text-slate-800 flex items-center gap-1.5"
-              title="Open Navigation Drawer"
-            >
-              <Menu className="w-4 h-4 text-teal-700" />
-              <span className="text-[11px]">Menu</span>
-            </button>
           </div>
         </div>
 
-        {/* Search & Actions Ribbon */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto">
-          {/* Debossed Search Bar */}
-          <div className="relative flex-1 md:w-80">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search SKU, dealer, town, invoice..."
-              className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl nm-inset text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-500/50"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
+        {/* Current Domain Badge & Quick Actions */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Active Section Badge */}
+          <div className="hidden md:flex items-center gap-2 nm-inset px-3.5 py-1.5 rounded-2xl text-xs font-bold text-slate-700">
+            <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse" />
+            <span>
+              {activeDomain === 'DASHBOARDS'
+                ? 'Sales & Recovery Analysis'
+                : activeDomain === 'OPERATIONS'
+                ? `Operations — ${activeOpTab.replace('_', ' ')}`
+                : `Reports — ${activeRepTab.replace('_', ' ')}`}
+            </span>
           </div>
 
-          {/* Desktop Right Actions */}
-          <div className="hidden md:flex items-center gap-2.5">
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="nm-btn p-2.5 rounded-xl text-slate-700 hover:text-teal-700 transition-colors"
-              title="Refresh Live Data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
-            </button>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="nm-btn p-2.5 rounded-2xl text-slate-700 hover:text-teal-700 transition-colors"
+            title="Refresh Live Data"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
+          </button>
 
-            <button
-              onClick={onOpenAuditLogs}
-              className="nm-btn p-2.5 rounded-xl text-slate-700 hover:text-amber-700 transition-colors relative"
-              title="Audit Logs & System Activity"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-teal-600 ring-2 ring-[#E8ECF2]" />
-            </button>
+          <button
+            onClick={onOpenAuditLogs}
+            className="nm-btn p-2.5 rounded-2xl text-slate-700 hover:text-amber-700 transition-colors relative"
+            title="Audit Logs & System Activity"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-teal-600 ring-2 ring-[#E8ECF2]" />
+          </button>
 
-            <button
-              onClick={() => setIsProfileModalOpen(true)}
-              className="nm-flat-sm px-3 py-1.5 rounded-xl flex items-center gap-2 border border-white/80 hover:border-teal-500/40 transition-colors text-left"
-              title="View Account Profile"
-            >
-              <div className="w-7 h-7 rounded-lg nm-inset flex items-center justify-center text-teal-700">
-                <User className="w-3.5 h-3.5" />
+          <button
+            onClick={() => setIsProfileModalOpen(true)}
+            className="nm-flat-sm px-3 py-1.5 rounded-2xl flex items-center gap-2 border border-white/80 hover:border-teal-500/40 transition-colors text-left"
+            title="View Account Profile"
+          >
+            <div className="w-7 h-7 rounded-xl nm-inset flex items-center justify-center text-teal-700 font-black">
+              <User className="w-3.5 h-3.5" />
+            </div>
+            <div className="text-left leading-none hidden md:block">
+              <span className="text-xs font-bold text-slate-800 block truncate max-w-[120px]">
+                {currentUser.fullName}
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium">
+                {currentUser.role.replace('_', ' ')}
+              </span>
+            </div>
+          </button>
+
+          <button
+            onClick={onSignOut}
+            className="nm-btn p-2.5 rounded-2xl text-slate-600 hover:text-rose-600 transition-colors"
+            title="Sign Out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Side Drawer Overlay Modal */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-start bg-slate-900/50 backdrop-blur-sm transition-all">
+          <div className="nm-flat w-full max-w-sm sm:max-w-md h-full bg-[#E8ECF2] p-6 flex flex-col justify-between shadow-2xl overflow-y-auto border-r border-white">
+            <div className="space-y-6">
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-300">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl nm-flat flex items-center justify-center text-teal-700 font-black text-base border border-white">
+                    NL
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-800">N-LINK 360</h3>
+                    <p className="text-[11px] text-slate-500 font-medium">Navigation & Operations Drawer</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="nm-btn p-2.5 rounded-full text-slate-600 font-bold hover:text-rose-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="text-left leading-none">
-                <span className="text-xs font-bold text-slate-800 block truncate max-w-[130px]">
-                  {currentUser.fullName}
-                </span>
-                <span className="text-[10px] text-slate-500 font-medium">
+
+              {/* User Profile Summary */}
+              <div className="nm-inset p-3.5 rounded-2xl space-y-1">
+                <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider block">Signed In User</span>
+                <p className="text-xs font-black text-slate-800">{currentUser.fullName}</p>
+                <p className="text-[11px] text-slate-500 font-mono truncate">{currentUser.email}</p>
+                <span className="inline-block mt-1 text-[9px] px-2.5 py-0.5 rounded-md bg-teal-100 text-teal-800 font-bold">
                   {currentUser.role.replace('_', ' ')}
                 </span>
               </div>
-            </button>
 
-            <button
-              onClick={onSignOut}
-              className="nm-btn p-2.5 rounded-xl text-slate-600 hover:text-rose-600 transition-colors"
-              title="Sign Out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+              {/* Navigation Group 1: Dashboards & Analysis */}
+              <div className="space-y-2">
+                <div className="text-[10px] font-black text-slate-500 uppercase tracking-wider px-1 flex items-center gap-1.5">
+                  <LayoutDashboard className="w-3.5 h-3.5 text-teal-600" />
+                  1. Dashboards & Analysis
+                </div>
+                <div className="space-y-1.5">
+                  <button
+                    onClick={() => navTo('DASHBOARDS')}
+                    className={`w-full text-left p-3 rounded-2xl text-xs font-bold transition-all flex items-center justify-between ${
+                      activeDomain === 'DASHBOARDS'
+                        ? 'nm-btn-primary shadow-sm'
+                        : 'nm-btn text-slate-700 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>Sales & Recovery Analysis</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-70" />
+                  </button>
 
-      {/* Main Domains Bar */}
-      <div className="nm-container pt-0.5 pb-2.5">
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl nm-inset overflow-x-auto scrollbar-none">
-          {/* Domain 1: Dashboards */}
-          <button
-            onClick={() => setActiveDomain('DASHBOARDS')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeDomain === 'DASHBOARDS'
-                ? 'nm-btn-primary shadow-md'
-                : 'nm-btn text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>Dashboards</span>
-          </button>
+                  <button
+                    onClick={() => navTo('OPERATIONS', 'TARGET')}
+                    className="w-full text-left p-3 rounded-2xl text-xs font-bold nm-btn text-slate-700 hover:text-slate-900 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Target className="w-4 h-4 text-amber-600" />
+                      <span>Target vs Achievement</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-70" />
+                  </button>
+                </div>
+              </div>
 
-          {/* Domain 2: Operation Domain (Admins Only) */}
-          {canAccessOperations && (
-            <button
-              onClick={() => setActiveDomain('OPERATIONS')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                activeDomain === 'OPERATIONS'
-                  ? 'nm-btn-primary shadow-md'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Operation Domain</span>
-            </button>
-          )}
+              {/* Navigation Group 2: Operation Domain */}
+              {canAccessOperations && (
+                <div className="space-y-2 pt-2 border-t border-slate-200">
+                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-wider px-1 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-teal-600" />
+                    2. Operation Domain
+                  </div>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    <button
+                      onClick={() => navTo('OPERATIONS', 'COMPANY')}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                        activeDomain === 'OPERATIONS' && activeOpTab === 'COMPANY'
+                          ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                          : 'nm-btn text-slate-700 hover:text-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Company Master</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    </button>
 
-          {/* Domain 3: Reports */}
-          <button
-            onClick={() => setActiveDomain('REPORTS')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeDomain === 'REPORTS'
-                ? 'nm-btn-primary shadow-md'
-                : 'nm-btn text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>Reports & Registers</span>
-          </button>
-        </div>
-      </div>
+                    <button
+                      onClick={() => navTo('OPERATIONS', 'BRANDS_PRODUCTS')}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                        activeDomain === 'OPERATIONS' && activeOpTab === 'BRANDS_PRODUCTS'
+                          ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                          : 'nm-btn text-slate-700 hover:text-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Package className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Brands / Products</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    </button>
 
-      {/* Secondary Sub-Tabs Strip */}
-      {activeDomain === 'OPERATIONS' && (
-        <div className="bg-[#E2E7EE]/80 border-t border-b border-white/60 py-2">
-          <div className="nm-container flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-            <button
-              onClick={() => setActiveOpTab('COMPANY')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeOpTab === 'COMPANY'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5 text-teal-600" />
-              Company Master
-            </button>
-            <button
-              onClick={() => setActiveOpTab('BRANDS_PRODUCTS')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeOpTab === 'BRANDS_PRODUCTS'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Package className="w-3.5 h-3.5 text-teal-600" />
-              Brands / Products
-            </button>
-            <button
-              onClick={() => setActiveOpTab('DEALERS_DISTRIBUTORS')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeOpTab === 'DEALERS_DISTRIBUTORS'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Store className="w-3.5 h-3.5 text-teal-600" />
-              Dealers / Distributors
-            </button>
-            <button
-              onClick={() => setActiveOpTab('TARGET')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeOpTab === 'TARGET'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Target className="w-3.5 h-3.5 text-amber-600" />
-              Target Allocation
-            </button>
-            <button
-              onClick={() => setActiveOpTab('SALES_TEAM')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeOpTab === 'SALES_TEAM'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5 text-teal-600" />
-              Sales Team
-            </button>
-            <button
-              onClick={() => setActiveOpTab('HIERARCHY')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeOpTab === 'HIERARCHY'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <GitFork className="w-3.5 h-3.5 text-teal-600" />
-              Territory Hierarchy
-            </button>
-          </div>
-        </div>
-      )}
+                    <button
+                      onClick={() => navTo('OPERATIONS', 'DEALERS_DISTRIBUTORS')}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                        activeDomain === 'OPERATIONS' && activeOpTab === 'DEALERS_DISTRIBUTORS'
+                          ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                          : 'nm-btn text-slate-700 hover:text-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Store className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Dealers / Distributors</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    </button>
 
-      {activeDomain === 'REPORTS' && (
-        <div className="bg-[#E2E7EE]/80 border-t border-b border-white/60 py-2">
-          <div className="nm-container flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-            <button
-              onClick={() => setActiveRepTab('SALES')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeRepTab === 'SALES'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5 text-teal-600" />
-              Sales Report
-            </button>
-            <button
-              onClick={() => setActiveRepTab('CREDIT')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeRepTab === 'CREDIT'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <CreditCard className="w-3.5 h-3.5 text-rose-600" />
-              Credit & Aging
-            </button>
-            <button
-              onClick={() => setActiveRepTab('RECOVERY')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeRepTab === 'RECOVERY'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Banknote className="w-3.5 h-3.5 text-emerald-600" />
-              Recovery Register
-            </button>
-            <button
-              onClick={() => setActiveRepTab('LEDGERS')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeRepTab === 'LEDGERS'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5 text-teal-600" />
-              Party Ledgers
-            </button>
-            <button
-              onClick={() => setActiveRepTab('STOCKS_WAREHOUSE')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeRepTab === 'STOCKS_WAREHOUSE'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Warehouse className="w-3.5 h-3.5 text-amber-600" />
-              Stocks / Warehouse
-            </button>
-            <button
-              onClick={() => setActiveRepTab('DEALERS_DISTRIBUTOR')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
-                activeRepTab === 'DEALERS_DISTRIBUTOR'
-                  ? 'nm-inset text-teal-800 bg-[#E8ECF2] border border-teal-500/20'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Store className="w-3.5 h-3.5 text-indigo-600" />
-              Dealer Performance
-            </button>
+                    <button
+                      onClick={() => navTo('OPERATIONS', 'TARGET')}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                        activeDomain === 'OPERATIONS' && activeOpTab === 'TARGET'
+                          ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                          : 'nm-btn text-slate-700 hover:text-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Target className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Target Allocation</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    </button>
+
+                    <button
+                      onClick={() => navTo('OPERATIONS', 'SALES_TEAM')}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                        activeDomain === 'OPERATIONS' && activeOpTab === 'SALES_TEAM'
+                          ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                          : 'nm-btn text-slate-700 hover:text-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Users className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Sales Team</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    </button>
+
+                    <button
+                      onClick={() => navTo('OPERATIONS', 'HIERARCHY')}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                        activeDomain === 'OPERATIONS' && activeOpTab === 'HIERARCHY'
+                          ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                          : 'nm-btn text-slate-700 hover:text-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <GitFork className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Hierarchy & Regional Tree</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    </button>
+
+                    <button
+                      onClick={() => navTo('OPERATIONS', 'HIERARCHY')}
+                      className="w-full text-left p-2.5 rounded-xl text-xs font-bold nm-btn text-slate-700 hover:text-slate-900 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Towns & Territories</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    </button>
+
+                    <button
+                      onClick={() => navTo('OPERATIONS', 'SALES_TEAM')}
+                      className="w-full text-left p-2.5 rounded-xl text-xs font-bold nm-btn text-slate-700 hover:text-slate-900 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CalendarCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Attendance & Field Visits</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Group 3: Reports & Registers */}
+              <div className="space-y-2 pt-2 border-t border-slate-200">
+                <div className="text-[10px] font-black text-slate-500 uppercase tracking-wider px-1 flex items-center gap-1.5">
+                  <BarChart3 className="w-3.5 h-3.5 text-teal-600" />
+                  3. Reports & Registers
+                </div>
+                <div className="grid grid-cols-1 gap-1.5">
+                  <button
+                    onClick={() => navTo('REPORTS', 'SALES')}
+                    className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                      activeDomain === 'REPORTS' && activeRepTab === 'SALES'
+                        ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                        : 'nm-btn text-slate-700 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-3.5 h-3.5 text-teal-600" />
+                      <span>Sales Report</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  <button
+                    onClick={() => navTo('REPORTS', 'CREDIT')}
+                    className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                      activeDomain === 'REPORTS' && activeRepTab === 'CREDIT'
+                        ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                        : 'nm-btn text-slate-700 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Credit & Aging</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  <button
+                    onClick={() => navTo('REPORTS', 'RECOVERY')}
+                    className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                      activeDomain === 'REPORTS' && activeRepTab === 'RECOVERY'
+                        ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                        : 'nm-btn text-slate-700 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Banknote className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Recovery Register</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  <button
+                    onClick={() => navTo('REPORTS', 'LEDGERS')}
+                    className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                      activeDomain === 'REPORTS' && activeRepTab === 'LEDGERS'
+                        ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                        : 'nm-btn text-slate-700 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-3.5 h-3.5 text-teal-600" />
+                      <span>Party Ledgers</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  <button
+                    onClick={() => navTo('REPORTS', 'STOCKS_WAREHOUSE')}
+                    className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                      activeDomain === 'REPORTS' && activeRepTab === 'STOCKS_WAREHOUSE'
+                        ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                        : 'nm-btn text-slate-700 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Warehouse className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Stocks / Warehouse Floor</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  <button
+                    onClick={() => navTo('REPORTS', 'DEALERS_DISTRIBUTOR')}
+                    className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                      activeDomain === 'REPORTS' && activeRepTab === 'DEALERS_DISTRIBUTOR'
+                        ? 'nm-inset text-teal-900 font-extrabold bg-[#E8ECF2] border border-teal-500/20'
+                        : 'nm-btn text-slate-700 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Store className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Dealers / Distributor Performance</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="pt-4 border-t border-slate-300 space-y-2">
+              <button
+                onClick={() => {
+                  setIsDrawerOpen(false);
+                  onOpenAuditLogs();
+                }}
+                className="w-full nm-btn p-3 rounded-2xl text-xs font-bold text-slate-700 flex items-center gap-3"
+              >
+                <Bell className="w-4 h-4 text-amber-600" />
+                <span>System Audit Logs</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsDrawerOpen(false);
+                  onSignOut();
+                }}
+                className="w-full nm-btn py-3 rounded-2xl text-xs font-bold text-rose-600 flex items-center justify-center gap-2 hover:bg-rose-50"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out of Enterprise</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -452,92 +572,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
           </div>
         </div>
       )}
-
-      {/* Mobile Slide-Over Side Drawer */}
-      {isMobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-sm transition-all md:hidden">
-          <div className="nm-flat w-4/5 max-w-sm h-full bg-[#E8ECF2] p-6 flex flex-col justify-between shadow-2xl overflow-y-auto border-l border-white">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl nm-flat flex items-center justify-center text-teal-700 font-black">
-                    NL
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-800">N-LINK 360</h3>
-                    <p className="text-[10px] text-slate-500 font-medium">Mobile Operations Menu</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsMobileDrawerOpen(false)}
-                  className="nm-btn p-2 rounded-full text-slate-600 font-bold"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* User Card inside Drawer */}
-              <div className="nm-inset p-3.5 rounded-2xl space-y-1">
-                <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider block">Signed In User</span>
-                <p className="text-xs font-black text-slate-800">{currentUser.fullName}</p>
-                <p className="text-[11px] text-slate-500 font-mono truncate">{currentUser.email}</p>
-                <span className="inline-block mt-1 text-[9px] px-2 py-0.5 rounded-md bg-teal-100 text-teal-800 font-bold">
-                  {currentUser.role.replace('_', ' ')}
-                </span>
-              </div>
-
-              {/* Drawer Action Buttons */}
-              <div className="space-y-2.5">
-                <button
-                  onClick={() => {
-                    setIsMobileDrawerOpen(false);
-                    handleRefresh();
-                  }}
-                  className="w-full nm-btn p-3 rounded-2xl text-xs font-bold text-slate-700 flex items-center gap-3"
-                >
-                  <RefreshCw className={`w-4 h-4 text-teal-700 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  <span>Refresh Workspace Data</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsMobileDrawerOpen(false);
-                    onOpenAuditLogs();
-                  }}
-                  className="w-full nm-btn p-3 rounded-2xl text-xs font-bold text-slate-700 flex items-center gap-3"
-                >
-                  <Bell className="w-4 h-4 text-amber-600" />
-                  <span>System Audit Logs</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsMobileDrawerOpen(false);
-                    setIsProfileModalOpen(true);
-                  }}
-                  className="w-full nm-btn p-3 rounded-2xl text-xs font-bold text-slate-700 flex items-center gap-3"
-                >
-                  <User className="w-4 h-4 text-indigo-600" />
-                  <span>View Account Profile</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-200">
-              <button
-                onClick={() => {
-                  setIsMobileDrawerOpen(false);
-                  onSignOut();
-                }}
-                className="w-full nm-btn py-3 rounded-2xl text-xs font-bold text-rose-600 flex items-center justify-center gap-2 hover:bg-rose-50"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out of Enterprise</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 };
+

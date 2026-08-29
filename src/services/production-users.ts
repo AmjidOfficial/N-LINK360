@@ -16,6 +16,30 @@ export interface ProductionAccount {
   description: string;
 }
 
+export const MULTI_ROLE_ELIGIBLE_EMAILS = [
+  'admin@nationallights.com',
+  'nationallights2026@gmail.com',
+];
+
+export function isMultiRoleEligibleEmail(email: string): boolean {
+  const clean = email.trim().toLowerCase();
+  if (!clean) return false;
+  if (MULTI_ROLE_ELIGIBLE_EMAILS.includes(clean)) return true;
+  if (clean.includes('amjid')) return true;
+  return false;
+}
+
+export const AVAILABLE_ROLES: { role: UserRole; title: string; category: string }[] = [
+  { role: 'SUPER_ADMIN', title: 'Super Admin', category: 'Executive' },
+  { role: 'MANAGEMENT', title: 'Management', category: 'Executive' },
+  { role: 'RSM', title: 'RSM', category: 'Sales Field' },
+  { role: 'ASM', title: 'ASM', category: 'Sales Field' },
+  { role: 'TSM', title: 'TSM', category: 'Sales Field' },
+  { role: 'ACCOUNTS', title: 'Accounts', category: 'Finance' },
+  { role: 'WAREHOUSE_MANAGER', title: 'Warehouse Manager', category: 'Supply Chain' },
+  { role: 'FACTORY_MANAGER', title: 'Factory Manager', category: 'Manufacturing' },
+];
+
 export const PRODUCTION_ACCOUNTS: ProductionAccount[] = [
   {
     id: 'USR-ADMIN-01',
@@ -31,6 +55,18 @@ export const PRODUCTION_ACCOUNTS: ProductionAccount[] = [
   },
   {
     id: 'USR-ADMIN-02',
+    email: 'nationallights2026@gmail.com',
+    fullName: 'Muhammad Amjid (National Lights Admin)',
+    phone: '+92 300 8456101',
+    role: 'SUPER_ADMIN',
+    roleTitle: 'Managing Administrator',
+    branchId: 'BR-01',
+    branchName: 'National Lights Head Office, Lahore',
+    accessScope: 'GLOBAL_ADMIN',
+    description: 'Executive Administrator with full multi-role access across all operational domains.',
+  },
+  {
+    id: 'USR-ADMIN-03',
     email: 'syedzain@nationallights.com',
     fullName: 'Syed Zain',
     phone: '+92 300 1122334',
@@ -42,7 +78,7 @@ export const PRODUCTION_ACCOUNTS: ProductionAccount[] = [
     description: 'Managing Partner with executive governance over commercial distribution, strategy, and regional accounts.',
   },
   {
-    id: 'USR-ADMIN-03',
+    id: 'USR-ADMIN-04',
     email: 'shahzadullah@nationallights.com',
     fullName: 'Shahzad Ullah',
     phone: '+92 300 5566778',
@@ -147,8 +183,9 @@ export function registerPortalEmployee(account: Partial<ProductionAccount> & { e
 
 /**
  * Authenticate and verify employee purely by registered Email.
+ * Allows role override for multi-role eligible administrative accounts.
  */
-export function authenticateProductionEmail(email: string): User | null {
+export function authenticateProductionEmail(email: string, overrideRole?: UserRole): User | null {
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail || !cleanEmail.includes('@')) {
     return null;
@@ -163,7 +200,7 @@ export function authenticateProductionEmail(email: string): User | null {
   }
 
   // 3. Auto-register if email ends with @nationallights.com or is added dynamically
-  if (!account && (cleanEmail.endsWith('@nationallights.com') || cleanEmail.endsWith('@nlink.com'))) {
+  if (!account && (cleanEmail.endsWith('@nationallights.com') || cleanEmail.endsWith('@nlink.com') || cleanEmail.endsWith('@gmail.com'))) {
     account = registerPortalEmployee({
       email: cleanEmail,
       fullName: cleanEmail.split('@')[0].replace('.', ' ').replace('-', ' ').toUpperCase(),
@@ -178,12 +215,14 @@ export function authenticateProductionEmail(email: string): User | null {
     });
   }
 
+  const activeRole = overrideRole || account.role;
+
   return {
     id: account.id,
     email: account.email,
     fullName: account.fullName,
     phone: account.phone,
-    role: account.role,
+    role: activeRole,
     branchId: account.branchId,
     branchName: account.branchName,
     isActive: true,
@@ -192,6 +231,6 @@ export function authenticateProductionEmail(email: string): User | null {
   };
 }
 
-export function authenticateProductionCredentials(email: string, _password?: string): User | null {
-  return authenticateProductionEmail(email);
+export function authenticateProductionCredentials(email: string, _password?: string, overrideRole?: UserRole): User | null {
+  return authenticateProductionEmail(email, overrideRole);
 }

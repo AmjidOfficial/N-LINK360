@@ -270,11 +270,11 @@ export const NeumorphicExecutiveDashboard: React.FC<ExecutiveDashboardProps> = (
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-black text-slate-800">
-                {isField ? 'Assigned Field Operations' : 'Master Enterprise Operations'}
+                {isField ? 'Field Force Khata, Ledger & Invoice Hub' : 'Master Enterprise Operations'}
               </h2>
               <p className="text-[11px] text-slate-500">
                 {isField
-                  ? 'Access your designated dealers, log orders & generate party statement ledgers'
+                  ? 'CreditBook & Invoice Maker mode: Fast party khata, cash-in logging & 1-tap professional billing'
                   : 'Manage national branch hubs, automotive SKU catalogue, target quotas & territories'}
               </p>
             </div>
@@ -296,10 +296,10 @@ export const NeumorphicExecutiveDashboard: React.FC<ExecutiveDashboardProps> = (
                 <Store className="w-4 h-4" />
               </div>
               <div className="text-xs font-black text-slate-800">
-                {isField ? 'My Assigned Dealers' : 'Dealer & Distributor Network'}
+                {isField ? 'Party Khata / Accounts' : 'Dealer & Distributor Network'}
               </div>
               <p className="text-[10px] text-slate-500">
-                {isField ? 'View your accounts, credit limits & phone numbers' : 'All accounts across all 5 national regions'}
+                {isField ? 'CreditBook style ledger balances & phone contacts' : 'All accounts across all 5 national regions'}
               </p>
             </div>
 
@@ -311,10 +311,10 @@ export const NeumorphicExecutiveDashboard: React.FC<ExecutiveDashboardProps> = (
                 <Target className="w-4 h-4" />
               </div>
               <div className="text-xs font-black text-slate-800">
-                {isField ? 'My Target & KPI Quota' : 'Target Allocation Quotas'}
+                {isField ? 'Sales & Recovery Quota' : 'Target Allocation Quotas'}
               </div>
               <p className="text-[10px] text-slate-500">
-                {isField ? 'Track your realization against monthly target' : 'Sales and recovery quotas by officer'}
+                {isField ? 'Track realization against monthly target' : 'Sales and recovery quotas by officer'}
               </p>
             </div>
 
@@ -326,10 +326,10 @@ export const NeumorphicExecutiveDashboard: React.FC<ExecutiveDashboardProps> = (
                 <FileText className="w-4 h-4" />
               </div>
               <div className="text-xs font-black text-slate-800">
-                {isField ? 'Party Statements & Ledgers' : 'Audited Party Ledgers'}
+                {isField ? 'Invoice & Ledger Book' : 'Audited Party Ledgers'}
               </div>
               <p className="text-[10px] text-slate-500">
-                {isField ? 'Print statements for assigned dealers' : 'Full double-entry party ledgers with PDF export'}
+                {isField ? 'Invoice Maker estimates & double-entry statement' : 'Full double-entry party ledgers with PDF export'}
               </p>
             </div>
           </div>
