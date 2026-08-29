@@ -108,16 +108,16 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Action Controls & User */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {/* Global Search Button */}
           {onOpenGlobalSearch && (
             <button
               onClick={onOpenGlobalSearch}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-bg-secondary px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-colors"
+              className="flex min-h-[38px] items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-bg-secondary px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:border-slate-300 active:scale-95 transition-all"
               title="Global Search (Ctrl+K)"
             >
-              <Search className="h-4 w-4 text-amber-600" />
-              <span className="hidden sm:inline">Search Everything</span>
+              <Search className="h-4 w-4 text-amber-600 shrink-0" />
+              <span className="hidden sm:inline">Search</span>
               <kbd className="hidden md:inline-block rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-500 shadow-2xs">
                 ⌘K
               </kbd>
@@ -128,10 +128,10 @@ export const Header: React.FC<HeaderProps> = ({
           {canImport && onOpenImportModal && (
             <button
               onClick={onOpenImportModal}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-bg-secondary px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+              className="flex min-h-[38px] items-center gap-1.5 rounded-xl border border-slate-200 bg-bg-secondary px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 active:scale-95 transition-all"
               title="Controlled Excel/CSV Import Studio"
             >
-              <FileSpreadsheet className="h-4 w-4 text-amber-600" />
+              <FileSpreadsheet className="h-4 w-4 text-amber-600 shrink-0" />
               <span className="hidden lg:inline">Excel Import</span>
             </button>
           )}
@@ -140,11 +140,11 @@ export const Header: React.FC<HeaderProps> = ({
           {canAudit && onOpenAuditLogs && (
             <button
               onClick={onOpenAuditLogs}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-bg-secondary px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+              className="flex min-h-[38px] items-center gap-1.5 rounded-xl border border-slate-200 bg-bg-secondary px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 active:scale-95 transition-all"
               title="Compliance Audit Trail"
             >
-              <ShieldAlert className="h-4 w-4 text-rose-600" />
-              <span className="hidden lg:inline">Audit Logs</span>
+              <ShieldAlert className="h-4 w-4 text-rose-600 shrink-0" />
+              <span className="hidden lg:inline">Audit</span>
             </button>
           )}
 
@@ -152,7 +152,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onOpenOfflineSync && (
             <button
               onClick={onOpenOfflineSync}
-              className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-all ${
+              className={`flex min-h-[38px] items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold active:scale-95 transition-all ${
                 !isOnline
                   ? 'border-rose-300 bg-rose-50 text-rose-800 animate-pulse'
                   : pendingSyncCount > 0
@@ -178,11 +178,11 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Current User Info */}
-          <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-bg-secondary px-3 py-1.5 md:flex">
-            <UserRound className="h-4 w-4 text-amber-600" />
+          <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-bg-secondary px-3 py-1.5 md:flex min-h-[38px]">
+            <UserRound className="h-4 w-4 text-amber-600 shrink-0" />
             <div className="leading-tight">
-              <div className="text-xs font-semibold text-text-primary">{currentUser.fullName}</div>
-              <div className="text-[10px] text-slate-500">{currentUser.id}</div>
+              <div className="text-xs font-semibold text-text-primary truncate max-w-[120px]">{currentUser.fullName}</div>
+              <div className="text-[10px] text-slate-500 truncate max-w-[120px]">{currentUser.branchName || currentUser.role}</div>
             </div>
           </div>
 
@@ -190,10 +190,10 @@ export const Header: React.FC<HeaderProps> = ({
           {onSignOut && (
             <button
               onClick={onSignOut}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-bg-secondary transition-colors"
+              className="flex min-h-[38px] items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-bg-secondary active:scale-95 transition-all"
               title="Sign out"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Sign out</span>
             </button>
           )}

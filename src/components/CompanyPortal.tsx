@@ -67,6 +67,7 @@ import { InvoiceCorrectionTab } from './InvoiceCorrectionTab';
 import { SuperAdminControlCenter } from './SuperAdminControlCenter';
 import { SuperAdminExecutiveDashboard } from './SuperAdminExecutiveDashboard';
 import { RoleScopedDashboard } from './RoleScopedDashboard';
+import { RoleAndHierarchyManagementTab } from './RoleAndHierarchyManagementTab';
 
 interface CompanyPortalProps {
   currentUser: UserType;
@@ -1586,10 +1587,10 @@ export const CompanyPortal: React.FC<CompanyPortalProps> = ({
                     c.companyName,
                     c.contactPerson,
                     c.type,
-                    `${c.city}, ${c.region}`,
-                    c.creditLimit.toLocaleString(),
-                    c.currentBalance.toLocaleString(),
-                    c.status
+                    `${c.city || ''}, ${c.region || ''}`,
+                    (c.creditLimit || 0).toLocaleString(),
+                    (c.currentBalance || 0).toLocaleString(),
+                    c.isCreditLocked ? 'LOCKED' : 'ACTIVE'
                   ])
                 })}
                 className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-white hover:bg-bg-secondary text-slate-700 border border-slate-200 font-semibold text-xs rounded-lg transition-colors"
@@ -1628,10 +1629,10 @@ export const CompanyPortal: React.FC<CompanyPortalProps> = ({
                     </td>
                     <td className="py-3 px-3 text-slate-600">{cust.city}, {cust.region}</td>
                     <td className="py-3 px-3 text-right font-mono font-bold text-slate-800">
-                      PKR {cust.creditLimit.toLocaleString()}
+                      PKR {(cust.creditLimit || 0).toLocaleString()}
                     </td>
                     <td className="py-3 px-3 text-right font-mono font-bold text-amber-600">
-                      PKR {cust.currentBalance.toLocaleString()}
+                      PKR {(cust.currentBalance || 0).toLocaleString()}
                     </td>
                     <td className="py-3 px-3 text-center">
                       <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
@@ -2599,8 +2600,30 @@ export const CompanyPortal: React.FC<CompanyPortalProps> = ({
         </div>
       )}
 
-      {/* 12. SALES HIERARCHY & COMPREHENSIVE COVERAGE DOCK */}
+      {/* 12. SALES HIERARCHY & DYNAMIC ROLES MANAGEMENT */}
       {activeTab === 'HIERARCHY' && (
+        <RoleAndHierarchyManagementTab
+          currentUser={currentUser}
+          users={usersList}
+          onAddUser={(newUser) => {
+            setUsersList((prev) => [
+              {
+                id: newUser.id || `u-${Date.now()}`,
+                fullName: newUser.fullName || 'New Employee',
+                email: newUser.email || 'emp@nationallights.com',
+                phone: newUser.phone || '+92 300 0000000',
+                role: newUser.role || 'SALES_RECOVERY',
+                branchName: newUser.branchName || 'Lahore Region',
+                isActive: true,
+                employeeCode: `EMP-${Date.now().toString().slice(-4)}`,
+              },
+              ...prev,
+            ]);
+          }}
+        />
+      )}
+
+      {/* OLD_HIERARCHY_REPLACED */ false && (
         <div className="space-y-6 animate-fade-in">
           {/* Header Dashboard section */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">

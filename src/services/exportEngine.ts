@@ -31,7 +31,7 @@ export function exportCustomerLedgerToCsv(customer: Customer, entries: LedgerEnt
     ['NATIONAL LIGHTS - OFFICIAL CUSTOMER STATEMENT'],
     ['Customer Code', customer.customerCode, 'Customer Name', customer.companyName || customer.customerCode],
     ['Contact Person', customer.contactPerson || '-', 'Phone', customer.phone || '-'],
-    ['City / Region', `${customer.city || ''} / ${customer.region || ''}`, 'Credit Limit', customer.creditLimit.toLocaleString()],
+    ['City / Region', `${customer.city || ''} / ${customer.region || ''}`, 'Credit Limit', (customer?.creditLimit || 0).toLocaleString()],
     ['Statement Generated', new Date().toLocaleString()],
     [],
     headers,

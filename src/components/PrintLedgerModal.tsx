@@ -120,9 +120,9 @@ export const PrintLedgerModal: React.FC<PrintLedgerModalProps> = ({
 
               <div className="space-y-1 bg-bg-secondary p-3 rounded-lg border border-slate-200/70 text-right">
                 <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">ACCOUNT STATUS</div>
-                <div className="text-slate-600">Credit Limit: <span className="font-bold font-mono">PKR {customer.creditLimit.toLocaleString()}</span></div>
-                <div className="text-slate-600">Payment Terms: <span className="font-bold">{customer.creditDays || 30} Days</span></div>
-                <div className="text-slate-600">Opening Balance: <span className="font-bold font-mono">PKR {customer.openingBalance.toLocaleString()}</span></div>
+                <div className="text-slate-600">Credit Limit: <span className="font-bold font-mono">PKR {(customer?.creditLimit || 0).toLocaleString()}</span></div>
+                <div className="text-slate-600">Payment Terms: <span className="font-bold">{customer?.creditDays || 30} Days</span></div>
+                <div className="text-slate-600">Opening Balance: <span className="font-bold font-mono">PKR {(customer?.openingBalance || 0).toLocaleString()}</span></div>
                 <div className="text-deep-green text-sm font-black mt-1">
                   Closing Balance: <span className="font-mono text-amber-700">PKR {latestBalance.toLocaleString()}</span>
                 </div>

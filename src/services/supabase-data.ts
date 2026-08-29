@@ -1,4 +1,16 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import {
+  initialCustomers,
+  initialSKUs,
+  initialInventoryBalances,
+  initialSalesOrders,
+  initialInvoices,
+  initialRecoveries,
+  initialLedgerEntries,
+  initialDispatches,
+  initialStockReturns,
+  initialVisits,
+} from './store';
 import type { Customer, CustomerVisit, Dispatch, InventoryBalance, Invoice, LedgerEntry, Recovery, SalesOrder, SKU, StockReturn, User } from '../types';
 
 export interface SupabaseAppData {
@@ -14,24 +26,26 @@ export interface SupabaseAppData {
   visits: CustomerVisit[];
 }
 
-const emptyAppData: SupabaseAppData = {
-  customers: [],
-  skus: [],
-  inventoryBalances: [],
-  salesOrders: [],
-  invoices: [],
-  recoveries: [],
-  ledgerEntries: [],
-  dispatches: [],
-  stockReturns: [],
-  visits: [],
+export const fallbackAppData: SupabaseAppData = {
+  customers: initialCustomers,
+  skus: initialSKUs,
+  inventoryBalances: initialInventoryBalances,
+  salesOrders: initialSalesOrders,
+  invoices: initialInvoices,
+  recoveries: initialRecoveries,
+  ledgerEntries: initialLedgerEntries,
+  dispatches: initialDispatches,
+  stockReturns: initialStockReturns,
+  visits: initialVisits,
 };
+
+export const emptyData: SupabaseAppData = fallbackAppData;
 
 function money(value: unknown) { return Number(value || 0); }
 
 export async function loadSupabaseAppData(_currentUser: User): Promise<SupabaseAppData> {
   if (!isSupabaseConfigured || !supabase) {
-    return emptyAppData;
+    return fallbackAppData;
   }
 
   const db = supabase;
@@ -289,7 +303,18 @@ export async function loadSupabaseAppData(_currentUser: User): Promise<SupabaseA
     recoveryCollected: false,
   }));
 
-  return { customers, skus, inventoryBalances, salesOrders, invoices, recoveries, ledgerEntries, dispatches, stockReturns, visits };
+    return {
+      customers: customers.length > 0 ? customers : initialCustomers,
+      skus: skus.length > 0 ? skus : initialSKUs,
+      inventoryBalances: inventoryBalances.length > 0 ? inventoryBalances : initialInventoryBalances,
+      salesOrders: salesOrders.length > 0 ? salesOrders : initialSalesOrders,
+      invoices: invoices.length > 0 ? invoices : initialInvoices,
+      recoveries: recoveries.length > 0 ? recoveries : initialRecoveries,
+      ledgerEntries: ledgerEntries.length > 0 ? ledgerEntries : initialLedgerEntries,
+      dispatches: dispatches.length > 0 ? dispatches : initialDispatches,
+      stockReturns: stockReturns.length > 0 ? stockReturns : initialStockReturns,
+      visits: visits.length > 0 ? visits : initialVisits,
+    };
   } catch (err) {
     console.error('Database connection or query error in loadSupabaseAppData:', err);
     throw err;

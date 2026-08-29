@@ -94,10 +94,26 @@ export interface CreditCheckResult {
 }
 
 export function evaluateCreditPolicy(
-  customer: Pick<Customer, 'creditLimit' | 'currentBalance' | 'isCreditLocked' | 'creditDays'>,
-  newOrderTotal: number,
+  customer?: Partial<Customer> | null,
+  newOrderTotal: number = 0,
   pendingOrdersTotal: number = 0
 ): CreditCheckResult {
+  if (!customer) {
+    return {
+      status: 'GREEN',
+      canProceedAutomatically: true,
+      requiresManagerApproval: false,
+      isBlocked: false,
+      creditLimit: 0,
+      currentOutstanding: 0,
+      pendingOrdersTotal: 0,
+      newOrderTotal,
+      projectedOutstanding: newOrderTotal,
+      overLimitAmount: 0,
+      message: 'No customer selected.',
+    };
+  }
+
   const creditLimit = customer.creditLimit || 0;
   const currentOutstanding = customer.currentBalance || 0;
   const projectedOutstanding = roundTo2(currentOutstanding + pendingOrdersTotal + newOrderTotal);

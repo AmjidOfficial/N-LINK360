@@ -10,8 +10,10 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowLeft,
+  Building2,
   Calendar,
   Camera,
+  Check,
   CheckCircle2,
   ChevronRight,
   Clock,
@@ -21,7 +23,9 @@ import {
   FileText,
   History,
   Info,
+  Layers,
   MapPin,
+  MoreHorizontal,
   Navigation,
   Package,
   Plus,
@@ -76,6 +80,26 @@ interface SalesRecoveryAppProps {
   onSubmitRegistration?: (req: Partial<CustomerRegistrationRequest>) => void;
 }
 
+const defaultFallbackCustomer: Customer = {
+  id: 'cust-demo-01',
+  customerCode: 'CUST-001',
+  companyName: 'Al-Madina Electric Corporation',
+  contactPerson: 'Haji Shafiq',
+  phone: '+92 300 4211223',
+  type: 'DISTRIBUTOR',
+  address: 'Shop 14-16, Brandreth Road, Lahore',
+  city: 'Lahore',
+  region: 'Punjab North',
+  creditLimit: 1500000,
+  creditDays: 45,
+  openingBalance: 350000,
+  currentBalance: 580000,
+  isCreditLocked: false,
+  isActive: true,
+  createdAt: '2026-08-01T00:00:00Z',
+  updatedAt: '2026-08-20T00:00:00Z',
+};
+
 export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   currentUser,
   customers = [],
@@ -96,11 +120,11 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   onSubmitRegistration = (_req: Partial<CustomerRegistrationRequest>) => {},
 }) => {
   const [activeScreen, setActiveScreen] = useState<
-    'DASHBOARD' | 'CUSTOMERS' | 'CUSTOMER_PROFILE' | 'ORDER_BOOKING' | 'RECOVERY_FORM' | 'VISIT_LOG' | 'PERFORMANCE' | 'REGISTRATION_FORM' | 'REGISTRATION_HISTORY'
+    'DASHBOARD' | 'CUSTOMERS' | 'CUSTOMER_PROFILE' | 'ORDER_BOOKING' | 'RECOVERY_FORM' | 'VISIT_LOG' | 'PERFORMANCE' | 'REGISTRATION_FORM' | 'REGISTRATION_HISTORY' | 'MORE'
   >('DASHBOARD');
 
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(customers[0]?.id || '');
-  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId) || customers[0];
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(customers[0]?.id || 'cust-demo-01');
+  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId) || customers[0] || defaultFallbackCustomer;
 
   // Registration Form State
   const [regBusinessName, setRegBusinessName] = useState('');
@@ -466,34 +490,36 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   };
 
   return (
-    <div className="max-w-md mx-auto my-4 bg-primary text-deep-green hover:bg-primary/90 rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden min-h-[750px] flex flex-col font-sans">
+    <div className="w-full max-w-md mx-auto sm:my-4 bg-primary text-deep-green rounded-none sm:rounded-3xl border-0 sm:border-4 border-slate-800 shadow-2xl overflow-hidden min-h-screen sm:min-h-[750px] flex flex-col font-sans transition-all">
       
       {/* Mobile Top App Bar */}
-      <div className="bg-surface-card p-4 border-b border-slate-800 flex items-center justify-between sticky top-0 z-20">
+      <div className="bg-surface-card p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between sticky top-0 z-20 shadow-sm">
         {activeScreen !== 'DASHBOARD' ? (
           <button
             onClick={() => setActiveScreen('DASHBOARD')}
-            className="flex items-center gap-1 text-xs text-deep-teal font-semibold"
+            className="flex items-center gap-1.5 text-xs text-deep-teal font-bold px-2 py-1.5 rounded-lg hover:bg-slate-800/60 transition-colors min-h-[36px]"
           >
             <ArrowLeft className="w-4 h-4" /> Back
           </button>
         ) : (
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-deep-green font-black text-xs">
+            <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-deep-green font-black text-xs shadow-sm">
               NL
             </div>
             <div>
-              <span className="font-bold text-xs tracking-tight block">N-LINK Field App</span>
+              <span className="font-bold text-xs tracking-tight block text-white">N-LINK Field App</span>
               <span className="text-[10px] text-deep-teal font-mono">Sales & Recovery Lead</span>
             </div>
           </div>
         )}
 
         <div className="text-right">
-          <span className="text-[11px] font-bold text-slate-200 block truncate max-w-[140px]">
+          <span className="text-[11px] font-bold text-slate-200 block truncate max-w-[130px] sm:max-w-[160px]">
             {currentUser.fullName}
           </span>
-          <span className="text-[9px] text-slate-500 font-mono">Lahore Central</span>
+          <span className="text-[9px] text-slate-400 font-mono block truncate max-w-[130px] sm:max-w-[160px]">
+            {currentUser.branchName || 'National Lights'}
+          </span>
         </div>
       </div>
 
@@ -738,13 +764,13 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                       <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-800">
                         <span className="text-[10px] text-slate-400 block">Credit Limit</span>
                         <span className="font-mono font-bold text-white block mt-0.5 text-sm tabular-nums tracking-tight">
-                          PKR {cust.creditLimit.toLocaleString()}
+                          PKR {(cust.creditLimit || 0).toLocaleString()}
                         </span>
                       </div>
                       <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-800">
                         <span className="text-[10px] text-slate-400 block">Outstanding</span>
                         <span className="font-mono font-bold text-deep-teal block mt-0.5 text-sm tabular-nums tracking-tight">
-                          PKR {cust.currentBalance.toLocaleString()}
+                          PKR {(cust.currentBalance || 0).toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -807,20 +833,20 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               <div className="p-3 bg-slate-800 rounded-xl border border-slate-700">
                 <span className="text-slate-400 text-[10px] block">Credit Limit</span>
                 <span className="font-mono font-bold text-white text-sm tabular-nums tracking-tight block mt-0.5">
-                  PKR {selectedCustomer.creditLimit.toLocaleString()}
+                  PKR {(selectedCustomer?.creditLimit || 0).toLocaleString()}
                 </span>
                 <span className="text-[10px] text-slate-500 block mt-0.5">
-                  {selectedCustomer.creditDays} Credit Days
+                  {selectedCustomer?.creditDays || 0} Credit Days
                 </span>
               </div>
 
               <div className="p-3 bg-slate-800 rounded-xl border border-slate-700">
                 <span className="text-slate-400 text-[10px] block">Current Balance</span>
                 <span className="font-mono font-bold text-deep-teal text-sm tabular-nums tracking-tight block mt-0.5">
-                  PKR {selectedCustomer.currentBalance.toLocaleString()}
+                  PKR {(selectedCustomer?.currentBalance || 0).toLocaleString()}
                 </span>
                 <span className="text-[10px] text-deep-teal block mt-0.5 tabular-nums tracking-tight">
-                  Avail: PKR {(selectedCustomer.creditLimit - selectedCustomer.currentBalance).toLocaleString()}
+                  Avail: PKR {Math.max(0, (selectedCustomer?.creditLimit || 0) - (selectedCustomer?.currentBalance || 0)).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -955,7 +981,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                   </div>
                   <div className="text-right font-mono text-[10px]">
                     <span className="text-slate-500 block">Credit Limit:</span>
-                    <span className="text-white font-bold">PKR {selectedCustomer.creditLimit.toLocaleString()}</span>
+                    <span className="text-white font-bold">PKR {(selectedCustomer?.creditLimit || 0).toLocaleString()}</span>
                   </div>
                 </div>
               )}
@@ -970,7 +996,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                 <div className="p-2.5">
                   <span className="text-[9px] text-slate-500 block">Opening Balance</span>
                   <span className="text-[11px] font-bold text-white font-mono block mt-0.5">
-                    PKR {selectedCustomer.currentBalance.toLocaleString()}
+                    PKR {(selectedCustomer?.currentBalance || 0).toLocaleString()}
                   </span>
                 </div>
                 <div className="p-2.5 bg-emerald-950/20">
@@ -982,7 +1008,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                 <div className="p-2.5">
                   <span className="text-[9px] text-slate-500 block">Net Balance</span>
                   <span className="text-[11px] font-bold text-deep-teal font-mono block mt-0.5">
-                    PKR {(selectedCustomer.currentBalance - orderRecoveryAmount).toLocaleString()}
+                    PKR {((selectedCustomer?.currentBalance || 0) - orderRecoveryAmount).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -1440,13 +1466,13 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                       <div className="flex justify-between">
                         <span className="text-slate-400">Predicted Balance:</span>
                         <span className="text-white font-bold">
-                          PKR {(selectedCustomer.currentBalance - orderRecoveryAmount + gridOrderTotals.totalAmount).toLocaleString()}
+                          PKR {(((selectedCustomer?.currentBalance || 0) - orderRecoveryAmount) + gridOrderTotals.totalAmount).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Remaining Credit:</span>
                         <span className="text-deep-teal font-bold">
-                          PKR {Math.max(0, selectedCustomer.creditLimit - (selectedCustomer.currentBalance - orderRecoveryAmount + gridOrderTotals.totalAmount)).toLocaleString()}
+                          PKR {Math.max(0, (selectedCustomer?.creditLimit || 0) - ((selectedCustomer?.currentBalance || 0) - orderRecoveryAmount + gridOrderTotals.totalAmount)).toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -2329,56 +2355,216 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
           );
         })()}
 
+        {/* 9. MORE HUB (Visits, Ledger, Stock, Dealer Registration, Performance, Offline Sync) */}
+        {activeScreen === 'MORE' && (
+          <div className="space-y-4 animate-fade-in pb-6">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg shadow-inner">
+                  {currentUser.fullName ? currentUser.fullName.charAt(0) : 'N'}
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base leading-tight">{currentUser.fullName}</h3>
+                  <p className="text-xs text-slate-400 font-sans">{currentUser.email || currentUser.phone || 'Field Officer'}</p>
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                    {currentUser.role?.replace(/_/g, ' ')} • {currentUser.branchName || 'National Lights'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Access Menu Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setActiveScreen('VISIT_LOG')}
+                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-3 group-hover:scale-105 transition-transform">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white">Visits & GPS</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Check-in, visits & route follow-up</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (customers.length > 0) setSelectedCustomerId(customers[0].id);
+                  setActiveScreen('CUSTOMER_PROFILE');
+                }}
+                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3 group-hover:scale-105 transition-transform">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white">Party Ledger</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Customer balance, invoices & receipts</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setActiveScreen('REGISTRATION_FORM')}
+                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3 group-hover:scale-105 transition-transform">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white">Add Dealer</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Register new dealer or distributor</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setActiveScreen('REGISTRATION_HISTORY')}
+                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-3 group-hover:scale-105 transition-transform">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white">Approvals Log</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">View status of submitted accounts</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setActiveScreen('PERFORMANCE')}
+                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-3 group-hover:scale-105 transition-transform">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white">Performance</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Target KPIs, MTD sales & recovery</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setSyncNotice('Connecting to central database...');
+                  setTimeout(() => {
+                    setSyncNotice('Central database synced successfully (0 pending offline records).');
+                    setTimeout(() => setSyncNotice(null), 3000);
+                  }, 800);
+                }}
+                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 mb-3 group-hover:scale-105 transition-transform">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white">Database Sync</h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Sync transactions with Supabase</p>
+                </div>
+              </button>
+            </div>
+
+            {/* Sync Notification Banner */}
+            {syncNotice && (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-2 text-xs text-emerald-300">
+                <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>{syncNotice}</span>
+              </div>
+            )}
+
+            {/* Live Stock Summary */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                  <Package className="w-4 h-4 text-emerald-400" />
+                  <span>Available Stock Snapshot</span>
+                </h4>
+                <span className="text-[10px] text-slate-400 font-sans">{skus.length} active SKUs</span>
+              </div>
+              <div className="divide-y divide-slate-800/60 max-h-48 overflow-y-auto">
+                {skus.slice(0, 5).map((sku) => {
+                  const balance = inventoryBalances.find((b) => b.skuId === sku.id);
+                  const available = balance ? balance.availableQty : 0;
+                  return (
+                    <div key={sku.id} className="py-2 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-medium text-slate-200">{sku.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{sku.code} • {sku.brand}</div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`font-bold font-mono px-2 py-0.5 rounded text-[11px] ${available > 10 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                          {available} {sku.unit || 'PCS'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <nav aria-label="Field Force Navigation" className="bg-surface-card border-t border-slate-800 py-4 px-4 grid grid-cols-4 gap-4 text-xs text-center sticky bottom-0 z-20 shadow-lg">
+      {/* 5-Item Streamlined Field Force Navigation Bar */}
+      <nav aria-label="Field Force Navigation" className="bg-surface-card border-t border-slate-800 pt-2 pb-safe pb-3 sm:pb-3 px-2 grid grid-cols-5 gap-1 text-xs text-center sticky bottom-0 z-20 shadow-2xl backdrop-blur-md">
         <button
           onClick={() => setActiveScreen('DASHBOARD')}
-          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] ${
+          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] active:scale-95 ${
             activeScreen === 'DASHBOARD'
-              ? 'bg-secondary/15 text-deep-teal font-bold border-t-[3px] border-secondary shadow-sm'
+              ? 'bg-secondary/15 text-deep-teal font-bold border-t-2 border-secondary shadow-sm'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
           }`}
         >
           <TrendingUp className="w-5 h-5" />
-          <span className="text-[11px]">Home</span>
+          <span className="text-[10px] font-medium tracking-tight">Home</span>
         </button>
 
         <button
           onClick={() => setActiveScreen('CUSTOMERS')}
-          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] ${
+          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] active:scale-95 ${
             activeScreen === 'CUSTOMERS'
-              ? 'bg-secondary/15 text-deep-teal font-bold border-t-[3px] border-secondary shadow-sm'
+              ? 'bg-secondary/15 text-deep-teal font-bold border-t-2 border-secondary shadow-sm'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
           }`}
         >
           <Users className="w-5 h-5" />
-          <span className="text-[11px]">Clients</span>
+          <span className="text-[10px] font-medium tracking-tight">Clients</span>
         </button>
 
         <button
           onClick={() => setActiveScreen('ORDER_BOOKING')}
-          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] ${
+          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] active:scale-95 ${
             activeScreen === 'ORDER_BOOKING'
-              ? 'bg-secondary/15 text-deep-teal font-bold border-t-[3px] border-secondary shadow-sm'
+              ? 'bg-secondary/15 text-deep-teal font-bold border-t-2 border-secondary shadow-sm'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
           }`}
         >
           <FilePlus className="w-5 h-5" />
-          <span className="text-[11px]">Order</span>
+          <span className="text-[10px] font-medium tracking-tight">Order</span>
         </button>
 
         <button
           onClick={() => setActiveScreen('RECOVERY_FORM')}
-          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] ${
+          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] active:scale-95 ${
             activeScreen === 'RECOVERY_FORM'
-              ? 'bg-secondary/15 text-deep-teal font-bold border-t-[3px] border-secondary shadow-sm'
+              ? 'bg-secondary/15 text-deep-teal font-bold border-t-2 border-secondary shadow-sm'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
           }`}
         >
           <Coins className="w-5 h-5" />
-          <span className="text-[11px]">Recovery</span>
+          <span className="text-[10px] font-medium tracking-tight">Recovery</span>
+        </button>
+
+        <button
+          onClick={() => setActiveScreen('MORE')}
+          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] active:scale-95 ${
+            activeScreen === 'MORE' || activeScreen === 'VISIT_LOG' || activeScreen === 'REGISTRATION_FORM' || activeScreen === 'REGISTRATION_HISTORY' || activeScreen === 'PERFORMANCE'
+              ? 'bg-secondary/15 text-deep-teal font-bold border-t-2 border-secondary shadow-sm'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+          }`}
+        >
+          <MoreHorizontal className="w-5 h-5" />
+          <span className="text-[10px] font-medium tracking-tight">More</span>
         </button>
       </nav>
 

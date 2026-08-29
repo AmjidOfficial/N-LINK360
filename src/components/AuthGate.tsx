@@ -1,231 +1,230 @@
-import React, { useEffect, useState } from 'react';
-import { Building2, Loader2, LockKeyhole, LogIn, Mail, KeyRound, ArrowLeft } from 'lucide-react';
-import { getCurrentUser, signIn, signOut, resetPassword, updatePassword } from '../services/auth';
-import { isSupabaseConfigured } from '../lib/supabase';
+import React, { useState } from 'react';
+import {
+  LogIn,
+  Mail,
+  ShieldCheck,
+  Users,
+  ShieldAlert,
+  Sparkles,
+  CheckCircle2,
+  Building2,
+} from 'lucide-react';
+import {
+  PRODUCTION_ACCOUNTS,
+  authenticateProductionEmail,
+  ProductionAccount,
+} from '../services/production-users';
 import type { User } from '../types';
 
 interface AuthGateProps {
-  children: (user: User, onSignOut: () => Promise<void>) => React.ReactNode;
+  children: React.ReactNode;
+  currentUser: User | null;
+  onSignIn: (user: User) => Promise<void>;
+  onSignOut: () => Promise<void>;
 }
 
-export const AuthGate: React.FC<AuthGateProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [busy, setBusy] = useState(true);
+export const AuthGate: React.FC<AuthGateProps> = ({
+  children,
+  currentUser,
+  onSignIn,
+}) => {
+  const [email, setEmail] = useState('admin@nationallights.com');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isResetMode, setIsResetMode] = useState(false);
-  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [showAccountsModal, setShowAccountsModal] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    getCurrentUser()
-      .then((next) => mounted && setUser(next))
-      .catch((err) => mounted && setError(err instanceof Error ? err.message : 'Unable to load your account.'))
-      .finally(() => mounted && setBusy(false));
-
-    // Detect if we landed from a Supabase recovery redirect
-    const hash = window.location.hash || '';
-    const params = new URLSearchParams(window.location.search);
-    if (hash.includes('type=recovery') || params.get('type') === 'recovery') {
-      setIsRecoveryMode(true);
-    }
-
-    return () => { mounted = false; };
-  }, []);
+  if (currentUser) {
+    return <>{children}</>;
+  }
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
-    setSubmitting(true);
-    setError('');
-    setSuccess('');
-    try {
-      await signIn(email.trim(), password);
-      const next = await getCurrentUser();
-      if (!next) throw new Error('Login succeeded but your N-LINK employee profile was not found.');
-      setUser(next);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleForgotPassword = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!email.trim()) {
-      setError('Please provide your email address first.');
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError('Please enter your authorized employee email.');
       return;
     }
+
     setSubmitting(true);
     setError('');
-    setSuccess('');
+
     try {
-      await resetPassword(email.trim());
-      setSuccess('A recovery email has been successfully sent. Please check your inbox.');
+      // Direct Email Verification against production organization accounts
+      const authenticatedUser = authenticateProductionEmail(cleanEmail);
+      if (!authenticatedUser) {
+        throw new Error(`Email "${cleanEmail}" is not recognized in the National Lights personnel registry.`);
+      }
+
+      await onSignIn(authenticatedUser);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to trigger password recovery request.');
+      setError(err instanceof Error ? err.message : 'Verification failed. Please enter a valid registered email.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleUpdatePassword = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (newPassword.length < 6) {
-      setError('Password must contain at least 6 characters.');
-      return;
-    }
-    setSubmitting(true);
+  const handleSelectAccount = (account: ProductionAccount) => {
+    setEmail(account.email);
+    setShowAccountsModal(false);
     setError('');
-    setSuccess('');
-    try {
-      await updatePassword(newPassword);
-      setSuccess('Your password has been successfully updated. You can now sign in.');
-      setIsRecoveryMode(false);
-      setIsResetMode(false);
-      setPassword('');
-      // Clean url hash
-      window.history.replaceState(null, '', window.location.pathname);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to save new password.');
-    } finally {
-      setSubmitting(false);
-    }
   };
-
-  if (busy) return <div className="min-h-screen grid place-items-center bg-surface-card text-white"><Loader2 className="h-7 w-7 animate-spin text-deep-teal" /></div>;
-
-  if (user) return <>{children(user, async () => { await signOut(); setUser(null); })}</>;
 
   return (
-    <main className="min-h-screen bg-bg-primary px-4 py-8 sm:px-6">
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-5xl place-items-center">
-        <section className="w-full max-w-md rounded-3xl border border-slate-800 bg-white p-6 shadow-2xl sm:p-8">
-          <div className="mb-8 flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-secondary/80 text-lg font-black text-deep-green"><Building2 /></div>
-            <div><h1 className="text-xl font-black tracking-tight text-deep-green">N-LINK 360</h1><p className="text-xs text-text-muted">National Lights</p></div>
+    <main className="min-h-screen bg-[#E8ECF2] flex items-center justify-center p-4">
+      <div className="w-full max-w-md nm-flat p-8 rounded-3xl border border-white space-y-6">
+        {/* Brand Header */}
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 mx-auto rounded-2xl nm-inset flex items-center justify-center text-teal-700 font-black text-2xl border border-white shadow-inner">
+            NL
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight">
+              N-LINK <span className="text-teal-600">360</span>
+            </h1>
+            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+              National Lights Auto & Industrial Distribution
+            </p>
+          </div>
+        </div>
+
+        {/* Welcome Note */}
+        <div className="nm-inset p-4 rounded-2xl text-center space-y-1">
+          <p className="text-xs font-black text-slate-800">Welcome to National Lights Enterprise!</p>
+          <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+            Please enter your corporate email address to access your role-based dashboard and operational tools.
+          </p>
+        </div>
+
+        {error && (
+          <div className="nm-inset p-3.5 rounded-2xl text-xs font-bold text-rose-700 flex items-center gap-2 border border-rose-200">
+            <ShieldAlert className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Email-Only Verification Form (No Password) */}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              Corporate Email Address
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="e.g. admin@nationallights.com"
+                className="w-full pl-10 pr-4 py-3.5 rounded-2xl nm-inset text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
+              />
+              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-4" />
+            </div>
           </div>
 
-          {isRecoveryMode ? (
-            <>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-deep-green">New Password</h2>
-                <p className="mt-1 text-sm text-text-muted">Choose a new password for your account.</p>
-              </div>
-              {error && <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-              {success && <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
-              <form onSubmit={handleUpdatePassword} className="space-y-4">
-                <label className="block text-sm font-semibold text-text-primary">
-                  New Password
-                  <input
-                    required
-                    type="password"
-                    placeholder="Min 6 characters"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                    autoComplete="new-password"
-                  />
-                </label>
-                <button
-                  disabled={submitting}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-bold text-deep-green transition hover:bg-primary/90 active:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <KeyRound className="h-4 w-4" />
-                  {submitting ? 'Updating…' : 'Update Password'}
-                </button>
-              </form>
-            </>
-          ) : isResetMode ? (
-            <>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-deep-green">Reset Password</h2>
-                <p className="mt-1 text-sm text-text-muted">We will send you a password restoration link.</p>
-              </div>
-              {error && <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-              {success && <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <label className="block text-sm font-semibold text-text-primary">
-                  Email
-                  <input
-                    required
-                    type="email"
-                    placeholder="Enter your registered email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                    autoComplete="email"
-                  />
-                </label>
-                <button
-                  disabled={submitting}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-bold text-deep-green transition hover:bg-primary/90 active:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Mail className="h-4 w-4" />
-                  {submitting ? 'Sending Link…' : 'Send Reset Link'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsResetMode(false); setError(''); setSuccess(''); }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-text-primary transition hover:bg-bg-secondary"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Sign In
-                </button>
-              </form>
-            </>
-          ) : !isSupabaseConfigured ? (
-            <div className="text-center py-4">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary/10 text-amber-600 border border-amber-200">
-                <LockKeyhole className="h-7 w-7" />
-              </div>
-              <h2 className="text-xl font-black text-deep-green">Supabase Database Connection Required</h2>
-              <p className="mt-2 text-sm text-text-secondary leading-relaxed">
-                N-LINK 360 is in strict production mode. Authentication verifies corporate credentials against National Lights Supabase PostgreSQL.
-              </p>
-              <div className="mt-6 rounded-2xl border border-slate-200 bg-bg-secondary p-4 text-left text-xs text-text-primary space-y-2">
-                <p className="font-bold text-text-primary">Required Environment Variables:</p>
-                <ul className="list-disc pl-4 space-y-1 text-text-secondary font-mono text-[11px]">
-                  <li>VITE_SUPABASE_URL</li>
-                  <li>VITE_SUPABASE_ANON_KEY</li>
-                </ul>
-                <p className="text-[11px] text-text-muted pt-1">
-                  Mock authentication and simulated logins have been completely removed.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="mb-6"><h2 className="text-2xl font-bold text-deep-green">Sign in</h2><p className="mt-1 text-sm text-text-muted">Enter your National Lights credentials.</p></div>
-              {error && <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-              {success && <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">{success}</div>}
-              <form onSubmit={handleLogin} className="space-y-4">
-                <label className="block text-sm font-semibold text-text-primary">Email<input required type="email" placeholder="name@nationallights.com" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" autoComplete="email" /></label>
-                <div className="block text-sm font-semibold text-text-primary">
-                  <div className="flex justify-between items-center">
-                    <span>Password</span>
-                    <button
-                      type="button"
-                      onClick={() => { setIsResetMode(true); setError(''); setSuccess(''); }}
-                      className="text-xs font-bold text-deep-teal hover:text-amber-600 hover:underline"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                  <input required type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" autoComplete="current-password" />
-                </div>
-                <button disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-bold text-deep-green transition hover:bg-primary/90 active:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"><LogIn className="h-4 w-4" />{submitting ? 'Signing in…' : 'Sign in'}</button>
-              </form>
-            </>
-          )}
-          <p className="mt-6 flex items-center justify-center gap-2 text-[11px] text-slate-400"><LockKeyhole className="h-3.5 w-3.5" /> Access is controlled by your N-LINK role and permissions.</p>
-        </section>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full nm-btn-primary py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg hover:brightness-105 transition-all mt-2"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>{submitting ? 'Verifying Account Role…' : 'Enter Enterprise Portal'}</span>
+          </button>
+        </form>
+
+        {/* Subtle Registered Directory Button */}
+        <div className="text-center pt-2 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={() => setShowAccountsModal(true)}
+            className="text-[11px] font-bold text-slate-500 hover:text-teal-700 transition-colors inline-flex items-center gap-1.5"
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>View Registered Emails Directory</span>
+          </button>
+        </div>
       </div>
+
+      {/* Authorized Users & Roles Directory Modal */}
+      {showAccountsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="nm-flat bg-[#E8ECF2] p-6 rounded-3xl border border-white max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl nm-inset flex items-center justify-center text-teal-700 font-black">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-800">
+                    Registered Employee Emails & Assigned Roles
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Click any email to select and load its scoped permissions
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAccountsModal(false)}
+                className="nm-btn w-8 h-8 rounded-full text-slate-600 font-bold hover:text-slate-900 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Accounts Table */}
+            <div className="space-y-2.5">
+              {PRODUCTION_ACCOUNTS.map((acc) => (
+                <div
+                  key={acc.id}
+                  onClick={() => handleSelectAccount(acc)}
+                  className="nm-btn p-3.5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 cursor-pointer hover:border-teal-400 group transition-all"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-black text-slate-800 group-hover:text-teal-700">
+                        {acc.fullName}
+                      </span>
+                      <span
+                        className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${
+                          acc.accessScope === 'GLOBAL_ADMIN'
+                            ? 'bg-teal-100 text-teal-800'
+                            : acc.accessScope === 'FIELD_FORCE_SCOPED'
+                            ? 'bg-indigo-100 text-indigo-800'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {acc.roleTitle}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 font-mono font-bold text-teal-700">
+                      <Mail className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{acc.email}</span>
+                    </div>
+
+                    <p className="text-[10px] text-slate-500 italic">{acc.description}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                    <span className="nm-btn-primary px-3.5 py-2 rounded-xl text-xs font-bold">
+                      Select Email ➔
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAccountsModal(false)}
+                className="nm-btn px-5 py-2.5 rounded-xl text-xs font-bold text-slate-700"
+              >
+                Close Directory
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
-
