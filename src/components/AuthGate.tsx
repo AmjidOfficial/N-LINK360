@@ -2,17 +2,14 @@ import React, { useState } from 'react';
 import {
   LogIn,
   Mail,
-  ShieldCheck,
   ShieldAlert,
   UserCheck,
   ChevronDown,
 } from 'lucide-react';
 import {
-  PRODUCTION_ACCOUNTS,
   authenticateProductionEmail,
   isMultiRoleEligibleEmail,
   AVAILABLE_ROLES,
-  ProductionAccount,
 } from '../services/production-users';
 import type { User, UserRole } from '../types';
 
@@ -66,11 +63,6 @@ export const AuthGate: React.FC<AuthGateProps> = ({
     }
   };
 
-  const handleQuickPickAccount = (accEmail: string) => {
-    setEmail(accEmail);
-    setError('');
-  };
-
   return (
     <main className="min-h-screen bg-[#E8ECF2] flex items-center justify-center p-4">
       <div className="w-full max-w-lg nm-flat p-8 rounded-3xl border border-white space-y-6 shadow-2xl">
@@ -86,44 +78,6 @@ export const AuthGate: React.FC<AuthGateProps> = ({
             <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
               National Lights Business Management Platform
             </p>
-          </div>
-        </div>
-
-        {/* Quick Pick Accounts for Administrative / Executive Login */}
-        <div className="nm-inset p-3.5 rounded-2xl space-y-2 text-xs">
-          <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-            <span>Executive Accounts</span>
-            <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickPickAccount('admin@nationallights.com')}
-              className={`p-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between ${
-                email.toLowerCase() === 'admin@nationallights.com'
-                  ? 'nm-btn-primary shadow-sm text-white'
-                  : 'nm-btn text-slate-700 hover:text-teal-800'
-              }`}
-            >
-              <div>
-                <p className="text-xs font-black">Muhammad Amjid</p>
-                <p className="text-[10px] opacity-90 font-medium">Global Administrator</p>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickPickAccount('nationallights2026@gmail.com')}
-              className={`p-2.5 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between ${
-                email.toLowerCase() === 'nationallights2026@gmail.com'
-                  ? 'nm-btn-primary shadow-sm text-white'
-                  : 'nm-btn text-slate-700 hover:text-teal-800'
-              }`}
-            >
-              <div>
-                <p className="text-xs font-black">National Lights Admin</p>
-                <p className="text-[10px] opacity-90 font-medium">Managing Administrator</p>
-              </div>
-            </button>
           </div>
         </div>
 

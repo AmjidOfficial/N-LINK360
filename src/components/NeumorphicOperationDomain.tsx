@@ -28,8 +28,10 @@ import {
   AlertTriangle,
   Clock,
   Layers,
-  Lock
+  Lock,
+  ShieldAlert
 } from 'lucide-react';
+import { TerritoryHierarchyD3Map } from './TerritoryHierarchyD3Map';
 import { OperationSubTab } from './NeumorphicHeader';
 import { User, UserRole } from '../types';
 import { isAdminUser, isFieldForceUser, getAssignedDealerIds } from '../services/production-users';
@@ -212,6 +214,27 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
       bankName: 'Habib Bank Ltd, Plaza Branch',
       bankIban: 'PK99HABB0001122334455667',
     },
+  ]);
+
+  const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([
+    {
+      id: 'REG-REQ-301',
+      businessName: 'Farhan Light House, Multan',
+      ownerName: 'Muhammad Farhan',
+      contactNumber: '+92 315 7654321',
+      cnic: '36302-8877665-1',
+      address: 'Main Chowk Ghanta Ghar, Multan',
+      city: 'Multan',
+      region: 'Punjab South',
+      type: 'DEALER',
+      proposedCreditLimit: 500000,
+      proposedCreditDays: 15,
+      proposedOpeningBalance: 0,
+      additionalNotes: 'Highly active lighting dealer in southern Punjab auto sector. Recommending credit approval.',
+      salesUserId: 'USR-TSM-01',
+      salesUserName: 'Tariq Mansoor (TSM)',
+      submittedAt: '2026-08-29'
+    }
   ]);
 
   const [targets, setTargets] = useState<any[]>([
@@ -401,6 +424,20 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
     },
   ]);
 
+  const [towns, setTowns] = useState<any[]>([
+    { id: 'TWN-01', name: 'Lahore', area: 'Lahore Division', region: 'Punjab Central', assignedTsm: 'Ali Raza (TSM)', status: 'ACTIVE' },
+    { id: 'TWN-02', name: 'Gujranwala', area: 'Gujranwala Zone', region: 'Punjab Central', assignedTsm: 'Muhammad Usman (TSM)', status: 'ACTIVE' },
+    { id: 'TWN-03', name: 'Karachi', area: 'Karachi South Zone', region: 'Sindh South', assignedTsm: 'Farhan Siddiqui (TSM)', status: 'ACTIVE' },
+    { id: 'TWN-04', name: 'Peshawar', area: 'Peshawar Division', region: 'KPK West', assignedTsm: 'Tariq Mansoor (RSM)', status: 'ACTIVE' },
+    { id: 'TWN-05', name: 'Multan', area: 'Multan Zone', region: 'Punjab South', assignedTsm: 'Unassigned', status: 'INACTIVE' },
+  ]);
+
+  const [newTownName, setNewTownName] = useState('');
+  const [newTownArea, setNewTownArea] = useState('Lahore Division');
+  const [newTownRegion, setNewTownRegion] = useState('Punjab Central');
+  const [newTownTsm, setNewTownTsm] = useState('Ali Raza (TSM)');
+  const [editingTownId, setEditingTownId] = useState<string | null>(null);
+
   // Modal States
   const [modalType, setModalType] = useState<
     | null
@@ -531,9 +568,30 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
     return branches.filter((b) => b.name.toLowerCase().includes(q) || b.city.toLowerCase().includes(q) || b.code.toLowerCase().includes(q));
   }, [branches, searchQuery]);
 
+  // Permission Middleware & Mobile Grid Expansion States
+  const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [expandedCardIds, setExpandedCardIds] = useState<Record<string, boolean>>({});
+
+  const toggleCardExpansion = (cardId: string) => {
+    setExpandedCardIds((prev) => ({ ...prev, [cardId]: !prev[cardId] }));
+  };
+
+  const enforceAdminWritePermission = (actionLabel: string): boolean => {
+    if (!isAdmin) {
+      setPermissionError(
+        `Access Denied: Administrative authority required to ${actionLabel}. Only Super Admin & Executive Management accounts hold write access.`
+      );
+      setTimeout(() => setPermissionError(null), 8000);
+      return false;
+    }
+    setPermissionError(null);
+    return true;
+  };
+
   // Handlers
   const handleSaveBranch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!enforceAdminWritePermission('register or modify branch nodes')) return;
     if (modalType === 'ADD_BRANCH') {
       const newBr = { id: `BR-0${branches.length + 1}`, ...branchForm };
       setBranches((prev) => [...prev, newBr]);
@@ -544,12 +602,13 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
   };
 
   const handleDeleteBranch = (id: string) => {
-    if (!isAdmin) return;
+    if (!enforceAdminWritePermission('delete branch nodes')) return;
     setBranches((prev) => prev.filter((b) => b.id !== id));
   };
 
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!enforceAdminWritePermission('register or modify SKU catalog items')) return;
     if (modalType === 'ADD_SKU') {
       const newSku = { id: `SKU-00${products.length + 1}`, ...productForm };
       setProducts((prev) => [...prev, newSku]);
@@ -560,12 +619,13 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
   };
 
   const handleDeleteProduct = (id: string) => {
-    if (!isAdmin) return;
+    if (!enforceAdminWritePermission('delete SKU catalog items')) return;
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
   const handleSaveDealer = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!enforceAdminWritePermission('register or update dealer accounts')) return;
     if (modalType === 'ADD_DEALER') {
       const newDlr = {
         id: `DLR-${100 + dealers.length + 1}`,
@@ -581,12 +641,13 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
   };
 
   const handleDeleteDealer = (id: string) => {
-    if (!isAdmin) return;
+    if (!enforceAdminWritePermission('delete dealer accounts')) return;
     setDealers((prev) => prev.filter((d) => d.id !== id));
   };
 
   const handleSaveTarget = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!enforceAdminWritePermission('reassign or allocate monthly target quotas')) return;
     const newTgt = {
       id: `TGT-0${targets.length + 1}`,
       officerId: currentUser.id,
@@ -604,6 +665,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
 
   const handleSaveEmployee = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!enforceAdminWritePermission('register or edit employee dossiers')) return;
     const beatsList = employeeForm.beatsStr
       ? employeeForm.beatsStr.split(',').map((b) => b.trim()).filter(Boolean)
       : ['Monday: Main Market', 'Tuesday: Commercial Beat'];
@@ -624,12 +686,13 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
   };
 
   const handleDeleteEmployee = (id: string) => {
-    if (!isAdmin) return;
+    if (!enforceAdminWritePermission('delete employee dossiers')) return;
     setSalesTeam((prev) => prev.filter((s) => s.id !== id));
   };
 
   const handleSaveHierarchyNode = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!enforceAdminWritePermission('alter or add 5-tier regional hierarchy nodes')) return;
     if (!hierarchyForm.nodeName) return;
     const targetLevel = hierarchyNodes.find((h) => h.level === hierarchyForm.tierLevel) || hierarchyNodes[1];
     
@@ -651,6 +714,19 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Permission Alert Banner */}
+      {permissionError && (
+        <div className="nm-flat p-4 rounded-3xl border border-rose-300 bg-rose-50/90 text-rose-900 flex items-center justify-between gap-3 text-xs font-bold shadow-md animate-pulse">
+          <div className="flex items-center gap-2.5">
+            <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+            <span>{permissionError}</span>
+          </div>
+          <button onClick={() => setPermissionError(null)} className="nm-btn p-1.5 rounded-xl text-rose-700">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Sub Tab Navigation Ribbon */}
       <div className="nm-flat p-2 rounded-3xl border border-white">
         <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
@@ -717,50 +793,65 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {visibleBranches.map((br) => (
-              <div key={br.id} className="nm-flat p-5 rounded-3xl border border-white space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
-                    {br.code}
-                  </span>
-                  <span className="nm-badge-teal text-[9px] px-2 py-0.5 rounded-full font-bold">{br.status}</span>
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-800">{br.name}</h3>
-                  <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-0.5">
-                    <MapPin className="w-3 h-3 text-slate-400" />
-                    {br.city}, Pakistan
-                  </p>
-                </div>
-                <div className="text-[11px] text-slate-600 space-y-1 pt-2 border-t border-slate-200">
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="w-3 h-3 text-slate-400" />
-                    <span>{br.phone}</span>
+            {visibleBranches.map((br) => {
+              const isExpanded = !!expandedCardIds[br.id];
+              return (
+                <div key={br.id} className="nm-flat p-5 rounded-3xl border border-white space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
+                      {br.code}
+                    </span>
+                    <span className="nm-badge-teal text-[9px] px-2 py-0.5 rounded-full font-bold">{br.status}</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 truncate">{br.address}</div>
-                </div>
-                {isAdmin && (
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
-                    <button
-                      onClick={() => {
-                        setSelectedBranch(br);
-                        setBranchForm({ ...br });
-                        setModalType('EDIT_BRANCH');
-                      }}
-                      className="nm-btn p-2 rounded-xl text-slate-600 hover:text-teal-700"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteBranch(br.id)}
-                      className="nm-btn p-2 rounded-xl text-slate-600 hover:text-rose-600"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800">{br.name}</h3>
+                    <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                      <MapPin className="w-3 h-3 text-slate-400" />
+                      {br.city}, Pakistan
+                    </p>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Mobile Touch Collapsible Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => toggleCardExpansion(br.id)}
+                    className="sm:hidden w-full pt-1.5 text-[11px] font-bold text-teal-700 flex items-center justify-between border-t border-slate-200/60"
+                  >
+                    <span>{isExpanded ? 'Hide Details' : 'Tap for Contact & Address'}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <div className={`text-[11px] text-slate-600 space-y-1 pt-2 border-t border-slate-200 ${isExpanded ? 'block' : 'hidden sm:block'}`}>
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="w-3 h-3 text-slate-400" />
+                      <span>{br.phone}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 truncate">{br.address}</div>
+                  </div>
+
+                  {isAdmin && (
+                    <div className={`items-center justify-end gap-2 pt-2 border-t border-slate-200 ${isExpanded ? 'flex' : 'hidden sm:flex'}`}>
+                      <button
+                        onClick={() => {
+                          setSelectedBranch(br);
+                          setBranchForm({ ...br });
+                          setModalType('EDIT_BRANCH');
+                        }}
+                        className="nm-btn p-2 rounded-xl text-slate-600 hover:text-teal-700"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBranch(br.id)}
+                        className="nm-btn p-2 rounded-xl text-slate-600 hover:text-rose-600"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -789,7 +880,88 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
             )}
           </div>
 
-          <div className="nm-flat rounded-3xl border border-white overflow-hidden">
+          {/* Mobile Collapsible SKU Cards (Small Screens) */}
+          <div className="md:hidden grid grid-cols-1 gap-3">
+            {visibleProducts.map((p) => {
+              const isExpanded = !!expandedCardIds[p.id];
+              return (
+                <div key={p.id} className="nm-flat p-4 rounded-3xl border border-white space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
+                      {p.id}
+                    </span>
+                    <span className="text-[10px] bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold border border-slate-200">
+                      {p.category}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800">{p.name}</h3>
+                    <p className="text-[11px] text-slate-500 font-medium">{p.brand}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <span className="text-slate-500 font-semibold">Trade Price:</span>
+                    <span className="font-black text-slate-800">PKR {p.tradePrice.toLocaleString()}</span>
+                  </div>
+
+                  {/* Touch Collapsible Expander Button */}
+                  <button
+                    type="button"
+                    onClick={() => toggleCardExpansion(p.id)}
+                    className="w-full pt-1.5 text-[11px] font-bold text-teal-700 flex items-center justify-between border-t border-slate-200/60"
+                  >
+                    <span>{isExpanded ? 'Hide Specs & Stock' : 'Tap for MRP, Carton & Stock'}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Collapsible Inner Specs */}
+                  {isExpanded && (
+                    <div className="space-y-2 pt-2 border-t border-slate-200 text-xs text-slate-600 nm-inset p-3 rounded-2xl">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Retail MRP:</span>
+                        <span className="font-bold text-slate-800">PKR {p.retailPrice.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Carton Packing:</span>
+                        <span className="font-mono font-bold text-slate-800">{p.cartonQty} pcs / box</span>
+                      </div>
+                      <div className="flex justify-between border-t border-slate-200/80 pt-1.5">
+                        <span className="text-slate-500">Warehouse Stock:</span>
+                        <span className="font-bold text-teal-700">{p.stock.toLocaleString()} pcs</span>
+                      </div>
+
+                      {isAdmin && (
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/80">
+                          <button
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setProductForm({ ...p });
+                              setModalType('EDIT_SKU');
+                            }}
+                            className="nm-btn p-1.5 rounded-xl text-slate-600 hover:text-teal-700 flex items-center gap-1 text-[11px] font-bold"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>Edit SKU</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(p.id)}
+                            className="nm-btn p-1.5 rounded-xl text-slate-600 hover:text-rose-600 flex items-center gap-1 text-[11px] font-bold"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table View (Medium & Larger Screens) */}
+          <div className="hidden md:block nm-flat rounded-3xl border border-white overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
@@ -851,6 +1023,98 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
       {/* TAB 3: DEALERS & DISTRIBUTORS (STRICT SCOPING) */}
       {activeSubTab === 'DEALERS_DISTRIBUTORS' && (
         <div className="space-y-6">
+          {/* Pending Approvals Panel (HO/Admin view only) */}
+          {!isField && pendingRegistrations.length > 0 && (
+            <div className="nm-flat p-6 rounded-3xl border border-white space-y-4 bg-amber-50/25">
+              <div className="border-b border-slate-300 pb-2 flex items-center justify-between">
+                <div>
+                  <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+                    Pending Field Registrations waiting for Approval ({pendingRegistrations.length})
+                  </h3>
+                  <p className="text-xs text-slate-500">Submitted by field representatives. Review proposed commercial terms and authorize.</p>
+                </div>
+                <span className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-full uppercase">
+                  Action Required
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pendingRegistrations.map((reg) => (
+                  <div key={reg.id} className="nm-inset p-4 rounded-2xl bg-white space-y-3 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-extrabold text-slate-800 text-sm">{reg.businessName}</span>
+                      <span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 border border-indigo-200 text-indigo-700">
+                        {reg.type} REQUEST
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                      <div>Owner: <span className="font-bold text-slate-800">{reg.ownerName}</span></div>
+                      <div>Mobile: <span className="font-bold text-slate-800">{reg.contactNumber}</span></div>
+                      <div>CNIC: <span className="font-mono">{reg.cnic}</span></div>
+                      <div>City: <span className="font-bold text-slate-800">{reg.city} ({reg.region})</span></div>
+                      <div>Proposed Limit: <span className="font-mono font-bold text-teal-700">PKR {reg.proposedCreditLimit.toLocaleString()}</span></div>
+                      <div>Proposed Days: <span className="font-bold text-slate-700">{reg.proposedCreditDays} Days</span></div>
+                    </div>
+                    
+                    <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg italic">
+                      " {reg.additionalNotes || 'No notes added' } "
+                    </p>
+                    
+                    <div className="text-[10px] text-slate-400">
+                      Submitted by <span className="font-bold text-slate-600">{reg.salesUserName || 'Field Rep'}</span> on {reg.submittedAt}
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPendingRegistrations(prev => prev.filter(p => p.id !== reg.id));
+                          alert('Dealer registration request declined.');
+                        }}
+                        className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg text-center text-xs"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newDealer = {
+                            id: `DLR-${Math.floor(104 + Math.random() * 900)}`,
+                            name: reg.businessName,
+                            customerType: reg.type,
+                            region: reg.region,
+                            area: `${reg.city} Division`,
+                            territory: reg.address,
+                            assignedTsm: reg.salesUserName || 'Ali Raza (TSM)',
+                            assignedOfficerId: reg.salesUserId || 'USR-ADMIN-01',
+                            assignedOfficerName: reg.salesUserName || 'Ali Raza (TSM)',
+                            town: reg.city,
+                            cnic: reg.cnic,
+                            contactPerson: reg.ownerName,
+                            phone: reg.contactNumber,
+                            address: reg.address,
+                            creditLimit: reg.proposedCreditLimit,
+                            creditDays: reg.proposedCreditDays,
+                            currentBalance: reg.proposedOpeningBalance,
+                            status: 'NORMAL',
+                          };
+                          setDealers(prev => [newDealer, ...prev]);
+                          setPendingRegistrations(prev => prev.filter(p => p.id !== reg.id));
+                          alert(`Authorization Complete! "${reg.businessName}" has been successfully activated.`);
+                        }}
+                        className="flex-1 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg text-center text-xs shadow-sm"
+                      >
+                        Approve & Activate
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="nm-flat p-6 rounded-3xl border border-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -884,6 +1148,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibleDealers.map((d) => {
               const utilPct = Math.round((d.currentBalance / d.creditLimit) * 100);
+              const isExpanded = !!expandedCardIds[d.id];
               return (
                 <div key={d.id} className="nm-flat p-5 rounded-3xl border border-white space-y-3 flex flex-col justify-between">
                   <div className="space-y-2">
@@ -906,44 +1171,61 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
 
                     <div>
                       <h3 className="text-sm font-black text-slate-800">{d.name}</h3>
-                      <p className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-slate-400" />
-                        {d.town}
+                      <p className="text-[11px] text-slate-500 font-medium flex items-center justify-between mt-0.5">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-slate-400" />
+                          {d.town}
+                        </span>
+                        <span className="font-mono font-bold text-slate-700 sm:hidden">
+                          PKR {(d.currentBalance / 100000).toFixed(1)}L Exposure
+                        </span>
                       </p>
                     </div>
 
-                    <div className="nm-inset p-2.5 rounded-2xl space-y-1 text-xs">
-                      <div className="flex justify-between text-slate-600">
-                        <span>Current Exposure:</span>
-                        <span className="font-black text-slate-800">PKR {d.currentBalance.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-[11px] text-slate-500">
-                        <span>Credit Limit:</span>
-                        <span>PKR {d.creditLimit.toLocaleString()}</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            utilPct > 90 ? 'bg-rose-500' : utilPct > 70 ? 'bg-amber-500' : 'bg-teal-500'
-                          }`}
-                          style={{ width: `${Math.min(utilPct, 100)}%` }}
-                        />
-                      </div>
-                    </div>
+                    {/* Touch Collapsible Expander Button */}
+                    <button
+                      type="button"
+                      onClick={() => toggleCardExpansion(d.id)}
+                      className="sm:hidden w-full pt-1.5 text-[11px] font-bold text-teal-700 flex items-center justify-between border-t border-slate-200/60"
+                    >
+                      <span>{isExpanded ? 'Hide Credit & Contact' : 'Tap for Exposure & Contact'}</span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </button>
 
-                    <div className="text-[11px] text-slate-600 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Contact:</span>
-                        <span className="font-bold text-slate-700">{d.contactPerson} ({d.phone})</span>
+                    <div className={`space-y-2 ${isExpanded ? 'block' : 'hidden sm:block'}`}>
+                      <div className="nm-inset p-2.5 rounded-2xl space-y-1 text-xs">
+                        <div className="flex justify-between text-slate-600">
+                          <span>Current Exposure:</span>
+                          <span className="font-black text-slate-800">PKR {d.currentBalance.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] text-slate-500">
+                          <span>Credit Limit:</span>
+                          <span>PKR {d.creditLimit.toLocaleString()}</span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              utilPct > 90 ? 'bg-rose-500' : utilPct > 70 ? 'bg-amber-500' : 'bg-teal-500'
+                            }`}
+                            style={{ width: `${Math.min(utilPct, 100)}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">Assigned Officer:</span>
-                        <span className="font-bold text-teal-700">{d.assignedOfficerName}</span>
+
+                      <div className="text-[11px] text-slate-600 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Contact:</span>
+                          <span className="font-bold text-slate-700">{d.contactPerson} ({d.phone})</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Assigned Officer:</span>
+                          <span className="font-bold text-teal-700">{d.assignedOfficerName}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-200 mt-2">
+                  <div className={`items-center justify-between pt-3 border-t border-slate-200 mt-2 ${isExpanded ? 'flex' : 'hidden sm:flex'}`}>
                     <button
                       onClick={() => {
                         setSelectedDealer(d);
@@ -1018,37 +1300,55 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
             {visibleTargets.map((t) => {
               const salesPct = Math.round((t.achievedSales / t.targetSales) * 100);
               const recPct = Math.round((t.achievedRecovery / t.targetRecovery) * 100);
+              const isExpanded = !!expandedCardIds[t.id];
               return (
-                <div key={t.id} className="nm-flat p-5 rounded-3xl border border-white space-y-4">
+                <div key={t.id} className="nm-flat p-5 rounded-3xl border border-white space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-black text-slate-800">{t.officer}</h3>
                       <p className="text-xs text-slate-500 font-medium">{t.territory}</p>
                     </div>
-                    <span className="font-mono text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-xl border border-teal-200">
-                      {t.month}
-                    </span>
-                  </div>
-
-                  {/* Sales Target Gauge */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span className="text-slate-600">Sales Realization ({salesPct}%)</span>
-                      <span className="text-teal-700">PKR {t.achievedSales.toLocaleString()} / {t.targetSales.toLocaleString()}</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                      <div className="bg-teal-600 h-full rounded-full transition-all" style={{ width: `${Math.min(salesPct, 100)}%` }} />
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="font-mono text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-xl border border-teal-200">
+                        {t.month}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-600 sm:hidden">
+                        Sales: {salesPct}% | Rec: {recPct}%
+                      </span>
                     </div>
                   </div>
 
-                  {/* Recovery Target Gauge */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span className="text-slate-600">Recovery Realization ({recPct}%)</span>
-                      <span className="text-indigo-700">PKR {t.achievedRecovery.toLocaleString()} / {t.targetRecovery.toLocaleString()}</span>
+                  {/* Touch Collapsible Expander Button */}
+                  <button
+                    type="button"
+                    onClick={() => toggleCardExpansion(t.id)}
+                    className="sm:hidden w-full pt-1.5 text-[11px] font-bold text-teal-700 flex items-center justify-between border-t border-slate-200/60"
+                  >
+                    <span>{isExpanded ? 'Hide Realization Progress' : 'Tap for Sales & Recovery Gauges'}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <div className={`space-y-3 ${isExpanded ? 'block' : 'hidden sm:block'}`}>
+                    {/* Sales Target Gauge */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-slate-600">Sales Realization ({salesPct}%)</span>
+                        <span className="text-teal-700">PKR {t.achievedSales.toLocaleString()} / {t.targetSales.toLocaleString()}</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div className="bg-teal-600 h-full rounded-full transition-all" style={{ width: `${Math.min(salesPct, 100)}%` }} />
+                      </div>
                     </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                      <div className="bg-indigo-600 h-full rounded-full transition-all" style={{ width: `${Math.min(recPct, 100)}%` }} />
+
+                    {/* Recovery Target Gauge */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-slate-600">Recovery Realization ({recPct}%)</span>
+                        <span className="text-indigo-700">PKR {t.achievedRecovery.toLocaleString()} / {t.targetRecovery.toLocaleString()}</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div className="bg-indigo-600 h-full rounded-full transition-all" style={{ width: `${Math.min(recPct, 100)}%` }} />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1110,125 +1410,140 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {visibleSalesTeam.map((st) => (
-              <div key={st.id} className="nm-flat p-5 rounded-3xl border border-white space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="nm-badge-teal text-[9px] px-2.5 py-0.5 rounded-full font-extrabold">{st.role}</span>
-                    <span className="font-mono text-[10px] text-slate-500 font-bold bg-slate-200 px-2 py-0.5 rounded-md">
-                      {st.employeeCode || st.id}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                    ● {st.status ? st.status.replace('_', ' ') : 'ACTIVE'}
-                  </span>
-                </div>
-
-                <div>
-                  <h3 className="text-base font-black text-slate-800">{st.name}</h3>
-                  <p className="text-xs text-slate-500 font-semibold">{st.designation || 'Territory Officer'}</p>
-                </div>
-
-                <div className="space-y-1 text-xs text-slate-600 bg-slate-100/60 p-3 rounded-2xl nm-inset">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-bold text-[10px] uppercase">CNIC:</span>
-                    <span className="font-mono font-bold text-slate-800 text-[11px]">{st.cnic || '35202-1234567-1'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-bold text-[10px] uppercase">Phone:</span>
-                    <span className="font-bold text-slate-800 text-[11px]">{st.phone}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-bold text-[10px] uppercase">Region / Area:</span>
-                    <span className="font-bold text-teal-800 text-[11px]">{st.region} ({st.area || 'Central'})</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-[10px]">
-                  <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100">
-                    <span className="text-emerald-700 font-bold block">Monthly Sales Target</span>
-                    <span className="font-mono font-black text-emerald-900 text-xs">
-                      PKR {((st.targetMonthlySales || 2500000) / 100000).toFixed(1)} Lakh
-                    </span>
-                  </div>
-                  <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100">
-                    <span className="text-indigo-700 font-bold block">Recovery Target</span>
-                    <span className="font-mono font-black text-indigo-900 text-xs">
-                      PKR {((st.targetMonthlyRecovery || 2000000) / 100000).toFixed(1)} Lakh
-                    </span>
-                  </div>
-                </div>
-
-                <div className="nm-inset p-3 rounded-2xl space-y-1 text-xs text-slate-600">
-                  <div className="font-bold text-slate-700 text-[11px]">Assigned Weekly Beats:</div>
-                  <ul className="space-y-1 text-[11px]">
-                    {(st.beats || []).map((b: string, idx: number) => (
-                      <li key={idx} className="flex items-center gap-1.5 text-teal-800 font-medium">
-                        <CheckCircle2 className="w-3 h-3 text-teal-600 shrink-0" />
-                        <span className="truncate">{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                  <button
-                    onClick={() => {
-                      setSelectedSalesPerson(st);
-                      setModalType('EMPLOYEE_DOSSIER');
-                    }}
-                    className="nm-btn px-3 py-1.5 rounded-xl text-[11px] font-bold text-teal-800"
-                  >
-                    View Personnel Dossier
-                  </button>
-                  {isAdmin && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => {
-                          setSelectedSalesPerson(st);
-                          setEmployeeForm({
-                            name: st.name || '',
-                            employeeCode: st.employeeCode || st.id,
-                            cnic: st.cnic || '35202-1234567-1',
-                            phone: st.phone || '',
-                            emergencyPhone: st.emergencyPhone || '',
-                            email: st.email || '',
-                            role: st.role || 'TSM',
-                            designation: st.designation || 'Territory Sales Manager',
-                            region: st.region || 'Punjab Central',
-                            area: st.area || 'Lahore Division',
-                            territory: st.territory || 'Brandreth Road Market',
-                            baseBranch: st.baseBranch || 'National Lights Head Office, Lahore',
-                            targetMonthlySales: st.targetMonthlySales || 2500000,
-                            targetMonthlyRecovery: st.targetMonthlyRecovery || 2000000,
-                            dateOfJoining: st.dateOfJoining || '2023-01-15',
-                            salaryGrade: st.salaryGrade || 'Grade B2 + 1.5% Commission',
-                            address: st.address || '',
-                            status: st.status || 'ACTIVE',
-                            beatsStr: (st.beats || []).join(', '),
-                          });
-                          setModalType('EDIT_SALES_MEMBER');
-                        }}
-                        className="nm-btn p-1.5 rounded-lg text-slate-600 hover:text-teal-700"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteEmployee(st.id)}
-                        className="nm-btn p-1.5 rounded-lg text-slate-600 hover:text-rose-600"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+            {visibleSalesTeam.map((st) => {
+              const isExpanded = !!expandedCardIds[st.id];
+              return (
+                <div key={st.id} className="nm-flat p-5 rounded-3xl border border-white space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="nm-badge-teal text-[9px] px-2.5 py-0.5 rounded-full font-extrabold">{st.role}</span>
+                      <span className="font-mono text-[10px] text-slate-500 font-bold bg-slate-200 px-2 py-0.5 rounded-md">
+                        {st.employeeCode || st.id}
+                      </span>
                     </div>
-                  )}
+                    <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      ● {st.status ? st.status.replace('_', ' ') : 'ACTIVE'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-black text-slate-800">{st.name}</h3>
+                    <p className="text-xs text-slate-500 font-semibold">{st.designation || 'Territory Officer'}</p>
+                  </div>
+
+                  {/* Touch Collapsible Expander Button */}
+                  <button
+                    type="button"
+                    onClick={() => toggleCardExpansion(st.id)}
+                    className="sm:hidden w-full pt-1.5 text-[11px] font-bold text-teal-700 flex items-center justify-between border-t border-slate-200/60"
+                  >
+                    <span>{isExpanded ? 'Hide Details' : 'Tap for CNIC, Quotas & Beats'}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <div className={`space-y-3 ${isExpanded ? 'block' : 'hidden sm:block'}`}>
+                    <div className="space-y-1 text-xs text-slate-600 bg-slate-100/60 p-3 rounded-2xl nm-inset">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 font-bold text-[10px] uppercase">CNIC:</span>
+                        <span className="font-mono font-bold text-slate-800 text-[11px]">{st.cnic || '35202-1234567-1'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 font-bold text-[10px] uppercase">Phone:</span>
+                        <span className="font-bold text-slate-800 text-[11px]">{st.phone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 font-bold text-[10px] uppercase">Region / Area:</span>
+                        <span className="font-bold text-teal-800 text-[11px]">{st.region} ({st.area || 'Central'})</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100">
+                        <span className="text-emerald-700 font-bold block">Monthly Sales Target</span>
+                        <span className="font-mono font-black text-emerald-900 text-xs">
+                          PKR {((st.targetMonthlySales || 2500000) / 100000).toFixed(1)} Lakh
+                        </span>
+                      </div>
+                      <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100">
+                        <span className="text-indigo-700 font-bold block">Recovery Target</span>
+                        <span className="font-mono font-black text-indigo-900 text-xs">
+                          PKR {((st.targetMonthlyRecovery || 2000000) / 100000).toFixed(1)} Lakh
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="nm-inset p-3 rounded-2xl space-y-1 text-xs text-slate-600">
+                      <div className="font-bold text-slate-700 text-[11px]">Assigned Weekly Beats:</div>
+                      <ul className="space-y-1 text-[11px]">
+                        {(st.beats || []).map((b: string, idx: number) => (
+                          <li key={idx} className="flex items-center gap-1.5 text-teal-800 font-medium">
+                            <CheckCircle2 className="w-3 h-3 text-teal-600 shrink-0" />
+                            <span className="truncate">{b}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className={`items-center justify-between pt-2 border-t border-slate-200 ${isExpanded ? 'flex' : 'hidden sm:flex'}`}>
+                    <button
+                      onClick={() => {
+                        setSelectedSalesPerson(st);
+                        setModalType('EMPLOYEE_DOSSIER');
+                      }}
+                      className="nm-btn px-3 py-1.5 rounded-xl text-[11px] font-bold text-teal-800"
+                    >
+                      View Personnel Dossier
+                    </button>
+                    {isAdmin && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setSelectedSalesPerson(st);
+                            setEmployeeForm({
+                              name: st.name || '',
+                              employeeCode: st.employeeCode || st.id,
+                              cnic: st.cnic || '35202-1234567-1',
+                              phone: st.phone || '',
+                              emergencyPhone: st.emergencyPhone || '',
+                              email: st.email || '',
+                              role: st.role || 'TSM',
+                              designation: st.designation || 'Territory Sales Manager',
+                              region: st.region || 'Punjab Central',
+                              area: st.area || 'Lahore Division',
+                              territory: st.territory || 'Brandreth Road Market',
+                              baseBranch: st.baseBranch || 'National Lights Head Office, Lahore',
+                              targetMonthlySales: st.targetMonthlySales || 2500000,
+                              targetMonthlyRecovery: st.targetMonthlyRecovery || 2000000,
+                              dateOfJoining: st.dateOfJoining || '2023-01-15',
+                              salaryGrade: st.salaryGrade || 'Grade B2 + 1.5% Commission',
+                              address: st.address || '',
+                              status: st.status || 'ACTIVE',
+                              beatsStr: (st.beats || []).join(', '),
+                            });
+                            setModalType('EDIT_SALES_MEMBER');
+                          }}
+                          className="nm-btn p-1.5 rounded-lg text-slate-600 hover:text-teal-700"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEmployee(st.id)}
+                          className="nm-btn p-1.5 rounded-lg text-slate-600 hover:text-rose-600"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* TAB 6: 5-TIER HIERARCHY TREE */}
+      {/* TAB 6: 5-TIER HIERARCHY TREE & D3 INTERACTIVE MAP */}
       {activeSubTab === 'HIERARCHY' && (
         <div className="space-y-6">
           <div className="nm-flat p-6 rounded-3xl border border-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1238,7 +1553,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
                 <span className="nm-badge-teal text-[10px] px-2.5 py-0.5 rounded-full font-bold">Admin Governance Tree</span>
               </div>
               <p className="text-xs text-slate-500">
-                National Executive Board $\rightarrow$ Regional Hubs (RSM) $\rightarrow$ Area Zones (ASM) $\rightarrow$ Territory Beats (TSM) $\rightarrow$ Commercial Outlets.
+                National Executive Board &rarr; Regional Hubs (RSM) &rarr; Area Zones (ASM) &rarr; Territory Beats (TSM) &rarr; Commercial Outlets.
               </p>
             </div>
             {isAdmin && (
@@ -1252,7 +1567,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
                   });
                   setModalType('ADD_HIERARCHY_NODE');
                 }}
-                className="nm-btn-primary px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                className="nm-btn-primary px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-sm shrink-0"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Hierarchy Node</span>
@@ -1260,33 +1575,232 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
             )}
           </div>
 
-          <div className="space-y-3">
-            {hierarchyNodes.map((hn) => (
-              <div key={hn.id} className="nm-flat p-5 rounded-3xl border border-white space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl nm-inset flex items-center justify-center text-teal-700 font-black text-xs">
-                      {hn.level[0]}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-800">{hn.level}</h3>
-                      <p className="text-xs text-slate-500">{hn.title}</p>
-                    </div>
-                  </div>
-                  <span className="font-mono text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-xl border border-teal-200">
-                    {hn.nodes} Nodes Active
-                  </span>
-                </div>
+          {/* D3 Interactive Map Component */}
+          <TerritoryHierarchyD3Map />
 
-                <div className="flex flex-wrap gap-1.5 pt-2">
-                  {hn.subNodes.map((sn: string, idx: number) => (
-                    <span key={idx} className="nm-inset px-3 py-1 rounded-xl text-[11px] font-bold text-slate-700">
-                      {sn}
+          <div className="space-y-3">
+            <h3 className="text-sm font-black text-slate-800 px-1">Hierarchy Tier Roster Summary</h3>
+            {hierarchyNodes.map((hn) => {
+              const isExpanded = !!expandedCardIds[hn.id];
+              return (
+                <div key={hn.id} className="nm-flat p-5 rounded-3xl border border-white space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl nm-inset flex items-center justify-center text-teal-700 font-black text-xs">
+                        {hn.level[0]}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-800">{hn.level}</h3>
+                        <p className="text-xs text-slate-500">{hn.title}</p>
+                      </div>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-xl border border-teal-200">
+                      {hn.nodes} Nodes Active
                     </span>
-                  ))}
+                  </div>
+
+                  {/* Mobile Collapsible Toggle */}
+                  <button
+                    onClick={() => toggleCardExpansion(hn.id)}
+                    className="sm:hidden w-full pt-1 text-[11px] font-bold text-teal-700 flex items-center justify-between"
+                  >
+                    <span>{isExpanded ? 'Hide Sub-Nodes' : `Tap to Expand (${hn.subNodes.length} Nodes)`}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <div className={`flex flex-wrap gap-1.5 pt-2 transition-all ${isExpanded ? 'flex' : 'hidden sm:flex'}`}>
+                    {hn.subNodes.map((sn: string, idx: number) => (
+                      <span key={idx} className="nm-inset px-3 py-1 rounded-xl text-[11px] font-bold text-slate-700">
+                        {sn}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Dedicated Towns & Route Management console */}
+          <div className="nm-flat p-6 rounded-3xl border border-white space-y-4">
+            <div className="border-b border-slate-300 pb-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+              <div>
+                <h3 className="text-base font-black text-slate-800">🏡 Town & Route Management console</h3>
+                <p className="text-xs text-slate-500 font-medium">Add, assign, and activate/deactivate corporate market routes and town nodes.</p>
+              </div>
+              <span className="text-[10px] bg-indigo-100 border border-indigo-200 text-indigo-800 font-bold px-2.5 py-1 rounded-full uppercase">
+                Route Connections Active
+              </span>
+            </div>
+
+            {/* Quick Town Registration/Edit Form (Inline for simplicity) */}
+            <div className="nm-inset p-5 rounded-2xl bg-[#EAF0F6] space-y-3">
+              <h4 className="font-extrabold text-xs text-slate-700">
+                {editingTownId ? '✏️ Edit Town Configuration' : '➕ Register New Town Node'}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs font-sans">
+                <div>
+                  <label className="font-bold text-slate-600 block mb-1">Town Name*</label>
+                  <input
+                    type="text"
+                    required
+                    value={newTownName}
+                    placeholder="e.g. Faisalabad"
+                    onChange={(e) => setNewTownName(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-white border border-slate-300 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-600 block mb-1">Area Zone*</label>
+                  <select
+                    value={newTownArea}
+                    onChange={(e) => setNewTownArea(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-white border border-slate-300 focus:outline-none"
+                  >
+                    <option value="Lahore Division">Lahore Division</option>
+                    <option value="Gujranwala Zone">Gujranwala Zone</option>
+                    <option value="Karachi South Zone">Karachi South Zone</option>
+                    <option value="Peshawar Division">Peshawar Division</option>
+                    <option value="Multan Zone">Multan Zone</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-600 block mb-1">Region*</label>
+                  <select
+                    value={newTownRegion}
+                    onChange={(e) => setNewTownRegion(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-white border border-slate-300 focus:outline-none"
+                  >
+                    <option value="Punjab Central">Punjab Central</option>
+                    <option value="Punjab North">Punjab North</option>
+                    <option value="Punjab South">Punjab South</option>
+                    <option value="Sindh South">Sindh South</option>
+                    <option value="KPK West">KPK West</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-600 block mb-1">Assigned TSM / Field Officer*</label>
+                  <select
+                    value={newTownTsm}
+                    onChange={(e) => setNewTownTsm(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-white border border-slate-300 focus:outline-none font-bold text-teal-800"
+                  >
+                    <option value="Ali Raza (TSM)">Ali Raza (TSM)</option>
+                    <option value="Muhammad Usman (TSM)">Muhammad Usman (TSM)</option>
+                    <option value="Farhan Siddiqui (TSM)">Farhan Siddiqui (TSM)</option>
+                    <option value="Tariq Mansoor (RSM)">Tariq Mansoor (RSM)</option>
+                    <option value="Unassigned">Unassigned</option>
+                  </select>
                 </div>
               </div>
-            ))}
+
+              <div className="flex justify-end gap-2 pt-1 font-sans">
+                {editingTownId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingTownId(null);
+                      setNewTownName('');
+                    }}
+                    className="px-4 py-2 rounded-xl font-bold bg-slate-200 text-slate-600 text-xs"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!newTownName.trim()) {
+                      alert('Town Name is required.');
+                      return;
+                    }
+                    if (editingTownId) {
+                      setTowns(prev => prev.map(t => t.id === editingTownId ? { ...t, name: newTownName.trim(), area: newTownArea, region: newTownRegion, assignedTsm: newTownTsm } : t));
+                      alert(`Town updated! Assigned route connected to ${newTownTsm}.`);
+                      setEditingTownId(null);
+                    } else {
+                      const nt = {
+                        id: `TWN-${Math.floor(100 + Math.random() * 900)}`,
+                        name: newTownName.trim(),
+                        area: newTownArea,
+                        region: newTownRegion,
+                        assignedTsm: newTownTsm,
+                        status: 'ACTIVE'
+                      };
+                      setTowns(prev => [...prev, nt]);
+                      alert(`New Town "${newTownName}" registered and assigned to ${newTownTsm}!`);
+                    }
+                    setNewTownName('');
+                  }}
+                  className="px-5 py-2 rounded-xl font-black bg-teal-600 hover:bg-teal-700 text-white text-xs shadow-md"
+                >
+                  {editingTownId ? 'Save Route Configuration' : 'Register Town & Route'}
+                </button>
+              </div>
+            </div>
+
+            {/* Towns List Table */}
+            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+              <table className="w-full text-left text-xs bg-white">
+                <thead className="bg-slate-100 text-slate-700 font-bold border-b">
+                  <tr>
+                    <th className="py-2.5 px-3">Town Code</th>
+                    <th className="py-2.5 px-3">Town Name</th>
+                    <th className="py-2.5 px-3 font-sans">Area / Zone</th>
+                    <th className="py-2.5 px-3 font-mono">Region</th>
+                    <th className="py-2.5 px-3 font-sans">Assigned TSM Field Representative</th>
+                    <th className="py-2.5 px-3 text-center font-sans">Status</th>
+                    <th className="py-2.5 px-3 text-right font-sans">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-sans text-slate-700 text-[11px]">
+                  {towns.map((t) => (
+                    <tr key={t.id} className="hover:bg-slate-50">
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-500">{t.id}</td>
+                      <td className="py-2.5 px-3 font-extrabold text-slate-800">{t.name}</td>
+                      <td className="py-2.5 px-3 text-slate-600">{t.area}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-500">{t.region}</td>
+                      <td className="py-2.5 px-3 font-bold text-teal-800">{t.assignedTsm}</td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] ${
+                          t.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {t.status}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="flex justify-end gap-1.5 font-sans">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTowns(prev => prev.map(o => o.id === t.id ? { ...o, status: o.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' } : o));
+                              alert(`Town route "${t.name}" status updated.`);
+                            }}
+                            className={`px-2 py-1 rounded text-[10px] font-bold ${
+                              t.status === 'ACTIVE' ? 'bg-rose-50 text-rose-700 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                            }`}
+                          >
+                            {t.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingTownId(t.id);
+                              setNewTownName(t.name);
+                              setNewTownArea(t.area);
+                              setNewTownRegion(t.region);
+                              setNewTownTsm(t.assignedTsm);
+                            }}
+                            className="p-1 text-slate-400 hover:text-teal-700"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

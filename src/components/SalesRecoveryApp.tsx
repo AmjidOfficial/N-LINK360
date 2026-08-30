@@ -1,72 +1,60 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * N-LINK 360 - Sales & Recovery Mobile Application (Field Officer App)
- * Critical Rule: Unified Sales + Recovery Single Role
+ * N-LINK 360 - Sales & Recovery Mobile Application (Field Force App)
+ * Responsive Universal Theme Design with Premium Neumorphic Styling & Live Supabase Synchronization
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowLeft,
-  Building2,
-  Calendar,
-  Camera,
-  Check,
-  CheckCircle2,
-  ChevronRight,
+  TrendingUp,
+  MapPin,
+  Users,
   Clock,
   Coins,
-  CreditCard,
   FilePlus,
   FileText,
-  History,
-  Info,
-  Layers,
-  MapPin,
-  MoreHorizontal,
-  Navigation,
-  Package,
-  Plus,
-  RotateCcw,
   Search,
-  Send,
+  Check,
+  Calendar,
+  AlertTriangle,
+  Info,
+  ChevronRight,
+  ArrowLeft,
   ShieldCheck,
-  ShoppingBag,
-  Sparkles,
-  Target,
-  Trash2,
-  TrendingUp,
-  User,
-  Users,
-  Wallet,
+  Wifi,
+  WifiOff,
+  RotateCw,
+  LogOut,
+  Send,
+  Printer,
+  ChevronDown
 } from 'lucide-react';
 import {
-  calculateOrderTotals,
-  evaluateCreditPolicy,
-  validateRecoverySubmission,
-} from '../lib/business-rules';
-import {
   Customer,
-  CustomerRegistrationRequest,
-  CustomerVisit,
-  InventoryBalance,
   PaymentMode,
   SalesOrder,
   SKU,
+  InventoryBalance,
   User as UserType,
+  Recovery as RecoveryType,
+  Invoice as InvoiceType,
+  LedgerEntry as LedgerEntryType
 } from '../types';
-import { VisitLogCalendarView } from './VisitLogCalendarView';
-import { fetchCustomerLatestBalance } from '../services/supabase-data';
 
 interface SalesRecoveryAppProps {
   currentUser: UserType;
   customers?: Customer[];
   skus?: SKU[];
   inventoryBalances?: InventoryBalance[];
-  visits?: CustomerVisit[];
-  registrationRequests?: CustomerRegistrationRequest[];
+  visits?: any[];
+  salesOrders?: SalesOrder[];
+  recoveries?: RecoveryType[];
+  invoices?: InvoiceType[];
+  ledgerEntries?: LedgerEntryType[];
+  onLogout?: () => Promise<void> | void;
   onBookOrder?: (order: Partial<SalesOrder>) => void;
   onRecordRecovery?: (data: {
     customerId: string;
@@ -76,2497 +64,1703 @@ interface SalesRecoveryAppProps {
     bankName?: string;
     remarks?: string;
   }) => void;
-  onLogVisit?: (visit: Partial<CustomerVisit>) => void;
-  onSubmitRegistration?: (req: Partial<CustomerRegistrationRequest>) => void;
+  onLogVisit?: (visit: Partial<any>) => void;
+  onSubmitRegistration?: (reg: any) => void;
+  onRefresh?: () => Promise<void> | void;
 }
 
-const defaultFallbackCustomer: Customer = {
-  id: 'cust-demo-01',
-  customerCode: 'CUST-001',
-  companyName: 'Al-Madina Electric Corporation',
-  contactPerson: 'Haji Shafiq',
-  phone: '+92 300 4211223',
-  type: 'DISTRIBUTOR',
-  address: 'Shop 14-16, Brandreth Road, Lahore',
-  city: 'Lahore',
-  region: 'Punjab North',
-  creditLimit: 1500000,
-  creditDays: 45,
-  openingBalance: 350000,
-  currentBalance: 580000,
-  isCreditLocked: false,
-  isActive: true,
-  createdAt: '2026-08-01T00:00:00Z',
-  updatedAt: '2026-08-20T00:00:00Z',
+// -------------------------------------------------------------
+// Central coords for standard Pakistan towns for Geofencing calculations
+// -------------------------------------------------------------
+const TOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  'Lahore': { lat: 31.5204, lng: 74.3587 },
+  'Gujranwala': { lat: 32.1617, lng: 74.1883 },
+  'Karachi': { lat: 24.8607, lng: 67.0011 },
+  'Karachi South': { lat: 24.8607, lng: 67.0011 },
+  'Peshawar': { lat: 34.0151, lng: 71.5249 },
+  'Multan': { lat: 30.1575, lng: 71.5249 },
+  'Faisalabad': { lat: 31.4504, lng: 73.1350 },
+  'Islamabad': { lat: 33.6844, lng: 73.0479 },
+  'Rawalpindi': { lat: 33.5984, lng: 73.0441 },
+  'Sialkot': { lat: 32.4972, lng: 74.5361 },
+  'Quetta': { lat: 30.1798, lng: 66.9750 }
 };
 
-export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
+const getTownCoordinates = (townName: string) => {
+  const normalized = townName.trim();
+  const matched = Object.keys(TOWN_COORDINATES).find(
+    k => k.toLowerCase() === normalized.toLowerCase()
+  );
+  if (matched) return TOWN_COORDINATES[matched];
+
+  let hash = 0;
+  for (let i = 0; i < normalized.length; i++) {
+    hash = normalized.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const lat = 31.0 + (Math.abs(hash % 100) / 50);
+  const lng = 72.0 + (Math.abs((hash >> 8) % 100) / 30);
+  return { lat, lng };
+};
+
+const getDistanceKM = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+export const SalesRecoveryApp = ({
   currentUser,
   customers = [],
   skus = [],
   inventoryBalances = [],
-  visits = [],
-  registrationRequests = [],
-  onBookOrder = (_order: Partial<SalesOrder>) => {},
-  onRecordRecovery = (_data: {
-    customerId: string;
-    amount: number;
-    paymentMode: PaymentMode;
-    instrumentNumber?: string;
-    bankName?: string;
-    remarks?: string;
-  }) => {},
-  onLogVisit = (_visit: Partial<CustomerVisit>) => {},
-  onSubmitRegistration = (_req: Partial<CustomerRegistrationRequest>) => {},
-}) => {
-  const [activeScreen, setActiveScreen] = useState<
-    'DASHBOARD' | 'CUSTOMERS' | 'CUSTOMER_PROFILE' | 'ORDER_BOOKING' | 'RECOVERY_FORM' | 'VISIT_LOG' | 'PERFORMANCE' | 'REGISTRATION_FORM' | 'REGISTRATION_HISTORY' | 'MORE'
-  >('DASHBOARD');
+  salesOrders = [],
+  recoveries = [],
+  invoices = [],
+  ledgerEntries = [],
+  onLogout,
+  onBookOrder,
+  onRecordRecovery,
+  onLogVisit,
+  onRefresh,
+}: SalesRecoveryAppProps) => {
+  // Mobile Navigation: 'DASHBOARD' | 'ATTENDANCE' | 'CUSTOMERS'
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'ATTENDANCE' | 'CUSTOMERS'>('DASHBOARD');
 
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(customers[0]?.id || 'cust-demo-01');
-  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId) || customers[0] || defaultFallbackCustomer;
+  // Dealer directory states
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [customerSubTab, setCustomerSubTab] = useState<'DETAILS' | 'ORDER_FORM' | 'INVOICES_LIST' | 'LEDGER_SHEET'>('DETAILS');
 
-  // Registration Form State
-  const [regBusinessName, setRegBusinessName] = useState('');
-  const [regOwnerName, setRegOwnerName] = useState('');
-  const [regContactNumber, setRegContactNumber] = useState('');
-  const [regCnic, setRegCnic] = useState('');
-  const [regAddress, setRegAddress] = useState('');
-  const [regCity, setRegCity] = useState('Lahore');
-  const [regRegion, setRegRegion] = useState('Punjab North');
-  const [regType, setRegType] = useState<'DEALER' | 'DISTRIBUTOR'>('DEALER');
-  const [regCreditLimit, setRegCreditLimit] = useState<number>(300000);
-  const [regCreditDays, setRegCreditDays] = useState<number>(30);
-  const [regOpeningBalance, setRegOpeningBalance] = useState<number>(0);
-  const [regNotes, setRegNotes] = useState('');
-  const [regLatitude, setRegLatitude] = useState<number>(31.5798);
-  const [regLongitude, setRegLongitude] = useState<number>(74.3168);
+  // Extract towns
+  const assignedTowns = Array.from(new Set(customers.map(c => c.city || 'Lahore'))).filter(Boolean);
+  const defaultTown = assignedTowns[0] || 'Lahore';
 
-  // Selected visit map pin (interactive state)
-  const [selectedMapPin, setSelectedMapPin] = useState<{ id: string; name: string; dist: number; type: string } | null>(null);
-  const [visitScreenSubTab, setVisitScreenSubTab] = useState<'CHECKIN' | 'CALENDAR'>('CHECKIN');
+  // Attendance states (This is the Single Source of Truth for selected town)
+  const [attendanceTown, setAttendanceTown] = useState<string>(() => {
+    return localStorage.getItem('nlink_active_town') || defaultTown;
+  });
 
-  // Advanced Sales & Recovery Ordering State
-  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
-  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
-  const [gridOrderQuantities, setGridOrderQuantities] = useState<Record<string, number>>({});
-  const [gridOrderDiscounts, setGridOrderDiscounts] = useState<Record<string, number>>({});
-  const [skuSearchQuery, setSkuSearchQuery] = useState('');
-  const [backordersEnabled, setBackordersEnabled] = useState(false);
-  const [orderRecoveryAmount, setOrderRecoveryAmount] = useState<number>(0);
-  const [orderPaymentMode, setOrderPaymentMode] = useState<PaymentMode>('CASH');
-  const [orderInstrumentNumber, setOrderInstrumentNumber] = useState('');
-  const [orderBankName, setOrderBankName] = useState('');
-  const [orderRecoveryRemarks, setOrderRecoveryRemarks] = useState('');
-  const [showOrderConfirmModal, setShowOrderConfirmModal] = useState(false);
-  const [isSyncingBalance, setIsSyncingBalance] = useState(false);
-  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [checkInTime, setCheckInTime] = useState<string | null>(localStorage.getItem('nlink_checkin_time'));
+  const [checkOutTime, setCheckOutTime] = useState<string | null>(localStorage.getItem('nlink_checkout_time'));
+  const [checkInLoc, setCheckInLoc] = useState<string | null>(localStorage.getItem('nlink_checkin_loc'));
+  const [checkOutLoc, setCheckOutLoc] = useState<string | null>(localStorage.getItem('nlink_checkout_loc'));
 
-  // Order Booking State
-  const [orderItems, setOrderItems] = useState<
-    Array<{ skuId: string; quantity: number; discountPercent: number }>
-  >([{ skuId: skus[0]?.id || '', quantity: 50, discountPercent: 0 }]);
+  // Save selected town in local storage
+  useEffect(() => {
+    localStorage.setItem('nlink_active_town', attendanceTown);
+  }, [attendanceTown]);
 
-  // Recovery Form State
-  const [recoveryAmount, setRecoveryAmount] = useState<number>(50000);
-  const [recoveryPaymentMode, setRecoveryPaymentMode] = useState<PaymentMode>('CASH');
-  const [instrumentNumber, setInstrumentNumber] = useState<string>('');
-  const [bankName, setBankName] = useState<string>('');
-  const [recoveryRemarks, setRecoveryRemarks] = useState<string>('');
+  // GPS checking states
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [bypassGeofence, setBypassGeofence] = useState<boolean>(false);
 
-  // Visit Log State
-  const [visitPurpose, setVisitPurpose] = useState('Routine Sales & Recovery Follow-up');
-  const [visitNotes, setVisitNotes] = useState('');
-  const [orderTakenInVisit, setOrderTakenInVisit] = useState(false);
-  const [recoveryTakenInVisit, setRecoveryTakenInVisit] = useState(false);
-  
-  // Visit Photo states
-  const [visitPhoto, setVisitPhoto] = useState<string | null>(null);
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  // Online Offline
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [offlineLogs, setOfflineLogs] = useState<any[]>(() => {
+    const cached = localStorage.getItem('nlink_offline_attendance');
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      setCameraStream(stream);
-      setIsCameraActive(true);
-      // Wait for React to render the video element and set srcObject
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      }, 100);
-    } catch (err) {
-      console.error("Camera access failed", err);
-      alert("Could not access device camera. You can still use simulated snapshots or upload an image file below!");
-    }
-  };
-
-  const stopCamera = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
-      setCameraStream(null);
-    }
-    setIsCameraActive(false);
-  };
-
-  const capturePhoto = () => {
-    if (videoRef.current) {
-      const video = videoRef.current;
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg');
-        setVisitPhoto(dataUrl);
-        stopCamera();
-      }
-    }
-  };
-
-  const selectSimulatedPhoto = (type: 'store' | 'receipt' | 'cheque') => {
-    const urls = {
-      store: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=400&q=80', // Shop storefront
-      receipt: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?auto=format&fit=crop&w=400&q=80', // Delivery receipt / writing desk
-      cheque: 'https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=400&q=80', // Cheque / bank details
-    };
-    setVisitPhoto(urls[type]);
-    stopCamera();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setVisitPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  React.useEffect(() => {
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     return () => {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-      }
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
-  }, [cameraStream]);
+  }, []);
 
-  // Advanced Grid-based Calculations
-  const gridComputedItems = Object.entries(gridOrderQuantities)
-    .filter(([_, qty]) => Number(qty) > 0)
-    .map(([skuId, qty]) => {
-      const sku = skus.find((s) => s.id === skuId);
-      const discountPercent = Number(gridOrderDiscounts[skuId]) || 0;
-      return {
-        skuId,
-        orderedQuantity: Number(qty),
-        unitPrice: sku?.tradePrice || 0,
-        discountPercent,
-      };
+  // Automatic background synchronization when transition back online occurs
+  useEffect(() => {
+    if (isOnline && offlineLogs.length > 0) {
+      syncOfflineLogs(true);
+    }
+  }, [isOnline]);
+
+  // Fetch coordinates on town change
+  useEffect(() => {
+    acquireLocation();
+  }, [attendanceTown]);
+
+  const acquireLocation = () => {
+    if (!navigator.geolocation) {
+      setGpsError('Geolocation not supported.');
+      return;
+    }
+    setGpsLoading(true);
+    setGpsError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsLoading(false);
+      },
+      (err) => {
+        console.warn('Geolocation sensor unavailable:', err.message);
+        setGpsError('Sensor offline. Fallback simulation active.');
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  };
+
+  const townCenter = getTownCoordinates(attendanceTown);
+  const userLat = userCoords?.lat ?? 31.5204;
+  const userLng = userCoords?.lng ?? 74.3587;
+  const distanceToCenter = getDistanceKM(userLat, userLng, townCenter.lat, townCenter.lng);
+  const maxRadiusKM = 15;
+  const isWithinGeofence = distanceToCenter <= maxRadiusKM || bypassGeofence;
+
+  // Session logs list
+  const [sessionLogs, setSessionLogs] = useState<any[]>([
+    { date: '2026-08-28', town: 'Gujranwala', checkIn: '09:15 AM', checkOut: '05:30 PM', status: 'SYNCHRONIZED', coords: '32.1617° N, 74.1883° E' },
+    { date: '2026-08-27', town: 'Lahore', checkIn: '09:02 AM', checkOut: '06:05 PM', status: 'SYNCHRONIZED', coords: '31.5204° N, 74.3587° E' },
+  ]);
+
+  // Today's transaction/orders data aggregation
+  const customerMap = new Map(customers.map(c => [c.id, c.city || 'Lahore']));
+  const aggregatedActivitiesMap: Record<string, Record<string, { sales: number; recovery: number }>> = {};
+
+  (salesOrders || []).forEach(order => {
+    const dateStr = (order.orderDate || '').split('T')[0];
+    if (!dateStr) return;
+    const town = customerMap.get(order.customerId) || 'Lahore';
+    if (!aggregatedActivitiesMap[dateStr]) aggregatedActivitiesMap[dateStr] = {};
+    if (!aggregatedActivitiesMap[dateStr][town]) aggregatedActivitiesMap[dateStr][town] = { sales: 0, recovery: 0 };
+    aggregatedActivitiesMap[dateStr][town].sales += Number(order.totalAmount || 0);
+  });
+
+  (recoveries || []).forEach(rec => {
+    const dateStr = (rec.collectionDate || '').split('T')[0];
+    if (!dateStr) return;
+    const town = customerMap.get(rec.customerId) || 'Lahore';
+    if (!aggregatedActivitiesMap[dateStr]) aggregatedActivitiesMap[dateStr] = {};
+    if (!aggregatedActivitiesMap[dateStr][town]) aggregatedActivitiesMap[dateStr][town] = { sales: 0, recovery: 0 };
+    aggregatedActivitiesMap[dateStr][town].recovery += Number(rec.amount || 0);
+  });
+
+  const dailyActivities: any[] = [];
+  Object.entries(aggregatedActivitiesMap).forEach(([date, townsObj]) => {
+    Object.entries(townsObj).forEach(([town, data]) => {
+      dailyActivities.push({ date, town, sales: data.sales, recovery: data.recovery });
     });
+  });
+  dailyActivities.sort((a, b) => b.date.localeCompare(a.date) || a.town.localeCompare(b.town));
 
-  const gridOrderTotals = calculateOrderTotals(gridComputedItems);
-  const gridCreditCheck = evaluateCreditPolicy(selectedCustomer, gridOrderTotals.totalAmount);
+  const todayDateStr = new Date().toISOString().split('T')[0];
+  if (dailyActivities.length === 0) {
+    dailyActivities.push({ date: todayDateStr, town: defaultTown, sales: 0, recovery: 0 });
+  }
 
-  // Submit Handlers
-  const handleOrderSubmit = () => {
-    if (gridComputedItems.length === 0) {
-      alert('Please enter order quantity for at least one SKU in the grid.');
+  // Monthly Achievement KPIs (Speedometers or clean visual bars)
+  const SALES_TARGET = 4500000; // PKR 4.5M Target
+  const RECOVERY_TARGET = 3500000; // PKR 3.5M Target
+
+  const totalAchievedSales = (salesOrders || []).reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+  const totalAchievedRecovery = (recoveries || []).reduce((sum, rec) => sum + Number(rec.amount || 0), 0);
+
+  const salesAchievementPercent = Math.min(Math.round((totalAchievedSales / SALES_TARGET) * 100), 100);
+  const recoveryAchievementPercent = Math.min(Math.round((totalAchievedRecovery / RECOVERY_TARGET) * 100), 100);
+
+  // Filter dealers EXACTLY by town selection in attendance
+  const filteredCustomers = customers.filter(
+    c => (c.city || 'Lahore').toLowerCase() === attendanceTown.toLowerCase()
+  );
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchedCustomers = filteredCustomers.filter(c => {
+    const q = searchQuery.toLowerCase();
+    return c.companyName.toLowerCase().includes(q) || c.customerCode.toLowerCase().includes(q);
+  });
+
+  const activeCustomer = customers.find(c => c.id === selectedCustomerId);
+
+  // -------------------------------------------------------------
+  // Dynamic Ledger, Invoices & Balance Equations for active customer
+  // -------------------------------------------------------------
+  // 1. Opening Balance
+  const clientOpeningBalance = activeCustomer?.openingBalance || 0;
+
+  // 2. Invoicing Amount (booked orders or matching invoices)
+  const clientInvoices = invoices.filter(inv => inv.customerId === selectedCustomerId);
+  const clientInvoicingAmount = clientInvoices.reduce((sum, inv) => sum + Number(inv.totalAmount || 0), 0);
+
+  // 3. Recovery Amount
+  const clientRecoveriesList = recoveries.filter(rec => rec.customerId === selectedCustomerId);
+  const clientRecoveryAmount = clientRecoveriesList.reduce((sum, rec) => sum + Number(rec.amount || 0), 0);
+
+  // 4. Net Balance
+  const clientNetBalance = clientOpeningBalance + clientInvoicingAmount - clientRecoveryAmount;
+
+  // Visit remarks
+  const [visitRemarks, setVisitRemarks] = useState('');
+
+  // Recovery Form states
+  const [todayRecoveryAmount, setTodayRecoveryAmount] = useState<string>('');
+  const [todayRecoveryMode, setTodayRecoveryMode] = useState<PaymentMode>('CASH');
+  const [instrumentNo, setInstrumentNo] = useState('');
+  const [bankName, setBankName] = useState('');
+
+  // -------------------------------------------------------------
+  // Group products by Brand
+  // -------------------------------------------------------------
+  const brandsGrouped: Record<string, SKU[]> = {};
+  skus.forEach(sku => {
+    const bName = sku.brandName || 'Brand 1';
+    if (!brandsGrouped[bName]) {
+      brandsGrouped[bName] = [];
+    }
+    brandsGrouped[bName].push(sku);
+  });
+
+  // Dynamic order states
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
+
+  // Generated Invoice Overlay State after successful submission
+  const [generatedInvoice, setGeneratedInvoice] = useState<any | null>(null);
+
+  // Invoices Subtab Date Filters
+  const [invoiceFromDate, setInvoiceFromDate] = useState('2026-08-01');
+  const [invoiceToDate, setInvoiceToDate] = useState('2026-08-31');
+  
+  const [liveInvoices, setLiveInvoices] = useState<InvoiceType[]>([]);
+  const [liveInvoicesLoading, setLiveInvoicesLoading] = useState(false);
+  const [liveInvoicesError, setLiveInvoicesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (!selectedCustomerId) {
+      setLiveInvoices([]);
       return;
     }
 
-    const newItems = gridComputedItems.map((item) => {
-      const sku = skus.find((s) => s.id === item.skuId)!;
-      const gross = item.orderedQuantity * sku.tradePrice;
-      const discount = gross * (item.discountPercent / 100);
-      return {
-        id: `soi-${Date.now()}-${Math.random()}`,
-        orderId: '',
-        skuId: sku.id,
-        skuCode: sku.skuCode,
-        skuName: sku.name,
-        orderedQuantity: item.orderedQuantity,
-        unitPrice: sku.tradePrice,
-        discountPercent: item.discountPercent,
-        lineTotal: gross - discount,
-      };
-    });
-
-    // Execute recovery submission in parallel if recovery is collected right inside this workflow
-    if (orderRecoveryAmount > 0) {
-      const recAmt = orderRecoveryAmount;
-      const targetCustId = selectedCustomer.id;
-      onRecordRecovery({
-        customerId: targetCustId,
-        amount: recAmt,
-        paymentMode: orderPaymentMode,
-        instrumentNumber: orderInstrumentNumber.trim() || undefined,
-        bankName: orderBankName.trim() || undefined,
-        remarks: orderRecoveryRemarks.trim() || 'Recorded during unified order booking workflow',
+    const fetchLiveInvoices = async () => {
+      // Local client filtering fallback
+      const clientInvoices = invoices.filter(inv => inv.customerId === selectedCustomerId);
+      const filteredLocal = clientInvoices.filter(inv => {
+        const date = inv.invoiceDate || '';
+        return date >= invoiceFromDate && date <= invoiceToDate;
       });
 
-      // Background re-validation of customer balance from Supabase
-      setIsSyncingBalance(true);
-      void (async () => {
-        try {
-          const liveBal = await fetchCustomerLatestBalance(targetCustId);
-          if (liveBal !== null && selectedCustomer && selectedCustomer.id === targetCustId) {
-            selectedCustomer.currentBalance = liveBal;
-            setSyncNotice(`✓ Verified live balance from Supabase: PKR ${liveBal.toLocaleString()}`);
-            setTimeout(() => setSyncNotice(null), 4000);
-          }
-        } catch (err) {
-          console.warn('Background balance check error:', err);
-        } finally {
-          setIsSyncingBalance(false);
-        }
-      })();
-    }
-
-    onBookOrder({
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.companyName,
-      customerCode: selectedCustomer.customerCode,
-      salesUserId: currentUser.id,
-      salesUserName: currentUser.fullName,
-      orderDate: new Date().toISOString().split('T')[0],
-      status: 'SUBMITTED',
-      items: newItems,
-      subtotal: gridOrderTotals.subtotal,
-      discountAmount: gridOrderTotals.discountAmount,
-      taxAmount: gridOrderTotals.taxAmount,
-      totalAmount: gridOrderTotals.totalAmount,
-      creditCheckStatus: gridCreditCheck.status,
-      creditCheckNotes: gridCreditCheck.message,
-    });
-
-    // Reset advanced grid & recovery state
-    setGridOrderQuantities({});
-    setGridOrderDiscounts({});
-    setOrderRecoveryAmount(0);
-    setOrderInstrumentNumber('');
-    setOrderBankName('');
-    setOrderRecoveryRemarks('');
-    setShowOrderConfirmModal(false);
-
-    alert('Unified Sales & Recovery Order submitted successfully!');
-    setActiveScreen('DASHBOARD');
-  };
-
-  const handleRecoverySubmit = () => {
-    const validation = validateRecoverySubmission(
-      recoveryAmount,
-      recoveryPaymentMode,
-      instrumentNumber,
-      bankName
-    );
-    if (!validation.isValid) {
-      alert(validation.error);
-      return;
-    }
-
-    const recordedAmount = recoveryAmount;
-    const targetCustId = selectedCustomer.id;
-
-    onRecordRecovery({
-      customerId: targetCustId,
-      amount: recordedAmount,
-      paymentMode: recoveryPaymentMode,
-      instrumentNumber: instrumentNumber.trim() || undefined,
-      bankName: bankName.trim() || undefined,
-      remarks: recoveryRemarks,
-    });
-
-    // Optimistically update current balance locally
-    if (selectedCustomer && selectedCustomer.id === targetCustId) {
-      selectedCustomer.currentBalance = Math.max(0, selectedCustomer.currentBalance - recordedAmount);
-    }
-
-    // Background fetch to re-validate latest ledger running balance directly from Supabase
-    setIsSyncingBalance(true);
-    void (async () => {
-      try {
-        const liveBal = await fetchCustomerLatestBalance(targetCustId);
-        if (liveBal !== null) {
-          if (selectedCustomer && selectedCustomer.id === targetCustId) {
-            selectedCustomer.currentBalance = liveBal;
-          }
-          setSyncNotice(`✓ Verified live balance from Supabase: PKR ${liveBal.toLocaleString()}`);
-          setTimeout(() => setSyncNotice(null), 4500);
-        }
-      } catch (err) {
-        console.warn('Background Supabase balance verification error:', err);
-      } finally {
-        setIsSyncingBalance(false);
+      if (!isSupabaseConfigured || !supabase || !isOnline) {
+        setLiveInvoices(filteredLocal);
+        return;
       }
-    })();
 
-    alert(`Recovery of PKR ${recordedAmount.toLocaleString()} recorded and submitted for verification!`);
-    setActiveScreen('DASHBOARD');
+      setLiveInvoicesLoading(true);
+      setLiveInvoicesError(null);
+
+      try {
+        const { data: dbData, error } = await supabase
+          .from('invoices')
+          .select('*,customers(customer_code,name),invoice_items(*,skus(sku_code,sku_name))')
+          .eq('customer_id', selectedCustomerId)
+          .gte('invoice_date', invoiceFromDate)
+          .lte('invoice_date', invoiceToDate)
+          .order('invoice_date', { ascending: false });
+
+        if (error) throw error;
+
+        if (active) {
+          const mapped: InvoiceType[] = (dbData || []).map((r: any) => ({
+            id: r.id,
+            invoiceNumber: r.invoice_code,
+            orderId: r.order_id || undefined,
+            customerId: r.customer_id,
+            customerName: r.customers?.name || '',
+            customerCode: r.customers?.customer_code || '',
+            invoiceDate: r.invoice_date,
+            dueDate: r.invoice_date,
+            status: r.status,
+            items: (r.invoice_items || []).map((i: any) => ({
+              id: i.id,
+              invoiceId: r.id,
+              skuId: i.sku_id,
+              skuCode: i.skus?.sku_code || '',
+              skuName: i.skus?.sku_name || '',
+              quantity: Number(i.qty || 0),
+              unitPrice: Number(i.unit_price || 0),
+              discountAmount: 0,
+              taxAmount: 0,
+              lineTotal: Number(i.line_amount || 0),
+            })),
+            subtotal: Number(r.invoice_amount || 0),
+            discountAmount: 0,
+            taxAmount: 0,
+            totalAmount: Number(r.invoice_amount || 0),
+            previousBalance: Number(r.previous_balance || 0),
+            newBalance: Number(r.new_balance || 0),
+            paymentStatus: r.status === 'POSTED' ? 'UNPAID' : r.status,
+            createdBy: r.posted_by || undefined,
+            createdAt: r.created_at,
+          }));
+
+          setLiveInvoices(mapped);
+        }
+      } catch (err: any) {
+        console.error('Error fetching live invoices:', err);
+        if (active) {
+          setLiveInvoicesError(err.message || 'Error querying Supabase invoices.');
+          setLiveInvoices(filteredLocal);
+        }
+      } finally {
+        if (active) {
+          setLiveInvoicesLoading(false);
+        }
+      }
+    };
+
+    void fetchLiveInvoices();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedCustomerId, invoiceFromDate, invoiceToDate, isOnline, invoices]);
+
+  // Maintain filteredInvoices name for backward compatibility with JSX
+  const filteredInvoices = liveInvoices;
+
+  // Ledger Subtab Date Filters
+  const [ledgerFromDate, setLedgerFromDate] = useState('2026-08-01');
+  const [ledgerToDate, setLedgerToDate] = useState('2026-08-31');
+  const clientLedgerEntries = ledgerEntries.filter(entry => {
+    const matchesClient = entry.customerId === selectedCustomerId;
+    const date = entry.entryDate || '';
+    return matchesClient && date >= ledgerFromDate && date <= ledgerToDate;
+  });
+
+  // Attendance Action Handlers
+  const handleCheckIn = () => {
+    if (!isWithinGeofence) {
+      alert(`Access Blocked! Geofence Violation: You are located ${distanceToCenter.toFixed(1)} km away from the center of ${attendanceTown}. Checking in is permitted only within a ${maxRadiusKM} km perimeter.`);
+      return;
+    }
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const coordStr = `${userLat.toFixed(4)}° N, ${userLng.toFixed(4)}° E`;
+
+    setCheckInTime(timeStr);
+    setCheckInLoc(coordStr);
+    setCheckOutTime(null);
+    setCheckOutLoc(null);
+
+    localStorage.setItem('nlink_checkin_time', timeStr);
+    localStorage.setItem('nlink_checkin_loc', coordStr);
+    localStorage.removeItem('nlink_checkout_time');
+    localStorage.removeItem('nlink_checkout_loc');
+
+    const newLog = {
+      action: 'CHECK_IN',
+      town: attendanceTown,
+      time: timeStr,
+      coords: coordStr,
+      date: todayDateStr,
+      synced: isOnline
+    };
+
+    if (isOnline) {
+      onLogVisit({
+        customerId: 'attendance-check-in',
+        purpose: 'Market Check-In Geofence Passed',
+        notes: `Checked in at Town: ${attendanceTown} | Distance: ${distanceToCenter.toFixed(2)} km`,
+        latitude: userLat,
+        longitude: userLng,
+        status: 'CHECKED_IN'
+      });
+    } else {
+      const updatedQueue = [...offlineLogs, newLog];
+      setOfflineLogs(updatedQueue);
+      localStorage.setItem('nlink_offline_attendance', JSON.stringify(updatedQueue));
+    }
+
+    alert(`Successfully Checked In at ${attendanceTown}! Logged coordinates: ${coordStr}`);
   };
 
-  const handleVisitSubmit = () => {
-    onLogVisit({
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.companyName,
-      salesUserId: currentUser.id,
-      salesUserName: currentUser.fullName,
-      checkinTime: new Date().toISOString(),
-      checkoutTime: new Date().toISOString(),
-      latitude: 31.5798,
-      longitude: 74.3168,
-      purpose: visitPurpose,
-      notes: visitNotes,
-      orderPlaced: orderTakenInVisit,
-      recoveryCollected: recoveryTakenInVisit,
-      photoUrl: visitPhoto || undefined,
-    });
+  const handleCheckOut = () => {
+    if (!checkInTime) {
+      alert('Action Denied: You must check-in to active beat first.');
+      return;
+    }
 
-    alert('Customer visit recorded with storefront snapshot and GPS location!');
-    // Reset fields
-    setVisitPurpose('Routine Sales & Recovery Follow-up');
-    setVisitNotes('');
-    setOrderTakenInVisit(false);
-    setRecoveryTakenInVisit(false);
-    setVisitPhoto(null);
-    setActiveScreen('DASHBOARD');
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const coordStr = `${userLat.toFixed(4)}° N, ${userLng.toFixed(4)}° E`;
+
+    setCheckOutTime(timeStr);
+    setCheckOutLoc(coordStr);
+
+    localStorage.setItem('nlink_checkout_time', timeStr);
+    localStorage.setItem('nlink_checkout_loc', coordStr);
+
+    const newLog = {
+      action: 'CHECK_OUT',
+      town: attendanceTown,
+      time: timeStr,
+      coords: coordStr,
+      date: todayDateStr,
+      synced: isOnline
+    };
+
+    if (isOnline) {
+      onLogVisit({
+        customerId: 'attendance-check-out',
+        purpose: 'Market Check-Out Geofence Passed',
+        notes: `Checked out from Town: ${attendanceTown}`,
+        latitude: userLat,
+        longitude: userLng,
+        status: 'CHECKED_OUT'
+      });
+    } else {
+      const updatedQueue = [...offlineLogs, newLog];
+      setOfflineLogs(updatedQueue);
+      localStorage.setItem('nlink_offline_attendance', JSON.stringify(updatedQueue));
+    }
+
+    const newSession = {
+      date: todayDateStr,
+      town: attendanceTown,
+      checkIn: checkInTime,
+      checkOut: timeStr,
+      status: isOnline ? 'SYNCHRONIZED' : 'OFFLINE_CACHED',
+      coords: coordStr
+    };
+    setSessionLogs(prev => [newSession, ...prev]);
+    alert(`Successfully Checked Out from ${attendanceTown}! Shift session recorded.`);
   };
 
-  const handleRegistrationSubmit = () => {
-    if (!regBusinessName.trim()) {
-      alert('Business Name is required.');
+  const syncOfflineLogs = (silent = false) => {
+    if (!isOnline) {
+      if (!silent) alert('Device is offline. Please check connection before syncing.');
       return;
     }
-    if (!regOwnerName.trim()) {
-      alert('Owner Name is required.');
-      return;
-    }
-    if (!regContactNumber.trim()) {
-      alert('Contact Number is required.');
-      return;
-    }
-    if (!regCnic.trim()) {
-      alert('CNIC is required.');
-      return;
-    }
-    if (!regAddress.trim()) {
-      alert('Address is required.');
+    if (offlineLogs.length === 0) {
+      if (!silent) alert('All attendance records synchronized.');
       return;
     }
 
-    onSubmitRegistration({
-      businessName: regBusinessName.trim(),
-      ownerName: regOwnerName.trim(),
-      contactNumber: regContactNumber.trim(),
-      cnic: regCnic.trim(),
-      address: regAddress.trim(),
-      city: regCity,
-      region: regRegion,
-      type: regType,
-      proposedCreditLimit: regCreditLimit,
-      proposedCreditDays: regCreditDays,
-      proposedOpeningBalance: regOpeningBalance,
-      additionalNotes: regNotes.trim(),
-      latitude: regLatitude,
-      longitude: regLongitude,
+    offlineLogs.forEach(log => {
+      onLogVisit?.({
+        customerId: log.action === 'CHECK_IN' ? 'attendance-check-in' : 'attendance-check-out',
+        purpose: `Offline-Synced ${log.action}`,
+        notes: `Recorded offline at ${log.time} on ${log.date} for Town: ${log.town}`,
+        latitude: parseFloat(log.coords.split('°')[0]) || 31.5204,
+        longitude: parseFloat(log.coords.split(',')[1]) || 74.3587,
+        status: log.action === 'CHECK_IN' ? 'CHECKED_IN' : 'CHECKED_OUT'
+      });
     });
 
-    alert(`Dealer/Distributor registration request for "${regBusinessName}" submitted! Head office will review and authorize.`);
+    const count = offlineLogs.length;
+    setOfflineLogs([]);
+    localStorage.removeItem('nlink_offline_attendance');
+    setSessionLogs(prev => prev.map(s => ({ ...s, status: 'SYNCHRONIZED' })));
     
-    // Reset form fields
-    setRegBusinessName('');
-    setRegOwnerName('');
-    setRegContactNumber('');
-    setRegCnic('');
-    setRegAddress('');
-    setRegNotes('');
-    setRegOpeningBalance(0);
-    setActiveScreen('DASHBOARD');
+    if (silent) {
+      setSyncStatusMsg(`Successfully auto-synced ${count} offline location logs!`);
+      setTimeout(() => setSyncStatusMsg(null), 4000);
+    } else {
+      alert(`Synchronization complete! ${count} offline logs uploaded.`);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // Main Proposal Submit Engine
+  // -------------------------------------------------------------
+  const handleProposalSubmit = () => {
+    if (!activeCustomer) return;
+
+    const items = Object.entries(quantities)
+      .filter(([_, q]) => Number(q) > 0)
+      .map(([skuId, q]) => {
+        const sku = skus.find(s => s.id === skuId);
+        const qty = Number(q);
+        const price = sku?.tradePrice || 0;
+        const total = qty * price;
+        return {
+          skuId,
+          skuCode: sku?.skuCode || '',
+          skuName: sku?.name || '',
+          orderedQuantity: qty,
+          unitPrice: price,
+          discountPercent: 0,
+          lineTotal: total
+        };
+      });
+
+    const parsedRecovery = Number(todayRecoveryAmount) || 0;
+
+    if (items.length === 0 && parsedRecovery === 0 && !visitRemarks.trim()) {
+      alert('Please fill out either an order quantity, recovery amount, or visit remarks before submitting.');
+      return;
+    }
+
+    // Book order
+    if (items.length > 0) {
+      const subtotal = items.reduce((acc, it) => acc + it.lineTotal, 0);
+      const taxAmount = subtotal * 0.17;
+      const totalAmount = subtotal + taxAmount;
+
+      const orderProposal = {
+        customerId: activeCustomer.id,
+        customerName: activeCustomer.companyName,
+        customerCode: activeCustomer.customerCode,
+        salesUserId: currentUser.id,
+        salesUserName: currentUser.fullName,
+        orderDate: todayDateStr,
+        status: 'SUBMITTED' as const,
+        subtotal,
+        discountAmount: 0,
+        taxAmount,
+        totalAmount,
+        items
+      };
+
+      onBookOrder(orderProposal as any);
+
+      // Create a gorgeous preview of the generated commercial invoice
+      setGeneratedInvoice({
+        id: `INV-NEW-${Math.floor(1000 + Math.random() * 9000)}`,
+        invoiceNumber: `INV-${Math.floor(10000 + Math.random() * 90000)}`,
+        customerName: activeCustomer.companyName,
+        customerCode: activeCustomer.customerCode,
+        invoiceDate: todayDateStr,
+        status: 'PENDING',
+        items,
+        subtotal,
+        taxAmount,
+        totalAmount
+      });
+    }
+
+    // Record recovery
+    if (parsedRecovery > 0) {
+      onRecordRecovery({
+        customerId: activeCustomer.id,
+        amount: parsedRecovery,
+        paymentMode: todayRecoveryMode,
+        instrumentNumber: instrumentNo.trim() || undefined,
+        bankName: bankName.trim() || undefined,
+        remarks: `Recorded via Field Mobile Workspace. Notes: ${visitRemarks}`
+      });
+    }
+
+    // Record customer visit remarks
+    if (visitRemarks.trim()) {
+      onLogVisit({
+        customerId: activeCustomer.id,
+        purpose: 'Market Visit Log',
+        notes: visitRemarks.trim(),
+        latitude: userLat,
+        longitude: userLng,
+        status: 'COMPLETED'
+      });
+    }
+
+    alert('Operations submitted successfully to Supabase!');
+    
+    // Clear forms (but keep generatedInvoice modal active to share)
+    setQuantities({});
+    setTodayRecoveryAmount('');
+    setVisitRemarks('');
+    setInstrumentNo('');
+    setBankName('');
+  };
+
+  // -------------------------------------------------------------
+  // WhatsApp Share Utilities
+  // -------------------------------------------------------------
+  const shareInvoiceWhatsApp = (inv: any) => {
+    if (!activeCustomer) return;
+    let phone = activeCustomer.phone || '';
+    if (!phone) {
+      const entered = prompt("Customer's contact number is missing. Please enter WhatsApp phone number (e.g. 923001234567):", "923");
+      if (!entered) return;
+      phone = entered;
+    }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const itemsStr = (inv.items || []).map((it: any) => 
+      `• *${it.skuName || it.skuCode}*\n  Qty: ${it.orderedQuantity || it.quantity || it.qty} | Price: PKR ${(it.unitPrice || 0).toLocaleString()}\n  Subtotal: PKR ${(it.lineTotal || 0).toLocaleString()}`
+    ).join('\n\n');
+
+    const messageText = 
+      `*N-LINK 360 - COMMERCIAL INVOICE*\n` +
+      `===============================\n` +
+      `*Invoice #:* ${inv.invoiceNumber || inv.id}\n` +
+      `*Date:* ${inv.invoiceDate}\n` +
+      `*Customer:* ${inv.customerName} (${inv.customerCode})\n` +
+      `*Status:* ${inv.status || 'PENDING'}\n` +
+      `===============================\n\n` +
+      `*Items Ordered:*\n` +
+      `${itemsStr}\n\n` +
+      `===============================\n` +
+      `*Gross Amount:* PKR ${(inv.subtotal || 0).toLocaleString()}\n` +
+      `*Sales Tax (17%):* PKR ${(inv.taxAmount || 0).toLocaleString()}\n` +
+      `*Net Payable:* PKR ${(inv.totalAmount || 0).toLocaleString()}\n` +
+      `===============================\n\n` +
+      `Thank you for your valuable business!\n` +
+      `N-LINK 360 Field Automation`;
+
+    const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
+    window.open(url, '_blank');
+  };
+
+  const shareLedgerWhatsApp = () => {
+    if (!activeCustomer) return;
+    let phone = activeCustomer.phone || '';
+    if (!phone) {
+      const entered = prompt("Customer's contact number is missing. Please enter WhatsApp phone number (e.g. 923001234567):", "923");
+      if (!entered) return;
+      phone = entered;
+    }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const entriesStr = clientLedgerEntries.map(entry => {
+      const date = entry.entryDate || '';
+      const type = entry.transactionType || 'TRANSACTION';
+      const drStr = entry.debitAmount ? `Dr: PKR ${entry.debitAmount.toLocaleString()}` : '';
+      const crStr = entry.creditAmount ? `Cr: PKR ${entry.creditAmount.toLocaleString()}` : '';
+      const amountStr = drStr || crStr;
+      return `• [${date}] *${type}*\n  ${amountStr} | Bal: PKR ${entry.runningBalance.toLocaleString()}`;
+    }).join('\n\n');
+
+    const messageText = 
+      `*N-LINK 360 - LEDGER STATEMENT*\n` +
+      `===============================\n` +
+      `*Customer:* ${activeCustomer.companyName}\n` +
+      `*Customer Code:* ${activeCustomer.customerCode || ''}\n` +
+      `*Statement Period:* ${ledgerFromDate} to ${ledgerToDate}\n` +
+      `===============================\n\n` +
+      `*Transaction Logs:*\n\n` +
+      `${entriesStr || 'No ledger records found for specified dates.'}\n\n` +
+      `===============================\n` +
+      `*Current Net Outstanding:* PKR ${(clientNetBalance).toLocaleString()}\n` +
+      `===============================\n\n` +
+      `Generated by N-LINK Accounts Department.`;
+
+    const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
+    window.open(url, '_blank');
   };
 
   return (
-    <div className="w-full max-w-md mx-auto sm:my-4 bg-primary text-deep-green rounded-none sm:rounded-3xl border-0 sm:border-4 border-slate-800 shadow-2xl overflow-hidden min-h-screen sm:min-h-[750px] flex flex-col font-sans transition-all">
+    <div className="w-full max-w-lg mx-auto bg-[#E8ECF2] text-slate-800 rounded-3xl border border-white p-4 sm:p-5 space-y-5 shadow-2xl font-sans min-h-screen flex flex-col relative">
       
-      {/* Mobile Top App Bar */}
-      <div className="bg-surface-card p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between sticky top-0 z-20 shadow-sm">
-        {activeScreen !== 'DASHBOARD' ? (
-          <button
-            onClick={() => setActiveScreen('DASHBOARD')}
-            className="flex items-center gap-1.5 text-xs text-deep-teal font-bold px-2 py-1.5 rounded-lg hover:bg-slate-800/60 transition-colors min-h-[36px]"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-deep-green font-black text-xs shadow-sm">
-              NL
-            </div>
-            <div>
-              <span className="font-bold text-xs tracking-tight block text-white">N-LINK Field App</span>
-              <span className="text-[10px] text-deep-teal font-mono">Sales & Recovery Lead</span>
-            </div>
+      {/* Top Header Panel */}
+      <div className="nm-flat p-4 rounded-2xl flex items-center justify-between border border-white">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-600 to-teal-500 flex items-center justify-center text-white font-black text-sm shadow-md">
+            NL
           </div>
-        )}
-
-        <div className="text-right">
-          <span className="text-[11px] font-bold text-slate-200 block truncate max-w-[130px] sm:max-w-[160px]">
-            {currentUser.fullName}
-          </span>
-          <span className="text-[9px] text-slate-400 font-mono block truncate max-w-[130px] sm:max-w-[160px]">
-            {currentUser.branchName || 'National Lights'}
-          </span>
+          <div>
+            <h1 className="text-sm font-black text-slate-800 tracking-tight">N-LINK 360</h1>
+            <span className="text-[10px] text-teal-700 font-bold uppercase tracking-wider block">Field Force Workspace</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2.5">
+          <div className="text-right">
+            <span className="text-[11px] font-bold text-slate-800 block leading-tight">{currentUser.fullName}</span>
+            <span className="text-[9px] text-slate-500 font-semibold block">{currentUser.role}</span>
+          </div>
+          {onLogout && (
+            <button
+              onClick={() => {
+                if (confirm('Are you sure you want to logout of N-LINK 360 mobile?')) {
+                  onLogout();
+                }
+              }}
+              title="Logout"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 hover:text-rose-700 bg-[#E8ECF2] shadow-md hover:shadow-inner transition-all border border-white/60"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs bg-surface-card">
+      {/* Online / Offline Sync bar */}
+      <div className="px-1 flex items-center justify-between text-[11px] font-bold text-slate-600">
+        <div className="flex items-center gap-1.5">
+          {isOnline ? (
+            <span className="flex items-center gap-1 text-emerald-700">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping inline-block" />
+              <Wifi className="w-3.5 h-3.5" /> LIVE CLOUD
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-rose-600">
+              <span className="w-2 h-2 rounded-full bg-rose-600 inline-block animate-pulse" />
+              <WifiOff className="w-3.5 h-3.5" /> OFFLINE MODE
+            </span>
+          )}
+        </div>
+        <span className="text-slate-500">Active Town: <b className="text-slate-800">{attendanceTown}</b></span>
+      </div>
+
+      {/* Primary Mobile Navigation Switcher (EXACTLY 3 TABS) */}
+      <div className="grid grid-cols-3 gap-1.5 bg-[#DFE4EC] p-1.5 rounded-2xl">
+        <button
+          onClick={() => { setActiveTab('DASHBOARD'); setSelectedCustomerId(null); }}
+          className={`py-3 px-1 rounded-xl text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
+            activeTab === 'DASHBOARD'
+              ? 'bg-[#E8ECF2] text-teal-800 font-black shadow-inner border border-white/60'
+              : 'text-slate-600 hover:text-slate-800'
+          }`}
+        >
+          <TrendingUp className="w-4 h-4 text-teal-600" />
+          <span>Dashboard</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('ATTENDANCE'); setSelectedCustomerId(null); }}
+          className={`py-3 px-1 rounded-xl text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
+            activeTab === 'ATTENDANCE'
+              ? 'bg-[#E8ECF2] text-teal-800 font-black shadow-inner border border-white/60'
+              : 'text-slate-600 hover:text-slate-800'
+          }`}
+        >
+          <Clock className="w-4 h-4 text-amber-600" />
+          <span>Attendance</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('CUSTOMERS'); setSelectedCustomerId(null); }}
+          className={`py-3 px-1 rounded-xl text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
+            activeTab === 'CUSTOMERS'
+              ? 'bg-[#E8ECF2] text-teal-800 font-black shadow-inner border border-white/60'
+              : 'text-slate-600 hover:text-slate-800'
+          }`}
+        >
+          <Users className="w-4 h-4 text-indigo-600" />
+          <span>Distributors</span>
+        </button>
+      </div>
+
+      {/* main view */}
+      <div className="flex-1 space-y-4">
         
-        {/* ========================================================================= */}
-        {/* 1. FIELD DASHBOARD SCREEN */}
-        {/* ========================================================================= */}
-        {activeScreen === 'DASHBOARD' && (
+        {/* ========================================================= */}
+        {/* TAB 1: DASHBOARD */}
+        {/* ========================================================= */}
+        {activeTab === 'DASHBOARD' && (
           <div className="space-y-4">
             
-            {/* Quick KPI Strip */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-slate-800/80 p-3 rounded-2xl border border-slate-700">
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="text-[11px]">Today's Recovery</span>
-                  <Wallet className="w-3.5 h-3.5 text-deep-teal" />
-                </div>
-                <div className="text-base font-bold font-mono text-deep-teal tabular-nums tracking-tight mt-1">
-                  PKR 60,000
-                </div>
-                <span className="text-[10px] text-slate-500">Target: PKR 100k/day</span>
-              </div>
-
-              <div className="bg-slate-800/80 p-3 rounded-2xl border border-slate-700">
-                <div className="flex items-center justify-between text-slate-400">
-                  <span className="text-[11px]">Today's Orders</span>
-                  <ShoppingBag className="w-3.5 h-3.5 text-deep-teal" />
-                </div>
-                <div className="text-base font-bold font-mono text-deep-teal tabular-nums tracking-tight mt-1">
-                  PKR 76,914
-                </div>
-                <span className="text-[10px] text-slate-500">1 Order Placed</span>
-              </div>
-            </div>
-
-            {/* Quick Action Buttons */}
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => setActiveScreen('ORDER_BOOKING')}
-                className="p-3 bg-secondary hover:bg-secondary/80 text-deep-green rounded-2xl font-bold flex flex-col items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
-              >
-                <FilePlus className="w-5 h-5" />
-                <span className="text-[11px]">Book Order</span>
-              </button>
-
-              <button
-                onClick={() => setActiveScreen('RECOVERY_FORM')}
-                className="p-3 bg-secondary hover:bg-secondary text-deep-green rounded-2xl font-bold flex flex-col items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
-              >
-                <Coins className="w-5 h-5" />
-                <span className="text-[11px]">Collect Cash</span>
-              </button>
-
-              <button
-                onClick={() => setActiveScreen('VISIT_LOG')}
-                className="p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-1.5 border border-slate-700 shadow-md active:scale-95 transition-all"
-              >
-                <MapPin className="w-5 h-5 text-rose-400" />
-                <span className="text-[11px]">GPS Visit</span>
-              </button>
-            </div>
-
-            {/* Dealer/Distributor Registration Request Quick Banner */}
-            <div className="bg-gradient-to-r from-amber-500/10 to-amber-500/5 border border-secondary/20 rounded-2xl p-3.5 flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="font-bold text-deep-teal block text-[11px] uppercase tracking-wide">Register Client Lead</span>
-                <span className="text-[10px] text-slate-400 block">Propose a new dealer or distributor for office authorization.</span>
-              </div>
-              <div className="flex gap-1.5">
-                <button
-                  onClick={() => setActiveScreen('REGISTRATION_FORM')}
-                  className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-deep-green font-bold rounded-xl text-[10px] whitespace-nowrap"
-                >
-                  + New Lead
-                </button>
-                <button
-                  onClick={() => setActiveScreen('REGISTRATION_HISTORY')}
-                  className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-[10px] whitespace-nowrap"
-                >
-                  Status ({registrationRequests.filter(r => r.salesUserId === currentUser.id).length})
-                </button>
-              </div>
-            </div>
-
-            {/* Live Supabase Sync Notice */}
-            {syncNotice && (
-              <div className="p-3 bg-emerald-950/60 border border-emerald-500/50 rounded-2xl flex items-center gap-2 text-emerald-200 text-xs shadow-md animate-fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{syncNotice}</span>
-              </div>
-            )}
-            {isSyncingBalance && !syncNotice && (
-              <div className="p-2.5 bg-secondary/10 border border-secondary/30 rounded-xl flex items-center gap-2 text-deep-teal text-[11px] animate-pulse">
-                <Clock className="w-3.5 h-3.5 animate-spin" />
-                <span>Syncing live ledger running balance with Supabase...</span>
-              </div>
-            )}
-
-            {/* Assigned Customers Quick List */}
-            <div className="space-y-2 pt-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-300">My Assigned Portfolio ({customers.length})</span>
-                <button
-                  onClick={() => setActiveScreen('CUSTOMERS')}
-                  className="text-deep-teal text-[11px] font-semibold hover:underline"
-                >
-                  View All ({customers.length}) &rarr;
-                </button>
-              </div>
-
-              {customers.map((cust) => (
-                <div
-                  key={cust.id}
-                  onClick={() => {
-                    setSelectedCustomerId(cust.id);
-                    setActiveScreen('CUSTOMER_PROFILE');
-                  }}
-                  className="p-3.5 bg-slate-800/90 hover:bg-slate-750 border border-slate-700/60 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.99] hover:scale-[1.02] transition-all duration-200 shadow-lg"
-                >
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-[10px] text-emerald-300 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                        {cust.customerCode}
-                      </span>
-                      <span className="font-bold text-white text-xs">{cust.companyName}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      {cust.contactPerson} • {cust.city}
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block">Outstanding:</span>
-                    <span className="font-mono font-bold text-deep-teal text-sm tabular-nums tracking-tight">
-                      PKR {cust.currentBalance.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Recent Visits Feed */}
-            <div className="space-y-2 pt-2">
-              <span className="font-bold text-slate-300 block">Today's Visits & Progress</span>
-              {visits.map((v) => (
-                <div key={v.id} className="p-3 bg-surface-card/80 rounded-xl border border-slate-800 space-y-1 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-white">{v.customerName}</span>
-                    <span className="text-[10px] text-slate-500 font-mono">Checked In</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">{v.notes}</p>
-                  
-                  {v.photoUrl && (
-                    <div className="my-2 rounded-lg overflow-hidden border border-slate-800/85 max-h-36 bg-surface-card flex items-center justify-center">
-                      <img src={v.photoUrl} alt="Storefront / Receipt Capture" className="w-full h-auto max-h-36 object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-3 pt-1 text-[10px] font-mono">
-                    <span className={v.orderPlaced ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
-                      Order: {v.orderPlaced ? 'YES' : 'NO'}
-                    </span>
-                    <span className={v.recoveryCollected ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
-                      Recovery: {v.recoveryCollected ? 'YES' : 'NO'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* 1.5 DEDICATED CUSTOMER DIRECTORY SCREEN */}
-        {/* ========================================================================= */}
-        {activeScreen === 'CUSTOMERS' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <h2 className="font-bold text-white text-base">Client Portfolio Directory</h2>
-                <p className="text-[11px] text-slate-400">Assigned customer accounts and live credit balances</p>
-              </div>
-              <button
-                onClick={() => setActiveScreen('REGISTRATION_FORM')}
-                className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-deep-green font-bold rounded-xl text-xs flex items-center gap-1 shadow-sm"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New Lead</span>
-              </button>
-            </div>
-
-            {/* Client Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search clients by trade name, code, city..."
-                value={customerSearchTerm}
-                onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-surface-card border border-slate-700/80 rounded-xl text-white text-xs placeholder:text-slate-500 focus:border-secondary"
-              />
-            </div>
-
-            {/* Customers Card Grid */}
-            <div className="space-y-2.5">
-              {customers
-                .filter((c) => {
-                  const t = customerSearchTerm.toLowerCase();
-                  return (
-                    c.companyName.toLowerCase().includes(t) ||
-                    c.customerCode.toLowerCase().includes(t) ||
-                    c.city.toLowerCase().includes(t) ||
-                    c.contactPerson.toLowerCase().includes(t)
-                  );
-                })
-                .map((cust) => (
-                  <div
-                    key={cust.id}
-                    className="p-3.5 bg-slate-800/90 hover:bg-slate-750 border border-slate-700/60 rounded-2xl space-y-2.5 shadow-lg transition-all duration-200 hover:scale-[1.02]"
+            {/* Sales analytics Header */}
+            <div className="nm-flat p-4 rounded-2xl border border-white space-y-3">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <TrendingUp className="w-4 h-4 text-teal-600" />
+                  Live Sales Analytics
+                </h3>
+                {onRefresh && (
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const btn = document.getElementById('dash-refresh-btn');
+                        if (btn) btn.classList.add('animate-spin');
+                        await onRefresh();
+                      } catch (e) {
+                        console.error(e);
+                      } finally {
+                        const btn = document.getElementById('dash-refresh-btn');
+                        if (btn) btn.classList.remove('dash-refresh-spin');
+                      }
+                    }} 
+                    className="text-slate-500 hover:text-teal-600 transition-colors p-1"
+                    title="Refresh Live Data"
                   >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[10px] text-emerald-300 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                            {cust.customerCode}
-                          </span>
-                          <span className="font-bold text-white text-sm">{cust.companyName}</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          {cust.contactPerson} • {cust.phone} • {cust.city}
-                        </p>
-                      </div>
-                      <span className="px-2 py-0.5 bg-secondary/15 text-deep-teal border border-secondary/30 rounded font-mono text-[9px] uppercase font-bold">
-                        {cust.type}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1 text-xs border-t border-slate-800/80">
-                      <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-800">
-                        <span className="text-[10px] text-slate-400 block">Credit Limit</span>
-                        <span className="font-mono font-bold text-white block mt-0.5 text-sm tabular-nums tracking-tight">
-                          PKR {(cust.creditLimit || 0).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="p-2 bg-slate-900/60 rounded-xl border border-slate-800">
-                        <span className="text-[10px] text-slate-400 block">Outstanding</span>
-                        <span className="font-mono font-bold text-deep-teal block mt-0.5 text-sm tabular-nums tracking-tight">
-                          PKR {(cust.currentBalance || 0).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        onClick={() => {
-                          setSelectedCustomerId(cust.id);
-                          setActiveScreen('CUSTOMER_PROFILE');
-                        }}
-                        className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl text-[11px] text-center"
-                      >
-                        360° Profile
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedCustomerId(cust.id);
-                          setActiveScreen('ORDER_BOOKING');
-                        }}
-                        className="flex-1 py-1.5 bg-secondary/20 hover:bg-secondary/30 text-deep-green font-bold rounded-xl text-[11px] text-center border border-secondary/30"
-                      >
-                        Book Order
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedCustomerId(cust.id);
-                          setActiveScreen('RECOVERY_FORM');
-                        }}
-                        className="flex-1 py-1.5 bg-secondary hover:bg-secondary text-deep-green font-bold rounded-xl text-[11px] text-center shadow-sm"
-                      >
-                        Recovery
-                      </button>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* 2. CUSTOMER 360 PROFILE SCREEN */}
-        {/* ========================================================================= */}
-        {activeScreen === 'CUSTOMER_PROFILE' && (
-          <div className="space-y-4">
-            
-            {/* Header Badge */}
-            <div className="p-4 bg-surface-card rounded-2xl border border-slate-800 space-y-2">
-              <span className="text-[10px] font-mono text-deep-teal bg-secondary/10 px-2 py-0.5 rounded">
-                {selectedCustomer.customerCode} • {selectedCustomer.type}
-              </span>
-              <h2 className="text-base font-bold text-white">{selectedCustomer.companyName}</h2>
-              <p className="text-slate-400 text-[11px]">
-                {selectedCustomer.contactPerson} • {selectedCustomer.phone}
-              </p>
-              <p className="text-slate-500 text-[11px]">{selectedCustomer.address}</p>
-            </div>
-
-            {/* Financial Status Cards */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 bg-slate-800 rounded-xl border border-slate-700">
-                <span className="text-slate-400 text-[10px] block">Credit Limit</span>
-                <span className="font-mono font-bold text-white text-sm tabular-nums tracking-tight block mt-0.5">
-                  PKR {(selectedCustomer?.creditLimit || 0).toLocaleString()}
-                </span>
-                <span className="text-[10px] text-slate-500 block mt-0.5">
-                  {selectedCustomer?.creditDays || 0} Credit Days
-                </span>
-              </div>
-
-              <div className="p-3 bg-slate-800 rounded-xl border border-slate-700">
-                <span className="text-slate-400 text-[10px] block">Current Balance</span>
-                <span className="font-mono font-bold text-deep-teal text-sm tabular-nums tracking-tight block mt-0.5">
-                  PKR {(selectedCustomer?.currentBalance || 0).toLocaleString()}
-                </span>
-                <span className="text-[10px] text-deep-teal block mt-0.5 tabular-nums tracking-tight">
-                  Avail: PKR {Math.max(0, (selectedCustomer?.creditLimit || 0) - (selectedCustomer?.currentBalance || 0)).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            {/* Customer Direct Actions */}
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              <button
-                onClick={() => setActiveScreen('ORDER_BOOKING')}
-                className="py-3 bg-secondary hover:bg-secondary/80 text-deep-green font-bold rounded-xl flex items-center justify-center gap-1.5"
-              >
-                <FilePlus className="w-4 h-4" /> Book New Order
-              </button>
-              <button
-                onClick={() => setActiveScreen('RECOVERY_FORM')}
-                className="py-3 bg-secondary hover:bg-secondary text-deep-green font-bold rounded-xl flex items-center justify-center gap-1.5"
-              >
-                <Coins className="w-4 h-4" /> Record Recovery
-              </button>
-            </div>
-
-            <button
-              onClick={() => setActiveScreen('VISIT_LOG')}
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5"
-            >
-              <MapPin className="w-4 h-4 text-rose-400" /> Log In-Person Visit
-            </button>
-
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* 3. ORDER BOOKING SCREEN (ADVANCED SEQUENTIAL SYSTEM) */}
-        {/* ========================================================================= */}
-        {activeScreen === 'ORDER_BOOKING' && (
-          <div className="space-y-4 relative pb-20">
-            
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <span className="font-bold text-white text-sm">Unified Order & Recovery Sheet</span>
-              <span className="px-2 py-0.5 bg-secondary/10 text-deep-teal font-mono text-[10px] rounded">
-                Active Booking
-              </span>
-            </div>
-
-            {/* STEP 1: CUSTOMER SELECTION & SEARCH */}
-            <div className="bg-surface-card p-3.5 rounded-2xl border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-300 text-[11px] uppercase tracking-wider block">
-                  Step 1: Client Account Selection
-                </span>
-                {selectedCustomerId && (
-                  <button
-                    onClick={() => {
-                      setIsCustomerDropdownOpen(!isCustomerDropdownOpen);
-                      setCustomerSearchTerm('');
-                    }}
-                    className="text-deep-teal text-[10px] hover:underline font-bold"
-                  >
-                    Change Client
+                    <RotateCw id="dash-refresh-btn" className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
 
-              {!selectedCustomerId || isCustomerDropdownOpen ? (
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-500" />
-                    <input
-                      type="text"
-                      placeholder="Search by name, ID (DST/DLR), phone or area..."
-                      value={customerSearchTerm}
-                      onChange={(e) => {
-                        setCustomerSearchTerm(e.target.value);
-                        setIsCustomerDropdownOpen(true);
-                      }}
-                      className="w-full pl-9 pr-3 py-2 bg-surface-card border border-slate-700 rounded-xl text-white font-semibold text-xs focus:ring-1 focus:ring-amber-500"
-                    />
-                  </div>
-
-                  {/* Filtered Dropdown List */}
-                  <div className="max-h-48 overflow-y-auto bg-surface-card border border-slate-800 rounded-xl divide-y divide-slate-800">
-                    {customers
-                      .filter((c) => {
-                        const term = customerSearchTerm.toLowerCase();
-                        return (
-                          c.companyName.toLowerCase().includes(term) ||
-                          c.customerCode.toLowerCase().includes(term) ||
-                          c.phone.includes(term) ||
-                          c.city.toLowerCase().includes(term) ||
-                          c.region.toLowerCase().includes(term)
-                        );
-                      })
-                      .map((c) => (
-                        <div
-                          key={c.id}
-                          onClick={() => {
-                            setSelectedCustomerId(c.id);
-                            setIsCustomerDropdownOpen(false);
-                            setCustomerSearchTerm('');
-                          }}
-                          className="p-2.5 hover:bg-slate-800 cursor-pointer flex justify-between items-center"
-                        >
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] bg-slate-800 font-mono font-bold text-deep-teal px-1 py-0.5 rounded">
-                                {c.customerCode}
-                              </span>
-                              <span className="text-white font-bold text-xs">{c.companyName}</span>
-                            </div>
-                            <span className="text-[10px] text-slate-500 block mt-0.5">
-                              {c.contactPerson} • {c.phone} • {c.city}
-                            </span>
-                          </div>
-                          <div className="text-right text-[10px] text-slate-400">
-                            Outstanding: <span className="font-mono text-deep-teal font-bold block">PKR {c.currentBalance.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
+              <div className="grid grid-cols-2 gap-3.5">
+                <div className="nm-inset p-3 bg-white rounded-xl text-center space-y-0.5">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Achieved Sales</span>
+                  <span className="text-sm font-black text-teal-800 font-mono">PKR {totalAchievedSales.toLocaleString()}</span>
                 </div>
-              ) : (
-                <div className="p-2.5 bg-surface-card rounded-xl border border-slate-850 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] bg-secondary/10 font-mono font-bold text-deep-teal px-1.5 py-0.5 rounded">
-                        {selectedCustomer.customerCode}
-                      </span>
-                      <span className="text-white font-black text-xs">{selectedCustomer.companyName}</span>
-                    </div>
-                    <span className="text-[10px] text-slate-400 block mt-1">
-                      {selectedCustomer.contactPerson} • {selectedCustomer.phone} • {selectedCustomer.address}
-                    </span>
-                  </div>
-                  <div className="text-right font-mono text-[10px]">
-                    <span className="text-slate-500 block">Credit Limit:</span>
-                    <span className="text-white font-bold">PKR {(selectedCustomer?.creditLimit || 0).toLocaleString()}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* STEP 2: CUSTOMER BALANCE BANNER */}
-            <div className="bg-surface-card p-3 rounded-2xl border border-slate-800 space-y-1.5">
-              <span className="font-semibold text-slate-300 text-[11px] uppercase tracking-wider block">
-                Step 2: Real-time Ledger Balance
-              </span>
-              <div className="grid grid-cols-3 bg-surface-card rounded-xl overflow-hidden border border-slate-800 divide-x divide-slate-800 text-center">
-                <div className="p-2.5">
-                  <span className="text-[9px] text-slate-500 block">Opening Balance</span>
-                  <span className="text-[11px] font-bold text-white font-mono block mt-0.5">
-                    PKR {(selectedCustomer?.currentBalance || 0).toLocaleString()}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-emerald-950/20">
-                  <span className="text-[9px] text-deep-teal block">Recovery Entry</span>
-                  <span className="text-[11px] font-bold text-deep-teal font-mono block mt-0.5">
-                    - PKR {orderRecoveryAmount.toLocaleString()}
-                  </span>
-                </div>
-                <div className="p-2.5">
-                  <span className="text-[9px] text-slate-500 block">Net Balance</span>
-                  <span className="text-[11px] font-bold text-deep-teal font-mono block mt-0.5">
-                    PKR {((selectedCustomer?.currentBalance || 0) - orderRecoveryAmount).toLocaleString()}
-                  </span>
+                <div className="nm-inset p-3 bg-white rounded-xl text-center space-y-0.5">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Achieved Recovery</span>
+                  <span className="text-sm font-black text-indigo-800 font-mono">PKR {totalAchievedRecovery.toLocaleString()}</span>
                 </div>
               </div>
             </div>
 
-            {/* STEP 3: SKU QUICK GRID */}
-            <div className="bg-surface-card p-3.5 rounded-2xl border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-300 text-[11px] uppercase tracking-wider block">
-                  Step 3: SKU Quick-Entry Grid
-                </span>
-                
-                {/* Backorder Toggle */}
-                <label className="flex items-center gap-1.5 cursor-pointer text-[10px] select-none bg-surface-card px-2 py-1 rounded-lg border border-slate-800">
-                  <input
-                    type="checkbox"
-                    checked={backordersEnabled}
-                    onChange={(e) => setBackordersEnabled(e.target.checked)}
-                    className="accent-amber-500"
+            {/* Target vs Achievement Gauges */}
+            <div className="nm-flat p-4 rounded-2xl border border-white space-y-4">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                Monthly Target vs Achievement
+              </h3>
+
+              {/* Sales Target vs Achievement */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs font-bold text-slate-600">
+                  <span>Sales Revenue</span>
+                  <span className="font-mono text-slate-800">{salesAchievementPercent}% Achieved</span>
+                </div>
+                <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden border border-white shadow-inner">
+                  <div
+                    className="h-full bg-gradient-to-r from-teal-500 to-teal-600 transition-all duration-500"
+                    style={{ width: `${salesAchievementPercent}%` }}
                   />
-                  <span className="text-slate-300 font-semibold">Enable Backorders</span>
-                </label>
-              </div>
-
-              {/* SKU Search Box */}
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Filter grid SKUs by name or code..."
-                  value={skuSearchQuery}
-                  onChange={(e) => setSkuSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-surface-card border border-slate-800 rounded-xl text-white text-[11px]"
-                />
-              </div>
-
-              {/* Dynamic SKU Grid: Table on Desktop/Tablet (>=640px), Card-View on Mobile (<640px) */}
-              
-              {/* 1. Desktop / Tablet High-Density Table */}
-              <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-800 bg-surface-card">
-                <table className="w-full text-left text-[11px]">
-                  <thead className="bg-surface-card text-slate-400 text-[10px] uppercase font-mono border-b border-slate-800">
-                    <tr>
-                      <th className="p-2.5 text-center w-8">#</th>
-                      <th className="p-2.5">SKU Name</th>
-                      <th className="p-2.5 text-right w-16">Avail</th>
-                      <th className="p-2.5 text-center w-28">Order Qty</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {skus
-                      .filter((sku) => {
-                        const term = skuSearchQuery.toLowerCase();
-                        return (
-                          sku.name.toLowerCase().includes(term) ||
-                          sku.skuCode.toLowerCase().includes(term)
-                        );
-                      })
-                      .map((sku, idx) => {
-                        const stock = inventoryBalances.find((b) => b.skuId === sku.id);
-                        const availableQty = stock ? stock.quantityOnHand : 0;
-                        const currentVal = gridOrderQuantities[sku.id] || '';
-                        
-                        return (
-                          <tr key={sku.id} className="hover:bg-slate-800/40">
-                            <td className="p-2.5 text-center text-slate-500 font-mono font-semibold">{idx + 1}</td>
-                            <td className="p-2.5">
-                              <span className="text-white font-bold block">{sku.name}</span>
-                              <div className="flex gap-2 items-center text-[10px] text-slate-400 mt-0.5">
-                                <span className="font-mono bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[9px] font-bold">{sku.skuCode}</span>
-                                <span className="font-mono text-emerald-400">PKR {sku.tradePrice.toLocaleString()}</span>
-                              </div>
-                            </td>
-                            <td className="p-2.5 text-right font-mono font-bold text-slate-300">
-                              <span className={availableQty === 0 ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
-                                {availableQty.toLocaleString()}
-                              </span>
-                            </td>
-                            <td className="p-2.5 text-center">
-                              <input
-                                type="number"
-                                placeholder="0"
-                                value={currentVal}
-                                onChange={(e) => {
-                                  const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
-                                  
-                                  if (val !== '') {
-                                    if (!backordersEnabled && val > availableQty) {
-                                      setGridOrderQuantities({
-                                        ...gridOrderQuantities,
-                                        [sku.id]: availableQty
-                                      });
-                                      alert(`Capped at ${availableQty} as backorders are currently disabled! Check 'Enable Backorders' above to order beyond stock.`);
-                                    } else {
-                                      setGridOrderQuantities({
-                                        ...gridOrderQuantities,
-                                        [sku.id]: val
-                                      });
-                                    }
-                                  } else {
-                                    const updated = { ...gridOrderQuantities };
-                                    delete updated[sku.id];
-                                    setGridOrderQuantities(updated);
-                                  }
-                                }}
-                                className="w-20 p-1.5 bg-surface-card border border-slate-700 rounded-lg text-center text-white font-bold font-mono focus:border-secondary text-xs"
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* 2. Mobile Touch-Optimized SKU Cards (< 640px) */}
-              <div className="block sm:hidden space-y-2.5">
-                {skus
-                  .filter((sku) => {
-                    const term = skuSearchQuery.toLowerCase();
-                    return (
-                      sku.name.toLowerCase().includes(term) ||
-                      sku.skuCode.toLowerCase().includes(term)
-                    );
-                  })
-                  .map((sku) => {
-                    const stock = inventoryBalances.find((b) => b.skuId === sku.id);
-                    const availableQty = stock ? stock.quantityOnHand : 0;
-                    const currentQty = gridOrderQuantities[sku.id] || 0;
-                    const lineTotal = currentQty * sku.tradePrice;
-                    const isOutOfStock = availableQty <= 0;
-
-                    const handleSetQty = (newQty: number) => {
-                      const validQty = Math.max(0, newQty);
-                      if (!backordersEnabled && validQty > availableQty) {
-                        setGridOrderQuantities({
-                          ...gridOrderQuantities,
-                          [sku.id]: availableQty
-                        });
-                        alert(`Capped at ${availableQty} available stock! Enable Backorders to exceed.`);
-                        return;
-                      }
-                      if (validQty === 0) {
-                        const updated = { ...gridOrderQuantities };
-                        delete updated[sku.id];
-                        setGridOrderQuantities(updated);
-                      } else {
-                        setGridOrderQuantities({
-                          ...gridOrderQuantities,
-                          [sku.id]: validQty
-                        });
-                      }
-                    };
-
-                    return (
-                      <div
-                        key={sku.id}
-                        className={`p-3.5 rounded-2xl border transition-all ${
-                          currentQty > 0
-                            ? 'bg-secondary/10 border-secondary/40 shadow-sm'
-                            : 'bg-surface-card border-slate-800'
-                        }`}
-                      >
-                        {/* Card Header */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-0.5">
-                            <span className="font-bold text-white text-xs block leading-snug">{sku.name}</span>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-mono text-[9px] text-slate-300 font-bold bg-slate-800 px-1.5 py-0.5 rounded">
-                                {sku.skuCode}
-                              </span>
-                              <span className="text-[10px] text-slate-400">
-                                {sku.category}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="text-right shrink-0">
-                            <span
-                              className={`font-mono text-[10px] px-2 py-0.5 rounded-md font-bold block ${
-                                isOutOfStock
-                                  ? 'bg-rose-950/50 text-rose-300 border border-rose-800/40'
-                                  : 'bg-emerald-950/50 text-emerald-300 border border-emerald-800/40'
-                              }`}
-                            >
-                              {isOutOfStock ? '0 Avail' : `${availableQty.toLocaleString()} in stock`}
-                            </span>
-                            <span className="text-[11px] font-mono font-bold text-deep-teal block mt-1">
-                              PKR {sku.tradePrice.toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Stepper Controls & Line Calculation */}
-                        <div className="mt-3 pt-2.5 border-t border-slate-800/60 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleSetQty(currentQty - 10)}
-                              disabled={currentQty <= 0}
-                              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 rounded-lg text-[10px] font-mono font-bold min-w-[32px] min-h-[36px] flex items-center justify-center active:scale-95"
-                            >
-                              -10
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSetQty(currentQty - 1)}
-                              disabled={currentQty <= 0}
-                              className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white rounded-lg text-xs font-bold min-w-[32px] min-h-[36px] flex items-center justify-center active:scale-95"
-                            >
-                              -
-                            </button>
-                            
-                            <input
-                              type="number"
-                              min="0"
-                              value={currentQty || ''}
-                              placeholder="0"
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
-                                handleSetQty(val);
-                              }}
-                              className="w-14 py-1.5 px-1 bg-surface-card border border-slate-700 rounded-lg text-center text-white font-bold font-mono text-xs focus:border-secondary min-h-[36px]"
-                            />
-
-                            <button
-                              type="button"
-                              onClick={() => handleSetQty(currentQty + 1)}
-                              className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 text-deep-green font-bold rounded-lg text-xs min-w-[32px] min-h-[36px] flex items-center justify-center active:scale-95 shadow-sm"
-                            >
-                              +
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSetQty(currentQty + 10)}
-                              className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] font-mono font-bold min-w-[32px] min-h-[36px] flex items-center justify-center active:scale-95"
-                            >
-                              +10
-                            </button>
-                          </div>
-
-                          {currentQty > 0 && (
-                            <div className="text-right">
-                              <span className="text-[9px] text-slate-400 block">Line Total:</span>
-                              <span className="text-xs font-bold text-emerald-400 font-mono tracking-tight">
-                                PKR {lineTotal.toLocaleString()}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-
-              {/* SKU Grid Totals Summary */}
-              {gridComputedItems.length > 0 && (
-                <div className="p-2.5 bg-surface-card rounded-xl border border-slate-800/60 flex items-center justify-between text-[11px] font-mono">
-                  <div>
-                    <span className="text-slate-400 block">Total Items:</span>
-                    <span className="text-white font-bold block mt-0.5">
-                      {gridComputedItems.reduce((acc, c) => acc + c.orderedQuantity, 0)} Units ({gridComputedItems.length} SKUs)
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-slate-400 block">Estimated Value:</span>
-                    <span className="text-deep-teal font-extrabold text-xs block mt-0.5">
-                      PKR {gridOrderTotals.totalAmount.toLocaleString()}
-                    </span>
-                  </div>
                 </div>
-              )}
-            </div>
-
-            {/* STEP 4: RECOVERY SHORTCUT FORM */}
-            <div className="bg-surface-card p-3.5 rounded-2xl border border-slate-800 space-y-3">
-              <span className="font-semibold text-slate-300 text-[11px] uppercase tracking-wider block">
-                Step 4: Unified Payment Recovery (Optional)
-              </span>
-              
-              <div className="space-y-2.5">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-slate-400 text-[10px] block mb-1">Recovery Amount Collected (PKR):</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 25000"
-                      value={orderRecoveryAmount || ''}
-                      onChange={(e) => setOrderRecoveryAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="w-full p-2 bg-surface-card border border-slate-700 rounded-xl font-mono text-deep-teal font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-slate-400 text-[10px] block mb-1">Payment Method:</label>
-                    <select
-                      value={orderPaymentMode}
-                      onChange={(e) => setOrderPaymentMode(e.target.value as PaymentMode)}
-                      className="w-full p-2 bg-surface-card border border-slate-700 rounded-xl text-white font-semibold text-xs"
-                    >
-                      <option value="CASH">CASH (Physical Receipt)</option>
-                      <option value="CHEQUE">CHEQUE / DEPOSIT</option>
-                      <option value="ONLINE_TRANSFER">ONLINE IBFT</option>
-                      <option value="PAY_ORDER">PAY ORDER</option>
-                    </select>
-                  </div>
+                <div className="flex justify-between text-[10px] text-slate-400 font-semibold font-mono">
+                  <span>Target: PKR {SALES_TARGET.toLocaleString()}</span>
+                  <span>Achieved: PKR {totalAchievedSales.toLocaleString()}</span>
                 </div>
+              </div>
 
-                {orderRecoveryAmount > 0 && (
-                  <div className="space-y-2 p-3 bg-surface-card rounded-xl border border-slate-800 animate-fadeIn">
-                    {(orderPaymentMode === 'CHEQUE' || orderPaymentMode === 'PAY_ORDER' || orderPaymentMode === 'ONLINE_TRANSFER') && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-slate-500 text-[9px] block mb-0.5">Reference / Instrument No:</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. HBL-009912"
-                            value={orderInstrumentNumber}
-                            onChange={(e) => setOrderInstrumentNumber(e.target.value)}
-                            className="w-full p-1.5 bg-surface-card border border-slate-700 rounded-lg text-white font-mono text-[11px]"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-slate-500 text-[9px] block mb-0.5">Drawee Bank Name:</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. HBL / MCB"
-                            value={orderBankName}
-                            onChange={(e) => setOrderBankName(e.target.value)}
-                            className="w-full p-1.5 bg-surface-card border border-slate-700 rounded-lg text-white text-[11px]"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="text-slate-500 text-[9px] block mb-0.5">Deposit Remarks:</label>
-                      <input
-                        type="text"
-                        placeholder="Details of collection, deposit slip note..."
-                        value={orderRecoveryRemarks}
-                        onChange={(e) => setOrderRecoveryRemarks(e.target.value)}
-                        className="w-full p-1.5 bg-surface-card border border-slate-700 rounded-lg text-white text-[11px]"
-                      />
-                    </div>
-                  </div>
-                )}
+              {/* Recovery Target vs Achievement */}
+              <div className="space-y-1.5 border-t pt-3">
+                <div className="flex justify-between text-xs font-bold text-slate-600">
+                  <span>Financial Recovery</span>
+                  <span className="font-mono text-slate-800">{recoveryAchievementPercent}% Achieved</span>
+                </div>
+                <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden border border-white shadow-inner">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-500"
+                    style={{ width: `${recoveryAchievementPercent}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-slate-400 font-semibold font-mono">
+                  <span>Target: PKR {RECOVERY_TARGET.toLocaleString()}</span>
+                  <span>Achieved: PKR {totalAchievedRecovery.toLocaleString()}</span>
+                </div>
               </div>
             </div>
 
-            {/* STEP 5: PROPOSED CREDIT HEALTH & SUBMIT BUTTON */}
-            <div className="space-y-3 pt-1">
-              {/* Credit check evaluation */}
-              {gridComputedItems.length > 0 && (
-                <div className={`p-3 rounded-2xl border ${
-                  gridCreditCheck.status === 'GREEN'
-                    ? 'bg-emerald-950/40 border-emerald-800/80 text-emerald-300'
-                    : gridCreditCheck.status === 'AMBER'
-                    ? 'bg-amber-950/40 border-amber-800/80 text-amber-300'
-                    : 'bg-rose-950/40 border-rose-800/80 text-rose-300'
-                }`}>
-                  <div className="flex items-start gap-2">
-                    <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold block text-[11px]">Proposed Credit Rating: {gridCreditCheck.status}</span>
-                      <p className="text-[10px] opacity-90 mt-0.5">{gridCreditCheck.message}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={() => {
-                  if (gridComputedItems.length === 0) {
-                    alert('Please enter order quantity for at least one SKU first!');
-                    return;
-                  }
-                  setShowOrderConfirmModal(true);
-                }}
-                disabled={gridComputedItems.length === 0}
-                className={`w-full py-3.5 rounded-2xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
-                  gridComputedItems.length === 0
-                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                    : 'bg-secondary hover:bg-secondary/80 text-deep-green hover:shadow-lg hover:shadow-amber-500/10 active:scale-98'
-                }`}
-              >
-                <Send className="w-4 h-4" /> Review & Book Order
-              </button>
-            </div>
-
-            {/* ========================================================================= */}
-            {/* 5. ORDER CONFIRMATION MODAL (STEP 5 PREVIEW) */}
-            {/* ========================================================================= */}
-            {showOrderConfirmModal && (
-              <div className="absolute inset-0 bg-surface-card/95 z-50 rounded-2xl flex flex-col justify-end p-4 animate-slideUp">
-                <div className="bg-surface-card border border-slate-800 rounded-3xl p-4 space-y-4 max-h-[90%] overflow-y-auto">
-                  <div className="border-b border-slate-800 pb-2 flex justify-between items-center">
-                    <span className="font-extrabold text-white text-sm">Verify Submission Details</span>
-                    <button
-                      onClick={() => setShowOrderConfirmModal(false)}
-                      className="text-slate-400 hover:text-white font-mono text-xs"
-                    >
-                      [Dismiss]
-                    </button>
-                  </div>
-
-                  {/* Summary grid */}
-                  <div className="space-y-3 text-xs">
-                    <div className="p-3 bg-surface-card rounded-xl space-y-2 border border-slate-800">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Client Business:</span>
-                        <span className="font-bold text-white text-right">{selectedCustomer.companyName}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Client ID:</span>
-                        <span className="font-mono text-deep-teal font-bold">{selectedCustomer.customerCode}</span>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-surface-card rounded-xl space-y-2 border border-slate-800 font-mono">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Opening Balance:</span>
-                        <span className="text-white">PKR {selectedCustomer.currentBalance.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-deep-teal">
-                        <span>Recovery Collected:</span>
-                        <span>- PKR {orderRecoveryAmount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between border-t border-slate-800 pt-1 text-deep-teal font-bold">
-                        <span>Net Balance:</span>
-                        <span>PKR {(selectedCustomer.currentBalance - orderRecoveryAmount).toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-surface-card rounded-xl space-y-2 border border-slate-800 font-mono">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Total SKU Lines:</span>
-                        <span className="text-white font-bold">{gridComputedItems.length} SKUs</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Total Product Qty:</span>
-                        <span className="text-white font-bold">
-                          {gridComputedItems.reduce((acc, c) => acc + c.orderedQuantity, 0)} Units
-                        </span>
-                      </div>
-                      <div className="flex justify-between border-t border-slate-800 pt-1 text-deep-teal font-black">
-                        <span>Order Estimated Value:</span>
-                        <span>PKR {gridOrderTotals.totalAmount.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {/* Proposed balance prediction */}
-                    <div className="p-3 bg-surface-card rounded-xl space-y-1.5 border border-slate-800 font-mono text-[10px]">
-                      <span className="text-slate-500 block uppercase font-bold text-[9px] tracking-wider mb-1">Simulated Ledger Post:</span>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Predicted Balance:</span>
-                        <span className="text-white font-bold">
-                          PKR {(((selectedCustomer?.currentBalance || 0) - orderRecoveryAmount) + gridOrderTotals.totalAmount).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Remaining Credit:</span>
-                        <span className="text-deep-teal font-bold">
-                          PKR {Math.max(0, (selectedCustomer?.creditLimit || 0) - ((selectedCustomer?.currentBalance || 0) - orderRecoveryAmount + gridOrderTotals.totalAmount)).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Credit Status */}
-                    <div className={`p-3 rounded-xl border flex items-start gap-2 ${
-                      gridCreditCheck.status === 'GREEN'
-                        ? 'bg-emerald-950/30 border-emerald-800/60 text-emerald-300'
-                        : gridCreditCheck.status === 'AMBER'
-                        ? 'bg-amber-950/30 border-amber-800/60 text-amber-300'
-                        : 'bg-rose-950/30 border-rose-800/60 text-rose-300'
-                    }`}>
-                      <Info className="w-4 h-4 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-bold block">Credit Review: {gridCreditCheck.status}</span>
-                        <p className="text-[10px] opacity-90 mt-0.5">{gridCreditCheck.message}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions inside Modal */}
-                  <div className="grid grid-cols-2 gap-2.5 pt-2">
-                    <button
-                      onClick={() => setShowOrderConfirmModal(false)}
-                      className="py-3 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-2xl text-xs active:scale-95 transition-all"
-                    >
-                      Cancel / Edit
-                    </button>
-                    <button
-                      onClick={handleOrderSubmit}
-                      className="py-3 bg-secondary hover:bg-secondary/80 text-deep-green font-black rounded-2xl text-xs active:scale-95 transition-all"
-                    >
-                      Confirm & Submit
-                    </button>
-                  </div>
-                </div>
+            {/* Shift coverage information */}
+            <div className="nm-inset p-4 rounded-2xl bg-white space-y-2.5 text-xs">
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-bold">Total Assigned Dealers:</span>
+                <span className="font-mono font-black text-slate-800">{customers.length}</span>
               </div>
-            )}
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-bold">Active Geofenced Beat Town:</span>
+                <span className="font-mono font-black text-teal-800">{attendanceTown}</span>
+              </div>
+            </div>
 
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* 4. RECOVERY COLLECTION SCREEN */}
-        {/* ========================================================================= */}
-        {activeScreen === 'RECOVERY_FORM' && (
+        {/* ========================================================= */}
+        {/* TAB 2: ATTENDANCE WITH GEOMAPPING GEOFENCE & ACTIVITIES LOG */}
+        {/* ========================================================= */}
+        {activeTab === 'ATTENDANCE' && (
           <div className="space-y-4">
             
-            <div className="border-b border-slate-800 pb-2">
-              <span className="font-bold text-white text-sm">Log Debt Recovery Collection</span>
-              <p className="text-[10px] text-slate-400">
-                Field collection directly credited to customer ledger upon Accounts verification.
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-slate-400 text-[10px]">Customer:</label>
-              <select
-                value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="w-full p-2 bg-surface-card border border-slate-700 rounded-lg text-white font-semibold"
-              >
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.customerCode} - {c.companyName} (Due: PKR {c.currentBalance.toLocaleString()})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-slate-400 text-[10px]">Amount Collected (PKR):</label>
-              <input
-                type="number"
-                value={recoveryAmount}
-                onChange={(e) => setRecoveryAmount(Number(e.target.value))}
-                className="w-full p-2 bg-surface-card border border-slate-700 rounded-lg font-mono text-deep-teal font-bold text-base"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-slate-400 text-[10px]">Payment Mode:</label>
-              <select
-                value={recoveryPaymentMode}
-                onChange={(e) => setRecoveryPaymentMode(e.target.value as PaymentMode)}
-                className="w-full p-2 bg-surface-card border border-slate-700 rounded-lg text-white font-semibold"
-              >
-                <option value="CASH">CASH (Physical Receipt)</option>
-                <option value="CHEQUE">CHEQUE / CHEQUE DEPOSIT</option>
-                <option value="ONLINE_TRANSFER">ONLINE BANK TRANSFER / IBFT</option>
-                <option value="PAY_ORDER">PAY ORDER</option>
-              </select>
-            </div>
-
-            {(recoveryPaymentMode === 'CHEQUE' || recoveryPaymentMode === 'PAY_ORDER') && (
-              <div className="space-y-2 p-3 bg-surface-card rounded-xl border border-slate-800">
-                <div className="space-y-1">
-                  <label className="text-slate-400 text-[10px]">Cheque / Instrument Number:</label>
-                  <input
-                    type="text"
-                    value={instrumentNumber}
-                    onChange={(e) => setInstrumentNumber(e.target.value)}
-                    placeholder="e.g. HBL-0099412"
-                    className="w-full p-1.5 bg-surface-card border border-slate-700 rounded font-mono text-white"
-                  />
+            {/* Offline Sync & Location Queue Manager Indicator */}
+            <div className="nm-flat p-4 rounded-2xl border border-white space-y-3 bg-[#f0f4fa]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500 animate-pulse'}`} />
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                    Location Queue Status
+                  </span>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-slate-400 text-[10px]">Drawee Bank Name:</label>
-                  <input
-                    type="text"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    placeholder="e.g. Habib Bank Ltd / MCB"
-                    className="w-full p-1.5 bg-surface-card border border-slate-700 rounded text-white"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <label className="text-slate-400 text-[10px]">Remarks / Deposit Notes:</label>
-              <textarea
-                value={recoveryRemarks}
-                onChange={(e) => setRecoveryRemarks(e.target.value)}
-                placeholder="Details of collection..."
-                rows={2}
-                className="w-full p-2 bg-surface-card border border-slate-700 rounded-lg text-white"
-              />
-            </div>
-
-            <button
-              onClick={handleRecoverySubmit}
-              className="w-full py-3 bg-secondary hover:bg-secondary text-deep-green font-bold rounded-xl shadow-md text-sm transition-all"
-            >
-              Submit Recovery (PKR {recoveryAmount.toLocaleString()})
-            </button>
-
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* 5. VISIT LOG & GPS CHECK-IN */}
-        {/* ========================================================================= */}
-        {activeScreen === 'VISIT_LOG' && (() => {
-          const mapCenterLat = 31.5798;
-          const mapCenterLng = 74.3168;
-
-          // Helper to calculate distance
-          const getDistanceInKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-            const R = 6371; // Earth's radius in km
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = 
-              Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return parseFloat((R * c).toFixed(2));
-          };
-
-          // Generate map pins relative to current check-in location (31.5798, 74.3168)
-          const mapPins = [
-            { id: 'self', name: 'Your GPS Check-in Point', lat: mapCenterLat, lng: mapCenterLng, type: 'SELF', outstanding: 0, code: 'ME' },
-            ...customers.map((c, idx) => {
-              let lat = mapCenterLat;
-              let lng = mapCenterLng;
-              // Map key customers to realistic Lahore coordinates
-              if (c.id === 'c-1') { lat = 31.5790; lng = 74.3120; } // Al-Madina (Brandreth Rd)
-              else if (c.id === 'c-2') { lat = 31.5722; lng = 74.3250; } // Bright Spark (Hall Rd)
-              else if (c.id === 'c-3') { lat = 31.5880; lng = 74.3210; } // Peshawar (GT Road Link)
-              else {
-                // Distribute around nicely for visual dispersion
-                lat = mapCenterLat + 0.006 * Math.sin(idx * 2.3 + 0.5);
-                lng = mapCenterLng + 0.006 * Math.cos(idx * 1.7 + 1.2);
-              }
-              return {
-                id: c.id,
-                name: c.companyName,
-                lat,
-                lng,
-                type: c.type,
-                outstanding: c.currentBalance,
-                code: c.customerCode
-              };
-            })
-          ];
-
-          return (
-            <div className="space-y-4">
-              
-              <div className="border-b border-slate-800 pb-2">
-                <span className="font-bold text-white text-sm">Customer Visits & Schedule</span>
-                <p className="text-[10px] text-slate-400">
-                  GPS check-in timestamp, client discussions, and monthly visit reminders.
-                </p>
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                  {isOnline ? 'Network Online' : 'Network Offline'}
+                </span>
               </div>
 
-              {/* Sub-tab Navigation: GPS Check-in vs Monthly Calendar */}
-              <div className="flex items-center gap-1 bg-surface-card p-1 rounded-xl border border-slate-800 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setVisitScreenSubTab('CHECKIN')}
-                  className={`flex-1 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all ${
-                    visitScreenSubTab === 'CHECKIN'
-                      ? 'bg-secondary text-deep-green shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Navigation className="w-3.5 h-3.5" /> GPS Check-In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVisitScreenSubTab('CALENDAR')}
-                  className={`flex-1 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all ${
-                    visitScreenSubTab === 'CALENDAR'
-                      ? 'bg-secondary text-deep-green shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Calendar className="w-3.5 h-3.5" /> Monthly Calendar & Reminders
-                </button>
-              </div>
-
-              {/* VIEW 1: MONTHLY CALENDAR & REMINDERS */}
-              {visitScreenSubTab === 'CALENDAR' && (
-                <div className="space-y-3">
-                  <VisitLogCalendarView
-                    currentUser={currentUser}
-                    visits={visits}
-                    customers={customers}
-                    isMobileCompact={true}
-                    onLogVisitClick={(custId, notes) => {
-                      if (custId) setSelectedCustomerId(custId);
-                      if (notes) setVisitPurpose(notes);
-                      setVisitScreenSubTab('CHECKIN');
-                    }}
-                  />
+              {syncStatusMsg && (
+                <div className="p-2.5 bg-emerald-50 text-emerald-800 text-[10px] rounded-xl border border-emerald-200 font-bold animate-fade-in flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                  {syncStatusMsg}
                 </div>
               )}
 
-              {/* VIEW 2: GPS CHECK-IN & DISCUSSION FORM */}
-              {visitScreenSubTab === 'CHECKIN' && (
-                <div className="space-y-4">
-                  {/* GPS Coordinates Bar */}
-                  <div className="p-3 bg-surface-card rounded-xl border border-slate-800 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-deep-teal">
-                      <Navigation className="w-4 h-4 animate-pulse" />
-                      <span className="font-mono text-[11px]">GPS: {mapCenterLat}° N, {mapCenterLng}° E</span>
-                    </div>
-                    <span className="px-2 py-0.5 bg-secondary/20 text-emerald-300 rounded text-[10px] font-mono">
-                      Lahore Market
-                    </span>
-                  </div>
-
-              {/* Interactive SVG Proximity Map View */}
-              <div className="space-y-2">
-                <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Lightweight Visit Proximity Map</span>
-                
-                <div className="relative w-full h-[220px] bg-surface-card rounded-2xl overflow-hidden border border-slate-800 shadow-inner flex flex-col">
-                  {/* Map Canvas */}
-                  <svg className="w-full h-full flex-1" viewBox="0 0 300 200">
-                    {/* Gridlines */}
-                    <defs>
-                      <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-                        <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(51, 65, 85, 0.2)" strokeWidth="1" />
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#grid)" />
-
-                    {/* Dotted street approximations */}
-                    <line x1="0" y1="100" x2="300" y2="100" stroke="rgba(51, 65, 85, 0.4)" strokeWidth="1.5" strokeDasharray="4 4" />
-                    <line x1="150" y1="0" x2="150" y2="200" stroke="rgba(51, 65, 85, 0.4)" strokeWidth="1.5" strokeDasharray="4 4" />
-                    <text x="5" y="95" fill="rgba(71, 85, 105, 0.6)" fontSize="7" fontFamily="monospace">BRANDRETH ROAD</text>
-                    <text x="155" y="195" fill="rgba(71, 85, 105, 0.6)" fontSize="7" fontFamily="monospace" transform="rotate(-90 155 195)">HALL ROAD</text>
-
-                    {/* Concentric Proximity Rings around SELF (150, 100) */}
-                    <circle cx="150" cy="100" r="35" fill="none" stroke="rgba(16, 185, 129, 0.1)" strokeWidth="1" />
-                    <circle cx="150" cy="100" r="75" fill="none" stroke="rgba(16, 185, 129, 0.05)" strokeWidth="1" />
-                    
-                    {/* Ring distance labels */}
-                    <text x="188" y="103" fill="rgba(16, 185, 129, 0.4)" fontSize="6" fontFamily="monospace">1.0 km</text>
-                    <text x="228" y="103" fill="rgba(16, 185, 129, 0.3)" fontSize="6" fontFamily="monospace">2.5 km</text>
-
-                    {/* Route line if a pin is selected */}
-                    {selectedMapPin && (() => {
-                      const pin = mapPins.find(p => p.id === selectedMapPin.id);
-                      if (pin && pin.id !== 'self') {
-                        // Relative coordinates
-                        const scaleX = 3500;
-                        const scaleY = -3500;
-                        const px = 150 + (pin.lng - mapCenterLng) * scaleX;
-                        const py = 100 + (pin.lat - mapCenterLat) * scaleY;
-                        return (
-                          <line 
-                            x1="150" y1="100" x2={px} y2={py} 
-                            stroke="#f59e0b" strokeWidth="1.5" 
-                            strokeDasharray="2 2" className="animate-[dash_2s_linear_infinite]"
-                          />
-                        );
-                      }
-                      return null;
-                    })()}
-
-                    {/* Render Pins */}
-                    {mapPins.map((pin) => {
-                      const scaleX = 3500;
-                      const scaleY = -3500;
-
-                      const px = pin.id === 'self' ? 150 : Math.min(285, Math.max(15, 150 + (pin.lng - mapCenterLng) * scaleX));
-                      const py = pin.id === 'self' ? 100 : Math.min(185, Math.max(15, 100 + (pin.lat - mapCenterLat) * scaleY));
-
-                      if (pin.type === 'SELF') {
-                        return (
-                          <g key={pin.id} className="cursor-pointer">
-                            <circle cx={px} cy={py} r="12" fill="rgba(16, 185, 129, 0.25)" className="animate-ping" style={{ transformOrigin: `${px}px ${py}px` }} />
-                            <circle cx={px} cy={py} r="5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
-                          </g>
-                        );
-                      }
-
-                      const isSelected = selectedMapPin?.id === pin.id;
-                      const dist = getDistanceInKm(mapCenterLat, mapCenterLng, pin.lat, pin.lng);
-
-                      return (
-                        <g 
-                          key={pin.id} 
-                          className="cursor-pointer"
-                          onClick={() => setSelectedMapPin({ id: pin.id, name: pin.name, dist, type: pin.type })}
-                        >
-                          <path 
-                            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" 
-                            fill={isSelected ? '#f59e0b' : '#3b82f6'} 
-                            stroke="#1e293b" 
-                            strokeWidth="1"
-                            transform={`translate(${px - 6}, ${py - 12}) scale(0.5)`} 
-                          />
-                          <rect x={px - 14} y={py - 22} width="28" height="9" rx="2" fill="#1e293b" stroke={isSelected ? '#f59e0b' : 'transparent'} strokeWidth="1" />
-                          <text x={px} y={py - 15} textAnchor="middle" fill="#ffffff" fontSize="6" fontWeight="bold" fontFamily="monospace">
-                            {pin.code}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-
-                  <div className="absolute bottom-2 right-2 bg-surface-card/95 border border-slate-800 px-2 py-1 rounded text-[8px] font-mono text-slate-400 flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-secondary rounded-full"></span> Self
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-secondary rounded-full"></span> Dealers
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-secondary rounded-full"></span> Selected
-                    </div>
-                  </div>
+              <div className="nm-inset p-3 bg-white rounded-xl space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 font-bold text-[10px] uppercase">Queued Location Logs:</span>
+                  <span className={`font-mono font-black text-xs px-2 py-0.5 rounded ${offlineLogs.length > 0 ? 'bg-amber-100 text-amber-800 animate-pulse' : 'bg-slate-100 text-slate-600'}`}>
+                    {offlineLogs.length} Pending Logs
+                  </span>
                 </div>
-
-                {selectedMapPin ? (
-                  <div className="bg-surface-card p-3 rounded-xl border border-secondary/30 flex items-center justify-between animate-fade-in">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-white text-[11px] truncate max-w-[170px]">{selectedMapPin.name}</span>
-                        <span className="px-1.5 py-0.5 bg-slate-800 text-[8px] text-slate-300 font-bold rounded uppercase tracking-wider">
-                          {selectedMapPin.type}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-400 block font-mono">
-                        Distance from check-in: <strong className="text-deep-teal">{selectedMapPin.dist} km</strong> 
-                        <span className="text-[9px] text-slate-500 ml-1">
-                          ({selectedMapPin.dist < 1 ? 'Immediate Proximity' : selectedMapPin.dist < 3 ? 'Nearby Range' : 'Outer Limit'})
-                        </span>
-                      </span>
-                    </div>
+                {offlineLogs.length > 0 && (
+                  <div className="pt-2 border-t border-dashed border-slate-200">
+                    <p className="text-[9px] text-slate-500 mb-2 font-semibold">
+                      Your location entries are safely cached in browser storage. When internet connectivity is detected, these upload automatically to Supabase.
+                    </p>
                     <button
-                      onClick={() => {
-                        setSelectedCustomerId(selectedMapPin.id);
-                        setSelectedMapPin(null);
-                      }}
-                      className="px-2.5 py-1 bg-secondary hover:bg-secondary/80 text-deep-green font-bold rounded text-[10px]"
+                      onClick={() => syncOfflineLogs(false)}
+                      className="w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 text-[10px] font-black rounded-lg shadow-sm flex items-center justify-center gap-1 active:scale-95 transition-all"
                     >
-                      Check-In
+                      <RotateCw className="w-3 h-3" /> Upload Queued Logs Now
                     </button>
                   </div>
-                ) : (
-                  <p className="text-[10px] text-slate-500 italic text-center">
-                    💡 Click any dealer pin above to view distance from check-in coordinates and plot routing.
-                  </p>
                 )}
               </div>
+            </div>
 
-              {/* Form Controls */}
-              <div className="space-y-1">
-                <label className="text-slate-400 text-[10px]">Customer visiting:</label>
+            {/* Geofence Widget */}
+            <div className="nm-flat p-4 rounded-2xl border border-white space-y-4">
+              <div>
+                <h3 className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase">
+                  <MapPin className="w-4 h-4 text-rose-600 animate-bounce" />
+                  Town Geofenced Attendance
+                </h3>
+                <p className="text-[10px] text-slate-500 mt-0.5">Assigned towns directory drop-down selection below determines the active market.</p>
+              </div>
+
+              {/* Selected Town Center Dropdown - ASSIGNED ONLY */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-600 block uppercase">Select Assigned Beat Town*</label>
                 <select
-                  value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="w-full p-2 bg-surface-card border border-slate-700 rounded-lg text-white font-semibold"
+                  value={attendanceTown}
+                  onChange={(e) => setAttendanceTown(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-white border border-slate-300 font-bold text-slate-800 text-xs focus:outline-none"
                 >
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.customerCode} - {c.companyName}
-                    </option>
+                  {assignedTowns.map(t => (
+                    <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-slate-400 text-[10px]">Purpose of Visit:</label>
-                <input
-                  type="text"
-                  value={visitPurpose}
-                  onChange={(e) => setVisitPurpose(e.target.value)}
-                  className="w-full p-2 bg-surface-card border border-slate-700 rounded-lg text-white"
-                />
+              {/* GPS Tracker Console */}
+              <div className="nm-inset p-3.5 rounded-2xl bg-white space-y-2.5 text-xs">
+                <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
+                  <span>SATELLITE GPS LOCK</span>
+                  <button onClick={acquireLocation} className="text-teal-700 hover:underline flex items-center gap-0.5">
+                    <RotateCw className="w-3 h-3" /> Refresh GPS
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-[11px]">
+                  <div>
+                    <span className="text-slate-400 block text-[9px]">Target Town Center</span>
+                    <span className="font-mono font-bold block text-slate-700">
+                      {townCenter.lat.toFixed(4)}° N, {townCenter.lng.toFixed(4)}° E
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[9px]">Current Location</span>
+                    {gpsLoading ? (
+                      <span className="font-medium text-slate-400 block animate-pulse">Scanning GPS...</span>
+                    ) : (
+                      <span className="font-mono font-bold block text-slate-700">
+                        {userLat.toFixed(4)}° N, {userLng.toFixed(4)}° E
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {gpsError && (
+                  <p className="text-[9px] text-amber-700 bg-amber-50 p-1.5 rounded flex items-center gap-1">
+                    <Info className="w-3 h-3" /> {gpsError}
+                  </p>
+                )}
+
+                <div className="border-t border-dashed pt-2 flex justify-between items-center">
+                  <div>
+                    <span className="text-slate-400 block text-[9px]">Calculated Proximity</span>
+                    <span className="font-mono font-black text-slate-800 text-xs">
+                      {distanceToCenter.toFixed(2)} km to center
+                    </span>
+                  </div>
+                  <span className={`px-2 py-1 rounded font-black text-[10px] ${
+                    isWithinGeofence ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                  }`}>
+                    {isWithinGeofence ? '✓ INSIDE GEOFENCE' : '✗ OUTSIDE BOUNDS'}
+                  </span>
+                </div>
+
+                {/* Simulation toggle */}
+                <div className="flex items-center justify-between border-t pt-2 mt-1">
+                  <span className="text-[10px] text-slate-500 font-bold">
+                    Bypass Geofence Guard (Simulation Mode)
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bypassGeofence}
+                      onChange={(e) => setBypassGeofence(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-8 h-4 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-teal-600"></div>
+                  </label>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-slate-400 text-[10px]">Discussion Notes & Feedback:</label>
-                <textarea
-                  value={visitNotes}
-                  onChange={(e) => setVisitNotes(e.target.value)}
-                  placeholder="Market feedback, competitor pricing, delivery issues..."
-                  rows={3}
-                  className="w-full p-2 bg-surface-card border border-slate-700 rounded-lg text-white"
-                />
+              {/* Clock Ins */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="nm-inset p-3 rounded-xl bg-white space-y-1">
+                  <span className="text-slate-400 font-bold block text-[9px]">Check-In Time</span>
+                  {checkInTime ? (
+                    <div>
+                      <span className="text-emerald-700 font-black block text-sm">{checkInTime}</span>
+                      <span className="text-[9px] text-slate-400 block font-mono truncate">{checkInLoc}</span>
+                    </div>
+                  ) : (
+                    <span className="text-rose-500 font-bold block mt-1">Not Checked-In</span>
+                  )}
+                </div>
+
+                <div className="nm-inset p-3 rounded-xl bg-white space-y-1">
+                  <span className="text-slate-400 font-bold block text-[9px]">Check-Out Time</span>
+                  {checkOutTime ? (
+                    <div>
+                      <span className="text-indigo-700 font-black block text-sm">{checkOutTime}</span>
+                      <span className="text-[9px] text-slate-400 block font-mono truncate">{checkOutLoc}</span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-400 block mt-1">Active Beat Shift</span>
+                  )}
+                </div>
               </div>
 
-              {/* Storefront / Delivery Receipt Capture Component */}
-              <div className="space-y-2 p-3 bg-surface-card rounded-xl border border-slate-800">
-                <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Storefront & Receipt Capture</span>
-                
-                {visitPhoto ? (
-                  <div className="space-y-2">
-                    <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-surface-card max-h-48 flex items-center justify-center">
-                      <img src={visitPhoto} alt="Captured Storefront" className="w-full h-auto max-h-48 object-contain" referrerPolicy="no-referrer" />
-                      <button 
-                        onClick={() => setVisitPhoto(null)}
-                        className="absolute top-2 right-2 bg-rose-600/90 hover:bg-rose-500 text-white p-1.5 rounded-full shadow-md transition-all text-[10px] font-bold"
-                        title="Remove Photo"
-                      >
-                        Delete
-                      </button>
-                      <div className="absolute bottom-2 left-2 bg-secondary/95 text-deep-green text-[9px] font-bold px-2 py-0.5 rounded shadow">
-                        ✓ Snapshot Attached
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => startCamera()}
-                      className="w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded text-[11px] flex items-center justify-center gap-1 border border-slate-700"
-                    >
-                      <Camera className="w-3.5 h-3.5" /> Retake Photo
-                    </button>
-                  </div>
-                ) : isCameraActive ? (
-                  <div className="space-y-2">
-                    <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-surface-card aspect-video flex flex-col justify-between">
-                      <video 
-                        ref={videoRef} 
-                        autoPlay 
-                        playsInline 
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
-                        <button
-                          onClick={capturePhoto}
-                          className="px-4 py-1.5 bg-secondary hover:bg-secondary/80 text-deep-green font-bold rounded-lg text-xs shadow-lg"
-                        >
-                          Capture
-                        </button>
-                        <button
-                          onClick={stopCamera}
-                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-slate-500 text-center">Position the receipt or storefront within the frame.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={startCamera}
-                        className="flex-1 py-3 bg-surface-card hover:bg-slate-850 text-deep-teal rounded-lg font-bold border border-slate-750 flex flex-col items-center justify-center gap-1 shadow transition-all active:scale-95"
-                      >
-                        <Camera className="w-5 h-5 text-deep-teal" />
-                        <span className="text-[10px]">Take Live Photo</span>
-                      </button>
+              {/* Submit Buttons */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <button
+                  onClick={handleCheckIn}
+                  className="py-3 px-1 rounded-xl font-black text-xs text-white bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 shadow-md active:scale-95 transition-all text-center"
+                >
+                  📌 Check In Beat
+                </button>
+                <button
+                  onClick={handleCheckOut}
+                  className="py-3 px-1 rounded-xl font-black text-xs text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-md active:scale-95 transition-all text-center"
+                >
+                  🚪 Check Out Beat
+                </button>
+              </div>
+            </div>
 
-                      <label className="flex-1 py-3 bg-surface-card hover:bg-slate-850 text-slate-300 rounded-lg font-bold border border-slate-750 flex flex-col items-center justify-center gap-1 shadow transition-all active:scale-95 cursor-pointer">
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          onChange={handleFileChange} 
-                          className="hidden" 
-                        />
-                        <svg className="w-5 h-5 text-slate-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                        <span className="text-[10px] mt-1">Upload File</span>
-                      </label>
-                    </div>
-
-                    <div className="pt-1 border-t border-slate-900">
-                      <span className="text-[10px] text-slate-500 block mb-1">Quick Sandbox Mock Snippets (For Testing):</span>
-                      <div className="flex gap-1.5">
-                        <button 
-                          onClick={() => selectSimulatedPhoto('store')}
-                          className="flex-1 py-1 bg-surface-card hover:bg-slate-850 text-slate-400 rounded border border-slate-800 text-[9px] font-semibold"
-                        >
-                          + Storefront
-                        </button>
-                        <button 
-                          onClick={() => selectSimulatedPhoto('receipt')}
-                          className="flex-1 py-1 bg-surface-card hover:bg-slate-850 text-slate-400 rounded border border-slate-800 text-[9px] font-semibold"
-                        >
-                          + Receipt
-                        </button>
-                        <button 
-                          onClick={() => selectSimulatedPhoto('cheque')}
-                          className="flex-1 py-1 bg-surface-card hover:bg-slate-850 text-slate-400 rounded border border-slate-800 text-[9px] font-semibold"
-                        >
-                          + Cheque Doc
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+            {/* DAILY ACTIVITIES LOG (DATE-WISE) - MOVED HERE */}
+            <div className="nm-flat p-4 rounded-2xl border border-white space-y-3">
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-teal-600" />
+                  Daily Activities Log (Date-Wise)
+                </h4>
+                {offlineLogs.length > 0 && (
+                  <button
+                    onClick={syncOfflineLogs}
+                    className="flex items-center gap-1 text-[9px] bg-amber-100 text-amber-800 font-black px-2 py-0.5 rounded animate-pulse"
+                  >
+                    Sync {offlineLogs.length} Records
+                  </button>
                 )}
               </div>
 
-              <div className="space-y-2 p-3 bg-surface-card rounded-xl border border-slate-800">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="chk-order-visit"
-                    checked={orderTakenInVisit}
-                    onChange={(e) => setOrderTakenInVisit(e.target.checked)}
-                    className="rounded text-deep-teal"
-                  />
-                  <label htmlFor="chk-order-visit" className="text-slate-300 font-medium">
-                    Sales order booked during this visit
-                  </label>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="chk-rec-visit"
-                    checked={recoveryTakenInVisit}
-                    onChange={(e) => setRecoveryTakenInVisit(e.target.checked)}
-                    className="rounded text-deep-teal"
-                  />
-                  <label htmlFor="chk-rec-visit" className="text-slate-300 font-medium">
-                    Recovery payment collected during this visit
-                  </label>
-                </div>
+              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                {dailyActivities.map((act, i) => (
+                  <div key={i} className="bg-white p-3 rounded-xl border border-slate-100 space-y-2 text-xs">
+                    <div className="flex justify-between items-center border-b pb-1">
+                      <span className="font-black text-slate-700 font-mono">📅 {act.date}</span>
+                      <span className="font-bold text-teal-800">🏡 {act.town}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                      <div>
+                        <span className="text-slate-400 block text-[9px]">SALES INVOICED</span>
+                        <span className="font-bold text-emerald-700">PKR {act.sales.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[9px]">RECOVERY RECEIVED</span>
+                        <span className="font-bold text-indigo-700">PKR {act.recovery.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              <button
-                onClick={handleVisitSubmit}
-                className="w-full py-3 bg-secondary hover:bg-secondary/80 text-deep-green font-bold rounded-xl shadow-md text-sm transition-all"
-              >
-                Complete Check-Out & Save Visit
-              </button>
-            </div>
-          )}
-
-        </div>
-      );
-    })()}
-
-        {/* ========================================================================= */}
-        {/* 6. NEW DEALER / DISTRIBUTOR REGISTRATION REQUEST */}
-        {/* ========================================================================= */}
-        {activeScreen === 'REGISTRATION_FORM' && (
-          <div className="space-y-4">
-            <div className="border-b border-slate-800 pb-2 flex items-center justify-between">
-              <div>
-                <span className="font-bold text-white text-sm">Register Dealer/Distributor</span>
-                <p className="text-[10px] text-slate-400">
-                  Submit a new client lead for management verification.
-                </p>
-              </div>
-              <span className="px-2 py-0.5 bg-secondary/10 text-deep-teal border border-secondary/20 rounded font-mono text-[9px] uppercase font-bold">
-                Authorization Workflow
-              </span>
             </div>
 
-            <div className="space-y-3">
-              {/* Business Details */}
-              <div className="space-y-2 p-3 bg-surface-card rounded-xl border border-slate-800">
-                <span className="text-deep-teal text-[9px] uppercase font-bold tracking-wider block">Business Identification</span>
-                
-                <div className="space-y-1">
-                  <label className="text-slate-400 text-[10px]">Business / Trade Name*</label>
-                  <input
-                    type="text"
-                    value={regBusinessName}
-                    onChange={(e) => setRegBusinessName(e.target.value)}
-                    placeholder="e.g. Al-Hamd Light House"
-                    className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-slate-400 text-[10px]">Client Type*</label>
-                    <select
-                      value={regType}
-                      onChange={(e) => setRegType(e.target.value as 'DEALER' | 'DISTRIBUTOR')}
-                      className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white"
-                    >
-                      <option value="DEALER">Dealer (DLR)</option>
-                      <option value="DISTRIBUTOR">Distributor (DST)</option>
-                    </select>
+            {/* Attendance Shift logs history */}
+            <div className="nm-flat p-4 rounded-2xl border border-white space-y-3">
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Shift Sessions</h4>
+              <div className="space-y-2 max-h-36 overflow-y-auto">
+                {sessionLogs.map((log, idx) => (
+                  <div key={idx} className="bg-white p-2.5 rounded-xl border border-slate-100 flex justify-between items-center text-[10px]">
+                    <div>
+                      <span className="font-bold text-slate-800 block">{log.town} Beat</span>
+                      <span className="text-[9px] text-slate-400 block font-mono truncate max-w-[200px]">{log.coords}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-slate-800 block">{log.date}</span>
+                      <span className="text-slate-500 font-mono block mt-0.5">{log.checkIn} - {log.checkOut || 'Shift Active'}</span>
+                    </div>
                   </div>
-
-                  <div className="space-y-1">
-                    <label className="text-slate-400 text-[10px]">Opening Balance (PKR)</label>
-                    <input
-                      type="number"
-                      value={regOpeningBalance || ''}
-                      onChange={(e) => setRegOpeningBalance(Number(e.target.value))}
-                      placeholder="e.g. 15000"
-                      className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white font-mono"
-                    />
-                  </div>
-                </div>
+                ))}
               </div>
-
-              {/* Owner / Contact Details */}
-              <div className="space-y-2 p-3 bg-surface-card rounded-xl border border-slate-800">
-                <span className="text-deep-teal text-[9px] uppercase font-bold tracking-wider block">Owner & Verification Info</span>
-                
-                <div className="space-y-1">
-                  <label className="text-slate-400 text-[10px]">Owner / Contact Person Name*</label>
-                  <input
-                    type="text"
-                    value={regOwnerName}
-                    onChange={(e) => setRegOwnerName(e.target.value)}
-                    placeholder="e.g. Muhammad Amjad"
-                    className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-slate-400 text-[10px]">Owner CNIC Number (Pakistan Format)*</label>
-                  <input
-                    type="text"
-                    value={regCnic}
-                    onChange={(e) => setRegCnic(e.target.value)}
-                    placeholder="e.g. 35201-1234567-9"
-                    className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-slate-400 text-[10px]">Contact Mobile Number*</label>
-                  <input
-                    type="text"
-                    value={regContactNumber}
-                    onChange={(e) => setRegContactNumber(e.target.value)}
-                    placeholder="e.g. 0321-4567890"
-                    className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Physical Location */}
-              <div className="space-y-2 p-3 bg-surface-card rounded-xl border border-slate-800">
-                <span className="text-deep-teal text-[9px] uppercase font-bold tracking-wider block">Shop Location & Address</span>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-slate-400 text-[10px]">City</label>
-                    <input
-                      type="text"
-                      value={regCity}
-                      onChange={(e) => setRegCity(e.target.value)}
-                      className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-slate-400 text-[10px]">Region</label>
-                    <select
-                      value={regRegion}
-                      onChange={(e) => setRegRegion(e.target.value)}
-                      className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white"
-                    >
-                      <option value="Punjab North">Punjab North (LHR/GUJ)</option>
-                      <option value="Punjab South">Punjab South (MUL/FSD)</option>
-                      <option value="Sindh Coastal">Sindh Coastal (KHI)</option>
-                      <option value="KPK Frontier">KPK Frontier (PEW)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-slate-400 text-[10px]">Shop Physical Address*</label>
-                  <textarea
-                    value={regAddress}
-                    onChange={(e) => setRegAddress(e.target.value)}
-                    placeholder="Shop # 12, Electric Market, Lahore"
-                    rows={2}
-                    className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white"
-                  />
-                </div>
-
-                {/* GPS Capture Indicator */}
-                <div className="p-2.5 bg-surface-card rounded border border-slate-800 flex items-center justify-between text-[10px]">
-                  <div className="flex items-center gap-1.5 text-deep-teal">
-                    <MapPin className="w-3.5 h-3.5 animate-pulse" />
-                    <span>GPS Attached: {regLatitude}, {regLongitude}</span>
-                  </div>
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      setRegLatitude(31.5582 + (Math.random() - 0.5) * 0.05);
-                      setRegLongitude(74.3294 + (Math.random() - 0.5) * 0.05);
-                      alert('Coordinates updated from simulator sensor!');
-                    }}
-                    className="text-deep-teal hover:text-amber-300 font-bold"
-                  >
-                    Recapture
-                  </button>
-                </div>
-              </div>
-
-              {/* Proposed Credit Policy */}
-              <div className="space-y-2 p-3 bg-surface-card rounded-xl border border-slate-800">
-                <span className="text-deep-teal text-[9px] uppercase font-bold tracking-wider block">Proposed Accounts terms</span>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-slate-400 text-[10px]">Proposed Limit (PKR)</label>
-                    <input
-                      type="number"
-                      value={regCreditLimit}
-                      onChange={(e) => setRegCreditLimit(Number(e.target.value))}
-                      className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-slate-400 text-[10px]">Proposed Credit Days</label>
-                    <input
-                      type="number"
-                      value={regCreditDays}
-                      onChange={(e) => setRegCreditDays(Number(e.target.value))}
-                      className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-slate-400 text-[10px]">Officer Assessment Notes</label>
-                  <textarea
-                    value={regNotes}
-                    onChange={(e) => setRegNotes(e.target.value)}
-                    placeholder="Good market reputation, verified original CNIC, expected sales volume 500k/month..."
-                    rows={2}
-                    className="w-full p-2 bg-surface-card border border-slate-700 rounded text-white"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleRegistrationSubmit}
-                className="w-full py-3 bg-secondary hover:bg-secondary/80 text-deep-green font-bold rounded-xl shadow-md text-sm transition-all flex items-center justify-center gap-2"
-              >
-                <Send className="w-4 h-4" />
-                Submit Lead Registration Request
-              </button>
             </div>
+
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* 7. REGISTRATION HISTORY */}
-        {/* ========================================================================= */}
-        {activeScreen === 'REGISTRATION_HISTORY' && (() => {
-          const myRequests = registrationRequests.filter(r => r.salesUserId === currentUser.id);
-          
-          return (
-            <div className="space-y-4">
-              <div className="border-b border-slate-800 pb-2">
-                <span className="font-bold text-white text-sm">My Lead Registrations History</span>
-                <p className="text-[10px] text-slate-400">
-                  Real-time status tracking for client proposals submitted to Lahore Office.
-                </p>
-              </div>
-
-              {myRequests.length === 0 ? (
-                <div className="text-center py-10 bg-surface-card rounded-2xl border border-slate-800 space-y-2">
-                  <p className="text-slate-500 text-[11px]">No registration requests found.</p>
-                  <button 
-                    onClick={() => setActiveScreen('REGISTRATION_FORM')}
-                    className="px-3 py-1 bg-secondary/10 hover:bg-secondary/20 text-deep-teal border border-secondary/30 rounded text-[10px] font-bold"
-                  >
-                    Propose First Client Lead
-                  </button>
+        {/* ========================================================= */}
+        {/* TAB 3: DISTRIBUTORS / DEALERS DIRECTORY & OPERATIONS */}
+        {/* ========================================================= */}
+        {activeTab === 'CUSTOMERS' && (
+          <div className="space-y-4">
+            
+            {!selectedCustomerId ? (
+              // Distributors/Dealers directory filtered strictly by attendance town selection
+              <div className="space-y-4">
+                
+                {/* Information header */}
+                <div className="p-3.5 bg-teal-50 border border-teal-200 text-teal-800 rounded-xl text-xs space-y-1">
+                  <span className="font-black block text-[10px] uppercase">Active Market Beat Context</span>
+                  <p className="text-[11px]">
+                    Showing distributors and dealers located in your selected attendance town beat: <b className="underline uppercase">{attendanceTown}</b>.
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {myRequests.map((req) => (
-                    <div 
-                      key={req.id} 
-                      className="p-3.5 bg-surface-card rounded-2xl border border-slate-800 space-y-2.5"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-white text-[11px]">{req.businessName}</span>
-                            <span className="px-1.5 py-0.5 bg-slate-800 text-[8px] text-slate-400 font-mono rounded tracking-wider uppercase">
-                              {req.type}
+
+                {/* Client Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder={`Search dealers in ${attendanceTown}...`}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-800 text-xs focus:outline-none"
+                  />
+                </div>
+
+                {/* Dealer grid list */}
+                <div className="space-y-3">
+                  {searchedCustomers.length === 0 ? (
+                    <div className="nm-flat p-6 rounded-2xl text-center text-slate-400 font-bold text-xs">
+                      No dealers found in "{attendanceTown}". Please change your town in the Attendance tab.
+                    </div>
+                  ) : (
+                    searchedCustomers.map((cust) => (
+                      <div
+                        key={cust.id}
+                        onClick={() => { setSelectedCustomerId(cust.id); setCustomerSubTab('DETAILS'); }}
+                        className="nm-flat p-4 rounded-2xl border border-white hover:bg-slate-50 cursor-pointer transition-all space-y-2.5"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[9px] text-teal-800 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded font-bold">
+                                {cust.customerCode}
+                              </span>
+                              <h4 className="font-extrabold text-sm text-slate-800">{cust.companyName}</h4>
+                            </div>
+                            <span className="text-[10px] text-slate-500 block mt-0.5">
+                              Proprietor: {cust.contactPerson} • {cust.phone}
                             </span>
                           </div>
-                          <span className="text-[9px] text-slate-500 block">Proposer: {req.ownerName} &bull; Date: {req.submissionDate}</span>
-                        </div>
-
-                        {req.status === 'PENDING_APPROVAL' && (
-                          <span className="px-2 py-0.5 bg-secondary/10 text-deep-teal border border-secondary/20 rounded-full text-[9px] font-bold">
-                            PENDING
+                          <span className={`px-2 py-0.5 rounded font-mono text-[9px] font-bold ${
+                            cust.type === 'DISTRIBUTOR' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'
+                          }`}>
+                            {cust.type}
                           </span>
-                        )}
-                        {req.status === 'APPROVED' && (
-                          <span className="px-2 py-0.5 bg-secondary/10 text-deep-teal border border-emerald-500/20 rounded-full text-[9px] font-bold">
-                            APPROVED
-                          </span>
-                        )}
-                        {req.status === 'REJECTED' && (
-                          <span className="px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full text-[9px] font-bold">
-                            REJECTED
-                          </span>
-                        )}
-                      </div>
+                        </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-[10px] border-t border-slate-900 pt-2 font-mono">
-                        <div>
-                          <span className="text-slate-500 block text-[9px]">Contact No:</span>
-                          <span className="text-slate-300">{req.contactNumber}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block text-[9px]">Proposed Limit:</span>
-                          <span className="text-slate-300">PKR {req.proposedCreditLimit.toLocaleString()}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-slate-500 block text-[9px]">Location Address:</span>
-                          <span className="text-slate-300 font-sans truncate block max-w-full">{req.address}, {req.city}</span>
-                        </div>
-                      </div>
-
-                      {/* Rejected Banner */}
-                      {req.status === 'REJECTED' && req.rejectionReason && (
-                        <div className="p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg text-[10px] text-rose-300">
-                          <strong>Rejection Reason:</strong> {req.rejectionReason}
-                        </div>
-                      )}
-
-                      {/* Approved Verification Details */}
-                      {req.status === 'APPROVED' && (
-                        <div className="p-2.5 bg-secondary/10 border border-emerald-500/20 rounded-xl space-y-1 text-[10px] text-emerald-300">
-                          <div className="flex items-center gap-1 font-bold">
-                            <span className="w-1.5 h-1.5 bg-secondary rounded-full"></span>
-                            <span>Authorized Account Created</span>
+                        {/* Financial summary overview */}
+                        <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-2.5">
+                          <div className="nm-inset p-2 rounded-xl bg-white">
+                            <span className="text-[9px] text-slate-400 block font-bold">Opening Balance</span>
+                            <span className="font-mono font-bold text-slate-700 block mt-0.5">
+                              PKR {(cust.openingBalance || 0).toLocaleString()}
+                            </span>
                           </div>
-                          <p className="text-[9px] text-slate-400 leading-tight">
-                            Assigned Code: <strong className="text-white font-mono text-[10px]">{req.approvedCustomerCode}</strong> <br/>
-                            Limit Set: <strong className="text-white font-mono">PKR {req.approvedCreditLimit?.toLocaleString()}</strong> ({req.approvedCreditDays} days)
-                          </p>
+                          <div className="nm-inset p-2 rounded-xl bg-white">
+                            <span className="text-[9px] text-slate-400 block font-bold">Outstanding Net</span>
+                            <span className="font-mono font-bold text-indigo-700 block mt-0.5">
+                              PKR {(cust.currentBalance || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-1 text-[10px] text-teal-800 font-extrabold items-center">
+                          <span>Enter Operations Directory</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+              </div>
+            ) : (
+              
+              // Distributor / Dealer Directory Workspace (With 4 requested sections)
+              <div className="space-y-4">
+                
+                {/* Back button */}
+                <button
+                  onClick={() => setSelectedCustomerId(null)}
+                  className="flex items-center gap-1.5 text-xs text-slate-600 font-bold hover:text-slate-800"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back to {attendanceTown} directory
+                </button>
+
+                {/* Selected Customer Header Banner */}
+                <div className="nm-flat p-4 rounded-2xl border border-white space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-mono font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+                      {activeCustomer?.customerCode} • {activeCustomer?.type}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">{activeCustomer?.city}</span>
+                  </div>
+                  <h3 className="font-black text-slate-800 text-sm">{activeCustomer?.companyName}</h3>
+                  <p className="text-[11px] text-slate-600 font-medium">Proprietor: {activeCustomer?.contactPerson} • {activeCustomer?.phone}</p>
+                </div>
+
+                {/* Dynamic directory selector subtabs */}
+                <div className="grid grid-cols-4 gap-1 text-center text-[11px]">
+                  <button
+                    onClick={() => setCustomerSubTab('DETAILS')}
+                    className={`py-2 px-1.5 rounded-lg font-black transition-all ${
+                      customerSubTab === 'DETAILS' ? 'nm-inset text-teal-800' : 'nm-flat text-slate-600'
+                    }`}
+                  >
+                    Directory
+                  </button>
+                  <button
+                    onClick={() => setCustomerSubTab('ORDER_FORM')}
+                    className={`py-2 px-1.5 rounded-lg font-black transition-all ${
+                      customerSubTab === 'ORDER_FORM' ? 'nm-inset text-emerald-800' : 'nm-flat text-slate-600'
+                    }`}
+                  >
+                    Order Form
+                  </button>
+                  <button
+                    onClick={() => setCustomerSubTab('INVOICES_LIST')}
+                    className={`py-2 px-1.5 rounded-lg font-black transition-all ${
+                      customerSubTab === 'INVOICES_LIST' ? 'nm-inset text-amber-800' : 'nm-flat text-slate-600'
+                    }`}
+                  >
+                    Invoices
+                  </button>
+                  <button
+                    onClick={() => setCustomerSubTab('LEDGER_SHEET')}
+                    className={`py-2 px-1.5 rounded-lg font-black transition-all ${
+                      customerSubTab === 'LEDGER_SHEET' ? 'nm-inset text-violet-800' : 'nm-flat text-slate-600'
+                    }`}
+                  >
+                    Ledger
+                  </button>
+                </div>
+
+                {/* SUBTAB 1: PRIMARY OPERATIONS DIRECTORY (Financial Cards, Today's Recovery Box, Visit Remarks, Submit) */}
+                {customerSubTab === 'DETAILS' && (
+                  <div className="space-y-4">
+                    
+                    {/* Real-time calculated balances */}
+                    <div className="nm-flat p-4 rounded-2xl border border-white space-y-3">
+                      <span className="text-xs font-black text-slate-800 block uppercase">Commercial Financial Ledger</span>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="nm-inset p-2.5 bg-white rounded-xl">
+                          <span className="text-slate-400 text-[9px] font-bold block uppercase">Opening Balance</span>
+                          <span className="font-mono font-black text-slate-800 mt-0.5 block">PKR {clientOpeningBalance.toLocaleString()}</span>
+                        </div>
+                        <div className="nm-inset p-2.5 bg-white rounded-xl">
+                          <span className="text-slate-400 text-[9px] font-bold block uppercase">Invoicing Amount</span>
+                          <span className="font-mono font-black text-emerald-700 mt-0.5 block">PKR {clientInvoicingAmount.toLocaleString()}</span>
+                        </div>
+                        <div className="nm-inset p-2.5 bg-white rounded-xl">
+                          <span className="text-slate-400 text-[9px] font-bold block uppercase">Recovery Amount</span>
+                          <span className="font-mono font-black text-indigo-700 mt-0.5 block">PKR {clientRecoveryAmount.toLocaleString()}</span>
+                        </div>
+                        <div className="nm-inset p-2.5 bg-white rounded-xl">
+                          <span className="text-slate-400 text-[9px] font-bold block uppercase">Net Balance</span>
+                          <span className="font-mono font-black text-rose-700 mt-0.5 block">PKR {clientNetBalance.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Today's Recovery Entry box */}
+                    <div className="nm-flat p-4 rounded-2xl border border-white space-y-3">
+                      <span className="text-xs font-black text-slate-800 block uppercase flex items-center gap-1.5">
+                        <Coins className="w-4 h-4 text-teal-600" />
+                        Today's Recovery Entry Box
+                      </span>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase">Amount (PKR)*</label>
+                          <input
+                            type="number"
+                            placeholder="Amount in PKR"
+                            value={todayRecoveryAmount}
+                            onChange={(e) => setTodayRecoveryAmount(e.target.value)}
+                            className="w-full p-2 rounded-xl bg-white border border-slate-300 font-bold text-slate-800"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase">Payment Mode*</label>
+                          <select
+                            value={todayRecoveryMode}
+                            onChange={(e) => setTodayRecoveryMode(e.target.value as PaymentMode)}
+                            className="w-full p-2 rounded-xl bg-white border border-slate-300 font-bold text-slate-800"
+                          >
+                            <option value="CASH">CASH</option>
+                            <option value="CHEQUE">CHEQUE</option>
+                            <option value="ONLINE_TRANSFER">ONLINE TRANSFER</option>
+                            <option value="PAY_ORDER">PAY ORDER</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {todayRecoveryMode !== 'CASH' && (
+                        <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Instrument/Slip No</label>
+                            <input
+                              type="text"
+                              placeholder="Cheque/Ref number"
+                              value={instrumentNo}
+                              onChange={(e) => setInstrumentNo(e.target.value)}
+                              className="w-full p-2 rounded-xl bg-white border border-slate-300"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Bank Name</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. HBL, MCB"
+                              value={bankName}
+                              onChange={(e) => setBankName(e.target.value)}
+                              className="w-full p-2 rounded-xl bg-white border border-slate-300"
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })()}
 
-        {/* 9. MORE HUB (Visits, Ledger, Stock, Dealer Registration, Performance, Offline Sync) */}
-        {activeScreen === 'MORE' && (
-          <div className="space-y-4 animate-fade-in pb-6">
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg shadow-inner">
-                  {currentUser.fullName ? currentUser.fullName.charAt(0) : 'N'}
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-base leading-tight">{currentUser.fullName}</h3>
-                  <p className="text-xs text-slate-400 font-sans">{currentUser.email || currentUser.phone || 'Field Officer'}</p>
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                    {currentUser.role?.replace(/_/g, ' ')} • {currentUser.branchName || 'National Lights'}
-                  </span>
-                </div>
-              </div>
-            </div>
+                    {/* Today's visit remarks box */}
+                    <div className="nm-flat p-4 rounded-2xl border border-white space-y-2">
+                      <span className="text-xs font-black text-slate-800 block uppercase">Today's Visit Remarks / Logs</span>
+                      <textarea
+                        rows={2}
+                        placeholder="Log any visit comments or follow up details..."
+                        value={visitRemarks}
+                        onChange={(e) => setVisitRemarks(e.target.value)}
+                        className="w-full p-2 rounded-xl bg-white border border-slate-300 text-xs focus:outline-none"
+                      />
+                    </div>
 
-            {/* Quick Access Menu Cards */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setActiveScreen('VISIT_LOG')}
-                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
-              >
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-3 group-hover:scale-105 transition-transform">
-                  <MapPin className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white">Visits & GPS</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Check-in, visits & route follow-up</p>
-                </div>
-              </button>
+                    {/* Master Submit Button */}
+                    <button
+                      onClick={handleProposalSubmit}
+                      className="w-full py-3 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 shadow-lg active:scale-95 transition-all text-center flex items-center justify-center gap-1.5"
+                    >
+                      <Send className="w-4 h-4" />
+                      Submit Operations Proposal
+                    </button>
 
-              <button
-                onClick={() => {
-                  if (customers.length > 0) setSelectedCustomerId(customers[0].id);
-                  setActiveScreen('CUSTOMER_PROFILE');
-                }}
-                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
-              >
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3 group-hover:scale-105 transition-transform">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white">Party Ledger</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Customer balance, invoices & receipts</p>
-                </div>
-              </button>
+                  </div>
+                )}
 
-              <button
-                onClick={() => setActiveScreen('REGISTRATION_FORM')}
-                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
-              >
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3 group-hover:scale-105 transition-transform">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white">Add Dealer</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Register new dealer or distributor</p>
-                </div>
-              </button>
+                {/* SUBTAB 2: BRAND & SKU WISE ORDERING FORM */}
+                {customerSubTab === 'ORDER_FORM' && (
+                  <div className="nm-flat p-4 rounded-2xl border border-white space-y-4">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <FilePlus className="w-4 h-4 text-emerald-600" />
+                        Today's Ordering Form
+                      </h4>
+                      <p className="text-[10px] text-slate-500">Add order quantities grouped by brand models.</p>
+                    </div>
 
-              <button
-                onClick={() => setActiveScreen('REGISTRATION_HISTORY')}
-                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
-              >
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-3 group-hover:scale-105 transition-transform">
-                  <History className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white">Approvals Log</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">View status of submitted accounts</p>
-                </div>
-              </button>
+                    {/* Brands Group Container */}
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+                      {Object.entries(brandsGrouped).map(([brandName, brandSkus]) => (
+                        <div key={brandName} className="space-y-2">
+                          <div className="flex items-center gap-2 border-b border-slate-300 pb-1">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
+                            <h5 className="font-extrabold text-xs text-slate-800 uppercase">{brandName}</h5>
+                          </div>
 
-              <button
-                onClick={() => setActiveScreen('PERFORMANCE')}
-                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
-              >
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-3 group-hover:scale-105 transition-transform">
-                  <Target className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white">Performance</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Target KPIs, MTD sales & recovery</p>
-                </div>
-              </button>
+                          <div className="space-y-2">
+                            {brandSkus.map(sku => {
+                              const balanceObj = inventoryBalances.find(b => b.skuId === sku.id);
+                              const availableStock = balanceObj?.availableQuantity || balanceObj?.quantityOnHand || 0;
+                              const currentQty = quantities[sku.id] || '';
 
-              <button
-                onClick={() => {
-                  setSyncNotice('Connecting to central database...');
-                  setTimeout(() => {
-                    setSyncNotice('Central database synced successfully (0 pending offline records).');
-                    setTimeout(() => setSyncNotice(null), 3000);
-                  }, 800);
-                }}
-                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl text-left transition-all flex flex-col justify-between group shadow-sm"
-              >
-                <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 mb-3 group-hover:scale-105 transition-transform">
-                  <RotateCcw className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-white">Database Sync</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Sync transactions with Supabase</p>
-                </div>
-              </button>
-            </div>
+                              return (
+                                <div key={sku.id} className="bg-white p-2.5 rounded-xl border border-slate-200 flex justify-between items-center text-xs gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <span className="font-mono font-black text-[9px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                      {sku.skuCode}
+                                    </span>
+                                    <h6 className="font-extrabold text-slate-800 text-[11px] truncate mt-1">{sku.name}</h6>
+                                    <span className="text-[10px] text-slate-500 font-semibold font-mono block mt-0.5">
+                                      Price: PKR {sku.tradePrice.toLocaleString()}
+                                    </span>
+                                  </div>
 
-            {/* Sync Notification Banner */}
-            {syncNotice && (
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-2 text-xs text-emerald-300">
-                <Check className="w-4 h-4 shrink-0 text-emerald-400" />
-                <span>{syncNotice}</span>
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="text-right">
+                                      <span className="text-[9px] text-slate-400 font-bold block uppercase">Avail Qty</span>
+                                      <span className="font-mono font-extrabold text-slate-700 block text-[11px]">
+                                        {availableStock}
+                                      </span>
+                                    </div>
+                                    <div className="w-16">
+                                      <span className="text-[9px] text-slate-400 font-bold block uppercase text-center">Order</span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        placeholder="0"
+                                        value={currentQty}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setQuantities(prev => ({ ...prev, [sku.id]: val }));
+                                        }}
+                                        className="w-full text-center py-1 bg-slate-50 border border-slate-300 rounded font-bold font-mono text-xs focus:bg-white"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Order action */}
+                    <button
+                      onClick={handleProposalSubmit}
+                      className="w-full py-3 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-md active:scale-95 transition-all text-center flex items-center justify-center gap-1"
+                    >
+                      <Check className="w-4 h-4" /> Submit Selected Quantities
+                    </button>
+                  </div>
+                )}
+
+                {/* SUBTAB 3: ALL INVOICES HISTORICAL LIST WITH DATE FILTERS */}
+                {customerSubTab === 'INVOICES_LIST' && (
+                  <div className="nm-flat p-4 rounded-2xl border border-white space-y-4">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-amber-600" />
+                        Dealer Commercial Invoices
+                      </h4>
+                      <p className="text-[10px] text-slate-500">Filter previous invoice receipts by dates.</p>
+                    </div>
+
+                    {/* Date picker filters */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">From Date</label>
+                        <input
+                          type="date"
+                          value={invoiceFromDate}
+                          onChange={(e) => setInvoiceFromDate(e.target.value)}
+                          className="w-full p-2 bg-white border border-slate-300 rounded-xl font-mono text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">To Date</label>
+                        <input
+                          type="date"
+                          value={invoiceToDate}
+                          onChange={(e) => setInvoiceToDate(e.target.value)}
+                          className="w-full p-2 bg-white border border-slate-300 rounded-xl font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Invoices List */}
+                    <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                      {filteredInvoices.length === 0 ? (
+                        <div className="bg-white p-6 rounded-xl border text-center text-slate-400 font-bold text-xs">
+                          No invoices found in specified date range.
+                        </div>
+                      ) : (
+                        filteredInvoices.map(inv => (
+                          <div key={inv.id} className="bg-white p-3 rounded-xl border border-slate-200 space-y-2 text-xs">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <span className="font-mono font-black text-slate-800">{inv.invoiceNumber}</span>
+                                <span className="text-[10px] text-slate-400 block font-mono">{inv.invoiceDate}</span>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded font-bold text-[9px] ${
+                                inv.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {inv.status || 'PENDING'}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-center text-[11px] border-t pt-2">
+                              <div>
+                                <span className="text-slate-400 block text-[9px] uppercase">Net Invoiced</span>
+                                <span className="font-mono font-black text-slate-800">PKR {Number(inv.totalAmount).toLocaleString()}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => shareInvoiceWhatsApp(inv)}
+                                  className="p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 flex items-center justify-center gap-1 text-[10px] font-bold"
+                                >
+                                  <Send className="w-3.5 h-3.5" /> Share
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    alert('Printer service connecting in container terminal environment...');
+                                  }}
+                                  className="p-2 rounded-lg bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100"
+                                >
+                                  <Printer className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                  </div>
+                )}
+
+                {/* SUBTAB 4: LEDGER SHEET STATEMENT & WHATSAPP SHARING */}
+                {customerSubTab === 'LEDGER_SHEET' && (
+                  <div className="nm-flat p-4 rounded-2xl border border-white space-y-4">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-violet-600" />
+                        Atomic Ledger Sheet
+                      </h4>
+                      <p className="text-[10px] text-slate-500">Filter and share Statement of Accounts with your dealer.</p>
+                    </div>
+
+                    {/* Date Filters */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">From Date</label>
+                        <input
+                          type="date"
+                          value={ledgerFromDate}
+                          onChange={(e) => setLedgerFromDate(e.target.value)}
+                          className="w-full p-2 bg-white border border-slate-300 rounded-xl font-mono text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">To Date</label>
+                        <input
+                          type="date"
+                          value={ledgerToDate}
+                          onChange={(e) => setLedgerToDate(e.target.value)}
+                          className="w-full p-2 bg-white border border-slate-300 rounded-xl font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Share action */}
+                    <button
+                      onClick={shareLedgerWhatsApp}
+                      className="w-full py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600 flex items-center justify-center gap-1.5"
+                    >
+                      <Send className="w-4 h-4" />
+                      Share Ledger on Dealer WhatsApp
+                    </button>
+
+                    {/* Ledger transactions list table */}
+                    <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                      {clientLedgerEntries.length === 0 ? (
+                        <div className="bg-white p-6 rounded-xl border text-center text-slate-400 font-bold text-xs">
+                          No ledger records matching date range.
+                        </div>
+                      ) : (
+                        clientLedgerEntries.map(entry => (
+                          <div key={entry.id} className="bg-white p-2.5 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                            <div className="flex justify-between items-center text-[10px] font-bold text-slate-500">
+                              <span>📅 {entry.entryDate}</span>
+                              <span className="font-mono uppercase">{entry.transactionType}</span>
+                            </div>
+                            <p className="text-[11px] font-semibold text-slate-700">{entry.description}</p>
+                            
+                            <div className="grid grid-cols-3 gap-1 pt-1.5 border-t border-dashed font-mono text-[10px]">
+                              <div>
+                                <span className="text-slate-400 block text-[8px] font-bold">DEBIT</span>
+                                <span className="text-rose-600 font-bold">
+                                  {entry.debitAmount ? `PKR ${entry.debitAmount.toLocaleString()}` : '-'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block text-[8px] font-bold">CREDIT</span>
+                                <span className="text-emerald-700 font-bold">
+                                  {entry.creditAmount ? `PKR ${entry.creditAmount.toLocaleString()}` : '-'}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-slate-400 block text-[8px] font-bold">RUNNING</span>
+                                <span className="text-slate-800 font-black">
+                                  PKR {entry.runningBalance.toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                  </div>
+                )}
+
               </div>
             )}
 
-            {/* Live Stock Summary */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
-                  <Package className="w-4 h-4 text-emerald-400" />
-                  <span>Available Stock Snapshot</span>
-                </h4>
-                <span className="text-[10px] text-slate-400 font-sans">{skus.length} active SKUs</span>
-              </div>
-              <div className="divide-y divide-slate-800/60 max-h-48 overflow-y-auto">
-                {skus.slice(0, 5).map((sku) => {
-                  const balance = inventoryBalances.find((b) => b.skuId === sku.id);
-                  const available = balance ? balance.availableQty : 0;
-                  return (
-                    <div key={sku.id} className="py-2 flex items-center justify-between text-xs">
-                      <div>
-                        <div className="font-medium text-slate-200">{sku.name}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{sku.code} • {sku.brand}</div>
-                      </div>
-                      <div className="text-right">
-                        <span className={`font-bold font-mono px-2 py-0.5 rounded text-[11px] ${available > 10 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                          {available} {sku.unit || 'PCS'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         )}
 
       </div>
 
-      {/* 5-Item Streamlined Field Force Navigation Bar */}
-      <nav aria-label="Field Force Navigation" className="bg-surface-card border-t border-slate-800 pt-2 pb-safe pb-3 sm:pb-3 px-2 grid grid-cols-5 gap-1 text-xs text-center sticky bottom-0 z-20 shadow-2xl backdrop-blur-md">
-        <button
-          onClick={() => setActiveScreen('DASHBOARD')}
-          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] active:scale-95 ${
-            activeScreen === 'DASHBOARD'
-              ? 'bg-secondary/15 text-deep-teal font-bold border-t-2 border-secondary shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
-        >
-          <TrendingUp className="w-5 h-5" />
-          <span className="text-[10px] font-medium tracking-tight">Home</span>
-        </button>
+      {/* SUCCESS GENERATED INVOICE OVERLAY DIALOG */}
+      {generatedInvoice && createPortal(
+        <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#E8ECF2] p-5 rounded-3xl border border-white space-y-4 shadow-2xl">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto text-xl font-bold mb-1.5">
+                ✓
+              </div>
+              <h3 className="font-black text-slate-800 text-sm">Commercial Invoice Generated</h3>
+              <p className="text-[10px] text-slate-400">Proposal recorded successfully.</p>
+            </div>
 
-        <button
-          onClick={() => setActiveScreen('CUSTOMERS')}
-          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] active:scale-95 ${
-            activeScreen === 'CUSTOMERS'
-              ? 'bg-secondary/15 text-deep-teal font-bold border-t-2 border-secondary shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
-        >
-          <Users className="w-5 h-5" />
-          <span className="text-[10px] font-medium tracking-tight">Clients</span>
-        </button>
+            {/* Invoice details */}
+            <div className="nm-inset p-3 bg-white rounded-xl text-xs space-y-2">
+              <div className="flex justify-between border-b pb-1">
+                <span className="text-slate-400">Invoice Number:</span>
+                <span className="font-mono font-bold text-slate-700">{generatedInvoice.invoiceNumber}</span>
+              </div>
+              <div className="flex justify-between border-b pb-1">
+                <span className="text-slate-400">Date:</span>
+                <span className="font-mono font-bold text-slate-700">{generatedInvoice.invoiceDate}</span>
+              </div>
+              <div className="flex justify-between border-b pb-1">
+                <span className="text-slate-400">Gross Total:</span>
+                <span className="font-mono font-bold text-slate-700">PKR {generatedInvoice.subtotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Net Payable:</span>
+                <span className="font-mono font-black text-emerald-700">PKR {generatedInvoice.totalAmount.toLocaleString()}</span>
+              </div>
+            </div>
 
-        <button
-          onClick={() => setActiveScreen('ORDER_BOOKING')}
-          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] active:scale-95 ${
-            activeScreen === 'ORDER_BOOKING'
-              ? 'bg-secondary/15 text-deep-teal font-bold border-t-2 border-secondary shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
-        >
-          <FilePlus className="w-5 h-5" />
-          <span className="text-[10px] font-medium tracking-tight">Order</span>
-        </button>
-
-        <button
-          onClick={() => setActiveScreen('RECOVERY_FORM')}
-          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] active:scale-95 ${
-            activeScreen === 'RECOVERY_FORM'
-              ? 'bg-secondary/15 text-deep-teal font-bold border-t-2 border-secondary shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
-        >
-          <Coins className="w-5 h-5" />
-          <span className="text-[10px] font-medium tracking-tight">Recovery</span>
-        </button>
-
-        <button
-          onClick={() => setActiveScreen('MORE')}
-          className={`py-2 px-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all min-h-[48px] active:scale-95 ${
-            activeScreen === 'MORE' || activeScreen === 'VISIT_LOG' || activeScreen === 'REGISTRATION_FORM' || activeScreen === 'REGISTRATION_HISTORY' || activeScreen === 'PERFORMANCE'
-              ? 'bg-secondary/15 text-deep-teal font-bold border-t-2 border-secondary shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-          }`}
-        >
-          <MoreHorizontal className="w-5 h-5" />
-          <span className="text-[10px] font-medium tracking-tight">More</span>
-        </button>
-      </nav>
+            {/* Action panel */}
+            <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+              <button
+                onClick={() => shareInvoiceWhatsApp(generatedInvoice)}
+                className="py-2.5 px-1 rounded-xl bg-emerald-600 text-white font-black text-center flex items-center justify-center gap-1 shadow-md hover:bg-emerald-700 active:scale-95 transition-all"
+              >
+                <Send className="w-4 h-4" /> Share WhatsApp
+              </button>
+              <button
+                onClick={() => setGeneratedInvoice(null)}
+                className="py-2.5 px-1 rounded-xl bg-white border border-slate-300 font-bold text-slate-700 text-center hover:bg-slate-50 active:scale-95 transition-all"
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

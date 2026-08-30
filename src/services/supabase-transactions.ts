@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import type { CustomerVisit, PaymentMode, SalesOrder } from '../types';
+import type { CustomerVisit, PaymentMode, SalesOrder, CustomerRegistrationRequest } from '../types';
 import type { ImportEntityType } from './importEngine';
 
 function db() {
@@ -733,4 +733,45 @@ export async function assignCustomerRepresentative(customerId: string, employeeI
 
   return true;
 }
+
+export async function registerCustomerPending(req: Partial<CustomerRegistrationRequest>) {
+  const client = db();
+  if (!client) {
+    return `cust-pending-local-${Date.now()}`;
+  }
+  const customerCode = `CUST-REG-${Math.floor(100000 + Math.random() * 900000)}`;
+  const { data, error } = await client
+    .from('customers')
+    .insert({
+      customer_code: customerCode,
+      customer_type: req.type || 'DEALER',
+      name: req.businessName,
+      owner_name: req.ownerName || null,
+      mobile: req.contactNumber || null,
+      address: req.address || null,
+      city: req.city || null,
+      territory: req.region || null,
+      credit_limit: Number(req.proposedCreditLimit) || 0,
+      credit_days: Number(req.proposedCreditDays) || 0,
+      opening_balance: Number(req.proposedOpeningBalance) || 0,
+      status: false, // inactive / pending approval
+      remarks: req.additionalNotes || null,
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+
+  await recordAuditLog({
+    action: 'CUSTOMER_CREATE_PENDING',
+    module: 'CUSTOMERS',
+    recordType: 'customers',
+    recordId: data.id,
+    details: `New customer registration submitted: ${req.businessName} (${customerCode}) by field force. Pending Head Office approval.`,
+    newValue: { ...req, customerCode },
+  });
+
+  return data.id as string;
+}
+
 

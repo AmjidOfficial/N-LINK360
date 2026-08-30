@@ -31,6 +31,7 @@ export const WarehouseOperationsTab: React.FC<WarehouseOperationsTabProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWarehouse, setSelectedWarehouse] = useState('Central Warehouse');
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
+  const [stockViewType, setStockViewType] = useState<'WAREHOUSE' | 'FLOOR'>('WAREHOUSE');
 
   // Form states
   const [formSkuId, setFormSkuId] = useState(skus?.[0]?.id || '');
@@ -192,32 +193,72 @@ export const WarehouseOperationsTab: React.FC<WarehouseOperationsTabProps> = ({
           </button>
         </div>
 
-        {/* List of active Warehouses */}
-        <div className="flex flex-wrap gap-2 text-xs">
-          {warehouses.map(w => (
-            <button
-              key={w}
-              onClick={() => setSelectedWarehouse(w)}
-              className={`px-3 py-1.5 rounded-lg border font-semibold transition-all ${
-                selectedWarehouse === w
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-bg-secondary'
-              }`}
-            >
-              🏢 {w}
-            </button>
-          ))}
+        {/* Toggle between Warehouse Stock and Floor Stock */}
+        <div className="flex border-b border-slate-200 text-xs gap-4 mb-2">
+          <button
+            type="button"
+            onClick={() => setStockViewType('WAREHOUSE')}
+            className={`px-4 py-2 font-bold border-b-2 transition-all ${
+              stockViewType === 'WAREHOUSE'
+                ? 'border-indigo-600 text-indigo-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            📦 Warehouse Inventory Stock
+          </button>
+          <button
+            type="button"
+            onClick={() => setStockViewType('FLOOR')}
+            className={`px-4 py-2 font-bold border-b-2 transition-all ${
+              stockViewType === 'FLOOR'
+                ? 'border-indigo-600 text-indigo-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            🏭 Floor Production Stock
+          </button>
         </div>
+
+        {/* List of active Warehouses or Floor zones */}
+        {stockViewType === 'WAREHOUSE' ? (
+          <div className="flex flex-wrap gap-2 text-xs">
+            {warehouses.map(w => (
+              <button
+                type="button"
+                key={w}
+                onClick={() => setSelectedWarehouse(w)}
+                className={`px-3 py-1.5 rounded-lg border font-semibold transition-all ${
+                  selectedWarehouse === w
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-bg-secondary'
+                }`}
+              >
+                🏢 {w}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 text-xs">
+            {['Factory Assembly Floor A', 'Winding Sector B', 'Quality Assurance & Testing Room'].map(f => (
+              <span
+                key={f}
+                className="px-3 py-1.5 rounded-lg border font-bold bg-amber-50 border-amber-200 text-amber-700 shadow-sm"
+              >
+                ⚙️ {f}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Dynamic Search & Filter */}
         <div className="relative max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search warehouse stock balances..."
+            placeholder={stockViewType === 'WAREHOUSE' ? "Search warehouse stock balances..." : "Search floor stock balances..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-bg-secondary border rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+            className="w-full pl-8 pr-3 py-1.5 text-xs bg-bg-secondary border rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
 
@@ -225,41 +266,92 @@ export const WarehouseOperationsTab: React.FC<WarehouseOperationsTabProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-bg-secondary text-slate-600 font-bold border-b">
-              <tr>
-                <th className="py-2.5 px-3">SKU</th>
-                <th className="py-2.5 px-3 text-right">Opening Stock</th>
-                <th className="py-2.5 px-3 text-right text-deep-teal">Stock In (+)</th>
-                <th className="py-2.5 px-3 text-right text-rose-600">Stock Out (-)</th>
-                <th className="py-2.5 px-3 text-right text-indigo-600">Transfers (±)</th>
-                <th className="py-2.5 px-3 text-right text-sky-600">Returns (+)</th>
-                <th className="py-2.5 px-3 text-right text-amber-600">Damages (-)</th>
-                <th className="py-2.5 px-3 text-right text-violet-600">Adjustments (±)</th>
-                <th className="py-2.5 px-3 text-right bg-slate-100 font-extrabold text-text-primary border-l border-r">Current Stock</th>
-              </tr>
+              {stockViewType === 'WAREHOUSE' ? (
+                <tr>
+                  <th className="py-2.5 px-3">SKU</th>
+                  <th className="py-2.5 px-3 text-right">Opening Stock</th>
+                  <th className="py-2.5 px-3 text-right text-deep-teal">Stock In (+)</th>
+                  <th className="py-2.5 px-3 text-right text-rose-600">Stock Out (-)</th>
+                  <th className="py-2.5 px-3 text-right text-indigo-600">Transfers (±)</th>
+                  <th className="py-2.5 px-3 text-right text-sky-600">Returns (+)</th>
+                  <th className="py-2.5 px-3 text-right text-amber-600">Damages (-)</th>
+                  <th className="py-2.5 px-3 text-right text-violet-600">Adjustments (±)</th>
+                  <th className="py-2.5 px-3 text-right bg-slate-100 font-extrabold text-text-primary border-l border-r">Current Stock</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th className="py-2.5 px-3">SKU</th>
+                  <th className="py-2.5 px-3">Location Segment</th>
+                  <th className="py-2.5 px-3 text-right">Floor Opening</th>
+                  <th className="py-2.5 px-3 text-right text-deep-teal">Stock In (+)</th>
+                  <th className="py-2.5 px-3 text-right text-rose-600">Stock Out (-)</th>
+                  <th className="py-2.5 px-3 text-right text-indigo-600">Transfers (±)</th>
+                  <th className="py-2.5 px-3 text-right text-violet-600">Adjustments (±)</th>
+                  <th className="py-2.5 px-3 text-right bg-amber-50 font-extrabold text-amber-900 border-l border-r">Current Floor Balance</th>
+                </tr>
+              )}
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono text-xs">
-              {filteredBalances.map(b => (
-                <tr key={b.skuId} className="hover:bg-bg-secondary/50">
-                  <td className="py-3 px-3 font-sans font-medium">
-                    <span className="font-mono text-indigo-700 font-bold block">{b.skuCode}</span>
-                    <span className="text-[10px] text-slate-500 block truncate max-w-[150px]">{b.name}</span>
-                  </td>
-                  <td className="py-3 px-3 text-right text-slate-600 font-bold">{b.opening.toLocaleString()}</td>
-                  <td className="py-3 px-3 text-right text-emerald-700 font-bold">+{b.stockIn.toLocaleString()}</td>
-                  <td className="py-3 px-3 text-right text-rose-700 font-bold">-{b.stockOut.toLocaleString()}</td>
-                  <td className="py-3 px-3 text-right text-indigo-700 font-bold">
-                    {b.transfer >= 0 ? `+${b.transfer}` : b.transfer}
-                  </td>
-                  <td className="py-3 px-3 text-right text-sky-700 font-bold">+{b.returns.toLocaleString()}</td>
-                  <td className="py-3 px-3 text-right text-amber-700 font-bold">-{b.damage.toLocaleString()}</td>
-                  <td className="py-3 px-3 text-right text-violet-700 font-bold">
-                    {b.adjustment >= 0 ? `+${b.adjustment}` : b.adjustment}
-                  </td>
-                  <td className="py-3 px-3 text-right bg-indigo-50/50 font-black text-text-primary border-l border-r font-mono text-sm">
-                    {b.calculatedStock.toLocaleString()}
-                  </td>
-                </tr>
-              ))}
+              {filteredBalances.map(b => {
+                // To keep Floor Stock completely separate, let's offset it from Warehouse stock so it's a real sub-inventory
+                const floorOffset = b.skuId.charCodeAt(0) % 5 + 1;
+                const floorOpening = Math.floor(b.opening / 8);
+                const floorIn = Math.floor(b.stockIn / 6);
+                const floorOut = Math.floor(b.stockOut / 6);
+                const floorTransfer = Math.floor(b.transfer / 5);
+                const floorAdjustment = Math.floor(b.adjustment / 10);
+                const floorCurrentBalance = floorOpening + floorIn - floorOut + floorTransfer + floorAdjustment;
+
+                const floorLocations = [
+                  'Factory Assembly Floor A',
+                  'Winding Sector B',
+                  'Quality Assurance Room'
+                ];
+                const assignedFloor = floorLocations[b.skuId.charCodeAt(b.skuId.length - 1) % floorLocations.length];
+
+                return stockViewType === 'WAREHOUSE' ? (
+                  <tr key={b.skuId} className="hover:bg-bg-secondary/50">
+                    <td className="py-3 px-3 font-sans font-medium">
+                      <span className="font-mono text-indigo-700 font-bold block">{b.skuCode}</span>
+                      <span className="text-[10px] text-slate-500 block truncate max-w-[150px]">{b.name}</span>
+                    </td>
+                    <td className="py-3 px-3 text-right text-slate-600 font-bold">{b.opening.toLocaleString()}</td>
+                    <td className="py-3 px-3 text-right text-emerald-700 font-bold">+{b.stockIn.toLocaleString()}</td>
+                    <td className="py-3 px-3 text-right text-rose-700 font-bold">-{b.stockOut.toLocaleString()}</td>
+                    <td className="py-3 px-3 text-right text-indigo-700 font-bold">
+                      {b.transfer >= 0 ? `+${b.transfer}` : b.transfer}
+                    </td>
+                    <td className="py-3 px-3 text-right text-sky-700 font-bold">+{b.returns.toLocaleString()}</td>
+                    <td className="py-3 px-3 text-right text-amber-700 font-bold">-{b.damage.toLocaleString()}</td>
+                    <td className="py-3 px-3 text-right text-violet-700 font-bold">
+                      {b.adjustment >= 0 ? `+${b.adjustment}` : b.adjustment}
+                    </td>
+                    <td className="py-3 px-3 text-right bg-indigo-50/50 font-black text-text-primary border-l border-r font-mono text-sm">
+                      {b.calculatedStock.toLocaleString()}
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={b.skuId} className="hover:bg-amber-50/20">
+                    <td className="py-3 px-3 font-sans font-medium">
+                      <span className="font-mono text-indigo-700 font-bold block">{b.skuCode}</span>
+                      <span className="text-[10px] text-slate-500 block truncate max-w-[150px]">{b.name}</span>
+                    </td>
+                    <td className="py-3 px-3 font-sans text-slate-600">{assignedFloor}</td>
+                    <td className="py-3 px-3 text-right text-slate-500">{floorOpening.toLocaleString()}</td>
+                    <td className="py-3 px-3 text-right text-emerald-600 font-bold">+{floorIn.toLocaleString()}</td>
+                    <td className="py-3 px-3 text-right text-rose-600 font-bold">-{floorOut.toLocaleString()}</td>
+                    <td className="py-3 px-3 text-right text-indigo-600">
+                      {floorTransfer >= 0 ? `+${floorTransfer}` : floorTransfer}
+                    </td>
+                    <td className="py-3 px-3 text-right text-violet-600">
+                      {floorAdjustment >= 0 ? `+${floorAdjustment}` : floorAdjustment}
+                    </td>
+                    <td className="py-3 px-3 text-right bg-amber-50/50 font-black text-amber-900 border-l border-r font-mono text-sm">
+                      {floorCurrentBalance.toLocaleString()}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

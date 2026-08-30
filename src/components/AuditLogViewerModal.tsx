@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ShieldAlert,
   Search,
@@ -60,8 +61,8 @@ export const AuditLogViewerModal: React.FC<AuditLogViewerModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-card/70 p-4 backdrop-blur-xs">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
       <div className="flex h-full max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl bg-white shadow-2xl overflow-hidden border border-slate-200">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 bg-surface-card px-6 py-4 text-white">
@@ -251,6 +252,7 @@ export const AuditLogViewerModal: React.FC<AuditLogViewerModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

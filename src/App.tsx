@@ -26,12 +26,19 @@ import { AuditLogViewerModal } from './components/AuditLogViewerModal';
 import { OfflineSyncModal } from './components/OfflineSyncModal';
 import { getCurrentUser } from './services/auth';
 import { isSupabaseConfigured } from './lib/supabase';
-import { isAdminUser } from './services/production-users';
+import { isAdminUser, isFieldForceUser } from './services/production-users';
+import { SalesRecoveryApp } from './components/SalesRecoveryApp';
+import { registerCustomerPending } from './services/supabase-transactions';
 
 function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSignOut: () => Promise<void> }) {
   const [data, setData] = useState<SupabaseAppData>(emptyData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // View Mode: Mobile app for Field Force, Enterprise portal for others
+  const [viewMode, setViewMode] = useState<'MOBILE' | 'ENTERPRISE'>(
+    isFieldForceUser(currentUser) ? 'MOBILE' : 'ENTERPRISE'
+  );
 
   // 3 Primary Domains & Sub-Tab Navigation
   const [activeDomain, setActiveDomain] = useState<MainDomain>('DASHBOARDS');
@@ -122,6 +129,65 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (viewMode === 'MOBILE') {
+    return (
+      <div className="min-h-screen bg-[#E8ECF2] text-slate-800 py-4 px-2 sm:px-4">
+        <SalesRecoveryApp
+          currentUser={currentUser as any}
+          customers={data.customers}
+          skus={data.skus}
+          inventoryBalances={data.inventoryBalances}
+          visits={data.visits}
+          salesOrders={data.salesOrders}
+          recoveries={data.recoveries}
+          invoices={data.invoices}
+          ledgerEntries={data.ledgerEntries}
+          onLogout={onSignOut}
+          onRefresh={refresh}
+          onBookOrder={async (order) => {
+            try {
+              const { submitOrder } = await import('./services/supabase-transactions');
+              await submitOrder(order as any);
+              await refresh();
+            } catch (err) {
+              console.error('Failed to submit order:', err);
+              alert('Failed to submit order: ' + (err instanceof Error ? err.message : String(err)));
+            }
+          }}
+          onRecordRecovery={async (rec) => {
+            try {
+              const { recordRecovery } = await import('./services/supabase-transactions');
+              await recordRecovery(rec);
+              await refresh();
+            } catch (err) {
+              console.error('Failed to record recovery:', err);
+              alert('Failed to record recovery: ' + (err instanceof Error ? err.message : String(err)));
+            }
+          }}
+          onLogVisit={async (visit) => {
+            try {
+              const { logVisit } = await import('./services/supabase-transactions');
+              await logVisit(visit);
+              await refresh();
+            } catch (err) {
+              console.error('Failed to log visit:', err);
+              alert('Failed to log visit: ' + (err instanceof Error ? err.message : String(err)));
+            }
+          }}
+          onSubmitRegistration={async (reg) => {
+            try {
+              await registerCustomerPending(reg);
+              await refresh();
+            } catch (err) {
+              console.error('Failed to register customer:', err);
+              alert('Failed to register customer: ' + (err instanceof Error ? err.message : String(err)));
+            }
+          }}
+        />
       </div>
     );
   }
