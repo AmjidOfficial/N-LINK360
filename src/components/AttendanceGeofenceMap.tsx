@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { Target, Navigation, ShieldCheck, ShieldAlert, LocateFixed, ZoomIn } from 'lucide-react';
+import * as d3 from 'd3';
+import { Target, Navigation, ShieldCheck, ShieldAlert, LocateFixed } from 'lucide-react';
 
 interface AttendanceGeofenceMapProps {
   userLat: number;
@@ -55,122 +56,218 @@ export const AttendanceGeofenceMap: React.FC<AttendanceGeofenceMapProps> = ({
 
     if (!map || !layerGroup) return;
 
-    // Clear previous markers & overlays
+    // Clear previous markers
     layerGroup.clearLayers();
 
     const townCenterLatLng: [number, number] = [townCenter.lat, townCenter.lng];
     const userLatLng: [number, number] = [userLat, userLng];
 
-    // 1. Geofence Circle Perimeter
-    const fenceColor = isWithinGeofence ? '#10b981' : '#f43f5e';
-    const circle = L.circle(townCenterLatLng, {
-      radius: maxRadiusKM * 1000, // convert km to meters
-      color: fenceColor,
-      fillColor: fenceColor,
-      fillOpacity: 0.12,
-      weight: 2,
-      dashArray: '6, 6',
-    });
-    circle.addTo(layerGroup);
-
-    // 2. Custom Icon for Town Center
+    // 1. Leaflet Base Town Center Marker
     const townIcon = L.divIcon({
       className: 'custom-town-marker',
       html: `
         <div style="
-          width: 32px;
-          height: 32px;
+          width: 34px;
+          height: 34px;
           background: #0f766e;
           border: 2.5px solid #ffffff;
           border-radius: 50%;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.35);
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
           font-weight: bold;
-          font-size: 14px;
+          font-size: 15px;
         ">
           🏛️
         </div>
       `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
     });
 
     const townMarker = L.marker(townCenterLatLng, { icon: townIcon });
     townMarker.bindPopup(`
-      <div style="font-family: sans-serif; font-size: 11px; color: #1e293b;">
+      <div style="font-family: system-ui, sans-serif; font-size: 11px; color: #1e293b; padding: 2px;">
         <strong style="color: #0f766e; font-size: 12px;">Beat Town Center: ${attendanceTown}</strong><br/>
         GPS: ${townCenter.lat.toFixed(4)}° N, ${townCenter.lng.toFixed(4)}° E<br/>
-        Geofence Perimeter: <strong>${maxRadiusKM} KM</strong>
+        Geofence Radius: <strong>${maxRadiusKM} KM</strong>
       </div>
     `);
     townMarker.addTo(layerGroup);
 
-    // 3. Custom Icon for User GPS Position
-    const userMarkerIcon = L.divIcon({
-      className: 'custom-user-marker',
-      html: `
-        <div style="
-          position: relative;
-          width: 32px;
-          height: 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        ">
-          <div style="
-            position: absolute;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: ${isWithinGeofence ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.4)'};
-            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-          "></div>
-          <div style="
-            width: 20px;
-            height: 20px;
-            background: ${isWithinGeofence ? '#10b981' : '#f43f5e'};
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            z-index: 2;
-          "></div>
-        </div>
-      `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-    });
+    // =========================================================================
+    // D3 INTERACTIVE OVERLAY SYSTEM FOR #map-container GEOFENCE PERIMETER & GPS
+    // =========================================================================
+    const overlayPane = map.getPanes().overlayPane;
+    let svgSelection = d3.select(overlayPane).select<SVGSVGElement>('svg.d3-geofence-overlay');
 
-    const userMarker = L.marker(userLatLng, { icon: userMarkerIcon });
-    userMarker.bindPopup(`
-      <div style="font-family: sans-serif; font-size: 11px; color: #1e293b;">
-        <strong style="color: ${isWithinGeofence ? '#059669' : '#e11d48'}; font-size: 12px;">
-          ${isWithinGeofence ? '✓ INSIDE GEOFENCE' : '✗ OUTSIDE BOUNDS'}
-        </strong><br/>
-        Current GPS: ${userLat.toFixed(4)}° N, ${userLng.toFixed(4)}° E<br/>
-        Proximity to Center: <strong>${distanceToCenter.toFixed(2)} KM</strong>
-      </div>
-    `);
-    userMarker.addTo(layerGroup);
+    if (svgSelection.empty()) {
+      svgSelection = d3.select(overlayPane)
+        .append('svg')
+        .attr('class', 'd3-geofence-overlay leaflet-zoom-hide')
+        .style('position', 'absolute')
+        .style('pointer-events', 'none')
+        .style('z-index', '500');
+    }
 
-    // 4. Distance Polyline Line
-    const polyline = L.polyline([userLatLng, townCenterLatLng], {
-      color: isWithinGeofence ? '#0d9488' : '#e11d48',
-      weight: 2,
-      dashArray: '5, 5',
-    });
-    polyline.addTo(layerGroup);
+    const updateD3Overlay = () => {
+      const bounds = map.getBounds();
+      const topLeft = map.latLngToLayerPoint(bounds.getNorthWest());
+      const bottomRight = map.latLngToLayerPoint(bounds.getSouthEast());
 
-    // 5. Auto fit bounds
+      const svgWidth = Math.max(bottomRight.x - topLeft.x, 300);
+      const svgHeight = Math.max(bottomRight.y - topLeft.y, 300);
+
+      svgSelection
+        .attr('width', svgWidth)
+        .attr('height', svgHeight)
+        .style('left', `${topLeft.x}px`)
+        .style('top', `${topLeft.y}px`);
+
+      let g = svgSelection.select<SVGGElement>('g.d3-main-group');
+      if (g.empty()) {
+        g = svgSelection.append('g').attr('class', 'd3-main-group');
+      }
+      g.attr('transform', `translate(${-topLeft.x}, ${-topLeft.y})`);
+
+      // 1. Generate 64-vertex circular polygon for defined town geofence perimeter
+      const numVertices = 64;
+      const polygonPoints: [number, number][] = [];
+      const latRad = (townCenter.lat * Math.PI) / 180;
+
+      for (let i = 0; i < numVertices; i++) {
+        const angle = (i / numVertices) * 2 * Math.PI;
+        const deltaLat = (maxRadiusKM / 111.32) * Math.cos(angle);
+        const deltaLng = (maxRadiusKM / (111.32 * Math.cos(latRad))) * Math.sin(angle);
+        const vertexPt = map.latLngToLayerPoint([townCenter.lat + deltaLat, townCenter.lng + deltaLng]);
+        polygonPoints.push([vertexPt.x, vertexPt.y]);
+      }
+
+      const lineGenerator = d3.line<[number, number]>()
+        .x(d => d[0])
+        .y(d => d[1])
+        .curve(d3.curveLinearClosed);
+
+      const d3PolygonPath = lineGenerator(polygonPoints) || '';
+
+      // Render or Update D3 Geofence Circular Polygon
+      const fenceColor = isWithinGeofence ? '#10b981' : '#f43f5e';
+      
+      let fencePath = g.select<SVGPathElement>('path.d3-geofence-polygon');
+      if (fencePath.empty()) {
+        fencePath = g.append('path').attr('class', 'd3-geofence-polygon');
+      }
+
+      fencePath
+        .attr('d', d3PolygonPath)
+        .attr('fill', fenceColor)
+        .attr('fill-opacity', 0.14)
+        .attr('stroke', fenceColor)
+        .attr('stroke-width', 2.5)
+        .attr('stroke-dasharray', '7, 4')
+        .style('pointer-events', 'auto')
+        .style('cursor', 'pointer');
+
+      // 2. Dynamic Color-Changing D3 GPS Marker for User Position
+      const userPt = map.latLngToLayerPoint(userLatLng);
+      const townPt = map.latLngToLayerPoint(townCenterLatLng);
+
+      let userGroup = g.select<SVGGElement>('g.d3-user-gps-marker');
+      if (userGroup.empty()) {
+        userGroup = g.append('g').attr('class', 'd3-user-gps-marker');
+        userGroup.append('circle').attr('class', 'd3-pulse-outer');
+        userGroup.append('circle').attr('class', 'd3-user-core');
+        userGroup.append('circle').attr('class', 'd3-user-inner-dot');
+      }
+
+      userGroup.attr('transform', `translate(${userPt.x}, ${userPt.y})`);
+
+      userGroup.select('circle.d3-pulse-outer')
+        .attr('r', 20)
+        .attr('fill', fenceColor)
+        .attr('fill-opacity', 0.25)
+        .attr('stroke', fenceColor)
+        .attr('stroke-width', 1.5)
+        .attr('stroke-opacity', 0.6);
+
+      userGroup.select('circle.d3-user-core')
+        .attr('r', 11)
+        .attr('fill', fenceColor)
+        .attr('stroke', '#ffffff')
+        .attr('stroke-width', 2.5)
+        .style('filter', 'drop-shadow(0px 3px 6px rgba(0,0,0,0.3))');
+
+      userGroup.select('circle.d3-user-inner-dot')
+        .attr('r', 3.5)
+        .attr('fill', '#ffffff');
+
+      // 3. Proximity Connector Line & Distance Badge
+      let connectorLine = g.select<SVGLineElement>('line.d3-connector-line');
+      if (connectorLine.empty()) {
+        connectorLine = g.append('line').attr('class', 'd3-connector-line');
+      }
+
+      connectorLine
+        .attr('x1', userPt.x)
+        .attr('y1', userPt.y)
+        .attr('x2', townPt.x)
+        .attr('y2', townPt.y)
+        .attr('stroke', isWithinGeofence ? '#0d9488' : '#e11d48')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '5, 5');
+
+      // Midpoint Distance Label Badge
+      const midX = (userPt.x + townPt.x) / 2;
+      const midY = (userPt.y + townPt.y) / 2;
+
+      let badgeGroup = g.select<SVGGElement>('g.d3-distance-badge');
+      if (badgeGroup.empty()) {
+        badgeGroup = g.append('g').attr('class', 'd3-distance-badge');
+        badgeGroup.append('rect').attr('rx', 6).attr('ry', 6);
+        badgeGroup.append('text');
+      }
+
+      badgeGroup.attr('transform', `translate(${midX}, ${midY})`);
+
+      const labelText = `${distanceToCenter.toFixed(2)} km`;
+      badgeGroup.select('text')
+        .text(labelText)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .attr('font-size', '10px')
+        .attr('font-weight', 'bold')
+        .attr('fill', '#ffffff')
+        .attr('font-family', 'sans-serif');
+
+      badgeGroup.select('rect')
+        .attr('x', -24)
+        .attr('y', -10)
+        .attr('width', 48)
+        .attr('height', 20)
+        .attr('fill', isWithinGeofence ? '#0f766e' : '#be123c')
+        .attr('rx', 5)
+        .attr('ry', 5)
+        .style('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))');
+    };
+
+    updateD3Overlay();
+
+    map.on('zoomend moveend viewreset', updateD3Overlay);
+
+    // Auto fit bounds
     const bounds = L.latLngBounds([userLatLng, townCenterLatLng]);
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    map.fitBounds(bounds, { padding: [45, 45], maxZoom: 14 });
 
-    // Invalidate map size to ensure full rendering inside flex/grid containers
     setTimeout(() => {
       map.invalidateSize();
-    }, 200);
+      updateD3Overlay();
+    }, 250);
+
+    return () => {
+      map.off('zoomend moveend viewreset', updateD3Overlay);
+    };
 
   }, [userLat, userLng, townCenter, attendanceTown, maxRadiusKM, isWithinGeofence, distanceToCenter]);
 
@@ -201,10 +298,10 @@ export const AttendanceGeofenceMap: React.FC<AttendanceGeofenceMapProps> = ({
           )}
           <div>
             <span className="block text-[9px] font-black uppercase text-slate-400">
-              {attendanceTown} Geofence Map
+              D3 Geofence Interactive Overlay
             </span>
             <span className={`block text-[11px] font-extrabold ${isWithinGeofence ? 'text-emerald-700' : 'text-rose-700'}`}>
-              {isWithinGeofence ? 'Inside Town Perimeter' : 'Outside Boundary'}
+              {isWithinGeofence ? '✓ Inside Town Perimeter' : '✗ Outside Boundary'}
             </span>
           </div>
         </div>
@@ -235,7 +332,7 @@ export const AttendanceGeofenceMap: React.FC<AttendanceGeofenceMapProps> = ({
             <span className="font-black text-slate-800">{distanceToCenter.toFixed(2)} km</span>
           </div>
           <div className="text-[10px] text-slate-500 font-sans">
-            Max Radius: <strong className="text-slate-800">{maxRadiusKM} km</strong>
+            Geofence Polygon: <strong className="text-slate-800">{maxRadiusKM} km</strong>
           </div>
         </div>
       </div>

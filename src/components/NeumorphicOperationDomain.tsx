@@ -430,6 +430,10 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
     { id: 'TWN-03', name: 'Karachi', area: 'Karachi South Zone', region: 'Sindh South', assignedTsm: 'Farhan Siddiqui (TSM)', status: 'ACTIVE' },
     { id: 'TWN-04', name: 'Peshawar', area: 'Peshawar Division', region: 'KPK West', assignedTsm: 'Tariq Mansoor (RSM)', status: 'ACTIVE' },
     { id: 'TWN-05', name: 'Multan', area: 'Multan Zone', region: 'Punjab South', assignedTsm: 'Unassigned', status: 'INACTIVE' },
+    { id: 'TWN-06', name: 'Rawalpindi', area: 'Rawalpindi Hub', region: 'Punjab North', assignedTsm: 'Waqas Malik (TSM)', status: 'ACTIVE' },
+    { id: 'TWN-07', name: 'Taxila', area: 'Rawalpindi Hub', region: 'Punjab North', assignedTsm: 'Waqas Malik (TSM)', status: 'ACTIVE' },
+    { id: 'TWN-08', name: 'Wah Cantt', area: 'Rawalpindi Hub', region: 'Punjab North', assignedTsm: 'Waqas Malik (TSM)', status: 'ACTIVE' },
+    { id: 'TWN-09', name: 'Hassanabdal', area: 'Rawalpindi Hub', region: 'Punjab North', assignedTsm: 'Waqas Malik (TSM)', status: 'ACTIVE' },
   ]);
 
   const [newTownName, setNewTownName] = useState('');

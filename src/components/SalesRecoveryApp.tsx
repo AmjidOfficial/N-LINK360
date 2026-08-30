@@ -74,6 +74,44 @@ interface SalesRecoveryAppProps {
 }
 
 // -------------------------------------------------------------
+// IndexedDB Helper Utility for Offline Attendance Location Queue
+// -------------------------------------------------------------
+const saveToIndexedDBAttendanceQueue = (log: any) => {
+  try {
+    const request = indexedDB.open('nlink_attendance_db', 1);
+    request.onupgradeneeded = (e: any) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('location_queue')) {
+        db.createObjectStore('location_queue', { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = (e: any) => {
+      const db = e.target.result;
+      if (db.objectStoreNames.contains('location_queue')) {
+        const tx = db.transaction('location_queue', 'readwrite');
+        tx.objectStore('location_queue').put({ id: `log_${Date.now()}_${Math.random()}`, ...log });
+      }
+    };
+  } catch (err) {
+    console.warn('IndexedDB write warning:', err);
+  }
+};
+
+const clearIndexedDBAttendanceQueue = () => {
+  try {
+    const request = indexedDB.open('nlink_attendance_db', 1);
+    request.onsuccess = (e: any) => {
+      const db = e.target.result;
+      if (db.objectStoreNames.contains('location_queue')) {
+        const tx = db.transaction('location_queue', 'readwrite');
+        tx.objectStore('location_queue').clear();
+      }
+    };
+  } catch (err) {
+    console.warn('IndexedDB clear warning:', err);
+  }
+};
+
 // Central coords for standard Pakistan towns for Geofencing calculations
 // -------------------------------------------------------------
 const TOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
@@ -86,6 +124,9 @@ const TOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   'Faisalabad': { lat: 31.4504, lng: 73.1350 },
   'Islamabad': { lat: 33.6844, lng: 73.0479 },
   'Rawalpindi': { lat: 33.5984, lng: 73.0441 },
+  'Taxila': { lat: 33.7460, lng: 72.8012 },
+  'Wah Cantt': { lat: 33.7741, lng: 72.7154 },
+  'Hassanabdal': { lat: 33.8186, lng: 72.6865 },
   'Sialkot': { lat: 32.4972, lng: 74.5361 },
   'Quetta': { lat: 30.1798, lng: 66.9750 }
 };
@@ -487,6 +528,7 @@ export const SalesRecoveryApp = ({
       const updatedQueue = [...offlineLogs, newLog];
       setOfflineLogs(updatedQueue);
       localStorage.setItem('nlink_offline_attendance', JSON.stringify(updatedQueue));
+      saveToIndexedDBAttendanceQueue(newLog);
     }
 
     alert(`Successfully Checked In at ${attendanceTown}! Logged coordinates: ${coordStr}`);
@@ -529,6 +571,7 @@ export const SalesRecoveryApp = ({
       const updatedQueue = [...offlineLogs, newLog];
       setOfflineLogs(updatedQueue);
       localStorage.setItem('nlink_offline_attendance', JSON.stringify(updatedQueue));
+      saveToIndexedDBAttendanceQueue(newLog);
     }
 
     const newSession = {
@@ -545,7 +588,7 @@ export const SalesRecoveryApp = ({
 
   const syncOfflineLogs = (silent = false) => {
     if (!isOnline) {
-      if (!silent) alert('Device is offline. Please check connection before syncing.');
+      if (!silent) alert('Device is offline. Please verify connectivity before syncing.');
       return;
     }
     if (offlineLogs.length === 0) {
@@ -567,13 +610,14 @@ export const SalesRecoveryApp = ({
     const count = offlineLogs.length;
     setOfflineLogs([]);
     localStorage.removeItem('nlink_offline_attendance');
+    clearIndexedDBAttendanceQueue();
     setSessionLogs(prev => prev.map(s => ({ ...s, status: 'SYNCHRONIZED' })));
     
     if (silent) {
       setSyncStatusMsg(`Successfully auto-synced ${count} offline location logs!`);
       setTimeout(() => setSyncStatusMsg(null), 4000);
     } else {
-      alert(`Synchronization complete! ${count} offline logs uploaded.`);
+      alert(`Synchronization complete! Flushed and uploaded ${count} queued location logs.`);
     }
   };
 
@@ -1162,6 +1206,54 @@ export const SalesRecoveryApp = ({
                 >
                   <LogOut className="w-4 h-4" />
                   <span>🚪 Check Out Beat</span>
+                </button>
+              </div>
+
+              {/* Offline Location Queuing System Console (LocalStorage + IndexedDB Cache) */}
+              <div className="nm-inset p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5 text-xs">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1.5 font-black text-slate-800 uppercase text-[10px]">
+                    {isOnline ? (
+                      <Wifi className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <WifiOff className="w-3.5 h-3.5 text-rose-600 animate-pulse" />
+                    )}
+                    <span>Offline Location Queue Console</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                    isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
+                  }`}>
+                    {isOnline ? 'Network Online' : 'Network Offline'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] font-bold">
+                  <span className="text-slate-500">Cached Location Logs (IndexedDB & LocalStorage):</span>
+                  <span className={`px-2.5 py-0.5 rounded font-mono text-xs ${
+                    offlineLogs.length > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {offlineLogs.length} Logs Queued
+                  </span>
+                </div>
+
+                {offlineLogs.length > 0 && (
+                  <div className="space-y-1 max-h-32 overflow-y-auto border-t pt-2 border-slate-200">
+                    {offlineLogs.map((log, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-[10px] bg-white p-2 rounded-lg border border-slate-200 shadow-xs">
+                        <span className="font-bold text-slate-700">{log.action} • {log.town}</span>
+                        <span className="font-mono text-slate-500">{log.time} ({log.coords})</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => syncOfflineLogs(false)}
+                  disabled={offlineLogs.length === 0}
+                  className="w-full py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black rounded-xl shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RotateCw className={`w-3.5 h-3.5 ${offlineLogs.length > 0 ? 'animate-spin' : ''}`} />
+                  <span>Sync All</span>
                 </button>
               </div>
             </div>

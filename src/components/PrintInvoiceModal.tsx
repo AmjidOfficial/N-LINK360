@@ -7,6 +7,8 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import {
   Printer,
   Download,
@@ -18,6 +20,7 @@ import {
   Receipt,
   FileSpreadsheet,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import { Customer, Invoice, SKU, User } from '../types';
 import { numberToPakistaniRupeesWords } from '../services/security';
@@ -39,14 +42,78 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
   skus,
   currentUser,
 }) => {
-  const [printMode, setPrintMode] = useState<'A4_FORMAL' | 'THERMAL_80MM'>('A4_FORMAL');
+  type PaperFormat = 'A4_FORMAL' | 'A5_COMPACT' | 'LETTER_STANDARD' | 'THERMAL_80MM';
+  const [printMode, setPrintMode] = useState<PaperFormat>('A5_COMPACT');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   if (!isOpen || !invoice || !customer) return null;
 
   const skuMap = new Map<string, SKU>(skus.map((s) => [s.id, s]));
   const amountInWords = numberToPakistaniRupeesWords(invoice.totalAmount);
 
-  const handlePrint = () => {
+  const downloadPdf = async (formatOverride?: PaperFormat) => {
+    if (isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+
+    const selectedFormat = formatOverride || printMode;
+
+    try {
+      const container = document.querySelector('.invoice-print-container') as HTMLElement;
+      if (!container) {
+        throw new Error('Print container element not found');
+      }
+
+      const canvas = await html2canvas(container, {
+        scale: 2.5,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+
+      let pdfFormat: any = 'a5';
+      let formatNameLabel = 'A5';
+
+      if (selectedFormat === 'A4_FORMAL') {
+        pdfFormat = 'a4';
+        formatNameLabel = 'A4';
+      } else if (selectedFormat === 'LETTER_STANDARD') {
+        pdfFormat = 'letter';
+        formatNameLabel = 'Letter';
+      } else if (selectedFormat === 'THERMAL_80MM') {
+        const aspectHeight = (canvas.height * 80) / canvas.width;
+        pdfFormat = [80, Math.max(120, aspectHeight)];
+        formatNameLabel = '80mm_Thermal';
+      } else {
+        pdfFormat = 'a5';
+        formatNameLabel = 'A5';
+      }
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: pdfFormat,
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pdfHeight));
+
+      const filename = `Invoice_${invoice.invoiceNumber || 'Doc'}_${formatNameLabel}.pdf`;
+      pdf.save(filename);
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handlePrint = async () => {
     window.print();
   };
 
@@ -54,44 +121,84 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/60 p-2 sm:p-4 backdrop-blur-sm overflow-y-auto">
       <div className="flex w-full max-w-4xl flex-col rounded-2xl bg-white shadow-2xl overflow-hidden border border-slate-200 my-auto">
         {/* Top Control Bar (Hidden on print) */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-900 px-4 sm:px-6 py-3 text-white" data-no-print>
+        <div className="flex flex-wrap items-center justify-between border-b border-slate-200 bg-slate-900 px-4 sm:px-6 py-3 text-white gap-3" data-no-print>
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 font-black text-white shadow-md">
               <Printer className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-sm font-bold text-white">Invoice Print Studio & A5 Thermal Receipt Generator</div>
-              <div className="text-[11px] text-slate-400">Official National Lights Commercial Billing</div>
+              <div className="text-sm font-bold text-white">Invoice Print Studio & Document Generator</div>
+              <div className="text-[11px] text-slate-400">National Lights Official Commercial Billing System</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Format Toggle */}
-            <div className="flex bg-slate-800 p-0.5 rounded-lg text-xs font-bold border border-slate-700">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Paper Size Selector */}
+            <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700">
+              <span className="text-[10px] font-black uppercase text-slate-400 px-1.5 hidden sm:inline">Format:</span>
+              <button
+                type="button"
+                onClick={() => setPrintMode('A5_COMPACT')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  printMode === 'A5_COMPACT' ? 'bg-teal-600 text-white shadow' : 'text-slate-300 hover:text-white'
+                }`}
+                title="A5 Compact Commercial Invoice (148 x 210 mm)"
+              >
+                A5
+              </button>
               <button
                 type="button"
                 onClick={() => setPrintMode('A4_FORMAL')}
-                className={`px-3 py-1 rounded-md transition-colors ${
-                  printMode === 'A4_FORMAL' ? 'bg-teal-600 text-white' : 'text-slate-300 hover:text-white'
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  printMode === 'A4_FORMAL' ? 'bg-teal-600 text-white shadow' : 'text-slate-300 hover:text-white'
                 }`}
+                title="A4 Standard Sales Tax Invoice (210 x 297 mm)"
               >
-                A4 Tax Invoice
+                A4 Tax
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintMode('LETTER_STANDARD')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  printMode === 'LETTER_STANDARD' ? 'bg-teal-600 text-white shadow' : 'text-slate-300 hover:text-white'
+                }`}
+                title="US Letter Standard Document (215.9 x 279.4 mm)"
+              >
+                Letter
               </button>
               <button
                 type="button"
                 onClick={() => setPrintMode('THERMAL_80MM')}
-                className={`px-3 py-1 rounded-md transition-colors ${
-                  printMode === 'THERMAL_80MM' ? 'bg-teal-600 text-white' : 'text-slate-300 hover:text-white'
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  printMode === 'THERMAL_80MM' ? 'bg-teal-600 text-white shadow' : 'text-slate-300 hover:text-white'
                 }`}
+                title="80mm POS Thermal Receipt Slip"
               >
-                A5 Thermal Receipt
+                80mm POS
               </button>
             </div>
 
             <button
               type="button"
+              onClick={() => downloadPdf(printMode)}
+              disabled={isGeneratingPdf}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 px-3.5 py-1.5 text-xs font-bold text-slate-200 border border-slate-700 shadow-md active:scale-95 transition-all disabled:opacity-60"
+              title="Generate and Download PDF file for selected paper format"
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="h-4 w-4 animate-spin text-teal-400" />
+              ) : (
+                <Download className="h-4 w-4 text-teal-400" />
+              )}
+              <span>{isGeneratingPdf ? 'Generating PDF...' : `Export ${printMode.split('_')[0]} PDF`}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 px-4 py-1.5 text-xs font-black text-white hover:from-teal-600 hover:to-emerald-700 shadow-md active:scale-95 transition-all"
+              disabled={isGeneratingPdf}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 px-4 py-1.5 text-xs font-black text-white hover:from-teal-600 hover:to-emerald-700 shadow-md active:scale-95 transition-all disabled:opacity-60"
+              title="Send document to system browser printer dialog"
             >
               <Printer className="h-4 w-4" />
               <span>Print Invoice</span>
@@ -108,9 +215,11 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
 
         {/* Invoice Printable Area */}
         <div className="p-4 sm:p-8 bg-slate-100 overflow-y-auto max-h-[82vh]">
-          {/* ================= A4 FORMAL TAX INVOICE ================= */}
-          {printMode === 'A4_FORMAL' && (
-            <div className="invoice-print-container mx-auto w-full max-w-[210mm] bg-white p-6 sm:p-10 shadow-lg border border-slate-200 text-text-primary font-sans print-area print:shadow-none print:border-none print:p-0">
+          {/* ================= FORMAL TAX INVOICE (A4 / A5 / Letter) ================= */}
+          {(printMode === 'A4_FORMAL' || printMode === 'A5_COMPACT' || printMode === 'LETTER_STANDARD') && (
+            <div className={`invoice-print-container mx-auto w-full bg-white p-6 sm:p-10 shadow-lg border border-slate-200 text-text-primary font-sans print-area print:shadow-none print:border-none print:p-0 ${
+              printMode === 'A5_COMPACT' ? 'max-w-[148mm]' : printMode === 'A4_FORMAL' ? 'max-w-[210mm]' : 'max-w-[215.9mm]'
+            }`}>
               {/* Header */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-slate-900 pb-4 gap-4">
                 <div className="flex items-center gap-3">
