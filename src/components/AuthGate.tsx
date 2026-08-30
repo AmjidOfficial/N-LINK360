@@ -65,7 +65,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({
 
   return (
     <main className="min-h-screen bg-[#E8ECF2] flex items-center justify-center p-4">
-      <div className="w-full max-w-lg nm-flat p-8 rounded-3xl border border-white space-y-6 shadow-2xl">
+      <div className="w-full max-w-lg nm-flat p-5 sm:p-8 rounded-3xl border border-white space-y-6 shadow-2xl">
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <div className="w-16 h-16 mx-auto rounded-2xl nm-inset flex items-center justify-center text-teal-700 font-black text-2xl border border-white shadow-inner">

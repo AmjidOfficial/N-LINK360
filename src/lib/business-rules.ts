@@ -269,3 +269,147 @@ export function validateRecoverySubmission(
 
   return { isValid: true };
 }
+
+// ==============================================================================
+// 8. TARGET ACHIEVEMENT & VARIANCE CALCULATION ENGINE
+// Formula: Achievement % = (Actual / Target) * 100 (Safe Zero Check: 'N/A')
+// ==============================================================================
+export interface TargetAchievementResult {
+  actual: number;
+  target: number;
+  variance: number; // Actual - Target (Positive = Overachieved, Negative = Deficit)
+  achievementPercentage: number | 'N/A';
+  isOverAchieved: boolean;
+  statusLabel: string;
+}
+
+export function calculateTargetAchievement(
+  actual: number = 0,
+  target: number = 0
+): TargetAchievementResult {
+  const actualNum = roundTo2(Number(actual) || 0);
+  const targetNum = roundTo2(Number(target) || 0);
+  const variance = roundTo2(actualNum - targetNum);
+
+  if (targetNum <= 0) {
+    return {
+      actual: actualNum,
+      target: targetNum,
+      variance,
+      achievementPercentage: 'N/A',
+      isOverAchieved: actualNum > 0,
+      statusLabel: targetNum === 0 && actualNum === 0 ? 'No Target Set' : 'Target N/A',
+    };
+  }
+
+  const pct = roundTo2((actualNum / targetNum) * 100);
+  return {
+    actual: actualNum,
+    target: targetNum,
+    variance,
+    achievementPercentage: pct,
+    isOverAchieved: actualNum >= targetNum,
+    statusLabel: `${pct.toFixed(1)}% achieved (${variance >= 0 ? '+' : ''}${variance.toLocaleString()})`,
+  };
+}
+
+// ==============================================================================
+// 9. DYNAMIC TOWN-BASED CUSTOMER ACCESS ENGINE
+// Rules: When an employee is assigned to a Town, system automatically resolves
+// all active Distributors/Dealers in that Town dynamically.
+// ==============================================================================
+export function getEmployeeScopedCustomers(
+  employeeId?: string,
+  assignedTowns: string[] = [],
+  assignedTerritories: string[] = [],
+  allCustomers: Customer[] = [],
+  userRole?: string
+): Customer[] {
+  if (!allCustomers || allCustomers.length === 0) return [];
+  
+  // Super Admin, Management, Accounts, and Head Office have global access
+  const isGlobalRole = ['SUPER_ADMIN', 'MANAGEMENT', 'ACCOUNTS', 'FACTORY_MANAGER', 'WAREHOUSE_MANAGER', 'DISPATCH_OFFICER', 'HO'].includes(
+    userRole || ''
+  );
+  if (isGlobalRole) {
+    return allCustomers;
+  }
+
+  const normalizedTowns = assignedTowns.map((t) => t.trim().toLowerCase()).filter(Boolean);
+  const normalizedTerritories = assignedTerritories.map((t) => t.trim().toLowerCase()).filter(Boolean);
+
+  return allCustomers.filter((customer) => {
+    if (!customer.isActive) return false;
+
+    // Direct assignment
+    if (employeeId && customer.assignedEmployee === employeeId) {
+      return true;
+    }
+
+    // Dynamic Town assignment
+    const custTown = (customer.town || customer.city || '').trim().toLowerCase();
+    if (custTown && normalizedTowns.includes(custTown)) {
+      return true;
+    }
+
+    // Dynamic Territory assignment
+    const custTerritory = (customer.territory || customer.region || '').trim().toLowerCase();
+    if (custTerritory && normalizedTerritories.includes(custTerritory)) {
+      return true;
+    }
+
+    return false;
+  });
+}
+
+// ==============================================================================
+// 10. CREDIT UTILIZATION & REAL-TIME BALANCES
+// Credit Limit, Current Outstanding, Available Credit, Credit Utilization %
+// ==============================================================================
+export interface CreditUtilizationInfo {
+  creditLimit: number;
+  currentOutstanding: number;
+  availableCredit: number;
+  creditUtilizationPercentage: number;
+  isOverLimit: boolean;
+}
+
+export function calculateCustomerCreditUtilization(
+  creditLimit: number = 0,
+  currentOutstanding: number = 0
+): CreditUtilizationInfo {
+  const limit = Math.max(0, roundTo2(creditLimit));
+  const outstanding = roundTo2(currentOutstanding);
+  const availableCredit = roundTo2(Math.max(0, limit - Math.max(0, outstanding)));
+  const utilization = limit > 0 ? roundTo2((Math.max(0, outstanding) / limit) * 100) : 0;
+
+  return {
+    creditLimit: limit,
+    currentOutstanding: outstanding,
+    availableCredit,
+    creditUtilizationPercentage: Math.min(999, utilization),
+    isOverLimit: outstanding > limit && limit > 0,
+  };
+}
+
+// ==============================================================================
+// 11. UNIQUE CUSTOMER CODE GENERATOR (CUST-DLR-XXXX / CUST-DST-XXXX)
+// ==============================================================================
+export function generateUniqueCustomerCode(
+  type: 'DISTRIBUTOR' | 'DEALER' | 'CUSTOMER' | 'SHOP',
+  existingCodes: string[] = []
+): string {
+  const prefix = type === 'DISTRIBUTOR' ? 'CUST-DST' : 'CUST-DLR';
+  const codeSet = new Set(existingCodes.map((c) => c.toUpperCase().trim()));
+
+  let sequence = existingCodes.length + 1;
+  let candidate = `${prefix}-${String(sequence).padStart(4, '0')}`;
+
+  while (codeSet.has(candidate)) {
+    sequence += 1;
+    candidate = `${prefix}-${String(sequence).padStart(4, '0')}`;
+  }
+
+  return candidate;
+}
+

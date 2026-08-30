@@ -774,4 +774,217 @@ export async function registerCustomerPending(req: Partial<CustomerRegistrationR
   return data.id as string;
 }
 
+export async function approveCustomerRegistration(customerId: string, approvedCustomerCode: string) {
+  const client = db();
+  if (!client) return true;
+
+  const { error } = await client
+    .from('customers')
+    .update({
+      customer_code: approvedCustomerCode,
+      status: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', customerId);
+
+  if (error) throw error;
+
+  await recordAuditLog({
+    action: 'CUSTOMER_APPROVE',
+    module: 'CUSTOMERS',
+    recordType: 'customers',
+    recordId: customerId,
+    details: `Customer application approved by Head Office. Assigned official Party Code: ${approvedCustomerCode}`,
+    newValue: { customerCode: approvedCustomerCode, status: true },
+  });
+
+  return true;
+}
+
+export async function rejectCustomerRegistration(customerId: string, reason: string) {
+  const client = db();
+  if (!client) return true;
+
+  const { error } = await client
+    .from('customers')
+    .update({
+      status: false,
+      remarks: `REJECTED: ${reason}`,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', customerId);
+
+  if (error) throw error;
+
+  await recordAuditLog({
+    action: 'CUSTOMER_REJECT',
+    module: 'CUSTOMERS',
+    recordType: 'customers',
+    recordId: customerId,
+    details: `Customer application rejected by Head Office. Reason: ${reason}`,
+    newValue: { status: false, reason },
+  });
+
+  return true;
+}
+
+export async function saveEmployeeRecord(employee: {
+  employeeCode: string;
+  fullName: string;
+  fatherName?: string;
+  cnic?: string;
+  mobile: string;
+  whatsapp?: string;
+  email?: string;
+  address?: string;
+  department: string;
+  designationCode?: string;
+  joiningDate?: string;
+  employmentStatus?: string;
+}) {
+  const client = db();
+  if (!client) return `emp-local-${Date.now()}`;
+
+  const { data, error } = await client
+    .from('employees')
+    .insert({
+      employee_code: employee.employeeCode,
+      full_name: employee.fullName,
+      father_name: employee.fatherName || null,
+      cnic: employee.cnic || null,
+      mobile: employee.mobile,
+      whatsapp: employee.whatsapp || null,
+      email: employee.email || null,
+      address: employee.address || null,
+      department: employee.department || 'SALES',
+      designation_code: employee.designationCode || null,
+      joining_date: employee.joiningDate || new Date().toISOString().slice(0, 10),
+      employment_status: employee.employmentStatus || 'ACTIVE',
+      status: true,
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+
+  await recordAuditLog({
+    action: 'EMPLOYEE_CREATE',
+    module: 'EMPLOYEES',
+    recordType: 'employees',
+    recordId: data.id,
+    details: `Employee profile registered: ${employee.fullName} (${employee.employeeCode})`,
+    newValue: employee,
+  });
+
+  return data.id as string;
+}
+
+export async function saveEmployeeSalary(salary: {
+  employeeId: string;
+  basicSalary: number;
+  allowances?: Array<{ name: string; amount: number }>;
+  grossSalary: number;
+  effectiveFrom: string;
+  salaryStatus?: string;
+}) {
+  const client = db();
+  if (!client) return `sal-local-${Date.now()}`;
+
+  // Archive previous active salaries
+  if (client) {
+    await client
+      .from('employee_salaries')
+      .update({ salary_status: 'SUPERSEDED', effective_to: salary.effectiveFrom })
+      .eq('employee_id', salary.employeeId)
+      .eq('salary_status', 'ACTIVE');
+  }
+
+  const { data, error } = await client
+    .from('employee_salaries')
+    .insert({
+      employee_id: salary.employeeId,
+      basic_salary: salary.basicSalary,
+      allowances: salary.allowances || [],
+      gross_salary: salary.grossSalary,
+      effective_from: salary.effectiveFrom,
+      salary_status: salary.salaryStatus || 'ACTIVE',
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+
+  await recordAuditLog({
+    action: 'SALARY_UPDATE',
+    module: 'PAYROLL',
+    recordType: 'employee_salaries',
+    recordId: data.id,
+    details: `Salary revision saved for employee ${salary.employeeId}. Gross: PKR ${salary.grossSalary.toLocaleString()} (Effective: ${salary.effectiveFrom})`,
+    newValue: salary,
+  });
+
+  return data.id as string;
+}
+
+export async function saveSKUVersion(version: {
+  skuId: string;
+  versionNumber: number;
+  packagingUnit: string;
+  unitsPerPack: number;
+  packsPerCarton: number;
+  unitsPerCarton: number;
+  cartonRate: number;
+  tradePrice: number;
+  retailPrice: number;
+  taxRate?: number;
+  changeReason?: string;
+}) {
+  const client = db();
+  if (!client) return `sku-ver-local-${Date.now()}`;
+
+  // Archive older active versions
+  if (client) {
+    await client
+      .from('sku_versions')
+      .update({ effective_to: new Date().toISOString(), status: 'SUPERSEDED' })
+      .eq('sku_id', version.skuId)
+      .is('effective_to', null);
+  }
+
+  const { data, error } = await client
+    .from('sku_versions')
+    .insert({
+      sku_id: version.skuId,
+      version_number: version.versionNumber,
+      effective_from: new Date().toISOString(),
+      packaging_unit: version.packagingUnit,
+      units_per_pack: version.unitsPerPack,
+      packs_per_carton: version.packsPerCarton,
+      units_per_carton: version.unitsPerCarton,
+      carton_rate: version.cartonRate,
+      trade_price: version.tradePrice,
+      retail_price: version.retailPrice,
+      dealer_price: Math.round(version.tradePrice * 0.95),
+      tax_rate: version.taxRate || 18.0,
+      status: 'ACTIVE',
+      change_reason: version.changeReason || 'Packaging & Rate Update',
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+
+  await recordAuditLog({
+    action: 'SKU_VERSION_CREATE',
+    module: 'SKU_MASTER',
+    recordType: 'sku_versions',
+    recordId: data.id,
+    details: `New SKU Version v${version.versionNumber} generated for SKU ${version.skuId}. Packing: ${version.unitsPerCarton} pcs/ctn, Trade: PKR ${version.tradePrice}`,
+    newValue: version,
+  });
+
+  return data.id as string;
+}
+
+
 

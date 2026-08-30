@@ -105,40 +105,40 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-[#E8ECF2]/95 backdrop-blur-md border-b border-white/60 shadow-sm transition-all">
       {/* Top Command Bar */}
-      <div className="nm-container py-3 flex items-center justify-between gap-3">
+      <div className="nm-container py-4 md:py-4.5 flex items-center justify-between gap-4 md:gap-6">
         {/* Brand, Logo & Side Drawer Trigger */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4 md:gap-5">
           <button
             onClick={() => setIsDrawerOpen(true)}
-            className="p-2.5 rounded-2xl nm-btn text-teal-800 flex items-center gap-2 hover:border-teal-500/40 transition-all cursor-pointer"
+            className="p-2.5 rounded-2xl nm-btn text-teal-800 flex items-center gap-2 hover:border-teal-500/40 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             title="Open Main Navigation Drawer"
           >
             <Menu className="w-5 h-5 text-teal-700" />
-            <span className="text-xs font-black">Navigation Drawer</span>
+            <span className="hidden sm:inline text-xs font-extrabold tracking-tight">Navigation Menu</span>
           </button>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center nm-flat text-teal-700 font-black text-sm sm:text-base tracking-wider border border-white shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center nm-flat text-teal-700 font-black text-sm sm:text-base tracking-wider border border-white shrink-0 shadow-sm">
               NL
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base sm:text-lg tracking-tight text-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-base sm:text-lg tracking-tight text-slate-800 leading-none">
                   N-LINK <span className="text-teal-600 font-black">360</span>
                 </span>
-                <span className="hidden sm:inline-block nm-badge-teal text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="hidden sm:inline-block nm-badge-teal text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
                   Enterprise
                 </span>
               </div>
-              <p className="hidden md:block text-[10px] text-slate-500 font-medium">National Lights Enterprise Workspace</p>
+              <p className="hidden md:block text-[10px] text-slate-500 font-medium mt-1">National Lights Enterprise Workspace</p>
             </div>
           </div>
         </div>
 
         {/* Current Domain Badge & Quick Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3 md:gap-4">
           {/* Active Section Badge */}
-          <div className="hidden md:flex items-center gap-2 nm-inset px-3.5 py-1.5 rounded-2xl text-xs font-bold text-slate-700">
+          <div className="hidden lg:flex items-center gap-2 nm-inset px-4 py-2 rounded-2xl text-xs font-bold text-slate-700">
             <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse" />
             <span>
               {activeDomain === 'DASHBOARDS'
@@ -152,7 +152,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="nm-btn p-2.5 rounded-2xl text-slate-700 hover:text-teal-700 transition-colors"
+            className="nm-btn p-2.5 rounded-2xl text-slate-700 hover:text-teal-700 transition-all hover:scale-[1.02] active:scale-[0.98]"
             title="Refresh Live Data"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
@@ -160,7 +160,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
 
           <button
             onClick={onOpenAuditLogs}
-            className="nm-btn p-2.5 rounded-2xl text-slate-700 hover:text-amber-700 transition-colors relative"
+            className="nm-btn p-2.5 rounded-2xl text-slate-700 hover:text-amber-700 transition-all hover:scale-[1.02] active:scale-[0.98] relative"
             title="Audit Logs & System Activity"
           >
             <Bell className="w-4 h-4" />
@@ -169,7 +169,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => setIsProfileModalOpen(true)}
-            className="nm-flat-sm px-3 py-1.5 rounded-2xl flex items-center gap-2 border border-white/80 hover:border-teal-500/40 transition-colors text-left"
+            className="nm-flat-sm px-3.5 py-2 rounded-2xl flex items-center gap-2.5 border border-white/80 hover:border-teal-500/40 transition-all text-left hover:scale-[1.02] active:scale-[0.98]"
             title="View Account Profile"
           >
             <div className="w-7 h-7 rounded-xl nm-inset flex items-center justify-center text-teal-700 font-black">
@@ -179,7 +179,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
               <span className="text-xs font-bold text-slate-800 block truncate max-w-[120px]">
                 {currentUser.fullName}
               </span>
-              <span className="text-[10px] text-slate-500 font-medium">
+              <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
                 {currentUser.role.replace('_', ' ')}
               </span>
             </div>
@@ -187,7 +187,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
 
           <button
             onClick={onSignOut}
-            className="nm-btn p-2.5 rounded-2xl text-slate-600 hover:text-rose-600 transition-colors"
+            className="nm-btn p-2.5 rounded-2xl text-slate-600 hover:text-rose-600 transition-all hover:scale-[1.02] active:scale-[0.98]"
             title="Sign Out"
           >
             <LogOut className="w-4 h-4" />

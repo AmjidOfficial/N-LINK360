@@ -29,12 +29,30 @@ import {
   Clock,
   Layers,
   Lock,
-  ShieldAlert
+  ShieldAlert,
+  Warehouse,
+  Factory,
+  Coins,
+  Briefcase,
+  KeyRound,
+  ShieldCheck,
+  UserCheck,
+  FileSpreadsheet,
+  BadgeCheck,
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 import { TerritoryHierarchyD3Map } from './TerritoryHierarchyD3Map';
 import { OperationSubTab } from './NeumorphicHeader';
 import { User, UserRole } from '../types';
-import { isAdminUser, isFieldForceUser, getAssignedDealerIds } from '../services/production-users';
+import {
+  isAdminUser,
+  isFieldForceUser,
+  getAssignedDealerIds,
+  getCentralEmployees,
+  saveCentralEmployee,
+  deleteCentralEmployee
+} from '../services/production-users';
 
 interface OperationDomainProps {
   activeSubTab: OperationSubTab;
@@ -51,6 +69,9 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
 }) => {
   const isAdmin = isAdminUser(currentUser);
   const isField = isFieldForceUser(currentUser);
+
+  // Department filter for unified employee directory
+  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('ALL');
 
   // State Collections
   const [branches, setBranches] = useState<any[]>([

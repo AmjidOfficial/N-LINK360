@@ -6,7 +6,7 @@
  */
 
 // ==============================================================================
-// 1. Roles & Permissions (RBAC)
+// 1. Roles, Permissions & Controlled Designations
 // ==============================================================================
 export type UserRole =
   | 'SUPER_ADMIN'
@@ -26,6 +26,17 @@ export type UserRole =
   | 'WAREHOUSE'
   | 'DISPATCH';
 
+export interface Designation {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  department: string;
+  gradeLevel?: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -36,6 +47,164 @@ export interface User {
   branchName?: string;
   isActive: boolean;
   lastLoginAt?: string;
+  createdAt: string;
+}
+
+export interface SalaryAllowance {
+  name: string;
+  amount: number;
+}
+
+export interface EmployeeSalary {
+  id: string;
+  employeeId: string;
+  basicSalary: number;
+  allowances: SalaryAllowance[];
+  grossSalary: number;
+  effectiveFrom: string;
+  effectiveTo?: string; // null means currently active
+  salaryStatus: 'ACTIVE' | 'ARCHIVED' | 'SUPERSEDED';
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface EmployeeDocument {
+  id: string;
+  name: string;
+  url: string;
+  fileType: string;
+  uploadedAt: string;
+}
+
+export interface EmployeeWarehouseDetails {
+  assignedWarehouseId?: string;
+  assignedWarehouseName?: string;
+  canApproveDispatches?: boolean;
+  canAdjustStock?: boolean;
+}
+
+export interface EmployeeFactoryDetails {
+  assignedPlantId?: string;
+  assignedPlantName?: string;
+  productionLine?: string;
+  shift?: 'MORNING' | 'EVENING' | 'NIGHT';
+}
+
+export interface EmployeeFinanceDetails {
+  canPostVouchers?: boolean;
+  canApproveCreditLimits?: boolean;
+  maxApprovalAmount?: number;
+}
+
+export interface EmployeeSalesDetails {
+  region?: string;
+  area?: string;
+  territory?: string;
+  monthlySalesTarget?: number;
+  monthlyRecoveryTarget?: number;
+  assignedBeats?: string[];
+}
+
+export interface Employee {
+  id: string;
+  employeeCode: string;
+  fullName: string;
+  fatherName?: string;
+  cnic?: string;
+  mobile: string;
+  whatsapp?: string;
+  email?: string;
+  emergencyMobile?: string;
+  emergencyPhone?: string;
+  address?: string;
+  joiningDate: string;
+  employmentStatus: 'ACTIVE' | 'PROBATION' | 'ON_LEAVE' | 'TERMINATED' | 'RESIGNED';
+  department: 'SUPPLY_CHAIN' | 'MANUFACTURING' | 'FINANCE_ACCOUNTS' | 'SALES_FIELD' | 'EXECUTIVE' | string;
+  designationId?: string;
+  designationCode?: string;
+  designationName?: string;
+  designation?: string;
+  reportingManagerId?: string;
+  reportingManagerName?: string;
+  profilePhotoUrl?: string;
+  documents?: EmployeeDocument[];
+  
+  // Linked System User Authentication & RBAC
+  userId?: string; // Linked system login account ID
+  systemRole?: UserRole; // Linked system role
+  accessScope?: 'GLOBAL_ADMIN' | 'ACCOUNTS_FINANCE' | 'LOGISTICS_WH' | 'MANUFACTURING_PLANT' | 'FIELD_FORCE_SCOPED' | string;
+  isLoginEnabled?: boolean;
+  baseBranch?: string;
+  branchId?: string;
+  branchName?: string;
+  salaryGrade?: string;
+
+  // Department-Specific Operational Parameters
+  warehouseDetails?: EmployeeWarehouseDetails;
+  factoryDetails?: EmployeeFactoryDetails;
+  financeDetails?: EmployeeFinanceDetails;
+  salesDetails?: EmployeeSalesDetails;
+
+  // Organization assignment
+  regionId?: string;
+  regionName?: string;
+  areaId?: string;
+  areaName?: string;
+  territoryId?: string;
+  territoryName?: string;
+  townIds?: string[];
+  townNames?: string[];
+  routeIds?: string[];
+  beats?: string[];
+  // Current active salary snapshot
+  currentSalary?: EmployeeSalary;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface EmployeeTownAssignment {
+  id: string;
+  employeeId: string;
+  regionId?: string;
+  areaId?: string;
+  territoryId?: string;
+  townId?: string;
+  townName?: string;
+  routeId?: string;
+  isActive: boolean;
+  effectiveFrom: string;
+  effectiveTo?: string;
+  createdAt: string;
+}
+
+export type TargetType = 'SALES' | 'RECOVERY';
+export type TargetPeriod = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+
+export interface Target {
+  id: string;
+  targetType: TargetType;
+  periodType: TargetPeriod;
+  periodKey: string; // e.g. '2026-08', '2026-Q3'
+  employeeId?: string;
+  employeeName?: string;
+  designationCode?: string;
+  regionId?: string;
+  regionName?: string;
+  areaId?: string;
+  areaName?: string;
+  territoryId?: string;
+  territoryName?: string;
+  townId?: string;
+  townName?: string;
+  customerId?: string;
+  customerName?: string;
+  targetValue: number;
+  targetQuantity?: number;
+  achievedValue?: number;
+  achievedQuantity?: number;
+  variance?: number;
+  achievementPercentage?: number | 'N/A';
+  createdBy?: string;
   createdAt: string;
 }
 
@@ -155,6 +324,10 @@ export interface SKU {
   weight?: number;
   taxRate?: number;
   status?: 'ACTIVE' | 'DISCONTINUED' | 'UPCOMING';
+  // SKU Versioning architecture
+  currentVersionId?: string;
+  currentVersionNumber?: number;
+  versions?: SKUVersion[];
 }
 
 // ==============================================================================
@@ -190,6 +363,8 @@ export interface Customer {
   town?: string;
   route?: string;
   assignedEmployee?: string;
+  priceTier?: 'STANDARD' | 'WHOLESALE' | 'DISTRIBUTOR' | 'SPECIAL' | string;
+  approvalStatus?: RegistrationRequestStatus | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 }
 
@@ -284,6 +459,9 @@ export interface InventoryTransaction {
   skuId: string;
   skuCode?: string;
   skuName?: string;
+  skuVersionId?: string;
+  versionNumber?: number;
+  unitsPerCartonSnapshot?: number;
   quantity: number;
   unitPrice: number;
   referenceModule: string;
@@ -300,6 +478,9 @@ export interface InventoryBalance {
   skuId: string;
   skuCode?: string;
   skuName?: string;
+  skuVersionId?: string;
+  versionNumber?: number;
+  unitsPerCartonSnapshot?: number;
   quantityOnHand: number;
   quantityReserved: number;
   quantityDamaged: number;
@@ -333,6 +514,12 @@ export interface SalesOrderItem {
   skuId: string;
   skuCode: string;
   skuName: string;
+  skuVersionId?: string;
+  versionNumber?: number;
+  unitsPerCartonSnapshot?: number;
+  unitTradePriceSnapshot?: number;
+  unitRetailPriceSnapshot?: number;
+  packagingUnit?: string;
   orderedQuantity: number;
   approvedQuantity?: number;
   unitPrice: number;
@@ -371,6 +558,12 @@ export interface InvoiceItem {
   skuId: string;
   skuCode: string;
   skuName: string;
+  skuVersionId?: string;
+  versionNumber?: number;
+  unitsPerCartonSnapshot?: number;
+  unitTradePriceSnapshot?: number;
+  unitRetailPriceSnapshot?: number;
+  packagingUnit?: string;
   quantity: number;
   unitPrice: number;
   discountAmount: number;
@@ -599,14 +792,73 @@ export interface AuditLog {
   createdAt: string;
 }
 
-export interface Notification {
+export interface SKUVersion {
   id: string;
-  userId: string;
-  title: string;
-  message: string;
-  type: 'INFO' | 'WARNING' | 'ALERT' | 'SUCCESS';
-  referenceModule?: string;
-  referenceId?: string;
-  isRead: boolean;
+  skuId: string;
+  versionNumber: number;
+  effectiveFrom: string;
+  effectiveTo?: string; // null means currently active
+  packagingUnit: string;
+  unitsPerPack: number;
+  packsPerCarton: number;
+  unitsPerCarton: number;
+  cartonRate: number;
+  tradePrice: number;
+  retailPrice: number;
+  dealerPrice: number;
+  costPrice?: number;
+  taxRate: number;
+  status: 'ACTIVE' | 'INACTIVE' | 'DISCONTINUED' | 'REPLACED';
+  changeReason?: string;
+  createdBy?: string;
   createdAt: string;
 }
+
+export interface MasterDataChangeAudit {
+  id: string;
+  entityType: 'SKU' | 'BRAND' | 'CUSTOMER' | 'EMPLOYEE' | 'SALARY' | 'DESIGNATION';
+  entityId: string;
+  entityName: string;
+  fieldChanged: string;
+  oldValue: string | number | boolean | null;
+  newValue: string | number | boolean | null;
+  effectiveDate: string;
+  reason?: string;
+  changedBy: string;
+  changedByName?: string;
+  createdAt: string;
+}
+
+export interface TownLedgerSummary {
+  townId: string;
+  townName: string;
+  territoryName: string;
+  areaName: string;
+  regionName: string;
+  totalCustomers: number;
+  totalOpeningBalance: number;
+  totalInvoicing: number;
+  totalRecovery: number;
+  totalAdjustments: number;
+  totalOutstanding: number;
+  assignedEmployees: {
+    employeeId: string;
+    employeeName: string;
+    designation: string;
+  }[];
+}
+
+export interface DesignationFinancialSummary {
+  designationCode: string;
+  designationName: string;
+  teamSize: number;
+  totalSalesTarget: number;
+  totalSalesAchievement: number;
+  salesAchievementPercent: number | 'N/A';
+  totalRecoveryTarget: number;
+  totalRecoveryAchievement: number;
+  recoveryAchievementPercent: number | 'N/A';
+  totalOutstanding: number;
+  totalCustomersCount: number;
+}
+

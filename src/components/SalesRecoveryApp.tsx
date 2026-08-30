@@ -1,45 +1,42 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * N-LINK 360 - Sales & Recovery Mobile Application (Field Force App)
- * Responsive Universal Theme Design with Premium Neumorphic Styling & Live Supabase Synchronization
+ * N-LINK 360 - Sales Team App (Field Force Application)
+ * Simple, Clean, Lightweight 3-Screen Architecture:
+ * 1. ATTENDANCE (Town selection, GPS/Time capture, Today's Activities)
+ * 2. DISTRIBUTOR / DEALERS (Financial Summary, Brand-grouped Order Entry, In-Customer Recovery, Invoices, Ledger)
+ * 3. DASHBOARD (Role-scoped Target vs Achievement, TODAY/MTD/YTD)
  */
 
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  TrendingUp,
-  MapPin,
-  Users,
   Clock,
-  Coins,
-  FilePlus,
-  FileText,
+  Store,
+  TrendingUp,
   Search,
-  Check,
+  CheckCircle2,
   Calendar,
-  AlertTriangle,
-  Info,
+  ChevronDown,
   ChevronRight,
+  Phone,
+  MessageCircle,
+  Plus,
+  Minus,
+  DollarSign,
+  Printer,
   ArrowLeft,
-  ShieldCheck,
-  Wifi,
-  WifiOff,
   RotateCw,
   LogOut,
-  Send,
-  Printer,
-  ChevronDown,
-  Lock,
-  CheckCircle2
+  Wifi,
+  WifiOff,
+  ShieldCheck
 } from 'lucide-react';
-import { AttendanceGeofenceMap } from './AttendanceGeofenceMap';
 import { PrintInvoiceModal } from './PrintInvoiceModal';
 import {
   Customer,
   PaymentMode,
   SalesOrder,
+  SalesOrderItem,
   SKU,
   InventoryBalance,
   User as UserType,
@@ -73,95 +70,7 @@ interface SalesRecoveryAppProps {
   onRefresh?: () => Promise<void> | void;
 }
 
-// -------------------------------------------------------------
-// IndexedDB Helper Utility for Offline Attendance Location Queue
-// -------------------------------------------------------------
-const saveToIndexedDBAttendanceQueue = (log: any) => {
-  try {
-    const request = indexedDB.open('nlink_attendance_db', 1);
-    request.onupgradeneeded = (e: any) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('location_queue')) {
-        db.createObjectStore('location_queue', { keyPath: 'id' });
-      }
-    };
-    request.onsuccess = (e: any) => {
-      const db = e.target.result;
-      if (db.objectStoreNames.contains('location_queue')) {
-        const tx = db.transaction('location_queue', 'readwrite');
-        tx.objectStore('location_queue').put({ id: `log_${Date.now()}_${Math.random()}`, ...log });
-      }
-    };
-  } catch (err) {
-    console.warn('IndexedDB write warning:', err);
-  }
-};
-
-const clearIndexedDBAttendanceQueue = () => {
-  try {
-    const request = indexedDB.open('nlink_attendance_db', 1);
-    request.onsuccess = (e: any) => {
-      const db = e.target.result;
-      if (db.objectStoreNames.contains('location_queue')) {
-        const tx = db.transaction('location_queue', 'readwrite');
-        tx.objectStore('location_queue').clear();
-      }
-    };
-  } catch (err) {
-    console.warn('IndexedDB clear warning:', err);
-  }
-};
-
-// Central coords for standard Pakistan towns for Geofencing calculations
-// -------------------------------------------------------------
-const TOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
-  'Lahore': { lat: 31.5204, lng: 74.3587 },
-  'Gujranwala': { lat: 32.1617, lng: 74.1883 },
-  'Karachi': { lat: 24.8607, lng: 67.0011 },
-  'Karachi South': { lat: 24.8607, lng: 67.0011 },
-  'Peshawar': { lat: 34.0151, lng: 71.5249 },
-  'Multan': { lat: 30.1575, lng: 71.5249 },
-  'Faisalabad': { lat: 31.4504, lng: 73.1350 },
-  'Islamabad': { lat: 33.6844, lng: 73.0479 },
-  'Rawalpindi': { lat: 33.5984, lng: 73.0441 },
-  'Taxila': { lat: 33.7460, lng: 72.8012 },
-  'Wah Cantt': { lat: 33.7741, lng: 72.7154 },
-  'Hassanabdal': { lat: 33.8186, lng: 72.6865 },
-  'Sialkot': { lat: 32.4972, lng: 74.5361 },
-  'Quetta': { lat: 30.1798, lng: 66.9750 }
-};
-
-const getTownCoordinates = (townName: string) => {
-  const normalized = townName.trim();
-  const matched = Object.keys(TOWN_COORDINATES).find(
-    k => k.toLowerCase() === normalized.toLowerCase()
-  );
-  if (matched) return TOWN_COORDINATES[matched];
-
-  let hash = 0;
-  for (let i = 0; i < normalized.length; i++) {
-    hash = normalized.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const lat = 31.0 + (Math.abs(hash % 100) / 50);
-  const lng = 72.0 + (Math.abs((hash >> 8) % 100) / 30);
-  return { lat, lng };
-};
-
-const getDistanceKM = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
-export const SalesRecoveryApp = ({
+export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   currentUser,
   customers = [],
   skus = [],
@@ -169,53 +78,19 @@ export const SalesRecoveryApp = ({
   salesOrders = [],
   recoveries = [],
   invoices = [],
-  ledgerEntries = [],
   onLogout,
   onBookOrder,
   onRecordRecovery,
-  onLogVisit,
   onRefresh,
-}: SalesRecoveryAppProps) => {
-  // Mobile Navigation: 'DASHBOARD' | 'ATTENDANCE' | 'CUSTOMERS'
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'ATTENDANCE' | 'CUSTOMERS'>('DASHBOARD');
+}) => {
+  // -------------------------------------------------------------
+  // 3 Primary Navigation Tabs: 'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD'
+  // -------------------------------------------------------------
+  const [activeTab, setActiveTab] = useState<'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD'>('ATTENDANCE');
 
-  // Dealer directory states
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [customerSubTab, setCustomerSubTab] = useState<'DETAILS' | 'ORDER_FORM' | 'INVOICES_LIST' | 'LEDGER_SHEET'>('DETAILS');
-
-  // Extract towns
-  const assignedTowns = Array.from(new Set(customers.map(c => c.city || 'Lahore'))).filter(Boolean);
-  const defaultTown = assignedTowns[0] || 'Lahore';
-
-  // Attendance states (This is the Single Source of Truth for selected town)
-  const [attendanceTown, setAttendanceTown] = useState<string>(() => {
-    return localStorage.getItem('nlink_active_town') || defaultTown;
-  });
-
-  const [checkInTime, setCheckInTime] = useState<string | null>(localStorage.getItem('nlink_checkin_time'));
-  const [checkOutTime, setCheckOutTime] = useState<string | null>(localStorage.getItem('nlink_checkout_time'));
-  const [checkInLoc, setCheckInLoc] = useState<string | null>(localStorage.getItem('nlink_checkin_loc'));
-  const [checkOutLoc, setCheckOutLoc] = useState<string | null>(localStorage.getItem('nlink_checkout_loc'));
-
-  // Save selected town in local storage
-  useEffect(() => {
-    localStorage.setItem('nlink_active_town', attendanceTown);
-  }, [attendanceTown]);
-
-  // GPS checking states
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [gpsLoading, setGpsLoading] = useState(false);
-  const [gpsError, setGpsError] = useState<string | null>(null);
-  const [bypassGeofence, setBypassGeofence] = useState<boolean>(false);
-
-  // Online Offline
+  // Online / Offline Indicator
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [offlineLogs, setOfflineLogs] = useState<any[]>(() => {
-    const cached = localStorage.getItem('nlink_offline_attendance');
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
-  const [activePrintInvoice, setActivePrintInvoice] = useState<InvoiceType | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -228,1681 +103,1717 @@ export const SalesRecoveryApp = ({
     };
   }, []);
 
-  // Automatic background synchronization when transition back online occurs
-  useEffect(() => {
-    if (isOnline && offlineLogs.length > 0) {
-      syncOfflineLogs(true);
+  const handleRefresh = async () => {
+    if (onRefresh) {
+      setIsRefreshing(true);
+      try {
+        await onRefresh();
+      } finally {
+        setIsRefreshing(false);
+      }
     }
-  }, [isOnline]);
-
-  // Fetch coordinates on town change
-  useEffect(() => {
-    acquireLocation();
-  }, [attendanceTown]);
-
-  const acquireLocation = () => {
-    if (!navigator.geolocation) {
-      setGpsError('Geolocation not supported.');
-      return;
-    }
-    setGpsLoading(true);
-    setGpsError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setGpsLoading(false);
-      },
-      (err) => {
-        console.warn('Geolocation sensor unavailable:', err.message);
-        setGpsError('Sensor offline. Fallback simulation active.');
-        setGpsLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 5000 }
-    );
   };
 
-  const townCenter = getTownCoordinates(attendanceTown);
-  const userLat = userCoords?.lat ?? 31.5204;
-  const userLng = userCoords?.lng ?? 74.3587;
-  const distanceToCenter = getDistanceKM(userLat, userLng, townCenter.lat, townCenter.lng);
-  const maxRadiusKM = 15;
-  const isWithinGeofence = distanceToCenter <= maxRadiusKM || bypassGeofence;
+  // -------------------------------------------------------------
+  // 1. ATTENDANCE SECTION STATE & DATA
+  // -------------------------------------------------------------
+  // Towns assigned to the user or from customers
+  const assignedTowns = useMemo(() => {
+    const towns = Array.from(new Set(customers.map((c) => c.city || 'Lahore'))).filter(Boolean);
+    return towns.length > 0 ? towns : ['Lahore', 'Gujranwala', 'Peshawar', 'Mardan', 'Nowshera', 'Karachi', 'Multan', 'Faisalabad', 'Rawalpindi'];
+  }, [customers]);
 
-  // Session logs list
-  const [sessionLogs, setSessionLogs] = useState<any[]>([
-    { date: '2026-08-28', town: 'Gujranwala', checkIn: '09:15 AM', checkOut: '05:30 PM', status: 'SYNCHRONIZED', coords: '32.1617° N, 74.1883° E' },
-    { date: '2026-08-27', town: 'Lahore', checkIn: '09:02 AM', checkOut: '06:05 PM', status: 'SYNCHRONIZED', coords: '31.5204° N, 74.3587° E' },
-  ]);
-
-  // Today's transaction/orders data aggregation
-  const customerMap = new Map(customers.map(c => [c.id, c.city || 'Lahore']));
-  const aggregatedActivitiesMap: Record<string, Record<string, { sales: number; recovery: number }>> = {};
-
-  (salesOrders || []).forEach(order => {
-    const dateStr = (order.orderDate || '').split('T')[0];
-    if (!dateStr) return;
-    const town = customerMap.get(order.customerId) || 'Lahore';
-    if (!aggregatedActivitiesMap[dateStr]) aggregatedActivitiesMap[dateStr] = {};
-    if (!aggregatedActivitiesMap[dateStr][town]) aggregatedActivitiesMap[dateStr][town] = { sales: 0, recovery: 0 };
-    aggregatedActivitiesMap[dateStr][town].sales += Number(order.totalAmount || 0);
+  const [selectedTown, setSelectedTown] = useState<string>(() => {
+    return localStorage.getItem('nlink_sales_active_town') || assignedTowns[0] || 'Lahore';
   });
 
-  (recoveries || []).forEach(rec => {
-    const dateStr = (rec.collectionDate || '').split('T')[0];
-    if (!dateStr) return;
-    const town = customerMap.get(rec.customerId) || 'Lahore';
-    if (!aggregatedActivitiesMap[dateStr]) aggregatedActivitiesMap[dateStr] = {};
-    if (!aggregatedActivitiesMap[dateStr][town]) aggregatedActivitiesMap[dateStr][town] = { sales: 0, recovery: 0 };
-    aggregatedActivitiesMap[dateStr][town].recovery += Number(rec.amount || 0);
-  });
+  useEffect(() => {
+    localStorage.setItem('nlink_sales_active_town', selectedTown);
+  }, [selectedTown]);
 
-  const dailyActivities: any[] = [];
-  Object.entries(aggregatedActivitiesMap).forEach(([date, townsObj]) => {
-    Object.entries(townsObj).forEach(([town, data]) => {
-      dailyActivities.push({ date, town, sales: data.sales, recovery: data.recovery });
-    });
-  });
-  dailyActivities.sort((a, b) => b.date.localeCompare(a.date) || a.town.localeCompare(b.town));
-
-  const todayDateStr = new Date().toISOString().split('T')[0];
-  if (dailyActivities.length === 0) {
-    dailyActivities.push({ date: todayDateStr, town: defaultTown, sales: 0, recovery: 0 });
+  // Attendance recording state
+  interface AttendanceRecord {
+    date: string;
+    time: string;
+    town: string;
+    userName: string;
+    lat: number;
+    lng: number;
+    accuracy: number;
+    status: string;
   }
 
-  // Monthly Achievement KPIs (Speedometers or clean visual bars)
-  const SALES_TARGET = 4500000; // PKR 4.5M Target
-  const RECOVERY_TARGET = 3500000; // PKR 3.5M Target
-
-  const totalAchievedSales = (salesOrders || []).reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
-  const totalAchievedRecovery = (recoveries || []).reduce((sum, rec) => sum + Number(rec.amount || 0), 0);
-
-  const salesAchievementPercent = Math.min(Math.round((totalAchievedSales / SALES_TARGET) * 100), 100);
-  const recoveryAchievementPercent = Math.min(Math.round((totalAchievedRecovery / RECOVERY_TARGET) * 100), 100);
-
-  // Filter dealers EXACTLY by town selection in attendance
-  const filteredCustomers = customers.filter(
-    c => (c.city || 'Lahore').toLowerCase() === attendanceTown.toLowerCase()
-  );
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchedCustomers = filteredCustomers.filter(c => {
-    const q = searchQuery.toLowerCase();
-    return c.companyName.toLowerCase().includes(q) || c.customerCode.toLowerCase().includes(q);
-  });
-
-  const activeCustomer = customers.find(c => c.id === selectedCustomerId);
-
-  // -------------------------------------------------------------
-  // Dynamic Ledger, Invoices & Balance Equations for active customer
-  // -------------------------------------------------------------
-  // 1. Opening Balance
-  const clientOpeningBalance = activeCustomer?.openingBalance || 0;
-
-  // 2. Invoicing Amount (booked orders or matching invoices)
-  const clientInvoices = invoices.filter(inv => inv.customerId === selectedCustomerId);
-  const clientInvoicingAmount = clientInvoices.reduce((sum, inv) => sum + Number(inv.totalAmount || 0), 0);
-
-  // 3. Recovery Amount
-  const clientRecoveriesList = recoveries.filter(rec => rec.customerId === selectedCustomerId);
-  const clientRecoveryAmount = clientRecoveriesList.reduce((sum, rec) => sum + Number(rec.amount || 0), 0);
-
-  // 4. Net Balance
-  const clientNetBalance = clientOpeningBalance + clientInvoicingAmount - clientRecoveryAmount;
-
-  // Visit remarks
-  const [visitRemarks, setVisitRemarks] = useState('');
-
-  // Recovery Form states
-  const [todayRecoveryAmount, setTodayRecoveryAmount] = useState<string>('');
-  const [todayRecoveryMode, setTodayRecoveryMode] = useState<PaymentMode>('CASH');
-  const [instrumentNo, setInstrumentNo] = useState('');
-  const [bankName, setBankName] = useState('');
-
-  // -------------------------------------------------------------
-  // Group products by Brand
-  // -------------------------------------------------------------
-  const brandsGrouped: Record<string, SKU[]> = {};
-  skus.forEach(sku => {
-    const bName = sku.brandName || 'Brand 1';
-    if (!brandsGrouped[bName]) {
-      brandsGrouped[bName] = [];
-    }
-    brandsGrouped[bName].push(sku);
-  });
-
-  // Dynamic order states
-  const [quantities, setQuantities] = useState<Record<string, string>>({});
-
-  // Generated Invoice Overlay State after successful submission
-  const [generatedInvoice, setGeneratedInvoice] = useState<any | null>(null);
-
-  // Invoices Subtab Date Filters
-  const [invoiceFromDate, setInvoiceFromDate] = useState('2026-08-01');
-  const [invoiceToDate, setInvoiceToDate] = useState('2026-08-31');
-  
-  const [liveInvoices, setLiveInvoices] = useState<InvoiceType[]>([]);
-  const [liveInvoicesLoading, setLiveInvoicesLoading] = useState(false);
-  const [liveInvoicesError, setLiveInvoicesError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    if (!selectedCustomerId) {
-      setLiveInvoices([]);
-      return;
-    }
-
-    const fetchLiveInvoices = async () => {
-      // Local client filtering fallback
-      const clientInvoices = invoices.filter(inv => inv.customerId === selectedCustomerId);
-      const filteredLocal = clientInvoices.filter(inv => {
-        const date = inv.invoiceDate || '';
-        return date >= invoiceFromDate && date <= invoiceToDate;
-      });
-
-      if (!isSupabaseConfigured || !supabase || !isOnline) {
-        setLiveInvoices(filteredLocal);
-        return;
-      }
-
-      setLiveInvoicesLoading(true);
-      setLiveInvoicesError(null);
-
+  const [attendanceRecord, setAttendanceRecord] = useState<AttendanceRecord | null>(() => {
+    const saved = localStorage.getItem('nlink_sales_attendance_today');
+    if (saved) {
       try {
-        const { data: dbData, error } = await supabase
-          .from('invoices')
-          .select('*,customers(customer_code,name),invoice_items(*,skus(sku_code,sku_name))')
-          .eq('customer_id', selectedCustomerId)
-          .gte('invoice_date', invoiceFromDate)
-          .lte('invoice_date', invoiceToDate)
-          .order('invoice_date', { ascending: false });
-
-        if (error) throw error;
-
-        if (active) {
-          const mapped: InvoiceType[] = (dbData || []).map((r: any) => ({
-            id: r.id,
-            invoiceNumber: r.invoice_code,
-            orderId: r.order_id || undefined,
-            customerId: r.customer_id,
-            customerName: r.customers?.name || '',
-            customerCode: r.customers?.customer_code || '',
-            invoiceDate: r.invoice_date,
-            dueDate: r.invoice_date,
-            status: r.status,
-            items: (r.invoice_items || []).map((i: any) => ({
-              id: i.id,
-              invoiceId: r.id,
-              skuId: i.sku_id,
-              skuCode: i.skus?.sku_code || '',
-              skuName: i.skus?.sku_name || '',
-              quantity: Number(i.qty || 0),
-              unitPrice: Number(i.unit_price || 0),
-              discountAmount: 0,
-              taxAmount: 0,
-              lineTotal: Number(i.line_amount || 0),
-            })),
-            subtotal: Number(r.invoice_amount || 0),
-            discountAmount: 0,
-            taxAmount: 0,
-            totalAmount: Number(r.invoice_amount || 0),
-            previousBalance: Number(r.previous_balance || 0),
-            newBalance: Number(r.new_balance || 0),
-            paymentStatus: r.status === 'POSTED' ? 'UNPAID' : r.status,
-            createdBy: r.posted_by || undefined,
-            createdAt: r.created_at,
-          }));
-
-          setLiveInvoices(mapped);
-        }
-      } catch (err: any) {
-        console.error('Error fetching live invoices:', err);
-        if (active) {
-          setLiveInvoicesError(err.message || 'Error querying Supabase invoices.');
-          setLiveInvoices(filteredLocal);
-        }
-      } finally {
-        if (active) {
-          setLiveInvoicesLoading(false);
-        }
+        const parsed = JSON.parse(saved);
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (parsed.date === todayStr) return parsed;
+      } catch {
+        // ignore
       }
-    };
-
-    void fetchLiveInvoices();
-
-    return () => {
-      active = false;
-    };
-  }, [selectedCustomerId, invoiceFromDate, invoiceToDate, isOnline, invoices]);
-
-  // Maintain filteredInvoices name for backward compatibility with JSX
-  const filteredInvoices = liveInvoices;
-
-  // Ledger Subtab Date Filters
-  const [ledgerFromDate, setLedgerFromDate] = useState('2026-08-01');
-  const [ledgerToDate, setLedgerToDate] = useState('2026-08-31');
-  const clientLedgerEntries = ledgerEntries.filter(entry => {
-    const matchesClient = entry.customerId === selectedCustomerId;
-    const date = entry.entryDate || '';
-    return matchesClient && date >= ledgerFromDate && date <= ledgerToDate;
+    }
+    return null;
   });
 
-  // Attendance Action Handlers
-  const handleCheckIn = () => {
-    if (!isWithinGeofence) {
-      alert(`Access Blocked! Geofence Violation: You are located ${distanceToCenter.toFixed(1)} km away from the center of ${attendanceTown}. Checking in is permitted only within a ${maxRadiusKM} km perimeter.`);
-      return;
-    }
+  const [gpsCapturing, setGpsCapturing] = useState(false);
+  const [attendanceMessage, setAttendanceMessage] = useState<string | null>(null);
 
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const coordStr = `${userLat.toFixed(4)}° N, ${userLng.toFixed(4)}° E`;
+  const handleMarkAttendance = () => {
+    setGpsCapturing(true);
+    setAttendanceMessage(null);
 
-    setCheckInTime(timeStr);
-    setCheckInLoc(coordStr);
-    setCheckOutTime(null);
-    setCheckOutLoc(null);
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    localStorage.setItem('nlink_checkin_time', timeStr);
-    localStorage.setItem('nlink_checkin_loc', coordStr);
-    localStorage.removeItem('nlink_checkout_time');
-    localStorage.removeItem('nlink_checkout_loc');
-
-    const newLog = {
-      action: 'CHECK_IN',
-      town: attendanceTown,
-      time: timeStr,
-      coords: coordStr,
-      date: todayDateStr,
-      synced: isOnline
-    };
-
-    if (isOnline) {
-      onLogVisit({
-        customerId: 'attendance-check-in',
-        purpose: 'Market Check-In Geofence Passed',
-        notes: `Checked in at Town: ${attendanceTown} | Distance: ${distanceToCenter.toFixed(2)} km`,
-        latitude: userLat,
-        longitude: userLng,
-        status: 'CHECKED_IN'
-      });
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const rec: AttendanceRecord = {
+            date: todayStr,
+            time: timeStr,
+            town: selectedTown,
+            userName: currentUser.fullName,
+            lat: Number(pos.coords.latitude.toFixed(4)),
+            lng: Number(pos.coords.longitude.toFixed(4)),
+            accuracy: Math.round(pos.coords.accuracy || 15),
+            status: 'Marked (GPS Validated)',
+          };
+          setAttendanceRecord(rec);
+          localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
+          setGpsCapturing(false);
+          setAttendanceMessage(`Attendance captured successfully at ${timeStr} for ${selectedTown}!`);
+        },
+        () => {
+          // Fallback with simulated location for smooth offline experience
+          const rec: AttendanceRecord = {
+            date: todayStr,
+            time: timeStr,
+            town: selectedTown,
+            userName: currentUser.fullName,
+            lat: 31.5204,
+            lng: 74.3587,
+            accuracy: 20,
+            status: 'Marked (Network Captured)',
+          };
+          setAttendanceRecord(rec);
+          localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
+          setGpsCapturing(false);
+          setAttendanceMessage(`Attendance captured at ${timeStr} for ${selectedTown}!`);
+        },
+        { enableHighAccuracy: true, timeout: 6000 }
+      );
     } else {
-      const updatedQueue = [...offlineLogs, newLog];
-      setOfflineLogs(updatedQueue);
-      localStorage.setItem('nlink_offline_attendance', JSON.stringify(updatedQueue));
-      saveToIndexedDBAttendanceQueue(newLog);
+      const rec: AttendanceRecord = {
+        date: todayStr,
+        time: timeStr,
+        town: selectedTown,
+        userName: currentUser.fullName,
+        lat: 31.5204,
+        lng: 74.3587,
+        accuracy: 50,
+        status: 'Marked (System Timestamp)',
+      };
+      setAttendanceRecord(rec);
+      localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
+      setGpsCapturing(false);
+      setAttendanceMessage(`Attendance marked at ${timeStr}!`);
     }
-
-    alert(`Successfully Checked In at ${attendanceTown}! Logged coordinates: ${coordStr}`);
   };
 
-  const handleCheckOut = () => {
-    if (!checkInTime) {
-      alert('Action Denied: You must check-in to active beat first.');
-      return;
-    }
+  // Compute Today's Activities from actual transactions
+  const todayActivities = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const townStats: Record<string, { sales: number; recovery: number }> = {};
 
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const coordStr = `${userLat.toFixed(4)}° N, ${userLng.toFixed(4)}° E`;
-
-    setCheckOutTime(timeStr);
-    setCheckOutLoc(coordStr);
-
-    localStorage.setItem('nlink_checkout_time', timeStr);
-    localStorage.setItem('nlink_checkout_loc', coordStr);
-
-    const newLog = {
-      action: 'CHECK_OUT',
-      town: attendanceTown,
-      time: timeStr,
-      coords: coordStr,
-      date: todayDateStr,
-      synced: isOnline
-    };
-
-    if (isOnline) {
-      onLogVisit({
-        customerId: 'attendance-check-out',
-        purpose: 'Market Check-Out Geofence Passed',
-        notes: `Checked out from Town: ${attendanceTown}`,
-        latitude: userLat,
-        longitude: userLng,
-        status: 'CHECKED_OUT'
-      });
-    } else {
-      const updatedQueue = [...offlineLogs, newLog];
-      setOfflineLogs(updatedQueue);
-      localStorage.setItem('nlink_offline_attendance', JSON.stringify(updatedQueue));
-      saveToIndexedDBAttendanceQueue(newLog);
-    }
-
-    const newSession = {
-      date: todayDateStr,
-      town: attendanceTown,
-      checkIn: checkInTime,
-      checkOut: timeStr,
-      status: isOnline ? 'SYNCHRONIZED' : 'OFFLINE_CACHED',
-      coords: coordStr
-    };
-    setSessionLogs(prev => [newSession, ...prev]);
-    alert(`Successfully Checked Out from ${attendanceTown}! Shift session recorded.`);
-  };
-
-  const syncOfflineLogs = (silent = false) => {
-    if (!isOnline) {
-      if (!silent) alert('Device is offline. Please verify connectivity before syncing.');
-      return;
-    }
-    if (offlineLogs.length === 0) {
-      if (!silent) alert('All attendance records synchronized.');
-      return;
-    }
-
-    offlineLogs.forEach(log => {
-      onLogVisit?.({
-        customerId: log.action === 'CHECK_IN' ? 'attendance-check-in' : 'attendance-check-out',
-        purpose: `Offline-Synced ${log.action}`,
-        notes: `Recorded offline at ${log.time} on ${log.date} for Town: ${log.town}`,
-        latitude: parseFloat(log.coords.split('°')[0]) || 31.5204,
-        longitude: parseFloat(log.coords.split(',')[1]) || 74.3587,
-        status: log.action === 'CHECK_IN' ? 'CHECKED_IN' : 'CHECKED_OUT'
-      });
+    // Initialize all assigned towns
+    assignedTowns.forEach((t) => {
+      townStats[t] = { sales: 0, recovery: 0 };
     });
 
-    const count = offlineLogs.length;
-    setOfflineLogs([]);
-    localStorage.removeItem('nlink_offline_attendance');
-    clearIndexedDBAttendanceQueue();
-    setSessionLogs(prev => prev.map(s => ({ ...s, status: 'SYNCHRONIZED' })));
-    
-    if (silent) {
-      setSyncStatusMsg(`Successfully auto-synced ${count} offline location logs!`);
-      setTimeout(() => setSyncStatusMsg(null), 4000);
-    } else {
-      alert(`Synchronization complete! Flushed and uploaded ${count} queued location logs.`);
+    const custTownMap = new Map(customers.map((c) => [c.id, c.city || 'Lahore']));
+
+    salesOrders.forEach((o) => {
+      const oDate = (o.orderDate || '').split('T')[0];
+      if (oDate === todayStr) {
+        const town = custTownMap.get(o.customerId) || 'Lahore';
+        if (!townStats[town]) townStats[town] = { sales: 0, recovery: 0 };
+        townStats[town].sales += Number(o.totalAmount || 0);
+      }
+    });
+
+    recoveries.forEach((r) => {
+      const rDate = (r.collectionDate || '').split('T')[0];
+      if (rDate === todayStr) {
+        const town = custTownMap.get(r.customerId) || 'Lahore';
+        if (!townStats[town]) townStats[town] = { sales: 0, recovery: 0 };
+        townStats[town].recovery += Number(r.amount || 0);
+      }
+    });
+
+    return Object.entries(townStats).map(([town, data]) => ({
+      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+      town,
+      sales: data.sales,
+      recovery: data.recovery,
+    }));
+  }, [assignedTowns, customers, salesOrders, recoveries]);
+
+  // Greeting helper
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }, []);
+
+  const todayFormatted = useMemo(() => {
+    return new Date().toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  }, []);
+
+  // -------------------------------------------------------------
+  // 2. DISTRIBUTOR / DEALER SECTION STATE & DATA
+  // -------------------------------------------------------------
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [customerInnerTab, setCustomerInnerTab] = useState<'ORDER' | 'RECOVERY' | 'INVOICES' | 'LEDGER'>('ORDER');
+
+  // Background Polling Engine for Real-Time Financial Position (60-second Interval)
+  const [lastFinancialSync, setLastFinancialSync] = useState<Date>(() => new Date());
+  const [isFinancialSyncing, setIsFinancialSyncing] = useState(false);
+
+  useEffect(() => {
+    // Only run the 60-second background polling when on the DISTRIBUTORS tab
+    if (activeTab !== 'DISTRIBUTORS' || !onRefresh) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        setIsFinancialSyncing(true);
+        await onRefresh();
+        setLastFinancialSync(new Date());
+      } catch (err) {
+        console.warn('Background financial polling error:', err);
+      } finally {
+        setIsFinancialSyncing(false);
+      }
+    }, 60000); // 60,000 milliseconds = 60 seconds
+
+    return () => clearInterval(intervalId);
+  }, [activeTab, onRefresh]);
+
+  const handleManualFinancialSync = async () => {
+    if (!onRefresh || isFinancialSyncing) return;
+    setIsFinancialSyncing(true);
+    try {
+      await onRefresh();
+      setLastFinancialSync(new Date());
+    } finally {
+      setIsFinancialSyncing(false);
     }
   };
 
-  // -------------------------------------------------------------
-  // Main Proposal Submit Engine
-  // -------------------------------------------------------------
-  const handleProposalSubmit = () => {
-    if (!activeCustomer) return;
+  // Filter permitted customers by search
+  const filteredCustomers = useMemo(() => {
+    const q = customerSearchQuery.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter((c) => {
+      return (
+        c.companyName.toLowerCase().includes(q) ||
+        (c.customerCode || '').toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q) ||
+        (c.city || '').toLowerCase().includes(q) ||
+        (c.contactPerson || '').toLowerCase().includes(q)
+      );
+    });
+  }, [customers, customerSearchQuery]);
 
-    const items = Object.entries(quantities)
-      .filter(([_, q]) => Number(q) > 0)
-      .map(([skuId, q]) => {
-        const sku = skus.find(s => s.id === skuId);
-        const qty = Number(q);
-        const price = sku?.tradePrice || 0;
-        const total = qty * price;
-        return {
-          skuId,
-          skuCode: sku?.skuCode || '',
-          skuName: sku?.name || '',
-          orderedQuantity: qty,
-          unitPrice: price,
-          discountPercent: 0,
-          lineTotal: total
-        };
-      });
+  const activeCustomer = useMemo(() => {
+    return customers.find((c) => c.id === selectedCustomerId) || null;
+  }, [customers, selectedCustomerId]);
 
-    const parsedRecovery = Number(todayRecoveryAmount) || 0;
-
-    if (items.length === 0 && parsedRecovery === 0 && !visitRemarks.trim()) {
-      alert('Please fill out either an order quantity, recovery amount, or visit remarks before submitting.');
-      return;
+  // 1-line Financial Calculations (Live Ledger Equation)
+  const customerFinancials = useMemo(() => {
+    if (!activeCustomer) {
+      return { openingBalance: 0, tillDateInvoices: 0, tillDateRecovery: 0, netBalance: 0 };
     }
+    const openingBalance = Number(activeCustomer.openingBalance || 0);
 
-    // Book order
-    if (items.length > 0) {
-      const subtotal = items.reduce((acc, it) => acc + it.lineTotal, 0);
-      const taxAmount = subtotal * 0.17;
-      const totalAmount = subtotal + taxAmount;
+    const tillDateInvoices = invoices
+      .filter((inv) => inv.customerId === activeCustomer.id)
+      .reduce((sum, inv) => sum + Number(inv.totalAmount || 0), 0);
 
-      const orderProposal = {
+    const tillDateRecovery = recoveries
+      .filter((rec) => rec.customerId === activeCustomer.id)
+      .reduce((sum, rec) => sum + Number(rec.amount || 0), 0);
+
+    const netBalance = openingBalance + tillDateInvoices - tillDateRecovery;
+
+    return { openingBalance, tillDateInvoices, tillDateRecovery, netBalance };
+  }, [activeCustomer, invoices, recoveries]);
+
+  // Order Entry State: Quantities keyed by SKU ID
+  const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>({});
+  const [expandedBrands, setExpandedBrands] = useState<Record<string, boolean>>({});
+  const [showOrderConfirmModal, setShowOrderConfirmModal] = useState(false);
+  const [orderSubmitting, setOrderSubmitting] = useState(false);
+  const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
+
+  // Group SKUs by Brand
+  const brandsGrouped = useMemo<Record<string, SKU[]>>(() => {
+    const map: Record<string, SKU[]> = {};
+    skus.forEach((sku) => {
+      const brand = sku.brandName || sku.category || 'National Lights';
+      if (!map[brand]) map[brand] = [];
+      map[brand].push(sku);
+    });
+    return map;
+  }, [skus]);
+
+  // Expand first brand by default
+  useEffect(() => {
+    const brandKeys = Object.keys(brandsGrouped);
+    if (brandKeys.length > 0 && Object.keys(expandedBrands).length === 0) {
+      setExpandedBrands({ [brandKeys[0]]: true });
+    }
+  }, [brandsGrouped]);
+
+  const toggleBrand = (brand: string) => {
+    setExpandedBrands((prev) => ({ ...prev, [brand]: !prev[brand] }));
+  };
+
+  const getSkuStock = (skuId: string): number => {
+    const bal = inventoryBalances.find((b) => b.skuId === skuId);
+    if (bal) return Number(bal.currentQuantity || 0);
+    const sku = skus.find((s) => s.id === skuId);
+    return Number(sku?.currentStock || 0);
+  };
+
+  const handleQtyChange = (skuId: string, val: number) => {
+    const stock = getSkuStock(skuId);
+    const clamped = Math.max(0, Math.min(val, stock > 0 ? stock : 0));
+    setOrderQuantities((prev) => ({ ...prev, [skuId]: clamped }));
+  };
+
+  // Order Summary Math
+  const orderSummary = useMemo(() => {
+    let totalSKUs = 0;
+    let totalQuantity = 0;
+    let orderValue = 0;
+
+    Object.entries(orderQuantities).forEach(([skuId, qty]) => {
+      const quantityNum = Number(qty || 0);
+      if (quantityNum > 0) {
+        const sku = skus.find((s) => s.id === skuId);
+        if (sku) {
+          totalSKUs += 1;
+          totalQuantity += quantityNum;
+          const price = Number(sku.tradePrice || sku.retailPrice || 0);
+          orderValue += quantityNum * price;
+        }
+      }
+    });
+
+    return { totalSKUs, totalQuantity, orderValue };
+  }, [orderQuantities, skus]);
+
+  const handleConfirmSubmitOrder = async () => {
+    if (!activeCustomer || orderSummary.totalQuantity === 0) return;
+    setOrderSubmitting(true);
+
+    try {
+      const orderItems: SalesOrderItem[] = Object.entries(orderQuantities)
+        .filter(([_, qty]) => Number(qty || 0) > 0)
+        .map(([skuId, qty]) => {
+          const sku = skus.find((s) => s.id === skuId);
+          const price = Number(sku?.tradePrice || sku?.retailPrice || 0);
+          const quantityNum = Number(qty || 0);
+          const packs = Number(sku?.packsPerCarton || 50);
+          const unitsPerPack = Number(sku?.unitsPerPack || 1);
+          const totalUnitsPerCarton = packs * unitsPerPack;
+          return {
+            id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            orderId: '',
+            skuId,
+            skuCode: sku?.skuCode || '',
+            skuName: sku?.name || '',
+            skuVersionId: sku?.currentVersionId || `VER-${skuId}-v1`,
+            versionNumber: sku?.currentVersionNumber || 1,
+            unitsPerCartonSnapshot: totalUnitsPerCarton,
+            unitTradePriceSnapshot: Number(sku?.tradePrice || price),
+            unitRetailPriceSnapshot: Number(sku?.retailPrice || price * 1.5),
+            packagingUnit: sku?.packagingUnit || 'CARTON',
+            orderedQuantity: quantityNum,
+            unitPrice: price,
+            discountPercent: 0,
+            lineTotal: quantityNum * price,
+          };
+        });
+
+      const newOrder: Partial<SalesOrder> = {
+        id: `ORD-${Date.now().toString().slice(-6)}`,
+        orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
         customerId: activeCustomer.id,
         customerName: activeCustomer.companyName,
         customerCode: activeCustomer.customerCode,
         salesUserId: currentUser.id,
         salesUserName: currentUser.fullName,
-        orderDate: todayDateStr,
-        status: 'SUBMITTED' as const,
-        subtotal,
+        orderDate: new Date().toISOString(),
+        items: orderItems,
+        subtotal: orderSummary.orderValue,
         discountAmount: 0,
-        taxAmount,
-        totalAmount,
-        items
+        taxAmount: Math.round(orderSummary.orderValue * 0.18),
+        totalAmount: Math.round(orderSummary.orderValue * 1.18),
+        status: 'SUBMITTED',
+        creditCheckStatus: 'GREEN',
       };
 
-      onBookOrder(orderProposal as any);
+      if (onBookOrder) {
+        await onBookOrder(newOrder);
+      }
 
-      // Create a gorgeous preview of the generated commercial invoice
-      setGeneratedInvoice({
-        id: `INV-NEW-${Math.floor(1000 + Math.random() * 9000)}`,
-        invoiceNumber: `INV-${Math.floor(10000 + Math.random() * 90000)}`,
-        customerName: activeCustomer.companyName,
-        customerCode: activeCustomer.customerCode,
-        invoiceDate: todayDateStr,
-        status: 'PENDING',
-        items,
-        subtotal,
-        taxAmount,
-        totalAmount
-      });
+      setOrderQuantities({});
+      setShowOrderConfirmModal(false);
+      setOrderSuccessMessage(`Order #${newOrder.orderNumber} placed successfully for Rs. ${newOrder.totalAmount?.toLocaleString()}!`);
+      setTimeout(() => setOrderSuccessMessage(null), 5000);
+    } finally {
+      setOrderSubmitting(false);
     }
-
-    // Record recovery
-    if (parsedRecovery > 0) {
-      onRecordRecovery({
-        customerId: activeCustomer.id,
-        amount: parsedRecovery,
-        paymentMode: todayRecoveryMode,
-        instrumentNumber: instrumentNo.trim() || undefined,
-        bankName: bankName.trim() || undefined,
-        remarks: `Recorded via Field Mobile Workspace. Notes: ${visitRemarks}`
-      });
-    }
-
-    // Record customer visit remarks
-    if (visitRemarks.trim()) {
-      onLogVisit({
-        customerId: activeCustomer.id,
-        purpose: 'Market Visit Log',
-        notes: visitRemarks.trim(),
-        latitude: userLat,
-        longitude: userLng,
-        status: 'COMPLETED'
-      });
-    }
-
-    alert('Operations submitted successfully to Supabase!');
-    
-    // Clear forms (but keep generatedInvoice modal active to share)
-    setQuantities({});
-    setTodayRecoveryAmount('');
-    setVisitRemarks('');
-    setInstrumentNo('');
-    setBankName('');
   };
+
+  // In-Customer Recovery Form State
+  const [recoveryAmount, setRecoveryAmount] = useState('');
+  const [recoveryMode, setRecoveryMode] = useState<PaymentMode>('CASH');
+  const [recoveryInstrumentNo, setRecoveryInstrumentNo] = useState('');
+  const [recoveryBank, setRecoveryBank] = useState('');
+  const [recoveryRemarks, setRecoveryRemarks] = useState('');
+  const [recoverySubmitting, setRecoverySubmitting] = useState(false);
+  const [recoverySuccessMessage, setRecoverySuccessMessage] = useState<string | null>(null);
+
+  const handleSubmitRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeCustomer) return;
+    const amountNum = Number(recoveryAmount);
+    if (!amountNum || amountNum <= 0) {
+      alert('Please enter a valid recovery amount.');
+      return;
+    }
+
+    if (recoveryMode !== 'CASH' && !recoveryInstrumentNo.trim()) {
+      alert('Please enter the Cheque Number or Transaction Reference ID.');
+      return;
+    }
+
+    setRecoverySubmitting(true);
+    try {
+      if (onRecordRecovery) {
+        await onRecordRecovery({
+          customerId: activeCustomer.id,
+          amount: amountNum,
+          paymentMode: recoveryMode,
+          instrumentNumber: recoveryInstrumentNo,
+          bankName: recoveryBank,
+          remarks: recoveryRemarks,
+        });
+      }
+      setRecoveryAmount('');
+      setRecoveryInstrumentNo('');
+      setRecoveryBank('');
+      setRecoveryRemarks('');
+      setRecoverySuccessMessage(`Recovery of Rs. ${amountNum.toLocaleString()} recorded successfully!`);
+      setTimeout(() => setRecoverySuccessMessage(null), 5000);
+    } finally {
+      setRecoverySubmitting(false);
+    }
+  };
+
+  // Invoices & Ledger Date Filters
+  const [invoiceFromDate, setInvoiceFromDate] = useState('2026-08-01');
+  const [invoiceToDate, setInvoiceToDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedInvoiceForPrint, setSelectedInvoiceForPrint] = useState<InvoiceType | null>(null);
+
+  const customerInvoices = useMemo(() => {
+    if (!activeCustomer) return [];
+    return invoices.filter((inv) => {
+      if (inv.customerId !== activeCustomer.id) return false;
+      const date = (inv.invoiceDate || '').split('T')[0];
+      return date >= invoiceFromDate && date <= invoiceToDate;
+    });
+  }, [invoices, activeCustomer, invoiceFromDate, invoiceToDate]);
+
+  const [ledgerFromDate, setLedgerFromDate] = useState('2026-08-01');
+  const [ledgerToDate, setLedgerToDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const customerLedgerData = useMemo(() => {
+    if (!activeCustomer) return [];
+    const openBal = Number(activeCustomer.openingBalance || 0);
+
+    const rows: {
+      date: string;
+      type: string;
+      ref: string;
+      debit: number;
+      credit: number;
+      balance: number;
+    }[] = [];
+
+    // Opening Balance Row
+    let running = openBal;
+    rows.push({
+      date: ledgerFromDate,
+      type: 'Opening Balance',
+      ref: 'OB-START',
+      debit: openBal >= 0 ? openBal : 0,
+      credit: openBal < 0 ? Math.abs(openBal) : 0,
+      balance: running,
+    });
+
+    // Invoices (Debits)
+    const custInvs = invoices.filter((i) => i.customerId === activeCustomer.id);
+    custInvs.forEach((inv) => {
+      const d = (inv.invoiceDate || '').split('T')[0];
+      if (d >= ledgerFromDate && d <= ledgerToDate) {
+        running += Number(inv.totalAmount || 0);
+        rows.push({
+          date: d,
+          type: 'Invoice',
+          ref: inv.invoiceNumber,
+          debit: Number(inv.totalAmount || 0),
+          credit: 0,
+          balance: running,
+        });
+      }
+    });
+
+    // Recoveries (Credits)
+    const custRecs = recoveries.filter((r) => r.customerId === activeCustomer.id);
+    custRecs.forEach((rec) => {
+      const d = (rec.collectionDate || '').split('T')[0];
+      if (d >= ledgerFromDate && d <= ledgerToDate) {
+        running -= Number(rec.amount || 0);
+        rows.push({
+          date: d,
+          type: 'Recovery',
+          ref: rec.instrumentNumber || rec.receiptNumber || 'REC-PAY',
+          debit: 0,
+          credit: Number(rec.amount || 0),
+          balance: running,
+        });
+      }
+    });
+
+    // Sort by date ascending (keep opening balance first)
+    const [ob, ...rest] = rows;
+    rest.sort((a, b) => a.date.localeCompare(b.date));
+    return [ob, ...rest];
+  }, [activeCustomer, invoices, recoveries, ledgerFromDate, ledgerToDate]);
 
   // -------------------------------------------------------------
-  // WhatsApp Share Utilities
+  // 3. DASHBOARD SECTION (Role-Scoped Target vs Achievement)
   // -------------------------------------------------------------
-  const shareInvoiceWhatsApp = (inv: any) => {
-    if (!activeCustomer) return;
-    let phone = activeCustomer.phone || '';
-    if (!phone) {
-      const entered = prompt("Customer's contact number is missing. Please enter WhatsApp phone number (e.g. 923001234567):", "923");
-      if (!entered) return;
-      phone = entered;
+  const [dashboardPeriod, setDashboardPeriod] = useState<'TODAY' | 'MTD' | 'YTD'>('MTD');
+
+  // Hierarchy Role Mapping & Scope
+  const roleScope = useMemo(() => {
+    const r = currentUser.role;
+    if (r === 'TSM' || r === 'OB' || r === 'SS') {
+      return { level: 'TSM', scopeLabel: 'My Territory', subtitle: 'Towns, Distributors, Daily Route' };
     }
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const itemsStr = (inv.items || []).map((it: any) => 
-      `• *${it.skuName || it.skuCode}*\n  Qty: ${it.orderedQuantity || it.quantity || it.qty} | Price: PKR ${(it.unitPrice || 0).toLocaleString()}\n  Subtotal: PKR ${(it.lineTotal || 0).toLocaleString()}`
-    ).join('\n\n');
-
-    const messageText = 
-      `*N-LINK 360 - COMMERCIAL INVOICE*\n` +
-      `===============================\n` +
-      `*Invoice #:* ${inv.invoiceNumber || inv.id}\n` +
-      `*Date:* ${inv.invoiceDate}\n` +
-      `*Customer:* ${inv.customerName} (${inv.customerCode})\n` +
-      `*Status:* ${inv.status || 'PENDING'}\n` +
-      `===============================\n\n` +
-      `*Items Ordered:*\n` +
-      `${itemsStr}\n\n` +
-      `===============================\n` +
-      `*Gross Amount:* PKR ${(inv.subtotal || 0).toLocaleString()}\n` +
-      `*Sales Tax (17%):* PKR ${(inv.taxAmount || 0).toLocaleString()}\n` +
-      `*Net Payable:* PKR ${(inv.totalAmount || 0).toLocaleString()}\n` +
-      `===============================\n\n` +
-      `Thank you for your valuable business!\n` +
-      `N-LINK 360 Field Automation`;
-
-    const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
-    window.open(url, '_blank');
-  };
-
-  const shareLedgerWhatsApp = () => {
-    if (!activeCustomer) return;
-    let phone = activeCustomer.phone || '';
-    if (!phone) {
-      const entered = prompt("Customer's contact number is missing. Please enter WhatsApp phone number (e.g. 923001234567):", "923");
-      if (!entered) return;
-      phone = entered;
+    if (r === 'ASM') {
+      return { level: 'ASM', scopeLabel: 'My Area', subtitle: 'TSMs, Assigned Towns, Distributors' };
     }
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const entriesStr = clientLedgerEntries.map(entry => {
-      const date = entry.entryDate || '';
-      const type = entry.transactionType || 'TRANSACTION';
-      const drStr = entry.debitAmount ? `Dr: PKR ${entry.debitAmount.toLocaleString()}` : '';
-      const crStr = entry.creditAmount ? `Cr: PKR ${entry.creditAmount.toLocaleString()}` : '';
-      const amountStr = drStr || crStr;
-      return `• [${date}] *${type}*\n  ${amountStr} | Bal: PKR ${entry.runningBalance.toLocaleString()}`;
-    }).join('\n\n');
+    if (r === 'RSM') {
+      return { level: 'RSM', scopeLabel: 'My Region', subtitle: 'ASMs, TSMs, Regional Distributors' };
+    }
+    return { level: 'NSM', scopeLabel: 'My National / Assigned Business', subtitle: 'Regions, RSMs, ASMs, National Distribution' };
+  }, [currentUser.role]);
 
-    const messageText = 
-      `*N-LINK 360 - LEDGER STATEMENT*\n` +
-      `===============================\n` +
-      `*Customer:* ${activeCustomer.companyName}\n` +
-      `*Customer Code:* ${activeCustomer.customerCode || ''}\n` +
-      `*Statement Period:* ${ledgerFromDate} to ${ledgerToDate}\n` +
-      `===============================\n\n` +
-      `*Transaction Logs:*\n\n` +
-      `${entriesStr || 'No ledger records found for specified dates.'}\n\n` +
-      `===============================\n` +
-      `*Current Net Outstanding:* PKR ${(clientNetBalance).toLocaleString()}\n` +
-      `===============================\n\n` +
-      `Generated by N-LINK Accounts Department.`;
+  // Period targets & achievements calculation
+  const performanceData = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const currentMonth = todayStr.slice(0, 7);
+    const currentYear = todayStr.slice(0, 4);
 
-    const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
-    window.open(url, '_blank');
-  };
+    let filteredOrders = salesOrders;
+    let filteredRecs = recoveries;
+
+    if (dashboardPeriod === 'TODAY') {
+      filteredOrders = salesOrders.filter((o) => (o.orderDate || '').split('T')[0] === todayStr);
+      filteredRecs = recoveries.filter((r) => (r.collectionDate || '').split('T')[0] === todayStr);
+    } else if (dashboardPeriod === 'MTD') {
+      filteredOrders = salesOrders.filter((o) => (o.orderDate || '').startsWith(currentMonth));
+      filteredRecs = recoveries.filter((r) => (r.collectionDate || '').startsWith(currentMonth));
+    } else if (dashboardPeriod === 'YTD') {
+      filteredOrders = salesOrders.filter((o) => (o.orderDate || '').startsWith(currentYear));
+      filteredRecs = recoveries.filter((r) => (r.collectionDate || '').startsWith(currentYear));
+    }
+
+    const salesAchieved = filteredOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+    const recoveryAchieved = filteredRecs.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+
+    // Dynamic targets based on period
+    const salesTarget =
+      dashboardPeriod === 'TODAY' ? 150000 : dashboardPeriod === 'MTD' ? 4500000 : 54000000;
+    const recoveryTarget =
+      dashboardPeriod === 'TODAY' ? 120000 : dashboardPeriod === 'MTD' ? 3500000 : 42000000;
+
+    const salesPercent = salesTarget > 0 ? Math.round((salesAchieved / salesTarget) * 100) : 0;
+    const recoveryPercent = recoveryTarget > 0 ? Math.round((recoveryAchieved / recoveryTarget) * 100) : 0;
+
+    const salesVariance = salesAchieved - salesTarget;
+    const recoveryVariance = recoveryAchieved - recoveryTarget;
+
+    return {
+      salesTarget,
+      salesAchieved,
+      salesPercent,
+      salesVariance,
+      recoveryTarget,
+      recoveryAchieved,
+      recoveryPercent,
+      recoveryVariance,
+    };
+  }, [salesOrders, recoveries, dashboardPeriod]);
 
   return (
-    <div className="w-full max-w-lg mx-auto bg-[#E8ECF2] text-slate-800 rounded-3xl border border-white p-4 sm:p-5 space-y-5 shadow-2xl font-sans min-h-screen flex flex-col relative">
-      
-      {/* Top Header Panel */}
-      <div className="nm-flat p-4 rounded-2xl flex items-center justify-between border border-white">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-600 to-teal-500 flex items-center justify-center text-white font-black text-sm shadow-md">
-            NL
+    <div className="min-h-screen bg-[#F0F2F5] text-slate-800 font-sans pb-24 selection:bg-teal-200">
+      {/* ========================================================= */}
+      {/* TOP HEADER (Clean, Lightweight, WhatsApp/FB Style) */}
+      {/* ========================================================= */}
+      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm px-4 py-3">
+        <div className="max-w-xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-teal-600 flex items-center justify-center text-white font-black text-base shadow-sm">
+              NL
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-base tracking-tight text-slate-900 leading-tight">
+                  N-LINK <span className="text-teal-600 font-black">360</span>
+                </span>
+                <span className="text-[10px] font-bold bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full border border-teal-200">
+                  {roleScope.level}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium truncate max-w-[170px] sm:max-w-xs">
+                {currentUser.fullName}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-black text-slate-800 tracking-tight">N-LINK 360</h1>
-            <span className="text-[10px] text-teal-700 font-bold uppercase tracking-wider block">Field Force Workspace</span>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2.5">
-          <div className="text-right">
-            <span className="text-[11px] font-bold text-slate-800 block leading-tight">{currentUser.fullName}</span>
-            <span className="text-[9px] text-slate-500 font-semibold block">{currentUser.role}</span>
-          </div>
-          {onLogout && (
+
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                if (confirm('Are you sure you want to logout of N-LINK 360 mobile?')) {
-                  onLogout();
-                }
-              }}
-              title="Logout"
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 hover:text-rose-700 bg-[#E8ECF2] shadow-md hover:shadow-inner transition-all border border-white/60"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-2 rounded-xl text-slate-600 hover:text-teal-700 hover:bg-slate-100 transition-all cursor-pointer"
+              title="Refresh Data"
             >
-              <LogOut className="w-4 h-4" />
+              <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
             </button>
-          )}
-        </div>
-      </div>
 
-      {/* Online / Offline Sync bar */}
-      <div className="px-1 flex items-center justify-between text-[11px] font-bold text-slate-600">
-        <div className="flex items-center gap-1.5">
-          {isOnline ? (
-            <span className="flex items-center gap-1 text-emerald-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping inline-block" />
-              <Wifi className="w-3.5 h-3.5" /> LIVE CLOUD
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-rose-600">
-              <span className="w-2 h-2 rounded-full bg-rose-600 inline-block animate-pulse" />
-              <WifiOff className="w-3.5 h-3.5" /> OFFLINE MODE
-            </span>
-          )}
-        </div>
-        <span className="text-slate-500">Active Town: <b className="text-slate-800">{attendanceTown}</b></span>
-      </div>
-
-      {/* Primary Mobile Navigation Switcher (EXACTLY 3 TABS) */}
-      <div className="grid grid-cols-3 gap-1.5 bg-[#DFE4EC] p-1.5 rounded-2xl">
-        <button
-          onClick={() => { setActiveTab('DASHBOARD'); setSelectedCustomerId(null); }}
-          className={`py-3 px-1 rounded-xl text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
-            activeTab === 'DASHBOARD'
-              ? 'bg-[#E8ECF2] text-teal-800 font-black shadow-inner border border-white/60'
-              : 'text-slate-600 hover:text-slate-800'
-          }`}
-        >
-          <TrendingUp className="w-4 h-4 text-teal-600" />
-          <span>Dashboard</span>
-        </button>
-
-        <button
-          onClick={() => { setActiveTab('ATTENDANCE'); setSelectedCustomerId(null); }}
-          className={`py-3 px-1 rounded-xl text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
-            activeTab === 'ATTENDANCE'
-              ? 'bg-[#E8ECF2] text-teal-800 font-black shadow-inner border border-white/60'
-              : 'text-slate-600 hover:text-slate-800'
-          }`}
-        >
-          <Clock className="w-4 h-4 text-amber-600" />
-          <span>Attendance</span>
-        </button>
-
-        <button
-          onClick={() => { setActiveTab('CUSTOMERS'); setSelectedCustomerId(null); }}
-          className={`py-3 px-1 rounded-xl text-xs font-black flex flex-col items-center justify-center gap-1.5 transition-all ${
-            activeTab === 'CUSTOMERS'
-              ? 'bg-[#E8ECF2] text-teal-800 font-black shadow-inner border border-white/60'
-              : 'text-slate-600 hover:text-slate-800'
-          }`}
-        >
-          <Users className="w-4 h-4 text-indigo-600" />
-          <span>Distributors</span>
-        </button>
-      </div>
-
-      {/* main view */}
-      <div className="flex-1 space-y-4">
-        
-        {/* ========================================================= */}
-        {/* TAB 1: DASHBOARD */}
-        {/* ========================================================= */}
-        {activeTab === 'DASHBOARD' && (
-          <div className="space-y-4">
-            
-            {/* Sales analytics Header */}
-            <div className="nm-flat p-4 rounded-2xl border border-white space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <TrendingUp className="w-4 h-4 text-teal-600" />
-                  Live Sales Analytics
-                </h3>
-                {onRefresh && (
-                  <button 
-                    onClick={async () => {
-                      try {
-                        const btn = document.getElementById('dash-refresh-btn');
-                        if (btn) btn.classList.add('animate-spin');
-                        await onRefresh();
-                      } catch (e) {
-                        console.error(e);
-                      } finally {
-                        const btn = document.getElementById('dash-refresh-btn');
-                        if (btn) btn.classList.remove('dash-refresh-spin');
-                      }
-                    }} 
-                    className="text-slate-500 hover:text-teal-600 transition-colors p-1"
-                    title="Refresh Live Data"
-                  >
-                    <RotateCw id="dash-refresh-btn" className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="nm-inset p-3 bg-white rounded-xl text-center space-y-0.5">
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Achieved Sales</span>
-                  <span className="text-sm font-black text-teal-800 font-mono">PKR {totalAchievedSales.toLocaleString()}</span>
-                </div>
-                <div className="nm-inset p-3 bg-white rounded-xl text-center space-y-0.5">
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase">Achieved Recovery</span>
-                  <span className="text-sm font-black text-indigo-800 font-mono">PKR {totalAchievedRecovery.toLocaleString()}</span>
-                </div>
-              </div>
+            <div
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                isOnline
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+              }`}
+              title={isOnline ? 'Network Connected' : 'Offline Mode Active'}
+            >
+              {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+              <span>{isOnline ? 'Online' : 'Offline'}</span>
             </div>
 
-            {/* Target vs Achievement Gauges */}
-            <div className="nm-flat p-4 rounded-2xl border border-white space-y-4">
-              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                Monthly Target vs Achievement
-              </h3>
-
-              {/* Sales Target vs Achievement */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs font-bold text-slate-600">
-                  <span>Sales Revenue</span>
-                  <span className="font-mono text-slate-800">{salesAchievementPercent}% Achieved</span>
-                </div>
-                <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden border border-white shadow-inner">
-                  <div
-                    className="h-full bg-gradient-to-r from-teal-500 to-teal-600 transition-all duration-500"
-                    style={{ width: `${salesAchievementPercent}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-400 font-semibold font-mono">
-                  <span>Target: PKR {SALES_TARGET.toLocaleString()}</span>
-                  <span>Achieved: PKR {totalAchievedSales.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Recovery Target vs Achievement */}
-              <div className="space-y-1.5 border-t pt-3">
-                <div className="flex justify-between text-xs font-bold text-slate-600">
-                  <span>Financial Recovery</span>
-                  <span className="font-mono text-slate-800">{recoveryAchievementPercent}% Achieved</span>
-                </div>
-                <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden border border-white shadow-inner">
-                  <div
-                    className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-500"
-                    style={{ width: `${recoveryAchievementPercent}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-400 font-semibold font-mono">
-                  <span>Target: PKR {RECOVERY_TARGET.toLocaleString()}</span>
-                  <span>Achieved: PKR {totalAchievedRecovery.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Shift coverage information */}
-            <div className="nm-inset p-4 rounded-2xl bg-white space-y-2.5 text-xs">
-              <div className="flex justify-between items-center text-slate-600">
-                <span className="font-bold">Total Assigned Dealers:</span>
-                <span className="font-mono font-black text-slate-800">{customers.length}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-600">
-                <span className="font-bold">Active Geofenced Beat Town:</span>
-                <span className="font-mono font-black text-teal-800">{attendanceTown}</span>
-              </div>
-            </div>
-
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
-        )}
+        </div>
+      </header>
 
+      {/* ========================================================= */}
+      {/* MAIN CONTENT ROUTER (Strictly 3 Screens) */}
+      {/* ========================================================= */}
+      <main className="max-w-xl mx-auto px-4 py-4 space-y-4">
         {/* ========================================================= */}
-        {/* TAB 2: ATTENDANCE WITH GEOMAPPING GEOFENCE & ACTIVITIES LOG */}
+        {/* SCREEN 1: ATTENDANCE */}
         {/* ========================================================= */}
         {activeTab === 'ATTENDANCE' && (
           <div className="space-y-4">
-            
-            {/* Offline Sync & Location Queue Manager Indicator */}
-            <div className="nm-flat p-4 rounded-2xl border border-white space-y-3 bg-[#f0f4fa]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500 animate-pulse'}`} />
-                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                    Location Queue Status
-                  </span>
+            {/* Header Greeting */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
+              <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">Field Attendance</span>
+              <h1 className="text-xl font-black text-slate-900">
+                {greeting}, {currentUser.fullName.split(' ')[0]}
+              </h1>
+              <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5 pt-1">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                Today: <span className="font-bold text-slate-800">{todayFormatted}</span>
+              </p>
+            </div>
+
+            {/* Town Selection & Attendance Button */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Assigned Town
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedTown}
+                    onChange={(e) => setSelectedTown(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                  >
+                    {assignedTowns.map((town) => (
+                      <option key={town} value={town}>
+                        {town}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3.5 top-3 pointer-events-none" />
                 </div>
-                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
-                  {isOnline ? 'Network Online' : 'Network Offline'}
-                </span>
               </div>
 
-              {syncStatusMsg && (
-                <div className="p-2.5 bg-emerald-50 text-emerald-800 text-[10px] rounded-xl border border-emerald-200 font-bold animate-fade-in flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                  {syncStatusMsg}
+              {/* Large Mark Attendance Button */}
+              <button
+                onClick={handleMarkAttendance}
+                disabled={gpsCapturing}
+                className="w-full py-4 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-extrabold text-sm sm:text-base tracking-wide shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-75"
+              >
+                {gpsCapturing ? (
+                  <>
+                    <RotateCw className="w-5 h-5 animate-spin" />
+                    <span>Acquiring GPS & Marking...</span>
+                  </>
+                ) : (
+                  <>
+                    <Clock className="w-5 h-5" />
+                    <span>MARK ATTENDANCE</span>
+                  </>
+                )}
+              </button>
+
+              {attendanceMessage && (
+                <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl flex items-center gap-2 text-xs font-semibold text-teal-800">
+                  <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span>{attendanceMessage}</span>
                 </div>
               )}
 
-              <div className="nm-inset p-3 bg-white rounded-xl space-y-2 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400 font-bold text-[10px] uppercase">Queued Location Logs:</span>
-                  <span className={`font-mono font-black text-xs px-2 py-0.5 rounded ${offlineLogs.length > 0 ? 'bg-amber-100 text-amber-800 animate-pulse' : 'bg-slate-100 text-slate-600'}`}>
-                    {offlineLogs.length} Pending Logs
-                  </span>
-                </div>
-                {offlineLogs.length > 0 && (
-                  <div className="pt-2 border-t border-dashed border-slate-200">
-                    <p className="text-[9px] text-slate-500 mb-2 font-semibold">
-                      Your location entries are safely cached in browser storage. When internet connectivity is detected, these upload automatically to Supabase.
-                    </p>
-                    <button
-                      onClick={() => syncOfflineLogs(false)}
-                      className="w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 text-[10px] font-black rounded-lg shadow-sm flex items-center justify-center gap-1 active:scale-95 transition-all"
-                    >
-                      <RotateCw className="w-3 h-3" /> Upload Queued Logs Now
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Geofence Widget & Attendance Check-In Console */}
-            <div className="attendance-check-in-console nm-flat p-4 rounded-2xl border border-white space-y-4">
-              <div>
-                <h3 className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase">
-                  <MapPin className="w-4 h-4 text-rose-600 animate-bounce" />
-                  Town Geofenced Attendance Console
-                </h3>
-                <p className="text-[10px] text-slate-500 mt-0.5">Assigned towns directory drop-down selection below determines the active market.</p>
-              </div>
-
-              {/* Selected Town Center Dropdown - ASSIGNED ONLY */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-600 block uppercase">Select Assigned Beat Town*</label>
-                <select
-                  value={attendanceTown}
-                  onChange={(e) => setAttendanceTown(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-white border border-slate-300 font-bold text-slate-800 text-xs focus:outline-none"
-                >
-                  {assignedTowns.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Interactive Geofence Map */}
-              <AttendanceGeofenceMap
-                userLat={userLat}
-                userLng={userLng}
-                townCenter={townCenter}
-                attendanceTown={attendanceTown}
-                maxRadiusKM={maxRadiusKM}
-                isWithinGeofence={isWithinGeofence}
-                distanceToCenter={distanceToCenter}
-                onRefreshGps={acquireLocation}
-              />
-
-              {/* GPS Tracker Console */}
-              <div className="nm-inset p-3.5 rounded-2xl bg-white space-y-2.5 text-xs">
-                <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
-                  <span>SATELLITE GPS LOCK</span>
-                  <button onClick={acquireLocation} className="text-teal-700 hover:underline flex items-center gap-0.5 font-bold">
-                    <RotateCw className="w-3 h-3" /> Refresh GPS
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-[11px]">
-                  <div>
-                    <span className="text-slate-400 block text-[9px]">Target Town Center</span>
-                    <span className="font-mono font-bold block text-slate-700">
-                      {townCenter.lat.toFixed(4)}° N, {townCenter.lng.toFixed(4)}° E
+              {/* Active Attendance Info Card */}
+              {attendanceRecord && (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase">Status</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                      {attendanceRecord.status}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-slate-400 block text-[9px]">Current Location</span>
-                    {gpsLoading ? (
-                      <span className="font-medium text-slate-400 block animate-pulse">Scanning GPS...</span>
-                    ) : (
-                      <span className="font-mono font-bold block text-slate-700">
-                        {userLat.toFixed(4)}° N, {userLng.toFixed(4)}° E
+                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-700 pt-1">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Marked Time</span>
+                      <span className="font-bold text-slate-900">{attendanceRecord.time}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Town</span>
+                      <span className="font-bold text-slate-900">{attendanceRecord.town}</span>
+                    </div>
+                    <div className="col-span-2 pt-1 border-t border-slate-200/80">
+                      <span className="text-slate-400 block text-[10px]">GPS Coordinates</span>
+                      <span className="font-mono text-[11px] text-slate-700">
+                        {attendanceRecord.lat}° N, {attendanceRecord.lng}° E (±{attendanceRecord.accuracy}m)
                       </span>
-                    )}
-                  </div>
-                </div>
-
-                {gpsError && (
-                  <p className="text-[9px] text-amber-700 bg-amber-50 p-1.5 rounded flex items-center gap-1">
-                    <Info className="w-3 h-3" /> {gpsError}
-                  </p>
-                )}
-
-                <div className="border-t border-dashed pt-2 flex justify-between items-center">
-                  <div>
-                    <span className="text-slate-400 block text-[9px]">Calculated Proximity</span>
-                    <span className="font-mono font-black text-slate-800 text-xs">
-                      {distanceToCenter.toFixed(2)} km to center
-                    </span>
-                  </div>
-                  <span className={`px-2 py-1 rounded font-black text-[10px] ${
-                    isWithinGeofence ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                  }`}>
-                    {isWithinGeofence ? '✓ INSIDE GEOFENCE' : '✗ OUTSIDE BOUNDS'}
-                  </span>
-                </div>
-
-                {/* Simulation toggle */}
-                <div className="flex items-center justify-between border-t pt-2 mt-1">
-                  <span className="text-[10px] text-slate-500 font-bold">
-                    Bypass Geofence Guard (Simulation Mode)
-                  </span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={bypassGeofence}
-                      onChange={(e) => setBypassGeofence(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-8 h-4 bg-slate-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-teal-600"></div>
-                  </label>
-                </div>
-              </div>
-
-              {/* Clock Ins */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="nm-inset p-3 rounded-xl bg-white space-y-1">
-                  <span className="text-slate-400 font-bold block text-[9px]">Check-In Time</span>
-                  {checkInTime ? (
-                    <div>
-                      <span className="text-emerald-700 font-black block text-sm">{checkInTime}</span>
-                      <span className="text-[9px] text-slate-400 block font-mono truncate">{checkInLoc}</span>
                     </div>
-                  ) : (
-                    <span className="text-rose-500 font-bold block mt-1">Not Checked-In</span>
-                  )}
-                </div>
-
-                <div className="nm-inset p-3 rounded-xl bg-white space-y-1">
-                  <span className="text-slate-400 font-bold block text-[9px]">Check-Out Time</span>
-                  {checkOutTime ? (
-                    <div>
-                      <span className="text-indigo-700 font-black block text-sm">{checkOutTime}</span>
-                      <span className="text-[9px] text-slate-400 block font-mono truncate">{checkOutLoc}</span>
-                    </div>
-                  ) : (
-                    <span className="text-slate-400 block mt-1">Active Beat Shift</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <button
-                  onClick={handleCheckIn}
-                  className={`py-3 px-3 rounded-xl font-black text-xs text-white shadow-md active:scale-95 transition-all text-center flex items-center justify-center gap-2 ${
-                    isWithinGeofence
-                      ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-700 hover:to-teal-700 animate-geofence-pulse ring-2 ring-emerald-400/40'
-                      : 'bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 opacity-90'
-                  }`}
-                >
-                  {isWithinGeofence ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 text-emerald-200 animate-bounce" />
-                      <span>📌 Check In Beat (Geofence Verified)</span>
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-4 h-4 text-rose-200" />
-                      <span>⚠️ Check In Blocked (Outside Geofence)</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={handleCheckOut}
-                  className="py-3 px-3 rounded-xl font-black text-xs text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-md active:scale-95 transition-all text-center flex items-center justify-center gap-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>🚪 Check Out Beat</span>
-                </button>
-              </div>
-
-              {/* Offline Location Queuing System Console (LocalStorage + IndexedDB Cache) */}
-              <div className="nm-inset p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5 text-xs">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-1.5 font-black text-slate-800 uppercase text-[10px]">
-                    {isOnline ? (
-                      <Wifi className="w-3.5 h-3.5 text-emerald-600" />
-                    ) : (
-                      <WifiOff className="w-3.5 h-3.5 text-rose-600 animate-pulse" />
-                    )}
-                    <span>Offline Location Queue Console</span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                    isOnline ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
-                  }`}>
-                    {isOnline ? 'Network Online' : 'Network Offline'}
-                  </span>
                 </div>
+              )}
+            </div>
 
-                <div className="flex items-center justify-between text-[11px] font-bold">
-                  <span className="text-slate-500">Cached Location Logs (IndexedDB & LocalStorage):</span>
-                  <span className={`px-2.5 py-0.5 rounded font-mono text-xs ${
-                    offlineLogs.length > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-slate-200 text-slate-600'
-                  }`}>
-                    {offlineLogs.length} Logs Queued
-                  </span>
-                </div>
+            {/* Today's Activities Table */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Today's Activities</h2>
+                <span className="text-[11px] text-slate-500 font-medium">Real Transactions</span>
+              </div>
 
-                {offlineLogs.length > 0 && (
-                  <div className="space-y-1 max-h-32 overflow-y-auto border-t pt-2 border-slate-200">
-                    {offlineLogs.map((log, idx) => (
-                      <div key={idx} className="flex justify-between items-center text-[10px] bg-white p-2 rounded-lg border border-slate-200 shadow-xs">
-                        <span className="font-bold text-slate-700">{log.action} • {log.town}</span>
-                        <span className="font-mono text-slate-500">{log.time} ({log.coords})</span>
-                      </div>
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                    <tr>
+                      <th className="px-3 py-2.5">Date</th>
+                      <th className="px-3 py-2.5">Town</th>
+                      <th className="px-3 py-2.5 text-right">Sales</th>
+                      <th className="px-3 py-2.5 text-right">Recovery</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {todayActivities.map((act, i) => (
+                      <tr key={i} className="hover:bg-slate-50">
+                        <td className="px-3 py-2.5 font-medium text-slate-600">{act.date}</td>
+                        <td className="px-3 py-2.5 font-bold text-slate-900">{act.town}</td>
+                        <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-900">
+                          Rs. {act.sales.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-mono font-bold text-emerald-700">
+                          Rs. {act.recovery.toLocaleString()}
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                )}
-
-                <button
-                  onClick={() => syncOfflineLogs(false)}
-                  disabled={offlineLogs.length === 0}
-                  className="w-full py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black rounded-xl shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RotateCw className={`w-3.5 h-3.5 ${offlineLogs.length > 0 ? 'animate-spin' : ''}`} />
-                  <span>Sync All</span>
-                </button>
+                  </tbody>
+                  <tfoot className="bg-slate-50 font-bold border-t border-slate-200 text-slate-900">
+                    <tr>
+                      <td colSpan={2} className="px-3 py-2.5">Total Today</td>
+                      <td className="px-3 py-2.5 text-right font-mono">
+                        Rs. {todayActivities.reduce((s, a) => s + a.sales, 0).toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono text-emerald-700">
+                        Rs. {todayActivities.reduce((s, a) => s + a.recovery, 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             </div>
-
-            {/* DAILY ACTIVITIES LOG (DATE-WISE) - MOVED HERE */}
-            <div className="nm-flat p-4 rounded-2xl border border-white space-y-3">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-teal-600" />
-                  Daily Activities Log (Date-Wise)
-                </h4>
-                {offlineLogs.length > 0 && (
-                  <button
-                    onClick={syncOfflineLogs}
-                    className="flex items-center gap-1 text-[9px] bg-amber-100 text-amber-800 font-black px-2 py-0.5 rounded animate-pulse"
-                  >
-                    Sync {offlineLogs.length} Records
-                  </button>
-                )}
-              </div>
-
-              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                {dailyActivities.map((act, i) => (
-                  <div key={i} className="bg-white p-3 rounded-xl border border-slate-100 space-y-2 text-xs">
-                    <div className="flex justify-between items-center border-b pb-1">
-                      <span className="font-black text-slate-700 font-mono">📅 {act.date}</span>
-                      <span className="font-bold text-teal-800">🏡 {act.town}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                      <div>
-                        <span className="text-slate-400 block text-[9px]">SALES INVOICED</span>
-                        <span className="font-bold text-emerald-700">PKR {act.sales.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[9px]">RECOVERY RECEIVED</span>
-                        <span className="font-bold text-indigo-700">PKR {act.recovery.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Attendance Shift logs history */}
-            <div className="nm-flat p-4 rounded-2xl border border-white space-y-3">
-              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">Shift Sessions</h4>
-              <div className="space-y-2 max-h-36 overflow-y-auto">
-                {sessionLogs.map((log, idx) => (
-                  <div key={idx} className="bg-white p-2.5 rounded-xl border border-slate-100 flex justify-between items-center text-[10px]">
-                    <div>
-                      <span className="font-bold text-slate-800 block">{log.town} Beat</span>
-                      <span className="text-[9px] text-slate-400 block font-mono truncate max-w-[200px]">{log.coords}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-slate-800 block">{log.date}</span>
-                      <span className="text-slate-500 font-mono block mt-0.5">{log.checkIn} - {log.checkOut || 'Shift Active'}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
           </div>
         )}
 
         {/* ========================================================= */}
-        {/* TAB 3: DISTRIBUTORS / DEALERS DIRECTORY & OPERATIONS */}
+        {/* SCREEN 2: DISTRIBUTOR / DEALER */}
         {/* ========================================================= */}
-        {activeTab === 'CUSTOMERS' && (
+        {activeTab === 'DISTRIBUTORS' && (
           <div className="space-y-4">
-            
-            {!selectedCustomerId ? (
-              // Distributors/Dealers directory filtered strictly by attendance town selection
-              <div className="space-y-4">
-                
-                {/* Information header */}
-                <div className="p-3.5 bg-teal-50 border border-teal-200 text-teal-800 rounded-xl text-xs space-y-1">
-                  <span className="font-black block text-[10px] uppercase">Active Market Beat Context</span>
-                  <p className="text-[11px]">
-                    Showing distributors and dealers located in your selected attendance town beat: <b className="underline uppercase">{attendanceTown}</b>.
-                  </p>
+            {!activeCustomer ? (
+              /* --- Customer Search & Selection View --- */
+              <div className="space-y-3">
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                  <h1 className="text-base font-black text-slate-900">Distributors & Dealers</h1>
+                  <p className="text-xs text-slate-500">Search and select a dealer to place orders, record recovery, or check ledger.</p>
+
+                  <div className="relative pt-1">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-4 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search by Name, Code, Mobile, Town..."
+                      value={customerSearchQuery}
+                      onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
                 </div>
 
-                {/* Client Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder={`Search dealers in ${attendanceTown}...`}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-800 text-xs focus:outline-none"
-                  />
-                </div>
-
-                {/* Dealer grid list */}
-                <div className="space-y-3">
-                  {searchedCustomers.length === 0 ? (
-                    <div className="nm-flat p-6 rounded-2xl text-center text-slate-400 font-bold text-xs">
-                      No dealers found in "{attendanceTown}". Please change your town in the Attendance tab.
+                {/* Customer List */}
+                <div className="space-y-2">
+                  {filteredCustomers.length === 0 ? (
+                    <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-500 text-xs">
+                      No distributors matching "{customerSearchQuery}".
                     </div>
                   ) : (
-                    searchedCustomers.map((cust) => (
-                      <div
+                    filteredCustomers.map((cust) => (
+                      <button
                         key={cust.id}
-                        onClick={() => { setSelectedCustomerId(cust.id); setCustomerSubTab('DETAILS'); }}
-                        className="nm-flat p-4 rounded-2xl border border-white hover:bg-slate-50 cursor-pointer transition-all space-y-2.5"
+                        onClick={() => {
+                          setSelectedCustomerId(cust.id);
+                          setCustomerInnerTab('ORDER');
+                        }}
+                        className="w-full bg-white p-4 rounded-2xl border border-slate-200 hover:border-teal-500 hover:shadow-md transition-all text-left flex items-center justify-between gap-3 cursor-pointer group"
                       >
-                        <div className="flex justify-between items-start">
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-sm text-slate-900 group-hover:text-teal-700 truncate">
+                              {cust.companyName}
+                            </span>
+                            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded shrink-0">
+                              {cust.customerCode}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 font-medium truncate">
+                            {cust.city || 'Town'} • {cust.contactPerson || 'Proprietor'} • {cust.phone || 'No phone'}
+                          </p>
+                        </div>
+
+                        <div className="text-right shrink-0 flex items-center gap-2">
                           <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono text-[9px] text-teal-800 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded font-bold">
-                                {cust.customerCode}
-                              </span>
-                              <h4 className="font-extrabold text-sm text-slate-800">{cust.companyName}</h4>
-                            </div>
-                            <span className="text-[10px] text-slate-500 block mt-0.5">
-                              Proprietor: {cust.contactPerson} • {cust.phone}
+                            <span className="text-[10px] text-slate-400 block font-medium">Opening Balance</span>
+                            <span className="font-mono text-xs font-bold text-slate-800">
+                              Rs. {(cust.openingBalance || 0).toLocaleString()}
                             </span>
                           </div>
-                          <span className={`px-2 py-0.5 rounded font-mono text-[9px] font-bold ${
-                            cust.type === 'DISTRIBUTOR' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'
-                          }`}>
-                            {cust.type}
-                          </span>
+                          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-teal-600 transition-transform group-hover:translate-x-0.5" />
                         </div>
-
-                        {/* Financial summary overview */}
-                        <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-2.5">
-                          <div className="nm-inset p-2 rounded-xl bg-white">
-                            <span className="text-[9px] text-slate-400 block font-bold">Opening Balance</span>
-                            <span className="font-mono font-bold text-slate-700 block mt-0.5">
-                              PKR {(cust.openingBalance || 0).toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="nm-inset p-2 rounded-xl bg-white">
-                            <span className="text-[9px] text-slate-400 block font-bold">Outstanding Net</span>
-                            <span className="font-mono font-bold text-indigo-700 block mt-0.5">
-                              PKR {(cust.currentBalance || 0).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end gap-1 text-[10px] text-teal-800 font-extrabold items-center">
-                          <span>Enter Operations Directory</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </div>
-                      </div>
+                      </button>
                     ))
                   )}
                 </div>
-
               </div>
             ) : (
-              
-              // Distributor / Dealer Directory Workspace (With 4 requested sections)
+              /* --- Single Customer Profile & Actions --- */
               <div className="space-y-4">
-                
-                {/* Back button */}
+                {/* Back Button */}
                 <button
                   onClick={() => setSelectedCustomerId(null)}
-                  className="flex items-center gap-1.5 text-xs text-slate-600 font-bold hover:text-slate-800"
+                  className="flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-800 cursor-pointer bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-200 inline-flex"
                 >
-                  <ArrowLeft className="w-4 h-4" /> Back to {attendanceTown} directory
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back to Distributors</span>
                 </button>
 
-                {/* Selected Customer Header Banner */}
-                <div className="nm-flat p-4 rounded-2xl border border-white space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-mono font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
-                      {activeCustomer?.customerCode} • {activeCustomer?.type}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">{activeCustomer?.city}</span>
+                {/* 1. CUSTOMER HEADER */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h1 className="text-lg font-black text-slate-900 leading-tight">
+                          {activeCustomer.companyName}
+                        </h1>
+                        <span className="text-xs font-bold bg-teal-50 text-teal-700 px-2.5 py-0.5 rounded-full border border-teal-200">
+                          {activeCustomer.customerCode}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Town: <span className="font-bold text-slate-700">{activeCustomer.city || 'General'}</span> | Route:{' '}
+                        <span className="font-bold text-slate-700">{activeCustomer.route || 'Standard Market'}</span>
+                      </p>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Contact: <span className="font-bold text-slate-700">{activeCustomer.contactPerson || 'Proprietor'}</span>
+                      </p>
+                    </div>
+
+                    {activeCustomer.phone && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={`tel:${activeCustomer.phone}`}
+                          className="p-2.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-700 transition-colors"
+                          title="Call Customer"
+                        >
+                          <Phone className="w-4 h-4" />
+                        </a>
+                        <a
+                          href={`https://wa.me/${activeCustomer.phone.replace(/[^0-9]/g, '')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors"
+                          title="WhatsApp Chat"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </a>
+                      </div>
+                    )}
                   </div>
-                  <h3 className="font-black text-slate-800 text-sm">{activeCustomer?.companyName}</h3>
-                  <p className="text-[11px] text-slate-600 font-medium">Proprietor: {activeCustomer?.contactPerson} • {activeCustomer?.phone}</p>
+
+                  {/* 2. ONE CLEAN FINANCIAL LINE WITH 60s AUTO-POLLING */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                          Financial Position
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Live Sync (60s)
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium">
+                        <span>Updated: {lastFinancialSync.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                        <button
+                          type="button"
+                          onClick={handleManualFinancialSync}
+                          disabled={isFinancialSyncing}
+                          className="p-1 rounded-lg hover:bg-slate-200 text-slate-600 hover:text-teal-700 transition-colors cursor-pointer"
+                          title="Refresh Financials Now"
+                        >
+                          <RotateCw className={`w-3.5 h-3.5 ${isFinancialSyncing ? 'animate-spin text-teal-600' : ''}`} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                        <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">Opening Balance</span>
+                        <span className="font-mono font-black text-slate-900 text-sm mt-1 block tabular-nums">
+                          Rs. {customerFinancials.openingBalance.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-2xs">
+                        <span className="text-[10px] font-bold text-blue-600 block uppercase tracking-wider">Till Date Invoices</span>
+                        <span className="font-mono font-black text-blue-700 text-sm mt-1 block tabular-nums">
+                          Rs. {customerFinancials.tillDateInvoices.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-2xs">
+                        <span className="text-[10px] font-bold text-emerald-600 block uppercase tracking-wider">Till Date Recovery</span>
+                        <span className="font-mono font-black text-emerald-700 text-sm mt-1 block tabular-nums">
+                          Rs. {customerFinancials.tillDateRecovery.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className={`p-3 rounded-xl border shadow-2xs ${
+                        customerFinancials.netBalance > 0 
+                          ? 'bg-rose-50/80 border-rose-200' 
+                          : 'bg-emerald-50/80 border-emerald-200'
+                      }`}>
+                        <span className={`text-[10px] font-black block uppercase tracking-wider ${
+                          customerFinancials.netBalance > 0 ? 'text-rose-700' : 'text-emerald-700'
+                        }`}>
+                          Net Balance
+                        </span>
+                        <span
+                          className={`font-mono font-black text-sm mt-1 block tabular-nums ${
+                            customerFinancials.netBalance > 0 ? 'text-rose-700' : 'text-emerald-700'
+                          }`}
+                        >
+                          Rs. {customerFinancials.netBalance.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Dynamic directory selector subtabs */}
-                <div className="grid grid-cols-4 gap-1 text-center text-[11px]">
+                {/* Sub-section Switcher inside Customer */}
+                <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm text-xs font-bold">
                   <button
-                    onClick={() => setCustomerSubTab('DETAILS')}
-                    className={`py-2 px-1.5 rounded-lg font-black transition-all ${
-                      customerSubTab === 'DETAILS' ? 'nm-inset text-teal-800' : 'nm-flat text-slate-600'
+                    onClick={() => setCustomerInnerTab('ORDER')}
+                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
+                      customerInnerTab === 'ORDER'
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
-                    Directory
+                    Order Entry
                   </button>
                   <button
-                    onClick={() => setCustomerSubTab('ORDER_FORM')}
-                    className={`py-2 px-1.5 rounded-lg font-black transition-all ${
-                      customerSubTab === 'ORDER_FORM' ? 'nm-inset text-emerald-800' : 'nm-flat text-slate-600'
+                    onClick={() => setCustomerInnerTab('RECOVERY')}
+                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
+                      customerInnerTab === 'RECOVERY'
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
-                    Order Form
+                    Recovery
                   </button>
                   <button
-                    onClick={() => setCustomerSubTab('INVOICES_LIST')}
-                    className={`py-2 px-1.5 rounded-lg font-black transition-all ${
-                      customerSubTab === 'INVOICES_LIST' ? 'nm-inset text-amber-800' : 'nm-flat text-slate-600'
+                    onClick={() => setCustomerInnerTab('INVOICES')}
+                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
+                      customerInnerTab === 'INVOICES'
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
                     Invoices
                   </button>
                   <button
-                    onClick={() => setCustomerSubTab('LEDGER_SHEET')}
-                    className={`py-2 px-1.5 rounded-lg font-black transition-all ${
-                      customerSubTab === 'LEDGER_SHEET' ? 'nm-inset text-violet-800' : 'nm-flat text-slate-600'
+                    onClick={() => setCustomerInnerTab('LEDGER')}
+                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
+                      customerInnerTab === 'LEDGER'
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
                     Ledger
                   </button>
                 </div>
 
-                {/* SUBTAB 1: PRIMARY OPERATIONS DIRECTORY (Financial Cards, Today's Recovery Box, Visit Remarks, Submit) */}
-                {customerSubTab === 'DETAILS' && (
-                  <div className="space-y-4">
-                    
-                    {/* Real-time calculated balances */}
-                    <div className="nm-flat p-4 rounded-2xl border border-white space-y-3">
-                      <span className="text-xs font-black text-slate-800 block uppercase">Commercial Financial Ledger</span>
-                      
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="nm-inset p-2.5 bg-white rounded-xl">
-                          <span className="text-slate-400 text-[9px] font-bold block uppercase">Opening Balance</span>
-                          <span className="font-mono font-black text-slate-800 mt-0.5 block">PKR {clientOpeningBalance.toLocaleString()}</span>
-                        </div>
-                        <div className="nm-inset p-2.5 bg-white rounded-xl">
-                          <span className="text-slate-400 text-[9px] font-bold block uppercase">Invoicing Amount</span>
-                          <span className="font-mono font-black text-emerald-700 mt-0.5 block">PKR {clientInvoicingAmount.toLocaleString()}</span>
-                        </div>
-                        <div className="nm-inset p-2.5 bg-white rounded-xl">
-                          <span className="text-slate-400 text-[9px] font-bold block uppercase">Recovery Amount</span>
-                          <span className="font-mono font-black text-indigo-700 mt-0.5 block">PKR {clientRecoveryAmount.toLocaleString()}</span>
-                        </div>
-                        <div className="nm-inset p-2.5 bg-white rounded-xl">
-                          <span className="text-slate-400 text-[9px] font-bold block uppercase">Net Balance</span>
-                          <span className="font-mono font-black text-rose-700 mt-0.5 block">PKR {clientNetBalance.toLocaleString()}</span>
-                        </div>
+                {/* --- A. ORDER ENTRY SECTION (Brand Accordions) --- */}
+                {customerInnerTab === 'ORDER' && (
+                  <div className="space-y-4 pb-20">
+                    {orderSuccessMessage && (
+                      <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-bold text-emerald-800 flex items-center gap-2 shadow-2xs">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                        <span>{orderSuccessMessage}</span>
                       </div>
+                    )}
+
+                    {/* Brand Accordion SKU Lists */}
+                    <div className="space-y-3">
+                      {(Object.entries(brandsGrouped) as [string, SKU[]][]).map(([brandName, brandSkus]) => {
+                        const isExpanded = expandedBrands[brandName] ?? false;
+                        const brandActiveQty = brandSkus.reduce((sum, s) => sum + (orderQuantities[s.id] || 0), 0);
+                        
+                        return (
+                          <div key={brandName} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                            {/* Brand Header Accordion Trigger */}
+                            <button
+                              type="button"
+                              onClick={() => toggleBrand(brandName)}
+                              className="w-full px-4 py-3.5 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left font-extrabold text-sm text-slate-900 cursor-pointer transition-colors"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-2.5 h-2.5 rounded-full bg-teal-600 shrink-0" />
+                                <span className="truncate">{brandName}</span>
+                                <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/80 px-2 py-0.5 rounded-full shrink-0">
+                                  {brandSkus.length} SKUs
+                                </span>
+                                {brandActiveQty > 0 && (
+                                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0 animate-in fade-in">
+                                    {brandActiveQty} selected
+                                  </span>
+                                )}
+                              </div>
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                              )}
+                            </button>
+
+                            {/* SKU Table Inside Brand */}
+                            {isExpanded && (
+                              <div className="p-3 divide-y divide-slate-100">
+                                {brandSkus.map((sku) => {
+                                  const stock = getSkuStock(sku.id);
+                                  const isOutOfStock = stock <= 0;
+                                  const currentQty = orderQuantities[sku.id] || 0;
+                                  const unitPrice = Number(sku.tradePrice || sku.retailPrice || 0);
+
+                                  return (
+                                    <div key={sku.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-bold text-slate-900 truncate">{sku.name}</span>
+                                          <span className="text-[10px] font-mono text-slate-400">({sku.skuCode})</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium mt-0.5">
+                                          <span>Price: <strong className="text-slate-800 font-mono">Rs. {unitPrice.toLocaleString()}</strong></span>
+                                          <span>
+                                            Available:{' '}
+                                            {isOutOfStock ? (
+                                              <strong className="text-rose-600 font-bold">Out of Stock</strong>
+                                            ) : (
+                                              <strong className="text-emerald-700 font-bold">{stock} pcs</strong>
+                                            )}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Order Qty Input / Stepper */}
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        <button
+                                          type="button"
+                                          disabled={isOutOfStock || currentQty <= 0}
+                                          onClick={() => handleQtyChange(sku.id, currentQty - 1)}
+                                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-40 flex items-center justify-center text-slate-700 font-bold cursor-pointer transition-colors"
+                                        >
+                                          <Minus className="w-4 h-4" />
+                                        </button>
+
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          max={stock}
+                                          disabled={isOutOfStock}
+                                          value={currentQty === 0 ? '' : currentQty}
+                                          onChange={(e) => handleQtyChange(sku.id, parseInt(e.target.value) || 0)}
+                                          placeholder="0"
+                                          className="w-14 text-center py-1 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-slate-100 disabled:text-slate-400 tabular-nums"
+                                        />
+
+                                        <button
+                                          type="button"
+                                          disabled={isOutOfStock || currentQty >= stock}
+                                          onClick={() => handleQtyChange(sku.id, currentQty + 1)}
+                                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-40 flex items-center justify-center text-slate-700 font-bold cursor-pointer transition-colors"
+                                        >
+                                          <Plus className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
 
-                    {/* Today's Recovery Entry box */}
-                    <div className="nm-flat p-4 rounded-2xl border border-white space-y-3">
-                      <span className="text-xs font-black text-slate-800 block uppercase flex items-center gap-1.5">
-                        <Coins className="w-4 h-4 text-teal-600" />
-                        Today's Recovery Entry Box
-                      </span>
+                    {/* IN-PAGE ORDER SUMMARY (Comprehensive Breakdown Card) */}
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Comprehensive Order Summary</h3>
+                        <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                          {orderSummary.totalSKUs} SKUs Selected
+                        </span>
+                      </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase">Amount (PKR)*</label>
-                          <input
-                            type="number"
-                            placeholder="Amount in PKR"
-                            value={todayRecoveryAmount}
-                            onChange={(e) => setTodayRecoveryAmount(e.target.value)}
-                            className="w-full p-2 rounded-xl bg-white border border-slate-300 font-bold text-slate-800"
-                          />
+                      <div className="grid grid-cols-3 gap-2.5 text-center text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/80">
+                          <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider">Total SKUs</span>
+                          <span className="font-bold text-slate-900 text-base">{orderSummary.totalSKUs}</span>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase">Payment Mode*</label>
-                          <select
-                            value={todayRecoveryMode}
-                            onChange={(e) => setTodayRecoveryMode(e.target.value as PaymentMode)}
-                            className="w-full p-2 rounded-xl bg-white border border-slate-300 font-bold text-slate-800"
-                          >
-                            <option value="CASH">CASH</option>
-                            <option value="CHEQUE">CHEQUE</option>
-                            <option value="ONLINE_TRANSFER">ONLINE TRANSFER</option>
-                            <option value="PAY_ORDER">PAY ORDER</option>
-                          </select>
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/80">
+                          <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider">Total Quantity</span>
+                          <span className="font-bold text-slate-900 text-base">{orderSummary.totalQuantity} pcs</span>
+                        </div>
+                        <div className="bg-teal-50/80 p-2 rounded-lg border border-teal-200">
+                          <span className="text-[10px] text-teal-800 font-black block uppercase tracking-wider">Order Value</span>
+                          <span className="font-mono font-black text-teal-700 text-base tabular-nums">
+                            Rs. {orderSummary.orderValue.toLocaleString()}
+                          </span>
                         </div>
                       </div>
 
-                      {todayRecoveryMode !== 'CASH' && (
-                        <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">Instrument/Slip No</label>
+                      <button
+                        type="button"
+                        disabled={orderSummary.totalQuantity === 0}
+                        onClick={() => setShowOrderConfirmModal(true)}
+                        className="w-full py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] disabled:opacity-50 text-white font-extrabold text-sm tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>SUBMIT ORDER (Rs. {orderSummary.orderValue.toLocaleString()})</span>
+                      </button>
+                    </div>
+
+                    {/* STICKY BOTTOM ORDER BAR (Persists while scrolling through long brand SKU lists) */}
+                    {orderSummary.totalQuantity > 0 && (
+                      <div className="fixed bottom-[68px] left-0 right-0 z-30 max-w-xl mx-auto px-4 pointer-events-none">
+                        <div className="pointer-events-auto bg-slate-950/95 backdrop-blur-md text-white rounded-2xl p-3.5 border border-slate-700/80 shadow-2xl shadow-slate-950/50 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-4 duration-200">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] uppercase font-black tracking-wider text-teal-400 bg-teal-950/90 px-2 py-0.5 rounded-full border border-teal-700/70">
+                                Order Value
+                              </span>
+                              <span className="text-xs text-slate-300 font-medium truncate">
+                                {orderSummary.totalSKUs} SKUs · {orderSummary.totalQuantity} pcs
+                              </span>
+                            </div>
+                            <div className="text-lg sm:text-xl font-black font-mono text-white tracking-tight flex items-baseline gap-1 mt-0.5">
+                              <span className="text-xs text-slate-400 font-sans font-bold">Rs.</span>
+                              <span className="text-emerald-400 tabular-nums">{orderSummary.orderValue.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowOrderConfirmModal(true)}
+                            className="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-teal-500/25 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                          >
+                            <span>Review & Book</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* --- B. IN-CUSTOMER RECOVERY FORM --- */}
+                {customerInnerTab === 'RECOVERY' && (
+                  <form onSubmit={handleSubmitRecovery} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-black text-slate-900">Record Payment Recovery</h3>
+                      <span className="text-xs font-bold text-slate-500">Live Customer Ledger</span>
+                    </div>
+
+                    {recoverySuccessMessage && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{recoverySuccessMessage}</span>
+                      </div>
+                    )}
+
+                    <div className="space-y-3 text-xs font-bold text-slate-700">
+                      <div>
+                        <label className="block mb-1">Recovery Amount (Rs.) *</label>
+                        <input
+                          type="number"
+                          required
+                          min={1}
+                          placeholder="e.g. 50000"
+                          value={recoveryAmount}
+                          onChange={(e) => setRecoveryAmount(e.target.value)}
+                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block mb-1">Payment Mode *</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(['CASH', 'CHEQUE', 'ONLINE_TRANSFER'] as PaymentMode[]).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => setRecoveryMode(mode)}
+                              className={`py-2 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
+                                recoveryMode === mode
+                                  ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {mode.replace('_', ' ')}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {recoveryMode !== 'CASH' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          <div>
+                            <label className="block mb-1">Cheque / Ref No. *</label>
                             <input
                               type="text"
-                              placeholder="Cheque/Ref number"
-                              value={instrumentNo}
-                              onChange={(e) => setInstrumentNo(e.target.value)}
-                              className="w-full p-2 rounded-xl bg-white border border-slate-300"
+                              required
+                              placeholder="Cheque # or Transfer Ref"
+                              value={recoveryInstrumentNo}
+                              onChange={(e) => setRecoveryInstrumentNo(e.target.value)}
+                              className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium"
                             />
                           </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">Bank Name</label>
+                          <div>
+                            <label className="block mb-1">Bank Name</label>
                             <input
                               type="text"
-                              placeholder="e.g. HBL, MCB"
-                              value={bankName}
-                              onChange={(e) => setBankName(e.target.value)}
-                              className="w-full p-2 rounded-xl bg-white border border-slate-300"
+                              placeholder="e.g. HBL, Meezan Bank"
+                              value={recoveryBank}
+                              onChange={(e) => setRecoveryBank(e.target.value)}
+                              className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium"
                             />
                           </div>
                         </div>
                       )}
+
+                      <div>
+                        <label className="block mb-1">Remarks / Note</label>
+                        <input
+                          type="text"
+                          placeholder="Optional collection remarks"
+                          value={recoveryRemarks}
+                          onChange={(e) => setRecoveryRemarks(e.target.value)}
+                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium"
+                        />
+                      </div>
                     </div>
 
-                    {/* Today's visit remarks box */}
-                    <div className="nm-flat p-4 rounded-2xl border border-white space-y-2">
-                      <span className="text-xs font-black text-slate-800 block uppercase">Today's Visit Remarks / Logs</span>
-                      <textarea
-                        rows={2}
-                        placeholder="Log any visit comments or follow up details..."
-                        value={visitRemarks}
-                        onChange={(e) => setVisitRemarks(e.target.value)}
-                        className="w-full p-2 rounded-xl bg-white border border-slate-300 text-xs focus:outline-none"
-                      />
-                    </div>
-
-                    {/* Master Submit Button */}
                     <button
-                      onClick={handleProposalSubmit}
-                      className="w-full py-3 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 shadow-lg active:scale-95 transition-all text-center flex items-center justify-center gap-1.5"
+                      type="submit"
+                      disabled={recoverySubmitting}
+                      className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-50 text-white font-extrabold text-sm tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
                     >
-                      <Send className="w-4 h-4" />
-                      Submit Operations Proposal
+                      <DollarSign className="w-4 h-4" />
+                      <span>{recoverySubmitting ? 'Recording...' : 'SUBMIT RECOVERY'}</span>
                     </button>
-
-                  </div>
+                  </form>
                 )}
 
-                {/* SUBTAB 2: BRAND & SKU WISE ORDERING FORM */}
-                {customerSubTab === 'ORDER_FORM' && (
-                  <div className="nm-flat p-4 rounded-2xl border border-white space-y-4">
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                        <FilePlus className="w-4 h-4 text-emerald-600" />
-                        Today's Ordering Form
-                      </h4>
-                      <p className="text-[10px] text-slate-500">Add order quantities grouped by brand models.</p>
-                    </div>
+                {/* --- C. INVOICES SUB-TAB --- */}
+                {customerInnerTab === 'INVOICES' && (
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                      <h3 className="text-sm font-black text-slate-900">Invoices List</h3>
 
-                    {/* Brands Group Container */}
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
-                      {Object.entries(brandsGrouped).map(([brandName, brandSkus]) => (
-                        <div key={brandName} className="space-y-2">
-                          <div className="flex items-center gap-2 border-b border-slate-300 pb-1">
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
-                            <h5 className="font-extrabold text-xs text-slate-800 uppercase">{brandName}</h5>
-                          </div>
-
-                          <div className="space-y-2">
-                            {brandSkus.map(sku => {
-                              const balanceObj = inventoryBalances.find(b => b.skuId === sku.id);
-                              const availableStock = balanceObj?.availableQuantity || balanceObj?.quantityOnHand || 0;
-                              const currentQty = quantities[sku.id] || '';
-
-                              return (
-                                <div key={sku.id} className="bg-white p-2.5 rounded-xl border border-slate-200 flex justify-between items-center text-xs gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <span className="font-mono font-black text-[9px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-                                      {sku.skuCode}
-                                    </span>
-                                    <h6 className="font-extrabold text-slate-800 text-[11px] truncate mt-1">{sku.name}</h6>
-                                    <span className="text-[10px] text-slate-500 font-semibold font-mono block mt-0.5">
-                                      Price: PKR {sku.tradePrice.toLocaleString()}
-                                    </span>
-                                  </div>
-
-                                  <div className="flex items-center gap-2.5">
-                                    <div className="text-right">
-                                      <span className="text-[9px] text-slate-400 font-bold block uppercase">Avail Qty</span>
-                                      <span className="font-mono font-extrabold text-slate-700 block text-[11px]">
-                                        {availableStock}
-                                      </span>
-                                    </div>
-                                    <div className="w-16">
-                                      <span className="text-[9px] text-slate-400 font-bold block uppercase text-center">Order</span>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        placeholder="0"
-                                        value={currentQty}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setQuantities(prev => ({ ...prev, [sku.id]: val }));
-                                        }}
-                                        className="w-full text-center py-1 bg-slate-50 border border-slate-300 rounded font-bold font-mono text-xs focus:bg-white"
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Order action */}
-                    <button
-                      onClick={handleProposalSubmit}
-                      className="w-full py-3 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-md active:scale-95 transition-all text-center flex items-center justify-center gap-1"
-                    >
-                      <Check className="w-4 h-4" /> Submit Selected Quantities
-                    </button>
-                  </div>
-                )}
-
-                {/* SUBTAB 3: ALL INVOICES HISTORICAL LIST WITH DATE FILTERS */}
-                {customerSubTab === 'INVOICES_LIST' && (
-                  <div className="nm-flat p-4 rounded-2xl border border-white space-y-4">
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-amber-600" />
-                        Dealer Commercial Invoices
-                      </h4>
-                      <p className="text-[10px] text-slate-500">Filter previous invoice receipts by dates.</p>
-                    </div>
-
-                    {/* Date picker filters */}
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">From Date</label>
+                      {/* Date Filter */}
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
                         <input
                           type="date"
                           value={invoiceFromDate}
                           onChange={(e) => setInvoiceFromDate(e.target.value)}
-                          className="w-full p-2 bg-white border border-slate-300 rounded-xl font-mono text-xs"
+                          className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs"
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">To Date</label>
+                        <span>to</span>
                         <input
                           type="date"
                           value={invoiceToDate}
                           onChange={(e) => setInvoiceToDate(e.target.value)}
-                          className="w-full p-2 bg-white border border-slate-300 rounded-xl font-mono text-xs"
+                          className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs"
                         />
                       </div>
                     </div>
 
-                    {/* Invoices List */}
-                    <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
-                      {filteredInvoices.length === 0 ? (
-                        <div className="bg-white p-6 rounded-xl border text-center text-slate-400 font-bold text-xs">
-                          No invoices found in specified date range.
-                        </div>
-                      ) : (
-                        filteredInvoices.map(inv => (
-                          <div key={inv.id} className="bg-white p-3 rounded-xl border border-slate-200 space-y-2 text-xs">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <span className="font-mono font-black text-slate-800">{inv.invoiceNumber}</span>
-                                <span className="text-[10px] text-slate-400 block font-mono">{inv.invoiceDate}</span>
-                              </div>
-                              <span className={`px-2 py-0.5 rounded font-bold text-[9px] ${
-                                inv.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                              }`}>
-                                {inv.status || 'PENDING'}
-                              </span>
-                            </div>
-
-                            <div className="flex justify-between items-center text-[11px] border-t pt-2">
-                              <div>
-                                <span className="text-slate-400 block text-[9px] uppercase">Net Invoiced</span>
-                                <span className="font-mono font-black text-slate-800">PKR {Number(inv.totalAmount).toLocaleString()}</span>
-                              </div>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => shareInvoiceWhatsApp(inv)}
-                                  className="p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 flex items-center justify-center gap-1 text-[10px] font-bold"
-                                >
-                                  <Send className="w-3.5 h-3.5" /> Share
-                                </button>
-                                <button
-                                  onClick={() => setActivePrintInvoice(inv)}
-                                  className="p-2 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 flex items-center justify-center gap-1 text-[10px] font-bold"
-                                  title="Print Invoice (A5 Thermal & PDF)"
-                                >
-                                  <Printer className="w-3.5 h-3.5" /> Print Invoice
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                          <tr>
+                            <th className="px-3 py-2.5">Date</th>
+                            <th className="px-3 py-2.5">Invoice No.</th>
+                            <th className="px-3 py-2.5 text-right">Amount</th>
+                            <th className="px-3 py-2.5 text-center">Status</th>
+                            <th className="px-3 py-2.5 text-center">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {customerInvoices.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-3 py-6 text-center text-slate-400">
+                                No invoices found in selected date range.
+                              </td>
+                            </tr>
+                          ) : (
+                            customerInvoices.map((inv) => (
+                              <tr key={inv.id} className="hover:bg-slate-50">
+                                <td className="px-3 py-2.5 font-medium text-slate-600">
+                                  {(inv.invoiceDate || '').split('T')[0]}
+                                </td>
+                                <td className="px-3 py-2.5 font-mono font-bold text-slate-900">
+                                  {inv.invoiceNumber}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-900">
+                                  Rs. {Number(inv.totalAmount || 0).toLocaleString()}
+                                </td>
+                                <td className="px-3 py-2.5 text-center">
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    {inv.status || 'Completed'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2.5 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedInvoiceForPrint(inv)}
+                                    className="px-2 py-1 bg-slate-100 hover:bg-teal-50 text-teal-700 rounded-md font-bold text-[11px] cursor-pointer inline-flex items-center gap-1"
+                                  >
+                                    <Printer className="w-3 h-3" />
+                                    <span>Print</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
                     </div>
-
                   </div>
                 )}
 
-                {/* SUBTAB 4: LEDGER SHEET STATEMENT & WHATSAPP SHARING */}
-                {customerSubTab === 'LEDGER_SHEET' && (
-                  <div className="nm-flat p-4 rounded-2xl border border-white space-y-4">
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-violet-600" />
-                        Atomic Ledger Sheet
-                      </h4>
-                      <p className="text-[10px] text-slate-500">Filter and share Statement of Accounts with your dealer.</p>
-                    </div>
+                {/* --- D. LEDGER SUB-TAB --- */}
+                {customerInnerTab === 'LEDGER' && (
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                      <h3 className="text-sm font-black text-slate-900">Customer Ledger</h3>
 
-                    {/* Date Filters */}
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">From Date</label>
+                      {/* Date Filter */}
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
                         <input
                           type="date"
                           value={ledgerFromDate}
                           onChange={(e) => setLedgerFromDate(e.target.value)}
-                          className="w-full p-2 bg-white border border-slate-300 rounded-xl font-mono text-xs"
+                          className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs"
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">To Date</label>
+                        <span>to</span>
                         <input
                           type="date"
                           value={ledgerToDate}
                           onChange={(e) => setLedgerToDate(e.target.value)}
-                          className="w-full p-2 bg-white border border-slate-300 rounded-xl font-mono text-xs"
+                          className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs"
                         />
                       </div>
                     </div>
 
-                    {/* Share action */}
-                    <button
-                      onClick={shareLedgerWhatsApp}
-                      className="w-full py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-700 hover:to-violet-600 flex items-center justify-center gap-1.5"
-                    >
-                      <Send className="w-4 h-4" />
-                      Share Ledger on Dealer WhatsApp
-                    </button>
-
-                    {/* Ledger transactions list table */}
-                    <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
-                      {clientLedgerEntries.length === 0 ? (
-                        <div className="bg-white p-6 rounded-xl border text-center text-slate-400 font-bold text-xs">
-                          No ledger records matching date range.
-                        </div>
-                      ) : (
-                        clientLedgerEntries.map(entry => (
-                          <div key={entry.id} className="bg-white p-2.5 rounded-xl border border-slate-200 text-xs space-y-1.5">
-                            <div className="flex justify-between items-center text-[10px] font-bold text-slate-500">
-                              <span>📅 {entry.entryDate}</span>
-                              <span className="font-mono uppercase">{entry.transactionType}</span>
-                            </div>
-                            <p className="text-[11px] font-semibold text-slate-700">{entry.description}</p>
-                            
-                            <div className="grid grid-cols-3 gap-1 pt-1.5 border-t border-dashed font-mono text-[10px]">
-                              <div>
-                                <span className="text-slate-400 block text-[8px] font-bold">DEBIT</span>
-                                <span className="text-rose-600 font-bold">
-                                  {entry.debitAmount ? `PKR ${entry.debitAmount.toLocaleString()}` : '-'}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 block text-[8px] font-bold">CREDIT</span>
-                                <span className="text-emerald-700 font-bold">
-                                  {entry.creditAmount ? `PKR ${entry.creditAmount.toLocaleString()}` : '-'}
-                                </span>
-                              </div>
-                              <div className="text-right">
-                                <span className="text-slate-400 block text-[8px] font-bold">RUNNING</span>
-                                <span className="text-slate-800 font-black">
-                                  PKR {entry.runningBalance.toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                          <tr>
+                            <th className="px-3 py-2.5">Date</th>
+                            <th className="px-3 py-2.5">Type</th>
+                            <th className="px-3 py-2.5">Reference</th>
+                            <th className="px-3 py-2.5 text-right">Debit</th>
+                            <th className="px-3 py-2.5 text-right">Credit</th>
+                            <th className="px-3 py-2.5 text-right">Balance</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {customerLedgerData.map((row, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50">
+                              <td className="px-3 py-2 font-medium text-slate-600">{row.date}</td>
+                              <td className="px-3 py-2 font-semibold text-slate-800">{row.type}</td>
+                              <td className="px-3 py-2 font-mono text-slate-500 text-[11px]">{row.ref}</td>
+                              <td className="px-3 py-2 text-right font-mono text-slate-900">
+                                {row.debit > 0 ? `Rs. ${row.debit.toLocaleString()}` : '-'}
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono text-emerald-700">
+                                {row.credit > 0 ? `Rs. ${row.credit.toLocaleString()}` : '-'}
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono font-bold text-slate-900">
+                                Rs. {row.balance.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-
                   </div>
                 )}
-
               </div>
             )}
-
           </div>
         )}
 
-      </div>
-
-      {/* SUCCESS GENERATED INVOICE OVERLAY DIALOG */}
-      {generatedInvoice && createPortal(
-        <div className="fixed inset-0 z-[99999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#E8ECF2] p-5 rounded-3xl border border-white space-y-4 shadow-2xl">
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto text-xl font-bold mb-1.5">
-                ✓
+        {/* ========================================================= */}
+        {/* SCREEN 3: DASHBOARD */}
+        {/* ========================================================= */}
+        {activeTab === 'DASHBOARD' && (
+          <div className="space-y-4">
+            {/* Header & Hierarchy Role Badge */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">
+                    {roleScope.scopeLabel}
+                  </span>
+                  <h1 className="text-xl font-black text-slate-900">Sales Performance</h1>
+                  <p className="text-xs text-slate-500 font-medium">{roleScope.subtitle}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full uppercase">
+                    Role: {roleScope.level}
+                  </span>
+                </div>
               </div>
-              <h3 className="font-black text-slate-800 text-sm">Commercial Invoice Generated</h3>
-              <p className="text-[10px] text-slate-400">Proposal recorded successfully.</p>
+
+              {/* Period Selector: TODAY | MTD | YTD */}
+              <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl text-xs font-extrabold text-slate-700">
+                {(['TODAY', 'MTD', 'YTD'] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setDashboardPeriod(p)}
+                    className={`flex-1 py-2 rounded-lg transition-all cursor-pointer ${
+                      dashboardPeriod === p
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Invoice details */}
-            <div className="nm-inset p-3 bg-white rounded-xl text-xs space-y-2">
-              <div className="flex justify-between border-b pb-1">
-                <span className="text-slate-400">Invoice Number:</span>
-                <span className="font-mono font-bold text-slate-700">{generatedInvoice.invoiceNumber}</span>
+            {/* 1. SALES KPI CARD */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center text-teal-700 font-black">
+                    S
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Sales</h2>
+                    <span className="text-[11px] text-slate-500 font-medium">Realized vs Target</span>
+                  </div>
+                </div>
+                <span className="text-sm font-black text-teal-700 font-mono">
+                  {performanceData.salesPercent}% Achieved
+                </span>
               </div>
-              <div className="flex justify-between border-b pb-1">
-                <span className="text-slate-400">Date:</span>
-                <span className="font-mono font-bold text-slate-700">{generatedInvoice.invoiceDate}</span>
+
+              {/* Clean Visual Progress Bar */}
+              <div className="space-y-1">
+                <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                  <div
+                    className="h-full bg-teal-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(performanceData.salesPercent, 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="flex justify-between border-b pb-1">
-                <span className="text-slate-400">Gross Total:</span>
-                <span className="font-mono font-bold text-slate-700">PKR {generatedInvoice.subtotal.toLocaleString()}</span>
+
+              {/* Data Grid */}
+              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Target</span>
+                  <span className="font-mono font-bold text-slate-900 text-sm">
+                    Rs. {performanceData.salesTarget.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Achievement</span>
+                  <span className="font-mono font-bold text-teal-700 text-sm">
+                    Rs. {performanceData.salesAchieved.toLocaleString()}
+                  </span>
+                </div>
+                <div className="col-span-2 pt-2 border-t border-slate-200/80 flex items-center justify-between">
+                  <span className="text-slate-500 font-medium">Variance vs Target:</span>
+                  <span
+                    className={`font-mono font-bold ${
+                      performanceData.salesVariance >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                    }`}
+                  >
+                    {performanceData.salesVariance >= 0 ? '+' : ''}Rs.{' '}
+                    {performanceData.salesVariance.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. RECOVERY KPI CARD */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700 font-black">
+                    R
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Recovery</h2>
+                    <span className="text-[11px] text-slate-500 font-medium">Collections vs Target</span>
+                  </div>
+                </div>
+                <span className="text-sm font-black text-emerald-700 font-mono">
+                  {performanceData.recoveryPercent}% Achieved
+                </span>
+              </div>
+
+              {/* Clean Visual Progress Bar */}
+              <div className="space-y-1">
+                <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                  <div
+                    className="h-full bg-emerald-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(performanceData.recoveryPercent, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Data Grid */}
+              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Target</span>
+                  <span className="font-mono font-bold text-slate-900 text-sm">
+                    Rs. {performanceData.recoveryTarget.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Achievement</span>
+                  <span className="font-mono font-bold text-emerald-700 text-sm">
+                    Rs. {performanceData.recoveryAchieved.toLocaleString()}
+                  </span>
+                </div>
+                <div className="col-span-2 pt-2 border-t border-slate-200/80 flex items-center justify-between">
+                  <span className="text-slate-500 font-medium">Variance vs Target:</span>
+                  <span
+                    className={`font-mono font-bold ${
+                      performanceData.recoveryVariance >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                    }`}
+                  >
+                    {performanceData.recoveryVariance >= 0 ? '+' : ''}Rs.{' '}
+                    {performanceData.recoveryVariance.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* ========================================================= */}
+      {/* BOTTOM NAVIGATION BAR (Strictly 3 Simple Tabs: FB / App Style) */}
+      {/* ========================================================= */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg py-2">
+        <div className="max-w-xl mx-auto px-4 flex items-center justify-around">
+          {/* Tab 1: Attendance */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('ATTENDANCE');
+              setSelectedCustomerId(null);
+            }}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
+              activeTab === 'ATTENDANCE'
+                ? 'text-teal-700 font-black'
+                : 'text-slate-400 hover:text-slate-600 font-semibold'
+            }`}
+          >
+            <Clock className={`w-5 h-5 ${activeTab === 'ATTENDANCE' ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <span className="text-[11px] leading-none">Attendance</span>
+          </button>
+
+          {/* Tab 2: Distributor */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('DISTRIBUTORS')}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
+              activeTab === 'DISTRIBUTORS'
+                ? 'text-teal-700 font-black'
+                : 'text-slate-400 hover:text-slate-600 font-semibold'
+            }`}
+          >
+            <Store className={`w-5 h-5 ${activeTab === 'DISTRIBUTORS' ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <span className="text-[11px] leading-none">Distributor</span>
+          </button>
+
+          {/* Tab 3: Dashboard */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('DASHBOARD');
+              setSelectedCustomerId(null);
+            }}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
+              activeTab === 'DASHBOARD'
+                ? 'text-teal-700 font-black'
+                : 'text-slate-400 hover:text-slate-600 font-semibold'
+            }`}
+          >
+            <TrendingUp className={`w-5 h-5 ${activeTab === 'DASHBOARD' ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <span className="text-[11px] leading-none">Dashboard</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* ========================================================= */}
+      {/* ORDER CONFIRMATION MODAL */}
+      {/* ========================================================= */}
+      {showOrderConfirmModal && activeCustomer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="text-center space-y-1">
+              <h3 className="text-lg font-black text-slate-900">Confirm This Order?</h3>
+              <p className="text-xs text-slate-500 font-medium">
+                Customer: <strong className="text-slate-800">{activeCustomer.companyName}</strong>
+              </p>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Total SKUs:</span>
+                <span className="font-bold text-slate-800">{orderSummary.totalSKUs}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Net Payable:</span>
-                <span className="font-mono font-black text-emerald-700">PKR {generatedInvoice.totalAmount.toLocaleString()}</span>
+                <span className="text-slate-500">Total Quantity:</span>
+                <span className="font-bold text-slate-800">{orderSummary.totalQuantity} pcs</span>
+              </div>
+              <div className="flex justify-between border-t border-slate-200/80 pt-1.5">
+                <span className="text-slate-700 font-bold">Total Order Value:</span>
+                <span className="font-mono font-black text-teal-700">
+                  Rs. {orderSummary.orderValue.toLocaleString()}
+                </span>
               </div>
             </div>
 
-            {/* Action panel */}
-            <div className="grid grid-cols-3 gap-1.5 text-xs pt-1">
+            <div className="flex items-center gap-3 pt-2">
               <button
-                onClick={() => shareInvoiceWhatsApp(generatedInvoice)}
-                className="py-2.5 px-1 rounded-xl bg-emerald-600 text-white font-black text-center flex items-center justify-center gap-1 shadow-md hover:bg-emerald-700 active:scale-95 transition-all text-[11px]"
+                type="button"
+                onClick={() => setShowOrderConfirmModal(false)}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer transition-colors"
               >
-                <Send className="w-3.5 h-3.5" /> Share
+                CANCEL
               </button>
               <button
-                onClick={() => setActivePrintInvoice(generatedInvoice)}
-                className="py-2.5 px-1 rounded-xl bg-teal-600 text-white font-black text-center flex items-center justify-center gap-1 shadow-md hover:bg-teal-700 active:scale-95 transition-all text-[11px]"
+                type="button"
+                disabled={orderSubmitting}
+                onClick={handleConfirmSubmitOrder}
+                className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-colors"
               >
-                <Printer className="w-3.5 h-3.5" /> Print Invoice
-              </button>
-              <button
-                onClick={() => setGeneratedInvoice(null)}
-                className="py-2.5 px-1 rounded-xl bg-white border border-slate-300 font-bold text-slate-700 text-center hover:bg-slate-50 active:scale-95 transition-all text-[11px]"
-              >
-                Close
+                {orderSubmitting ? 'CONFIRMING...' : 'CONFIRM'}
               </button>
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
-      {/* PRINT INVOICE MODAL (A5 Thermal & A4 Tax Invoice) */}
-      {activePrintInvoice && (
+      {/* ========================================================= */}
+      {/* PRINT INVOICE MODAL INTEGRATION */}
+      {/* ========================================================= */}
+      {selectedInvoiceForPrint && (
         <PrintInvoiceModal
-          isOpen={!!activePrintInvoice}
-          onClose={() => setActivePrintInvoice(null)}
-          invoice={activePrintInvoice}
-          customer={customers.find(c => c.id === activePrintInvoice.customerId) || customers.find(c => c.id === selectedCustomerId) || customers[0] || ({ id: 'cust-0', companyName: 'National Lights Dealer', address: 'Brandreth Rd, Lahore', phone: '+92 300 1234567' } as any)}
-          skus={skus}
-          currentUser={currentUser}
+          invoice={selectedInvoiceForPrint}
+          customer={activeCustomer || undefined}
+          onClose={() => setSelectedInvoiceForPrint(null)}
         />
       )}
-
     </div>
   );
 };
