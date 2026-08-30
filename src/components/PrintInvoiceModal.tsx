@@ -6,6 +6,7 @@
  */
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Printer,
   Download,
@@ -49,17 +50,17 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
     window.print();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-card/70 p-2 sm:p-4 backdrop-blur-xs overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/60 p-2 sm:p-4 backdrop-blur-sm overflow-y-auto">
       <div className="flex w-full max-w-4xl flex-col rounded-2xl bg-white shadow-2xl overflow-hidden border border-slate-200 my-auto">
         {/* Top Control Bar (Hidden on print) */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-surface-card px-4 sm:px-6 py-3 text-white" data-no-print>
+        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-900 px-4 sm:px-6 py-3 text-white" data-no-print>
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/80 font-black text-deep-green">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 font-black text-white shadow-md">
               <Printer className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-sm font-bold text-white">Invoice Document Viewer & Print Studio</div>
+              <div className="text-sm font-bold text-white">Invoice Print Studio & A5 Thermal Receipt Generator</div>
               <div className="text-[11px] text-slate-400">Official National Lights Commercial Billing</div>
             </div>
           </div>
@@ -71,28 +72,29 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                 type="button"
                 onClick={() => setPrintMode('A4_FORMAL')}
                 className={`px-3 py-1 rounded-md transition-colors ${
-                  printMode === 'A4_FORMAL' ? 'bg-secondary/80 text-deep-green' : 'text-slate-300 hover:text-white'
+                  printMode === 'A4_FORMAL' ? 'bg-teal-600 text-white' : 'text-slate-300 hover:text-white'
                 }`}
               >
-                A4 Formal Tax Invoice
+                A4 Tax Invoice
               </button>
               <button
                 type="button"
                 onClick={() => setPrintMode('THERMAL_80MM')}
                 className={`px-3 py-1 rounded-md transition-colors ${
-                  printMode === 'THERMAL_80MM' ? 'bg-secondary/80 text-deep-green' : 'text-slate-300 hover:text-white'
+                  printMode === 'THERMAL_80MM' ? 'bg-teal-600 text-white' : 'text-slate-300 hover:text-white'
                 }`}
               >
-                80mm Thermal Receipt
+                A5 Thermal Receipt
               </button>
             </div>
 
             <button
+              type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-secondary px-4 py-1.5 text-xs font-bold text-deep-green hover:bg-secondary/80 shadow-md transition-all"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 px-4 py-1.5 text-xs font-black text-white hover:from-teal-600 hover:to-emerald-700 shadow-md active:scale-95 transition-all"
             >
               <Printer className="h-4 w-4" />
-              <span>Print Now</span>
+              <span>Print Invoice</span>
             </button>
 
             <button
@@ -108,7 +110,7 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
         <div className="p-4 sm:p-8 bg-slate-100 overflow-y-auto max-h-[82vh]">
           {/* ================= A4 FORMAL TAX INVOICE ================= */}
           {printMode === 'A4_FORMAL' && (
-            <div className="mx-auto w-full max-w-[210mm] bg-white p-6 sm:p-10 shadow-lg border border-slate-200 text-text-primary font-sans print-area print:shadow-none print:border-none print:p-0">
+            <div className="invoice-print-container mx-auto w-full max-w-[210mm] bg-white p-6 sm:p-10 shadow-lg border border-slate-200 text-text-primary font-sans print-area print:shadow-none print:border-none print:p-0">
               {/* Header */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-slate-900 pb-4 gap-4">
                 <div className="flex items-center gap-3">
@@ -275,7 +277,7 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
 
           {/* ================= 80MM POS THERMAL RECEIPT ================= */}
           {printMode === 'THERMAL_80MM' && (
-            <div className="mx-auto w-[80mm] bg-white p-4 shadow-lg border border-slate-300 font-mono text-[11px] text-text-primary print-area print:shadow-none print:border-none print:w-[80mm] print:p-0">
+            <div className="invoice-print-container mx-auto w-[80mm] sm:w-[148mm] bg-white p-4 shadow-lg border border-slate-300 font-mono text-[11px] text-text-primary print-area print:shadow-none print:border-none print:w-[148mm] print:p-0">
               <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-400">
                 <div className="text-base font-black tracking-tight">NATIONAL LIGHTS</div>
                 <div className="text-[10px]">Head Office: Brandreth Rd, Lahore</div>
@@ -340,6 +342,7 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

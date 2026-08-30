@@ -30,8 +30,12 @@ import {
   LogOut,
   Send,
   Printer,
-  ChevronDown
+  ChevronDown,
+  Lock,
+  CheckCircle2
 } from 'lucide-react';
+import { AttendanceGeofenceMap } from './AttendanceGeofenceMap';
+import { PrintInvoiceModal } from './PrintInvoiceModal';
 import {
   Customer,
   PaymentMode,
@@ -170,6 +174,7 @@ export const SalesRecoveryApp = ({
     return cached ? JSON.parse(cached) : [];
   });
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+  const [activePrintInvoice, setActivePrintInvoice] = useState<InvoiceType | null>(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1001,12 +1006,12 @@ export const SalesRecoveryApp = ({
               </div>
             </div>
 
-            {/* Geofence Widget */}
-            <div className="nm-flat p-4 rounded-2xl border border-white space-y-4">
+            {/* Geofence Widget & Attendance Check-In Console */}
+            <div className="attendance-check-in-console nm-flat p-4 rounded-2xl border border-white space-y-4">
               <div>
                 <h3 className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase">
                   <MapPin className="w-4 h-4 text-rose-600 animate-bounce" />
-                  Town Geofenced Attendance
+                  Town Geofenced Attendance Console
                 </h3>
                 <p className="text-[10px] text-slate-500 mt-0.5">Assigned towns directory drop-down selection below determines the active market.</p>
               </div>
@@ -1025,11 +1030,23 @@ export const SalesRecoveryApp = ({
                 </select>
               </div>
 
+              {/* Interactive Geofence Map */}
+              <AttendanceGeofenceMap
+                userLat={userLat}
+                userLng={userLng}
+                townCenter={townCenter}
+                attendanceTown={attendanceTown}
+                maxRadiusKM={maxRadiusKM}
+                isWithinGeofence={isWithinGeofence}
+                distanceToCenter={distanceToCenter}
+                onRefreshGps={acquireLocation}
+              />
+
               {/* GPS Tracker Console */}
               <div className="nm-inset p-3.5 rounded-2xl bg-white space-y-2.5 text-xs">
                 <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
                   <span>SATELLITE GPS LOCK</span>
-                  <button onClick={acquireLocation} className="text-teal-700 hover:underline flex items-center gap-0.5">
+                  <button onClick={acquireLocation} className="text-teal-700 hover:underline flex items-center gap-0.5 font-bold">
                     <RotateCw className="w-3 h-3" /> Refresh GPS
                   </button>
                 </div>
@@ -1118,18 +1135,33 @@ export const SalesRecoveryApp = ({
               </div>
 
               {/* Submit Buttons */}
-              <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <button
                   onClick={handleCheckIn}
-                  className="py-3 px-1 rounded-xl font-black text-xs text-white bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 shadow-md active:scale-95 transition-all text-center"
+                  className={`py-3 px-3 rounded-xl font-black text-xs text-white shadow-md active:scale-95 transition-all text-center flex items-center justify-center gap-2 ${
+                    isWithinGeofence
+                      ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-700 hover:to-teal-700 animate-geofence-pulse ring-2 ring-emerald-400/40'
+                      : 'bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 opacity-90'
+                  }`}
                 >
-                  📌 Check In Beat
+                  {isWithinGeofence ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-200 animate-bounce" />
+                      <span>📌 Check In Beat (Geofence Verified)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4 text-rose-200" />
+                      <span>⚠️ Check In Blocked (Outside Geofence)</span>
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={handleCheckOut}
-                  className="py-3 px-1 rounded-xl font-black text-xs text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-md active:scale-95 transition-all text-center"
+                  className="py-3 px-3 rounded-xl font-black text-xs text-white bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 shadow-md active:scale-95 transition-all text-center flex items-center justify-center gap-2"
                 >
-                  🚪 Check Out Beat
+                  <LogOut className="w-4 h-4" />
+                  <span>🚪 Check Out Beat</span>
                 </button>
               </div>
             </div>
@@ -1600,12 +1632,11 @@ export const SalesRecoveryApp = ({
                                   <Send className="w-3.5 h-3.5" /> Share
                                 </button>
                                 <button
-                                  onClick={() => {
-                                    alert('Printer service connecting in container terminal environment...');
-                                  }}
-                                  className="p-2 rounded-lg bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100"
+                                  onClick={() => setActivePrintInvoice(inv)}
+                                  className="p-2 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 flex items-center justify-center gap-1 text-[10px] font-bold"
+                                  title="Print Invoice (A5 Thermal & PDF)"
                                 >
-                                  <Printer className="w-3.5 h-3.5" />
+                                  <Printer className="w-3.5 h-3.5" /> Print Invoice
                                 </button>
                               </div>
                             </div>
@@ -1743,23 +1774,41 @@ export const SalesRecoveryApp = ({
             </div>
 
             {/* Action panel */}
-            <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+            <div className="grid grid-cols-3 gap-1.5 text-xs pt-1">
               <button
                 onClick={() => shareInvoiceWhatsApp(generatedInvoice)}
-                className="py-2.5 px-1 rounded-xl bg-emerald-600 text-white font-black text-center flex items-center justify-center gap-1 shadow-md hover:bg-emerald-700 active:scale-95 transition-all"
+                className="py-2.5 px-1 rounded-xl bg-emerald-600 text-white font-black text-center flex items-center justify-center gap-1 shadow-md hover:bg-emerald-700 active:scale-95 transition-all text-[11px]"
               >
-                <Send className="w-4 h-4" /> Share WhatsApp
+                <Send className="w-3.5 h-3.5" /> Share
+              </button>
+              <button
+                onClick={() => setActivePrintInvoice(generatedInvoice)}
+                className="py-2.5 px-1 rounded-xl bg-teal-600 text-white font-black text-center flex items-center justify-center gap-1 shadow-md hover:bg-teal-700 active:scale-95 transition-all text-[11px]"
+              >
+                <Printer className="w-3.5 h-3.5" /> Print Invoice
               </button>
               <button
                 onClick={() => setGeneratedInvoice(null)}
-                className="py-2.5 px-1 rounded-xl bg-white border border-slate-300 font-bold text-slate-700 text-center hover:bg-slate-50 active:scale-95 transition-all"
+                className="py-2.5 px-1 rounded-xl bg-white border border-slate-300 font-bold text-slate-700 text-center hover:bg-slate-50 active:scale-95 transition-all text-[11px]"
               >
-                Close View
+                Close
               </button>
             </div>
           </div>
         </div>,
         document.body
+      )}
+
+      {/* PRINT INVOICE MODAL (A5 Thermal & A4 Tax Invoice) */}
+      {activePrintInvoice && (
+        <PrintInvoiceModal
+          isOpen={!!activePrintInvoice}
+          onClose={() => setActivePrintInvoice(null)}
+          invoice={activePrintInvoice}
+          customer={customers.find(c => c.id === activePrintInvoice.customerId) || customers.find(c => c.id === selectedCustomerId) || customers[0] || ({ id: 'cust-0', companyName: 'National Lights Dealer', address: 'Brandreth Rd, Lahore', phone: '+92 300 1234567' } as any)}
+          skus={skus}
+          currentUser={currentUser}
+        />
       )}
 
     </div>
