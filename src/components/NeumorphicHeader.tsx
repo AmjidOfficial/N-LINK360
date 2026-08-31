@@ -37,6 +37,7 @@ interface HeaderProps {
   setSearchQuery?: (q: string) => void;
   isSidebarCollapsed?: boolean;
   setIsSidebarCollapsed?: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
+  onToggleViewMode?: () => void;
 }
 
 export const NeumorphicHeader: React.FC<HeaderProps> = ({
@@ -50,6 +51,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
   onSignOut,
   onOpenAuditLogs,
   onRefreshData,
+  onToggleViewMode,
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -164,6 +166,18 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
               </span>
             </div>
           </button>
+
+          {onToggleViewMode && (
+            <button
+              onClick={onToggleViewMode}
+              className="px-3 py-2.5 rounded-2xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 font-black text-xs flex items-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              title="Switch to Field Force Mobile View"
+            >
+              <User className="w-4 h-4 text-teal-600" />
+              <span className="hidden sm:inline">Field Force App</span>
+              <span className="inline sm:hidden">Field Force</span>
+            </button>
+          )}
 
           <button
             onClick={onSignOut}

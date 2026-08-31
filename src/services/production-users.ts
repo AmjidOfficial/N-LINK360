@@ -19,13 +19,15 @@ export interface ProductionAccount {
 export const MULTI_ROLE_ELIGIBLE_EMAILS = [
   'admin@nationallights.com',
   'nationallights2026@gmail.com',
+  'syedzain@nationallights.com',
+  'shahzadullah@nationallights.com',
 ];
 
 export function isMultiRoleEligibleEmail(email: string): boolean {
   const clean = email.trim().toLowerCase();
   if (!clean) return false;
   if (MULTI_ROLE_ELIGIBLE_EMAILS.includes(clean)) return true;
-  if (clean.includes('amjid')) return true;
+  if (clean.includes('amjid') || clean.includes('zain') || clean.includes('shahzad') || clean.includes('ullah')) return true;
   return false;
 }
 

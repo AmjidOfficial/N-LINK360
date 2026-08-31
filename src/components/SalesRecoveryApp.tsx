@@ -72,6 +72,7 @@ interface SalesRecoveryAppProps {
   onLogVisit?: (visit: Partial<any>) => void;
   onSubmitRegistration?: (reg: any) => void;
   onRefresh?: () => Promise<void> | void;
+  onToggleViewMode?: () => void;
 }
 
 export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
@@ -89,6 +90,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   onLogVisit,
   onSubmitRegistration,
   onRefresh,
+  onToggleViewMode,
 }) => {
   // -------------------------------------------------------------
   // 3 Primary Navigation Tabs: 'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD'
@@ -268,7 +270,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       townStats[t] = { sales: 0, recovery: 0 };
     });
 
-    const custTownMap = new Map(authorizedCustomers.map((c) => [c.id, c.city || 'Lahore']));
+    const custTownMap = new Map<string, string>(authorizedCustomers.map((c) => [c.id, c.city || 'Lahore'] as [string, string]));
 
     salesOrders.forEach((o) => {
       if (o.status === 'CANCELLED' || o.status === 'REJECTED') return;
@@ -823,7 +825,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   }, [salesOrders, currentUser]);
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] text-slate-800 font-sans pb-28 selection:bg-teal-200">
+    <div className="SalesRecoveryApp min-h-screen bg-[#F0F2F5] text-slate-800 font-sans pb-28 selection:bg-teal-200 flex flex-col w-full">
       {/* ========================================================= */}
       {/* TOP HEADER (Clean, Unified Desktop/Mobile Navigation) */}
       {/* ========================================================= */}
@@ -916,6 +918,19 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               <span>{isOnline ? 'Online' : 'Offline'}</span>
             </div>
 
+            {onToggleViewMode && (
+              <button
+                type="button"
+                onClick={onToggleViewMode}
+                className="px-2.5 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 hover:bg-teal-100 transition-all font-black text-[11px] flex items-center gap-1 cursor-pointer active:scale-95"
+                title="Switch to Enterprise Portal"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+                <span className="hidden sm:inline">Enterprise Portal</span>
+                <span className="inline sm:hidden">Portal</span>
+              </button>
+            )}
+
             {onLogout && (
               <button
                 onClick={onLogout}
@@ -932,7 +947,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       {/* ========================================================= */}
       {/* MAIN CONTENT ROUTER (Strictly 3 Screens) */}
       {/* ========================================================= */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-5 flex flex-col gap-5 space-y-0">
         {/* ========================================================= */}
         {/* SCREEN 1: ATTENDANCE */}
         {/* ========================================================= */}
@@ -2073,7 +2088,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       {/* ========================================================= */}
       {/* BOTTOM NAVIGATION BAR (Responsive Mobile & Tablet View) */}
       {/* ========================================================= */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg py-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg py-2">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-around">
           {/* Tab 1: Attendance */}
           <button

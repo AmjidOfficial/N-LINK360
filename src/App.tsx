@@ -27,7 +27,7 @@ import { AuditLogViewerModal } from './components/AuditLogViewerModal';
 import { OfflineSyncModal } from './components/OfflineSyncModal';
 import { getCurrentUser } from './services/auth';
 import { isSupabaseConfigured } from './lib/supabase';
-import { isAdminUser, isFieldForceUser } from './services/production-users';
+import { isAdminUser, isFieldForceUser, isMultiRoleEligibleEmail } from './services/production-users';
 import { SalesRecoveryApp } from './components/SalesRecoveryApp';
 import { registerCustomerPending } from './services/supabase-transactions';
 
@@ -189,6 +189,11 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
               alert('Failed to register customer: ' + (err instanceof Error ? err.message : String(err)));
             }
           }}
+          onToggleViewMode={
+            isMultiRoleEligibleEmail(currentUser.email)
+              ? () => setViewMode('ENTERPRISE')
+              : undefined
+          }
         />
       </div>
     );
@@ -226,6 +231,11 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
           setSearchQuery={setSearchQuery}
           isSidebarCollapsed={isSidebarCollapsed}
           setIsSidebarCollapsed={setIsSidebarCollapsed}
+          onToggleViewMode={
+            isMultiRoleEligibleEmail(currentUser.email)
+              ? () => setViewMode('MOBILE')
+              : undefined
+          }
         />
 
         {/* Main Content Area */}
