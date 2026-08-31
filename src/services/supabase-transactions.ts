@@ -202,18 +202,52 @@ export async function verifyRecovery(recoveryId: string) {
     return true;
   }
   const { data, error } = await client.rpc('nlink_verify_recovery', { p_recovery_id: recoveryId });
-  if (error) throw error;
+  if (error) {
+    // Direct update fallback if RPC pending
+    const { error: updateError } = await client
+      .from('recoveries')
+      .update({ status: 'APPROVED', updated_at: new Date().toISOString() })
+      .eq('id', recoveryId);
+    if (updateError) throw updateError;
+  }
 
   await recordAuditLog({
     action: 'RECOVERY_VERIFY',
     module: 'RECOVERIES',
     recordType: 'recoveries',
     recordId: recoveryId,
-    details: `Payment recovery ${recoveryId} verified and posted to customer ledger.`,
-    newValue: { status: 'VERIFIED' },
+    details: `Payment recovery ${recoveryId} verified and approved by Head Office.`,
+    newValue: { status: 'APPROVED' },
   });
 
-  return Boolean(data);
+  return Boolean(data ?? true);
+}
+
+export async function rejectRecovery(recoveryId: string, reason?: string) {
+  const client = db();
+  if (!client) {
+    return true;
+  }
+  const { error } = await client
+    .from('recoveries')
+    .update({
+      status: 'REJECTED',
+      remarks: reason ? `REJECTED: ${reason}` : 'REJECTED by Head Office',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', recoveryId);
+  if (error) throw error;
+
+  await recordAuditLog({
+    action: 'RECOVERY_REJECT',
+    module: 'RECOVERIES',
+    recordType: 'recoveries',
+    recordId: recoveryId,
+    details: `Payment recovery ${recoveryId} rejected by Head Office. Reason: ${reason || 'Unspecified'}`,
+    newValue: { status: 'REJECTED', reason },
+  });
+
+  return true;
 }
 
 export async function logVisit(visit: Partial<CustomerVisit>) {

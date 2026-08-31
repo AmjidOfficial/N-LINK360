@@ -20,6 +20,7 @@ import {
 import { NeumorphicExecutiveDashboard } from './components/NeumorphicExecutiveDashboard';
 import { NeumorphicOperationDomain } from './components/NeumorphicOperationDomain';
 import { NeumorphicReportsDomain } from './components/NeumorphicReportsDomain';
+import { NeumorphicSidebar } from './components/NeumorphicSidebar';
 import { ExcelImportModal } from './components/ExcelImportModal';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { AuditLogViewerModal } from './components/AuditLogViewerModal';
@@ -45,6 +46,7 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
   const [activeOpTab, setActiveOpTab] = useState<OperationSubTab>('COMPANY');
   const [activeRepTab, setActiveRepTab] = useState<ReportSubTab>('SALES');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const canAccessOperations = isAdminUser(currentUser) || currentUser.role === 'ACCOUNTS' || currentUser.role === 'WAREHOUSE_MANAGER';
 
@@ -193,9 +195,9 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
   }
 
   return (
-    <div className="min-h-screen bg-[#E8ECF2] text-slate-800 font-sans antialiased selection:bg-teal-200 selection:text-teal-900">
-      {/* Neumorphic Unified Top Navigation */}
-      <NeumorphicHeader
+    <div className="min-h-screen bg-[#E8ECF2] text-slate-800 font-sans antialiased selection:bg-teal-200 selection:text-teal-900 flex">
+      {/* Persistent Collapsible Left Navigation Sidebar */}
+      <NeumorphicSidebar
         activeDomain={activeDomain}
         setActiveDomain={setActiveDomain}
         activeOpTab={activeOpTab}
@@ -203,52 +205,69 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
         activeRepTab={activeRepTab}
         setActiveRepTab={setActiveRepTab}
         currentUser={currentUser}
-        onSignOut={onSignOut}
-        onOpenAuditLogs={() => setIsAuditLogsOpen(true)}
-        onRefreshData={refresh}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
       />
 
-      {/* Main Content Area */}
-      <main className="nm-container py-6">
-        {activeDomain === 'DASHBOARDS' && (
-          <NeumorphicExecutiveDashboard
-            currentUser={currentUser}
-            onNavigateToDomain={(dom, sub) => {
-              setActiveDomain(dom);
-              if (dom === 'OPERATIONS' && sub) setActiveOpTab(sub as OperationSubTab);
-              if (dom === 'REPORTS' && sub) setActiveRepTab(sub as ReportSubTab);
-            }}
-          />
-        )}
+      {/* Main Right Area: Top Header + Main Content + Footer */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <NeumorphicHeader
+          activeDomain={activeDomain}
+          setActiveDomain={setActiveDomain}
+          activeOpTab={activeOpTab}
+          setActiveOpTab={setActiveOpTab}
+          activeRepTab={activeRepTab}
+          setActiveRepTab={setActiveRepTab}
+          currentUser={currentUser}
+          onSignOut={onSignOut}
+          onOpenAuditLogs={() => setIsAuditLogsOpen(true)}
+          onRefreshData={refresh}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          isSidebarCollapsed={isSidebarCollapsed}
+          setIsSidebarCollapsed={setIsSidebarCollapsed}
+        />
 
-        {activeDomain === 'OPERATIONS' && (
-          <NeumorphicOperationDomain
-            activeSubTab={activeOpTab}
-            setActiveSubTab={setActiveOpTab}
-            currentUser={currentUser}
-            searchQuery={searchQuery}
-          />
-        )}
+        {/* Main Content Area */}
+        <main className="flex-1 nm-container py-6">
+          {activeDomain === 'DASHBOARDS' && (
+            <NeumorphicExecutiveDashboard
+              currentUser={currentUser}
+              onNavigateToDomain={(dom, sub) => {
+                setActiveDomain(dom);
+                if (dom === 'OPERATIONS' && sub) setActiveOpTab(sub as OperationSubTab);
+                if (dom === 'REPORTS' && sub) setActiveRepTab(sub as ReportSubTab);
+              }}
+            />
+          )}
 
-        {activeDomain === 'REPORTS' && (
-          <NeumorphicReportsDomain
-            activeSubTab={activeRepTab}
-            setActiveSubTab={setActiveRepTab}
-            currentUser={currentUser}
-            searchQuery={searchQuery}
-          />
-        )}
-      </main>
+          {activeDomain === 'OPERATIONS' && (
+            <NeumorphicOperationDomain
+              activeSubTab={activeOpTab}
+              setActiveSubTab={setActiveOpTab}
+              currentUser={currentUser}
+              searchQuery={searchQuery}
+            />
+          )}
 
-      {/* Neumorphic Footer */}
-      <footer className="border-t border-white/60 bg-[#E8ECF2] py-4 text-center text-xs text-slate-500 font-medium">
-        <div className="nm-container flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>N-LINK 360 · National Lights Multi-Tenant Operations Platform</span>
-          <span className="font-mono text-[11px] text-slate-400">Production Mode · User: {currentUser.email}</span>
-        </div>
-      </footer>
+          {activeDomain === 'REPORTS' && (
+            <NeumorphicReportsDomain
+              activeSubTab={activeRepTab}
+              setActiveSubTab={setActiveRepTab}
+              currentUser={currentUser}
+              searchQuery={searchQuery}
+            />
+          )}
+        </main>
+
+        {/* Neumorphic Footer */}
+        <footer className="border-t border-white/60 bg-[#E8ECF2] py-4 text-center text-xs text-slate-500 font-medium">
+          <div className="nm-container flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>N-LINK 360 · National Lights Multi-Tenant Operations Platform</span>
+            <span className="font-mono text-[11px] text-slate-400">Production Mode · User: {currentUser.email}</span>
+          </div>
+        </footer>
+      </div>
 
       {/* Global Modals */}
       <ExcelImportModal

@@ -29,9 +29,13 @@ import {
   LogOut,
   Wifi,
   WifiOff,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle,
+  History,
+  MapPin
 } from 'lucide-react';
 import { PrintInvoiceModal } from './PrintInvoiceModal';
+import { DynamicDealerFormModal } from './DynamicDealerFormModal';
 import {
   Customer,
   PaymentMode,
@@ -78,15 +82,22 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   salesOrders = [],
   recoveries = [],
   invoices = [],
+  visits = [],
   onLogout,
   onBookOrder,
   onRecordRecovery,
+  onLogVisit,
+  onSubmitRegistration,
   onRefresh,
 }) => {
   // -------------------------------------------------------------
   // 3 Primary Navigation Tabs: 'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD'
   // -------------------------------------------------------------
   const [activeTab, setActiveTab] = useState<'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD'>('ATTENDANCE');
+
+  // Dealer Registration Modal State (Field Force Onboarding to Pending Queue)
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState<string | null>(null);
 
   // Online / Offline Indicator
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -115,13 +126,35 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   };
 
   // -------------------------------------------------------------
+  // 0. AUTHORIZED ACTIVE CUSTOMERS (Approval & Quarantine Guard)
+  // -------------------------------------------------------------
+  // Strictly isolate active authorized customers. Any Dealer/Distributor in 'PENDING_APPROVAL',
+  // 'PENDING', or 'REJECTED' status is excluded from customer selection and active operational lists.
+  const authorizedCustomers = useMemo(() => {
+    return customers.filter((c) => {
+      const approval = (c.approvalStatus || '').toUpperCase();
+      if (approval === 'PENDING_APPROVAL' || approval === 'PENDING' || approval === 'REJECTED') {
+        return false;
+      }
+      const status = (c.status || '').toUpperCase();
+      if (status === 'INACTIVE' || status === 'SUSPENDED' || status === 'PENDING_APPROVAL') {
+        return false;
+      }
+      if (c.isActive === false) {
+        return false;
+      }
+      return true;
+    });
+  }, [customers]);
+
+  // -------------------------------------------------------------
   // 1. ATTENDANCE SECTION STATE & DATA
   // -------------------------------------------------------------
-  // Towns assigned to the user or from customers
+  // Towns assigned to the user or derived from authorized customers
   const assignedTowns = useMemo(() => {
-    const towns = Array.from(new Set(customers.map((c) => c.city || 'Lahore'))).filter(Boolean);
+    const towns = Array.from(new Set(authorizedCustomers.map((c) => c.city || 'Lahore'))).filter(Boolean);
     return towns.length > 0 ? towns : ['Lahore', 'Gujranwala', 'Peshawar', 'Mardan', 'Nowshera', 'Karachi', 'Multan', 'Faisalabad', 'Rawalpindi'];
-  }, [customers]);
+  }, [authorizedCustomers]);
 
   const [selectedTown, setSelectedTown] = useState<string>(() => {
     return localStorage.getItem('nlink_sales_active_town') || assignedTowns[0] || 'Lahore';
@@ -223,9 +256,11 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     }
   };
 
-  // Compute Today's Activities from actual transactions
-  const todayActivities = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+  // Compute Month-to-Date (MTD) Activities strictly from Month-to-Date transactions matching Enterprise Portal
+  const mtdActivities = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
     const townStats: Record<string, { sales: number; recovery: number }> = {};
 
     // Initialize all assigned towns
@@ -233,11 +268,14 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       townStats[t] = { sales: 0, recovery: 0 };
     });
 
-    const custTownMap = new Map(customers.map((c) => [c.id, c.city || 'Lahore']));
+    const custTownMap = new Map(authorizedCustomers.map((c) => [c.id, c.city || 'Lahore']));
 
     salesOrders.forEach((o) => {
-      const oDate = (o.orderDate || '').split('T')[0];
-      if (oDate === todayStr) {
+      if (o.status === 'CANCELLED' || o.status === 'REJECTED') return;
+      const oDateStr = o.orderDate || o.createdAt || '';
+      if (!oDateStr) return;
+      const oDate = new Date(oDateStr);
+      if (!isNaN(oDate.getTime()) && oDate.getFullYear() === currentYear && oDate.getMonth() === currentMonth) {
         const town = custTownMap.get(o.customerId) || 'Lahore';
         if (!townStats[town]) townStats[town] = { sales: 0, recovery: 0 };
         townStats[town].sales += Number(o.totalAmount || 0);
@@ -245,21 +283,67 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     });
 
     recoveries.forEach((r) => {
-      const rDate = (r.collectionDate || '').split('T')[0];
-      if (rDate === todayStr) {
+      if (r.status === 'REJECTED') return;
+      const rDateStr = r.collectionDate || r.createdAt || '';
+      if (!rDateStr) return;
+      const rDate = new Date(rDateStr);
+      if (!isNaN(rDate.getTime()) && rDate.getFullYear() === currentYear && rDate.getMonth() === currentMonth) {
         const town = custTownMap.get(r.customerId) || 'Lahore';
         if (!townStats[town]) townStats[town] = { sales: 0, recovery: 0 };
         townStats[town].recovery += Number(r.amount || 0);
       }
     });
 
+    const mtdMonthLabel = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
     return Object.entries(townStats).map(([town, data]) => ({
-      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+      date: `MTD ${mtdMonthLabel}`,
       town,
       sales: data.sales,
       recovery: data.recovery,
     }));
-  }, [assignedTowns, customers, salesOrders, recoveries]);
+  }, [assignedTowns, authorizedCustomers, salesOrders, recoveries]);
+
+  // Compute past visits for same selected town from last 3 months
+  const pastTownVisits = useMemo(() => {
+    if (!selectedTown) return [];
+    
+    // Date from 3 months ago
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+    const townCustomerIds = new Set(
+      authorizedCustomers
+        .filter((c) => (c.city || 'Lahore').toLowerCase() === selectedTown.toLowerCase())
+        .map((c) => c.id)
+    );
+
+    return (visits || [])
+      .filter((v) => {
+        if (!v.customerId || !townCustomerIds.has(v.customerId)) return false;
+        const vDate = new Date(v.checkinTime);
+        return vDate >= threeMonthsAgo;
+      })
+      .map((v) => {
+        const customer = authorizedCustomers.find((c) => c.id === v.customerId);
+        return {
+          id: v.id,
+          customerId: v.customerId,
+          customerName: customer ? customer.companyName : v.customerName || 'Unknown Dealer',
+          purpose: v.purpose || 'Routine Visit',
+          notes: v.notes || '',
+          orderPlaced: !!v.orderPlaced,
+          recoveryCollected: !!v.recoveryCollected,
+          checkinTime: v.checkinTime,
+          dateFormatted: new Date(v.checkinTime).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        };
+      })
+      .sort((a, b) => new Date(b.checkinTime).getTime() - new Date(a.checkinTime).getTime());
+  }, [selectedTown, visits, authorizedCustomers]);
 
   // Greeting helper
   const greeting = useMemo(() => {
@@ -318,11 +402,11 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     }
   };
 
-  // Filter permitted customers by search
+  // Filter authorized customers by search query
   const filteredCustomers = useMemo(() => {
     const q = customerSearchQuery.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter((c) => {
+    if (!q) return authorizedCustomers;
+    return authorizedCustomers.filter((c) => {
       return (
         c.companyName.toLowerCase().includes(q) ||
         (c.customerCode || '').toLowerCase().includes(q) ||
@@ -331,11 +415,11 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
         (c.contactPerson || '').toLowerCase().includes(q)
       );
     });
-  }, [customers, customerSearchQuery]);
+  }, [authorizedCustomers, customerSearchQuery]);
 
   const activeCustomer = useMemo(() => {
-    return customers.find((c) => c.id === selectedCustomerId) || null;
-  }, [customers, selectedCustomerId]);
+    return authorizedCustomers.find((c) => c.id === selectedCustomerId) || null;
+  }, [authorizedCustomers, selectedCustomerId]);
 
   // 1-line Financial Calculations (Live Ledger Equation)
   const customerFinancials = useMemo(() => {
@@ -633,34 +717,46 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     return { level: 'NSM', scopeLabel: 'My National / Assigned Business', subtitle: 'Regions, RSMs, ASMs, National Distribution' };
   }, [currentUser.role]);
 
-  // Period targets & achievements calculation
+  // Period targets & achievements calculation strictly aligned with Enterprise Dashboard
   const performanceData = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const currentMonth = todayStr.slice(0, 7);
-    const currentYear = todayStr.slice(0, 4);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const todayStr = now.toISOString().split('T')[0];
 
-    let filteredOrders = salesOrders;
-    let filteredRecs = recoveries;
+    const isMatchDate = (dateStr?: string) => {
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return false;
+      if (dashboardPeriod === 'TODAY') {
+        return d.toISOString().split('T')[0] === todayStr;
+      }
+      if (dashboardPeriod === 'YTD') {
+        return d.getFullYear() === currentYear;
+      }
+      // Strict MTD default
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    };
 
-    if (dashboardPeriod === 'TODAY') {
-      filteredOrders = salesOrders.filter((o) => (o.orderDate || '').split('T')[0] === todayStr);
-      filteredRecs = recoveries.filter((r) => (r.collectionDate || '').split('T')[0] === todayStr);
-    } else if (dashboardPeriod === 'MTD') {
-      filteredOrders = salesOrders.filter((o) => (o.orderDate || '').startsWith(currentMonth));
-      filteredRecs = recoveries.filter((r) => (r.collectionDate || '').startsWith(currentMonth));
-    } else if (dashboardPeriod === 'YTD') {
-      filteredOrders = salesOrders.filter((o) => (o.orderDate || '').startsWith(currentYear));
-      filteredRecs = recoveries.filter((r) => (r.collectionDate || '').startsWith(currentYear));
-    }
+    const filteredOrders = salesOrders.filter((o) => {
+      if (o.status === 'CANCELLED' || o.status === 'REJECTED') return false;
+      return isMatchDate(o.orderDate || o.createdAt);
+    });
+
+    const filteredRecs = recoveries.filter((r) => {
+      if (r.status === 'REJECTED') return false;
+      return isMatchDate(r.collectionDate || r.createdAt);
+    });
 
     const salesAchieved = filteredOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
     const recoveryAchieved = filteredRecs.reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
-    // Dynamic targets based on period
+    // Dynamic targets based on period & user monthly target
+    const baseMonthlyTarget = currentUser.monthlyTarget && currentUser.monthlyTarget > 0 ? currentUser.monthlyTarget : 4500000;
     const salesTarget =
-      dashboardPeriod === 'TODAY' ? 150000 : dashboardPeriod === 'MTD' ? 4500000 : 54000000;
+      dashboardPeriod === 'TODAY' ? Math.round(baseMonthlyTarget / 26) : dashboardPeriod === 'MTD' ? baseMonthlyTarget : baseMonthlyTarget * 12;
     const recoveryTarget =
-      dashboardPeriod === 'TODAY' ? 120000 : dashboardPeriod === 'MTD' ? 3500000 : 42000000;
+      dashboardPeriod === 'TODAY' ? Math.round((baseMonthlyTarget * 0.8) / 26) : dashboardPeriod === 'MTD' ? Math.round(baseMonthlyTarget * 0.8) : Math.round(baseMonthlyTarget * 0.8 * 12);
 
     const salesPercent = salesTarget > 0 ? Math.round((salesAchieved / salesTarget) * 100) : 0;
     const recoveryPercent = recoveryTarget > 0 ? Math.round((recoveryAchieved / recoveryTarget) * 100) : 0;
@@ -678,15 +774,61 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       recoveryPercent,
       recoveryVariance,
     };
-  }, [salesOrders, recoveries, dashboardPeriod]);
+  }, [salesOrders, recoveries, dashboardPeriod, currentUser]);
+
+  // Dedicated dynamic Month-to-Date (MTD) Sales Order metrics
+  const mtdStats = useMemo(() => {
+    const today = new Date();
+    const currentMonth = today.toISOString().slice(0, 7);
+    const mtdOrders = salesOrders.filter((o) => {
+      const d = (o.orderDate || o.createdAt || '').slice(0, 7);
+      return d === currentMonth && o.status !== 'CANCELLED' && o.status !== 'REJECTED';
+    });
+
+    const mtdSalesAchieved = mtdOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+    const mtdTarget = currentUser.monthlyTarget && currentUser.monthlyTarget > 0 ? currentUser.monthlyTarget : 4500000;
+    const mtdPercent = mtdTarget > 0 ? Math.round((mtdSalesAchieved / mtdTarget) * 100) : 0;
+    const mtdVariance = mtdSalesAchieved - mtdTarget;
+
+    const approvedMtdOrders = mtdOrders.filter((o) => o.status === 'APPROVED' || o.status === 'CONFIRMED');
+    const pendingMtdOrders = mtdOrders.filter((o) => o.status === 'PENDING' || o.status === 'PENDING_APPROVAL');
+
+    const approvedMtdValue = approvedMtdOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+    const pendingMtdValue = pendingMtdOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const dayOfMonth = today.getDate();
+    const daysRemaining = Math.max(1, daysInMonth - dayOfMonth);
+    const targetRemaining = Math.max(0, mtdTarget - mtdSalesAchieved);
+    const dailyRunRateNeeded = Math.round(targetRemaining / daysRemaining);
+
+    return {
+      currentMonth,
+      monthName: today.toLocaleString('default', { month: 'long', year: 'numeric' }),
+      totalOrders: mtdOrders.length,
+      mtdSalesAchieved,
+      mtdTarget,
+      mtdPercent,
+      mtdVariance,
+      approvedOrdersCount: approvedMtdOrders.length,
+      approvedMtdValue,
+      pendingOrdersCount: pendingMtdOrders.length,
+      pendingMtdValue,
+      daysInMonth,
+      dayOfMonth,
+      daysRemaining,
+      dailyRunRateNeeded,
+      recentMtdOrders: mtdOrders.slice(0, 5),
+    };
+  }, [salesOrders, currentUser]);
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] text-slate-800 font-sans pb-24 selection:bg-teal-200">
+    <div className="min-h-screen bg-[#F0F2F5] text-slate-800 font-sans pb-28 selection:bg-teal-200">
       {/* ========================================================= */}
-      {/* TOP HEADER (Clean, Lightweight, WhatsApp/FB Style) */}
+      {/* TOP HEADER (Clean, Unified Desktop/Mobile Navigation) */}
       {/* ========================================================= */}
-      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm px-4 py-3">
-        <div className="max-w-xl mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm px-4 sm:px-6 py-3">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-teal-600 flex items-center justify-center text-white font-black text-base shadow-sm">
               NL
@@ -704,6 +846,52 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                 {currentUser.fullName}
               </p>
             </div>
+          </div>
+
+          {/* Unified Desktop/Tablet Navigation Bar */}
+          <div className="hidden md:flex items-center gap-1 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('ATTENDANCE');
+                setSelectedCustomerId(null);
+              }}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'ATTENDANCE'
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              <span>Attendance</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('DISTRIBUTORS')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'DISTRIBUTORS'
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Store className="w-4 h-4" />
+              <span>Distributors</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('DASHBOARD');
+                setSelectedCustomerId(null);
+              }}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'DASHBOARD'
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>Dashboard</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -744,7 +932,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       {/* ========================================================= */}
       {/* MAIN CONTENT ROUTER (Strictly 3 Screens) */}
       {/* ========================================================= */}
-      <main className="max-w-xl mx-auto px-4 py-4 space-y-4">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-5 space-y-5">
         {/* ========================================================= */}
         {/* SCREEN 1: ATTENDANCE */}
         {/* ========================================================= */}
@@ -840,25 +1028,33 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               )}
             </div>
 
-            {/* Today's Activities Table */}
+            {/* MTD Activities & Real Transactions Table */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Today's Activities</h2>
-                <span className="text-[11px] text-slate-500 font-medium">Real Transactions</span>
+                <div>
+                  <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <TrendingUp className="w-4 h-4 text-teal-600" />
+                    <span>MTD Activities</span>
+                  </h2>
+                  <p className="text-[10px] text-slate-500 font-medium">Month-to-Date Real Transactions</p>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
+                  REAL-TIME MTD
+                </span>
               </div>
 
               <div className="overflow-x-auto rounded-xl border border-slate-200">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                     <tr>
-                      <th className="px-3 py-2.5">Date</th>
+                      <th className="px-3 py-2.5">Month</th>
                       <th className="px-3 py-2.5">Town</th>
-                      <th className="px-3 py-2.5 text-right">Sales</th>
-                      <th className="px-3 py-2.5 text-right">Recovery</th>
+                      <th className="px-3 py-2.5 text-right">Sales Booking</th>
+                      <th className="px-3 py-2.5 text-right">Recovery Cash</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {todayActivities.map((act, i) => (
+                    {mtdActivities.map((act, i) => (
                       <tr key={i} className="hover:bg-slate-50">
                         <td className="px-3 py-2.5 font-medium text-slate-600">{act.date}</td>
                         <td className="px-3 py-2.5 font-bold text-slate-900">{act.town}</td>
@@ -873,17 +1069,87 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                   </tbody>
                   <tfoot className="bg-slate-50 font-bold border-t border-slate-200 text-slate-900">
                     <tr>
-                      <td colSpan={2} className="px-3 py-2.5">Total Today</td>
-                      <td className="px-3 py-2.5 text-right font-mono">
-                        Rs. {todayActivities.reduce((s, a) => s + a.sales, 0).toLocaleString()}
+                      <td colSpan={2} className="px-3 py-2.5 text-xs uppercase tracking-wider text-slate-500 font-extrabold">Total MTD</td>
+                      <td className="px-3 py-2.5 text-right font-mono text-xs font-black">
+                        Rs. {mtdActivities.reduce((s, a) => s + a.sales, 0).toLocaleString()}
                       </td>
-                      <td className="px-3 py-2.5 text-right font-mono text-emerald-700">
-                        Rs. {todayActivities.reduce((s, a) => s + a.recovery, 0).toLocaleString()}
+                      <td className="px-3 py-2.5 text-right font-mono text-emerald-700 text-xs font-black">
+                        Rs. {mtdActivities.reduce((s, a) => s + a.recovery, 0).toLocaleString()}
                       </td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
+            </div>
+
+            {/* 3-Month Same Towns Visit History */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <History className="w-4 h-4 text-indigo-600" />
+                    <span>3-Month Town Visit History</span>
+                  </h2>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Past dealer visits for active town: <strong className="text-indigo-600">{selectedTown}</strong>
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
+                  {pastTownVisits.length} Visits
+                </span>
+              </div>
+
+              {pastTownVisits.length === 0 ? (
+                <div className="py-8 text-center text-slate-400 space-y-1.5 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <MapPin className="w-6 h-6 mx-auto text-slate-300 animate-pulse" />
+                  <p className="text-xs font-medium">No past visits logged in the last 3 months for {selectedTown}.</p>
+                  <p className="text-[10px] text-slate-400">Complete visits to build customer historic profiles.</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                  {pastTownVisits.map((visit) => (
+                    <div
+                      key={visit.id}
+                      className="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100/50 transition-all space-y-2 text-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-mono text-slate-400 block">{visit.dateFormatted}</span>
+                          <span className="font-extrabold text-slate-800 text-sm leading-tight block">{visit.customerName}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 items-end shrink-0">
+                          {visit.orderPlaced && (
+                            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                              Order Placed
+                            </span>
+                          )}
+                          {visit.recoveryCollected && (
+                            <span className="inline-flex items-center gap-1 bg-teal-50 text-teal-800 border border-teal-200 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                              Recovery Made
+                            </span>
+                          )}
+                          {!visit.orderPlaced && !visit.recoveryCollected && (
+                            <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded text-[9px] font-semibold">
+                              Follow-Up Only
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-slate-600 border-t border-slate-200/60 pt-2 text-[11px] leading-relaxed">
+                        <div>
+                          <strong className="text-slate-700">Purpose:</strong> {visit.purpose}
+                        </div>
+                        {visit.notes && (
+                          <div className="italic text-slate-500 bg-white/70 p-1.5 rounded border border-slate-100 mt-1">
+                            "{visit.notes}"
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -896,9 +1162,52 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             {!activeCustomer ? (
               /* --- Customer Search & Selection View --- */
               <div className="space-y-3">
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-                  <h1 className="text-base font-black text-slate-900">Distributors & Dealers</h1>
-                  <p className="text-xs text-slate-500">Search and select a dealer to place orders, record recovery, or check ledger.</p>
+                {/* Registration Submission Confirmation Banner */}
+                {registrationSuccessMsg && (
+                  <div className="p-3.5 rounded-2xl bg-teal-800 text-white text-xs font-bold shadow-md flex items-center justify-between animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-teal-200 shrink-0" />
+                      <span>{registrationSuccessMsg}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRegistrationSuccessMsg(null)}
+                      className="p-1 hover:bg-teal-900 rounded-lg text-teal-100"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                )}
+
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                    <div>
+                      <h1 className="text-base font-black text-slate-900">Distributors &amp; Dealers</h1>
+                      <p className="text-xs text-slate-500">Search and select a dealer to place orders, record recovery, or check ledger.</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setIsRegisterModalOpen(true)}
+                        className="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 shrink-0"
+                        title="Register a new Dealer/Distributor to the Head Office Approval Queue"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Register Dealer</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleManualFinancialSync}
+                        disabled={isFinancialSyncing}
+                        className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95 shrink-0"
+                        title="Force Real-Time Sync of Ledgers and Invoices"
+                      >
+                        <RotateCw className={`w-3.5 h-3.5 ${isFinancialSyncing ? 'animate-spin text-teal-600' : ''}`} />
+                        <span>{isFinancialSyncing ? 'Syncing...' : 'Real-time Sync'}</span>
+                      </button>
+                    </div>
+                  </div>
 
                   <div className="relative pt-1">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-4 pointer-events-none" />
@@ -1079,28 +1388,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                   </div>
                 </div>
 
-                {/* Sub-section Switcher inside Customer */}
+                {/* Sub-section Switcher inside Customer (Alphabetically A-Z Sorted: Invoices -> Ledger -> Order Entry -> Recovery) */}
                 <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm text-xs font-bold">
-                  <button
-                    onClick={() => setCustomerInnerTab('ORDER')}
-                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
-                      customerInnerTab === 'ORDER'
-                        ? 'bg-teal-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    Order Entry
-                  </button>
-                  <button
-                    onClick={() => setCustomerInnerTab('RECOVERY')}
-                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
-                      customerInnerTab === 'RECOVERY'
-                        ? 'bg-teal-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    Recovery
-                  </button>
                   <button
                     onClick={() => setCustomerInnerTab('INVOICES')}
                     className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
@@ -1120,6 +1409,26 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                     }`}
                   >
                     Ledger
+                  </button>
+                  <button
+                    onClick={() => setCustomerInnerTab('ORDER')}
+                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
+                      customerInnerTab === 'ORDER'
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    Order Entry
+                  </button>
+                  <button
+                    onClick={() => setCustomerInnerTab('RECOVERY')}
+                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
+                      customerInnerTab === 'RECOVERY'
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    Recovery
                   </button>
                 </div>
 
@@ -1172,6 +1481,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                                 {brandSkus.map((sku) => {
                                   const stock = getSkuStock(sku.id);
                                   const isOutOfStock = stock <= 0;
+                                  const isLowStock = !isOutOfStock && stock < (sku.reorderLevel || 10);
                                   const currentQty = orderQuantities[sku.id] || 0;
                                   const unitPrice = Number(sku.tradePrice || sku.retailPrice || 0);
 
@@ -1181,6 +1491,15 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                           <span className="font-bold text-slate-900 truncate">{sku.name}</span>
                                           <span className="text-[10px] font-mono text-slate-400">({sku.skuCode})</span>
+                                          {isLowStock && (
+                                            <span 
+                                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-extrabold uppercase tracking-wider animate-pulse shrink-0"
+                                              title={`Current stock is below the reorder level of ${sku.reorderLevel || 10} pcs.`}
+                                            >
+                                              <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+                                              <span>Low Stock</span>
+                                            </span>
+                                          )}
                                         </div>
                                         <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium mt-0.5">
                                           <span>Price: <strong className="text-slate-800 font-mono">Rs. {unitPrice.toLocaleString()}</strong></span>
@@ -1189,7 +1508,14 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                                             {isOutOfStock ? (
                                               <strong className="text-rose-600 font-bold">Out of Stock</strong>
                                             ) : (
-                                              <strong className="text-emerald-700 font-bold">{stock} pcs</strong>
+                                              <span className="inline-flex items-center gap-1">
+                                                <strong className={`${isLowStock ? 'text-amber-600' : 'text-emerald-700'} font-bold`}>{stock} pcs</strong>
+                                                {isLowStock && (
+                                                  <span className="text-[10px] text-slate-400 font-medium font-mono">
+                                                    (Reorder Trigger: {sku.reorderLevel || 10})
+                                                  </span>
+                                                )}
+                                              </span>
                                             )}
                                           </span>
                                         </div>
@@ -1585,7 +1911,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               </div>
             </div>
 
-            {/* 1. SALES KPI CARD */}
+            {/* 1. SALES KPI CARD (Dynamic Calculation from current month's sales orders) */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1593,8 +1919,12 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                     S
                   </div>
                   <div>
-                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Sales</h2>
-                    <span className="text-[11px] text-slate-500 font-medium">Realized vs Target</span>
+                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                      {dashboardPeriod === 'MTD' ? `${mtdStats.monthName} Sales Performance` : 'Sales Performance'}
+                    </h2>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      {dashboardPeriod === 'MTD' ? 'Dynamic Sales Orders vs Monthly Target' : 'Realized vs Period Target'}
+                    </span>
                   </div>
                 </div>
                 <span className="text-sm font-black text-teal-700 font-mono">
@@ -1638,6 +1968,48 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Dynamic MTD Operational Run-Rate & Order Clearance Card (when in MTD mode or overview) */}
+              {dashboardPeriod === 'MTD' && (
+                <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200/80 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between border-b border-teal-200/60 pb-2">
+                    <span className="font-extrabold text-teal-900 text-[11px] uppercase tracking-wide">
+                      MTD Pace &amp; Quota Velocity
+                    </span>
+                    <span className="text-[10px] font-bold text-teal-700 font-mono">
+                      {mtdStats.totalOrders} Orders Logged
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="bg-white/80 p-2 rounded-lg border border-teal-100">
+                      <span className="text-[10px] text-slate-500 block">Approved / Confirmed</span>
+                      <span className="font-mono font-black text-teal-800">
+                        Rs. {mtdStats.approvedMtdValue.toLocaleString()} ({mtdStats.approvedOrdersCount})
+                      </span>
+                    </div>
+                    <div className="bg-white/80 p-2 rounded-lg border border-amber-100">
+                      <span className="text-[10px] text-slate-500 block">Pending Clearance</span>
+                      <span className="font-mono font-black text-amber-700">
+                        Rs. {mtdStats.pendingMtdValue.toLocaleString()} ({mtdStats.pendingOrdersCount})
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-white/90 p-2.5 rounded-lg border border-teal-200/60 text-[11px]">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Days Remaining in Month:</span>
+                      <span className="font-extrabold text-slate-800 font-mono">{mtdStats.daysRemaining} Days</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-slate-500 block text-[10px]">Daily Booking Run-Rate Needed:</span>
+                      <span className="font-extrabold text-teal-800 font-mono">
+                        Rs. {mtdStats.dailyRunRateNeeded.toLocaleString()} / day
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 2. RECOVERY KPI CARD */}
@@ -1699,10 +2071,10 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       </main>
 
       {/* ========================================================= */}
-      {/* BOTTOM NAVIGATION BAR (Strictly 3 Simple Tabs: FB / App Style) */}
+      {/* BOTTOM NAVIGATION BAR (Responsive Mobile & Tablet View) */}
       {/* ========================================================= */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg py-2">
-        <div className="max-w-xl mx-auto px-4 flex items-center justify-around">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-around">
           {/* Tab 1: Attendance */}
           <button
             type="button"
@@ -1710,13 +2082,13 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               setActiveTab('ATTENDANCE');
               setSelectedCustomerId(null);
             }}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
+            className={`flex flex-col items-center gap-1 py-1.5 px-4 rounded-2xl transition-all cursor-pointer ${
               activeTab === 'ATTENDANCE'
-                ? 'text-teal-700 font-black'
-                : 'text-slate-400 hover:text-slate-600 font-semibold'
+                ? 'text-teal-700 font-black bg-teal-50/80 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-700 font-semibold hover:bg-slate-50'
             }`}
           >
-            <Clock className={`w-5 h-5 ${activeTab === 'ATTENDANCE' ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <Clock className={`w-5 h-5 ${activeTab === 'ATTENDANCE' ? 'stroke-[2.5] text-teal-700' : 'stroke-2'}`} />
             <span className="text-[11px] leading-none">Attendance</span>
           </button>
 
@@ -1724,14 +2096,14 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('DISTRIBUTORS')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
+            className={`flex flex-col items-center gap-1 py-1.5 px-4 rounded-2xl transition-all cursor-pointer ${
               activeTab === 'DISTRIBUTORS'
-                ? 'text-teal-700 font-black'
-                : 'text-slate-400 hover:text-slate-600 font-semibold'
+                ? 'text-teal-700 font-black bg-teal-50/80 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-700 font-semibold hover:bg-slate-50'
             }`}
           >
-            <Store className={`w-5 h-5 ${activeTab === 'DISTRIBUTORS' ? 'stroke-[2.5]' : 'stroke-2'}`} />
-            <span className="text-[11px] leading-none">Distributor</span>
+            <Store className={`w-5 h-5 ${activeTab === 'DISTRIBUTORS' ? 'stroke-[2.5] text-teal-700' : 'stroke-2'}`} />
+            <span className="text-[11px] leading-none">Distributors</span>
           </button>
 
           {/* Tab 3: Dashboard */}
@@ -1741,13 +2113,13 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               setActiveTab('DASHBOARD');
               setSelectedCustomerId(null);
             }}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
+            className={`flex flex-col items-center gap-1 py-1.5 px-4 rounded-2xl transition-all cursor-pointer ${
               activeTab === 'DASHBOARD'
-                ? 'text-teal-700 font-black'
-                : 'text-slate-400 hover:text-slate-600 font-semibold'
+                ? 'text-teal-700 font-black bg-teal-50/80 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-700 font-semibold hover:bg-slate-50'
             }`}
           >
-            <TrendingUp className={`w-5 h-5 ${activeTab === 'DASHBOARD' ? 'stroke-[2.5]' : 'stroke-2'}`} />
+            <TrendingUp className={`w-5 h-5 ${activeTab === 'DASHBOARD' ? 'stroke-[2.5] text-teal-700' : 'stroke-2'}`} />
             <span className="text-[11px] leading-none">Dashboard</span>
           </button>
         </div>
@@ -1812,6 +2184,29 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
           invoice={selectedInvoiceForPrint}
           customer={activeCustomer || undefined}
           onClose={() => setSelectedInvoiceForPrint(null)}
+        />
+      )}
+
+      {/* ========================================================= */}
+      {/* FIELD FORCE DEALER REGISTRATION MODAL (PENDING APPROVAL QUEUE) */}
+      {/* ========================================================= */}
+      {isRegisterModalOpen && (
+        <DynamicDealerFormModal
+          isOpen={isRegisterModalOpen}
+          isEdit={false}
+          dealersList={customers}
+          currentUser={currentUser}
+          onClose={() => setIsRegisterModalOpen(false)}
+          onSave={async (dealerData) => {
+            setIsRegisterModalOpen(false);
+            if (onSubmitRegistration) {
+              await onSubmitRegistration(dealerData);
+            }
+            setRegistrationSuccessMsg(
+              `Registration application for "${dealerData.name}" submitted to Head Office Approval Queue. It will appear in active dealers once approved.`
+            );
+            setTimeout(() => setRegistrationSuccessMsg(null), 8000);
+          }}
         />
       )}
     </div>

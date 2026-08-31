@@ -24,7 +24,10 @@ import {
   Phone,
   Tag,
   Check,
-  X
+  X,
+  Calendar,
+  History,
+  TrendingUp
 } from 'lucide-react';
 
 interface CustomerEcosystemTabProps {
@@ -144,6 +147,20 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
   const selRecoveries = recoveries.filter(r => r.customerId === selCustomer?.id);
   const selVisits = visits.filter(v => v.customerId === selCustomer?.id);
   const selReturns = returns.filter(r => r.customerId === selCustomer?.id);
+
+  // 3 Months Visit Logs Filtered by Current Dealer's Town
+  const currentDealerTown = selCustomer?.town || selCustomer?.city || 'Brandreth Road';
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+  const townVisitsLast3Months = visits.filter(v => {
+    const visitDate = new Date(v.checkinTime);
+    const isWithin3Months = isNaN(visitDate.getTime()) || visitDate >= threeMonthsAgo;
+    const matchesTown = (v.townName && v.townName.toLowerCase() === currentDealerTown.toLowerCase()) ||
+                        v.customerId === selCustomer?.id ||
+                        (v.customerName && selCustomer?.companyName && v.customerName.toLowerCase().includes(selCustomer.companyName.toLowerCase()));
+    return isWithin3Months && matchesTown;
+  });
 
   // Financial calculations using real domain rule
   const creditAnalysis = selCustomer 
@@ -445,6 +462,74 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Last 3 Months Visit Logs (Filtered by Current Dealer's Town) */}
+              <div className="p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 text-xs space-y-3 shadow-lg">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                      <History className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-sm text-white">Last 3 Months Visit Logs</h4>
+                      <p className="text-[10px] text-slate-400 font-medium">
+                        Filtered by Town: <span className="text-emerald-400 font-bold">{currentDealerTown}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 font-mono font-bold text-[11px] rounded-full border border-emerald-500/30">
+                    {townVisitsLast3Months.length} Visits Logged
+                  </span>
+                </div>
+
+                {townVisitsLast3Months.length === 0 ? (
+                  <div className="p-4 text-center text-slate-400 text-[11px] bg-slate-800/50 rounded-xl border border-slate-800">
+                    <MapPin className="w-5 h-5 mx-auto text-slate-500 mb-1" />
+                    No field visits logged in {currentDealerTown} over the last 90 days.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                    {townVisitsLast3Months.map((v) => (
+                      <div
+                        key={v.id}
+                        className="p-3 bg-slate-800/80 hover:bg-slate-800 rounded-xl border border-slate-700/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 transition-colors"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white text-xs">{v.customerName || selCustomer.companyName}</span>
+                            <span className="px-2 py-0.2 bg-indigo-500/20 text-indigo-300 text-[9px] font-bold rounded">
+                              {v.purposeOfVisit || 'Routine Check'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-300 flex items-center gap-2">
+                            <span>Officer: <strong className="text-emerald-400">{v.salesUserName || 'Field Rep'}</strong></span>
+                            <span>•</span>
+                            <span className="font-mono">{new Date(v.checkinTime).toLocaleString()}</span>
+                          </p>
+                          {v.notes && (
+                            <p className="text-[10px] text-slate-400 italic">"{v.notes}"</p>
+                          )}
+                        </div>
+
+                        <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1 text-[10px]">
+                          {v.orderBooked && v.orderAmount ? (
+                            <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 font-mono font-bold rounded">
+                              Order: PKR {v.orderAmount.toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-slate-700 text-slate-400 rounded">No Order</span>
+                          )}
+                          {v.recoveryCollected && v.recoveryAmount ? (
+                            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 font-mono font-bold rounded">
+                              Recov: PKR {v.recoveryAmount.toLocaleString()}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ) : (

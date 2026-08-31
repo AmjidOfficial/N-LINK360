@@ -18,6 +18,8 @@ import {
   Clock,
   Sparkles,
   ChevronRight,
+  ChevronDown,
+  MapPin,
   Eye,
   Activity,
   Layers,
@@ -60,6 +62,8 @@ export const SuperAdminExecutiveDashboard: React.FC<SuperAdminExecutiveDashboard
   const [selectedRegion, setSelectedRegion] = useState<string>('ALL');
   const [dealerSearchQuery, setDealerSearchQuery] = useState<string>('');
   const [activeMetricTab, setActiveMetricTab] = useState<'REVENUE' | 'RECOVERY' | 'EXPOSURE'>('REVENUE');
+  const [isMtdDrilldownOpen, setIsMtdDrilldownOpen] = useState(false);
+  const [drilldownSearch, setDrilldownSearch] = useState('');
 
   // Filtered dataset
   const filteredCustomers = useMemo(() => {
@@ -396,18 +400,23 @@ export const SuperAdminExecutiveDashboard: React.FC<SuperAdminExecutiveDashboard
           </div>
         </div>
 
-        {/* Metric 3: Monthly Invoiced Sales Target Arc */}
+        {/* Metric 3: Monthly Invoiced Sales Target Arc & MTD Drill-Down Trigger */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">Invoiced Sales</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">Invoiced Sales MTD</span>
               <p className="text-xl font-black font-mono text-deep-green mt-0.5">
                 PKR {(metrics.totalSalesMTD / 1000000).toFixed(2)}M
               </p>
             </div>
-            <div className="p-2 rounded-2xl bg-amber-50 text-amber-700 border border-amber-100">
+            <button
+              onClick={() => setIsMtdDrilldownOpen((prev) => !prev)}
+              className="p-2 rounded-2xl bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer flex items-center gap-1 font-bold text-xs shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+              title="Expand MTD Sales Town & Dealer Drill-Down"
+            >
               <TrendingUp className="w-4 h-4" />
-            </div>
+              <span>Drill Down</span>
+            </button>
           </div>
 
           {/* Radial Arc */}
@@ -451,13 +460,159 @@ export const SuperAdminExecutiveDashboard: React.FC<SuperAdminExecutiveDashboard
             </div>
           </div>
 
-          <div className="p-3 bg-bg-secondary rounded-2xl border border-slate-100 text-xs text-slate-600 flex justify-between items-center">
-            <span>Target: PKR {(metrics.monthlySalesTarget / 1000000).toFixed(1)}M</span>
-            <span className="font-bold text-amber-700 font-mono">+18% MoM Pace</span>
+          <div className="space-y-2">
+            <div className="p-3 bg-bg-secondary rounded-2xl border border-slate-100 text-xs text-slate-600 flex justify-between items-center">
+              <span>Target: PKR {(metrics.monthlySalesTarget / 1000000).toFixed(1)}M</span>
+              <span className="font-bold text-amber-700 font-mono">+18% MoM Pace</span>
+            </div>
+            
+            <button
+              onClick={() => setIsMtdDrilldownOpen((prev) => !prev)}
+              className="w-full py-2 px-3 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+            >
+              <span>{isMtdDrilldownOpen ? 'Hide MTD Town & Dealer Analysis' : 'Expand Top Town & Dealer Analysis'}</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isMtdDrilldownOpen ? 'rotate-180' : ''}`} />
+            </button>
           </div>
         </div>
 
       </div>
+
+      {/* EXPANDABLE MTD SALES DRILL-DOWN PANEL */}
+      {isMtdDrilldownOpen && (
+        <div className="bg-white p-6 rounded-3xl border border-teal-200 shadow-xl space-y-5 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 uppercase tracking-wider">
+                MTD Performance Drill-Down
+              </span>
+              <h3 className="text-lg font-black text-slate-800 mt-1 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-teal-700" />
+                Month-to-Date (MTD) Sales Realization by Town &amp; Top Dealers
+              </h3>
+              <p className="text-xs text-slate-500">
+                Detailed breakdown of sales volume, monthly target achievement, and assigned sales officers across primary markets.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={drilldownSearch}
+                  onChange={(e) => setDrilldownSearch(e.target.value)}
+                  placeholder="Filter town or dealer..."
+                  className="pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-600 w-48 sm:w-64"
+                />
+              </div>
+              <button
+                onClick={() => setIsMtdDrilldownOpen(false)}
+                className="p-1.5 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800 text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Top Performing Towns Grid */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-teal-700" /> Top Performing Towns &amp; Commercial Markets (MTD)
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                {
+                  town: 'Lahore - Brandreth Road Market',
+                  region: 'Central Punjab',
+                  officer: 'Ali Raza (TSM)',
+                  mtdSales: 1650000,
+                  target: 1800000,
+                  pct: 91.6,
+                  dealers: 14,
+                  topDealer: 'Al-Madina Auto Spares',
+                },
+                {
+                  town: 'Peshawar - Karkhano Market',
+                  region: 'KPK / North',
+                  officer: 'Tariq Mansoor (RSM)',
+                  mtdSales: 1280000,
+                  target: 1400000,
+                  pct: 91.4,
+                  dealers: 9,
+                  topDealer: 'Khyber Auto Electric Store',
+                },
+                {
+                  town: 'Karachi - Saddar Plaza',
+                  region: 'South / Sindh',
+                  officer: 'Farhan Siddiqui (TSM)',
+                  mtdSales: 1120000,
+                  target: 1300000,
+                  pct: 86.1,
+                  dealers: 11,
+                  topDealer: 'Super Karachi Auto Traders',
+                },
+                {
+                  town: 'Rawalpindi - Gawalmandi Market',
+                  region: 'North Punjab',
+                  officer: 'Usman Ghani (TSM)',
+                  mtdSales: 890000,
+                  target: 1000000,
+                  pct: 89.0,
+                  dealers: 8,
+                  topDealer: 'Rawal Auto Lighting',
+                },
+                {
+                  town: 'Gujranwala - Small Industrial Estate',
+                  region: 'Central Punjab',
+                  officer: 'Hamza Malik (TSM)',
+                  mtdSales: 740000,
+                  target: 800000,
+                  pct: 92.5,
+                  dealers: 6,
+                  topDealer: 'GTI Lighting Center',
+                },
+              ]
+                .filter(
+                  (t) =>
+                    !drilldownSearch ||
+                    t.town.toLowerCase().includes(drilldownSearch.toLowerCase()) ||
+                    t.topDealer.toLowerCase().includes(drilldownSearch.toLowerCase()) ||
+                    t.officer.toLowerCase().includes(drilldownSearch.toLowerCase())
+                )
+                .map((t) => (
+                  <div key={t.town} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h5 className="text-xs font-black text-slate-800 leading-snug">{t.town}</h5>
+                        <span className="text-[10px] text-teal-700 font-bold block">{t.region} • {t.officer}</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono font-bold text-[10px]">
+                        {t.pct}% Quota
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] font-medium text-slate-600">
+                        <span>MTD Sales:</span>
+                        <span className="font-mono font-bold text-slate-800">PKR {(t.mtdSales / 100000).toFixed(2)} Lakhs</span>
+                      </div>
+                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div className="bg-teal-600 h-full rounded-full transition-all duration-500" style={{ width: `${t.pct}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-500">
+                      <span>Active Dealers: <strong className="text-slate-800">{t.dealers}</strong></span>
+                      <span>Top Key Account: <strong className="text-teal-800">{t.topDealer}</strong></span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3. INTERACTIVE VISUAL CHARTS: MONTHLY BAR CHART & 7-DAY REVENUE VELOCITY */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">

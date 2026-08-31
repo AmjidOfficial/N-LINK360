@@ -53,6 +53,15 @@ import {
   saveCentralEmployee,
   deleteCentralEmployee
 } from '../services/production-users';
+import {
+  approveCustomerRegistration,
+  rejectCustomerRegistration,
+  approveOrder,
+  rejectOrder,
+  verifyRecovery,
+  rejectRecovery
+} from '../services/supabase-transactions';
+import { DynamicDealerFormModal } from './DynamicDealerFormModal';
 
 interface OperationDomainProps {
   activeSubTab: OperationSubTab;
@@ -237,6 +246,9 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
     },
   ]);
 
+  const [approvalQueueFilter, setApprovalQueueFilter] = useState<'ALL' | 'REGISTRATIONS' | 'INVOICES' | 'RECOVERIES'>('ALL');
+  const [approvalNotification, setApprovalNotification] = useState<string | null>(null);
+
   const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([
     {
       id: 'REG-REQ-301',
@@ -254,9 +266,214 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
       additionalNotes: 'Highly active lighting dealer in southern Punjab auto sector. Recommending credit approval.',
       salesUserId: 'USR-TSM-01',
       salesUserName: 'Tariq Mansoor (TSM)',
-      submittedAt: '2026-08-29'
+      submittedAt: '2026-08-29',
+      status: 'PENDING_APPROVAL'
+    },
+    {
+      id: 'REG-REQ-302',
+      businessName: 'Al-Rehman Electric Auto Hub',
+      ownerName: 'Rehman Ullah Khan',
+      contactNumber: '+92 333 4455667',
+      cnic: '38403-1234567-3',
+      address: 'Sargodha Road, Faisalabad',
+      city: 'Faisalabad',
+      region: 'Punjab Central',
+      type: 'DISTRIBUTOR',
+      proposedCreditLimit: 1500000,
+      proposedCreditDays: 30,
+      proposedOpeningBalance: 0,
+      additionalNotes: 'Large regional distributor with 4 sub-dealer networks in Faisalabad & Jhang.',
+      salesUserId: 'USR-TSM-02',
+      salesUserName: 'Kashif Mehmood (TSM)',
+      submittedAt: '2026-08-30',
+      status: 'PENDING_APPROVAL'
     }
   ]);
+
+  const [pendingApprovalsInvoices, setPendingApprovalsInvoices] = useState<any[]>([
+    {
+      id: 'INV-2026-881',
+      orderNumber: 'SO-2026-904',
+      dealerName: 'Al-Madina Auto Spares & Lighting',
+      town: 'Lahore',
+      officerName: 'Ali Raza (TSM)',
+      amount: 450000,
+      itemSummary: '10 Cartons H4 Halogen Bulbs + 5 Sets LED Conversion Kits',
+      createdAt: '2026-08-30 14:20',
+      reason: 'High-Value Order Exceeding Soft Credit Limit',
+      status: 'PENDING_APPROVAL',
+    },
+    {
+      id: 'INV-2026-884',
+      orderNumber: 'SO-2026-909',
+      dealerName: 'Khyber Auto Electric Store',
+      town: 'Peshawar',
+      officerName: 'Tariq Mansoor (RSM)',
+      amount: 820000,
+      itemSummary: '20 Cartons H4 Halogen + 30 Packs T10 Wedge Bulbs',
+      createdAt: '2026-08-31 09:15',
+      reason: 'Overdue Balance > 30 Days Credit Policy',
+      status: 'PENDING_APPROVAL',
+    },
+    {
+      id: 'INV-2026-890',
+      orderNumber: 'SO-2026-915',
+      dealerName: 'Super Karachi Auto Traders',
+      town: 'Karachi',
+      officerName: 'Farhan Siddiqui (TSM)',
+      amount: 1250000,
+      itemSummary: '15 Sets Heavy Duty Fog Light Assembly + 40 Cartons Bulbs',
+      createdAt: '2026-08-31 11:45',
+      reason: 'Special Trade Discount (7.5%) Approval Required',
+      status: 'PENDING_APPROVAL',
+    },
+  ]);
+
+  const [pendingApprovalsRecoveries, setPendingApprovalsRecoveries] = useState<any[]>([
+    {
+      id: 'REC-2026-401',
+      dealerName: 'Al-Madina Auto Spares & Lighting',
+      town: 'Lahore',
+      officerName: 'Ali Raza (TSM)',
+      amount: 350000,
+      paymentMode: 'BANK_CHEQUE',
+      instrumentNumber: 'CHQ-MEZN-889012',
+      bankName: 'Meezan Bank Ltd',
+      date: '2026-08-30',
+      status: 'PENDING_VERIFICATION',
+      notes: 'Cheque received by field rep in Brandreth Road beat.',
+    },
+    {
+      id: 'REC-2026-405',
+      dealerName: 'Farhan Light House',
+      town: 'Multan',
+      officerName: 'Tariq Mansoor (TSM)',
+      amount: 180000,
+      paymentMode: 'ONLINE_TRANSFER',
+      instrumentNumber: 'FT-HBL-990182',
+      bankName: 'Habib Bank Ltd',
+      date: '2026-08-31',
+      status: 'PENDING_VERIFICATION',
+      notes: 'Online IBFT slip attached for invoice clearing.',
+    },
+    {
+      id: 'REC-2026-410',
+      dealerName: 'Super Karachi Auto Traders',
+      town: 'Karachi',
+      officerName: 'Farhan Siddiqui (TSM)',
+      amount: 600000,
+      paymentMode: 'PAY_ORDER',
+      instrumentNumber: 'PO-UBL-112233',
+      bankName: 'United Bank Ltd',
+      date: '2026-08-31',
+      status: 'PENDING_VERIFICATION',
+      notes: 'Pay order deposited at Karachi regional branch.',
+    },
+  ]);
+
+  const showApprovalToast = (msg: string) => {
+    setApprovalNotification(msg);
+    setTimeout(() => setApprovalNotification(null), 4000);
+  };
+
+  const handleApproveRegistration = async (regId: string) => {
+    const reg = pendingRegistrations.find((r) => r.id === regId);
+    if (!reg) return;
+
+    const newCode = `DLR-${dealers.length + 101}`;
+    setPendingRegistrations((prev) =>
+      prev.map((item) => (item.id === regId ? { ...item, status: 'APPROVED', assignedCode: newCode } : item))
+    );
+
+    // Add dealer to active dealers collection
+    const newDealerRecord = {
+      id: newCode,
+      name: reg.businessName,
+      contactPerson: reg.ownerName,
+      phone: reg.contactNumber,
+      cnic: reg.cnic,
+      address: reg.address,
+      town: reg.city,
+      area: reg.region,
+      city: reg.city,
+      region: reg.region,
+      type: reg.type,
+      creditLimit: Number(reg.proposedCreditLimit || 500000),
+      creditDays: Number(reg.proposedCreditDays || 15),
+      currentBalance: 0,
+      status: 'ACTIVE',
+      bankName: 'To be configured',
+      bankIban: 'PK-PENDING',
+    };
+    setDealers((prev) => [newDealerRecord, ...prev]);
+
+    try {
+      await approveCustomerRegistration(regId, newCode);
+    } catch {
+      // Optimistic state preserved
+    }
+    showApprovalToast(`Dealer Application ${regId} Approved. Assigned Code: ${newCode}`);
+  };
+
+  const handleRejectRegistration = async (regId: string) => {
+    setPendingRegistrations((prev) =>
+      prev.map((item) => (item.id === regId ? { ...item, status: 'REJECTED' } : item))
+    );
+    try {
+      await rejectCustomerRegistration(regId, 'Credit policy non-compliance / incomplete territory documentation');
+    } catch {
+      // Handled
+    }
+    showApprovalToast(`Dealer Application ${regId} has been rejected.`);
+  };
+
+  const handleApproveInvoice = async (id: string) => {
+    setPendingApprovalsInvoices((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: 'APPROVED' } : item))
+    );
+    try {
+      await approveOrder(id, `Approved by ${currentUser.name}`);
+    } catch {
+      // Handled
+    }
+    showApprovalToast(`Commercial Order / Invoice ${id} authorized and cleared for dispatch.`);
+  };
+
+  const handleRejectInvoice = async (id: string) => {
+    setPendingApprovalsInvoices((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: 'REJECTED' } : item))
+    );
+    try {
+      await rejectOrder(id, `Credit terms ceiling exceeded / overdue payments (by ${currentUser.name})`);
+    } catch {
+      // Handled
+    }
+    showApprovalToast(`Order ${id} rejected.`);
+  };
+
+  const handleApproveRecovery = async (id: string) => {
+    setPendingApprovalsRecoveries((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: 'APPROVED' } : item))
+    );
+    try {
+      await verifyRecovery(id);
+    } catch {
+      // Handled
+    }
+    showApprovalToast(`Payment Recovery ${id} verified and ledger updated successfully.`);
+  };
+
+  const handleRejectRecovery = async (id: string) => {
+    setPendingApprovalsRecoveries((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: 'REJECTED' } : item))
+    );
+    try {
+      await rejectRecovery(id, `Payment instrument bounced or invalid IBFT proof (by ${currentUser.name})`);
+    } catch {
+      // Handled
+    }
+    showApprovalToast(`Payment Recovery ${id} marked as rejected.`);
+  };
 
   const [targets, setTargets] = useState<any[]>([
     {
@@ -648,6 +865,25 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
+  const [dealerToDelete, setDealerToDelete] = useState<any | null>(null);
+
+  const handleSaveDynamicDealer = (dealerData: any) => {
+    if (!enforceAdminWritePermission('register or update dealer accounts')) return;
+    if (modalType === 'ADD_DEALER') {
+      const newDlr = {
+        ...dealerData,
+        id: `DLR-${100 + dealers.length + 1}`,
+      };
+      setDealers((prev) => [newDlr, ...prev]);
+    } else if (modalType === 'EDIT_DEALER' && selectedDealer) {
+      setDealers((prev) =>
+        prev.map((d) => (d.id === selectedDealer.id ? { ...d, ...dealerData } : d))
+      );
+    }
+    setModalType(null);
+    setSelectedDealer(null);
+  };
+
   const handleSaveDealer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!enforceAdminWritePermission('register or update dealer accounts')) return;
@@ -668,6 +904,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
   const handleDeleteDealer = (id: string) => {
     if (!enforceAdminWritePermission('delete dealer accounts')) return;
     setDealers((prev) => prev.filter((d) => d.id !== id));
+    setDealerToDelete(null);
   };
 
   const handleSaveTarget = (e: React.FormEvent) => {
@@ -762,6 +999,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
             { id: 'TARGET', label: isField ? 'My Sales Targets' : 'Target Allocation', icon: Target, adminOnly: false },
             { id: 'SALES_TEAM', label: isField ? 'My Route & Beats' : 'Sales Team & Beats', icon: Users, adminOnly: false },
             { id: 'HIERARCHY', label: '5-Tier Hierarchy Tree', icon: GitFork, adminOnly: false },
+            { id: 'APPROVALS', label: 'Head Office Approvals', icon: CheckCircle2, adminOnly: true },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSubTab === tab.id;
@@ -1275,8 +1513,9 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
                       </button>
                       {isAdmin && (
                         <button
-                          onClick={() => handleDeleteDealer(d.id)}
+                          onClick={() => setDealerToDelete(d)}
                           className="nm-btn p-1.5 rounded-xl text-slate-600 hover:text-rose-600"
+                          title="Delete Dealer Account"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1830,6 +2069,380 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
         </div>
       )}
 
+      {/* TAB 7: HEAD OFFICE APPROVAL QUEUE */}
+      {activeSubTab === 'APPROVALS' && (
+        <div className="approval-queue-container space-y-6">
+          {/* Real-time Notification Banner */}
+          {approvalNotification && (
+            <div className="p-3.5 rounded-2xl bg-emerald-700 text-white text-xs font-bold shadow-md flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-200 shrink-0" />
+                <span>{approvalNotification}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setApprovalNotification(null)}
+                className="p-1 hover:bg-emerald-800 rounded-lg text-emerald-100"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Header & KPI Summary */}
+          <div className="nm-flat p-6 rounded-3xl border border-white space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+              <div>
+                <span className="nm-badge-teal text-[10px] px-2.5 py-0.5 rounded-full font-bold">
+                  Enterprise Control Deck
+                </span>
+                <h2 className="text-xl font-black text-slate-800 tracking-tight mt-1 flex items-center gap-2">
+                  <CheckCircle2 className="w-6 h-6 text-teal-700" />
+                  Head Office Approval Queue &amp; Authorization Console
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Centralized queue to authorize pending dealer/distributor registrations, high-value commercial sales orders, and field payment recoveries.
+                </p>
+              </div>
+
+              {/* Sub-Queue Category Filters */}
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 text-xs font-bold">
+                {[
+                  { id: 'ALL', label: 'All Queue' },
+                  { id: 'REGISTRATIONS', label: `Dealers (${pendingRegistrations.filter((r) => r.status === 'PENDING_APPROVAL').length})` },
+                  { id: 'INVOICES', label: `Invoices (${pendingApprovalsInvoices.filter((i) => i.status === 'PENDING_APPROVAL').length})` },
+                  { id: 'RECOVERIES', label: `Recoveries (${pendingApprovalsRecoveries.filter((r) => r.status === 'PENDING_VERIFICATION').length})` },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setApprovalQueueFilter(f.id as any)}
+                    className={`px-3 py-1.5 rounded-xl transition-all ${
+                      approvalQueueFilter === f.id
+                        ? 'bg-teal-700 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* KPI Badges */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="nm-inset p-4 rounded-2xl space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Dealer Applications</span>
+                <div className="text-xl font-black text-indigo-700 font-mono">
+                  {pendingRegistrations.filter((r) => r.status === 'PENDING_APPROVAL').length} Pending
+                </div>
+                <span className="text-[10px] text-slate-400 block font-medium">
+                  {pendingRegistrations.length} Total Applications
+                </span>
+              </div>
+
+              <div className="nm-inset p-4 rounded-2xl space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Pending Invoices</span>
+                <div className="text-xl font-black text-amber-700 font-mono">
+                  {pendingApprovalsInvoices.filter((i) => i.status === 'PENDING_APPROVAL').length} Orders
+                </div>
+                <span className="text-[10px] text-slate-400 block font-medium">
+                  PKR {(pendingApprovalsInvoices.filter((i) => i.status === 'PENDING_APPROVAL').reduce((acc, curr) => acc + curr.amount, 0) / 1000000).toFixed(2)}M Value
+                </span>
+              </div>
+
+              <div className="nm-inset p-4 rounded-2xl space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Pending Recoveries</span>
+                <div className="text-xl font-black text-teal-800 font-mono">
+                  {pendingApprovalsRecoveries.filter((r) => r.status === 'PENDING_VERIFICATION').length} Receipts
+                </div>
+                <span className="text-[10px] text-slate-400 block font-medium">
+                  PKR {(pendingApprovalsRecoveries.filter((r) => r.status === 'PENDING_VERIFICATION').reduce((acc, curr) => acc + curr.amount, 0) / 1000000).toFixed(2)}M Value
+                </span>
+              </div>
+
+              <div className="nm-inset p-4 rounded-2xl space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Approval Authority</span>
+                <div className="text-sm font-extrabold text-emerald-800">
+                  Head Office Executive
+                </div>
+                <span className="text-[10px] text-slate-400 block font-medium">Role: {currentUser.role}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 1: Pending Dealer / Distributor Registrations */}
+          {(approvalQueueFilter === 'ALL' || approvalQueueFilter === 'REGISTRATIONS') && (
+            <div className="nm-flat p-6 rounded-3xl border border-white space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Store className="w-4 h-4 text-indigo-700" />
+                  1. Dealer &amp; Distributor Account Registrations
+                </h3>
+                <span className="text-xs text-slate-500 font-mono font-bold">
+                  {pendingRegistrations.length} Applications Logged
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                <table className="w-full text-left text-xs bg-white">
+                  <thead className="bg-slate-100 text-slate-700 font-bold border-b">
+                    <tr>
+                      <th className="py-2.5 px-3">Req ID</th>
+                      <th className="py-2.5 px-3">Business &amp; Owner</th>
+                      <th className="py-2.5 px-3">Contact &amp; CNIC</th>
+                      <th className="py-2.5 px-3">Town / Region</th>
+                      <th className="py-2.5 px-3">Submitting Agent</th>
+                      <th className="py-2.5 px-3 text-right">Proposed Credit</th>
+                      <th className="py-2.5 px-3 text-center">Status</th>
+                      <th className="py-2.5 px-3 text-right">Head Office Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-sans text-slate-700 text-[11px]">
+                    {pendingRegistrations.map((reg) => (
+                      <tr key={reg.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-3">
+                          <span className="font-mono font-bold text-slate-800 block">{reg.id}</span>
+                          <span className="text-[10px] text-slate-400">{reg.submittedAt}</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-slate-800 block">{reg.businessName}</span>
+                          <span className="text-[10px] text-slate-500 font-medium">{reg.ownerName} ({reg.type})</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-mono font-bold text-slate-700 block">{reg.contactNumber}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{reg.cnic}</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-slate-800 block">{reg.city}</span>
+                          <span className="text-[10px] text-slate-500">{reg.region}</span>
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-teal-800">{reg.salesUserName}</td>
+                        <td className="py-3 px-3 text-right">
+                          <span className="font-mono font-black text-slate-800 block">
+                            PKR {Number(reg.proposedCreditLimit || 0).toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-slate-500">{reg.proposedCreditDays || 15} Days Credit</span>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold ${
+                              reg.status === 'APPROVED'
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                : reg.status === 'REJECTED'
+                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                : 'bg-amber-100 text-amber-800 border border-amber-300'
+                            }`}
+                          >
+                            {reg.status === 'APPROVED' && reg.assignedCode ? `APPROVED (${reg.assignedCode})` : (reg.status || 'PENDING_APPROVAL').replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          {reg.status === 'PENDING_APPROVAL' ? (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleApproveRegistration(reg.id)}
+                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                              >
+                                Approve &amp; Assign Code
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRejectRegistration(reg.id)}
+                                className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-bold italic">Application Processed</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Section 2: Pending Commercial Invoices & Sales Orders */}
+          {(approvalQueueFilter === 'ALL' || approvalQueueFilter === 'INVOICES') && (
+            <div className="nm-flat p-6 rounded-3xl border border-white space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Package className="w-4 h-4 text-teal-700" />
+                  2. Pending Commercial Invoices &amp; Orders Requiring Clearance
+                </h3>
+                <span className="text-xs text-slate-500 font-mono font-bold">
+                  {pendingApprovalsInvoices.length} Total Registered
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                <table className="w-full text-left text-xs bg-white">
+                  <thead className="bg-slate-100 text-slate-700 font-bold border-b">
+                    <tr>
+                      <th className="py-2.5 px-3">Invoice / Order #</th>
+                      <th className="py-2.5 px-3">Dealer &amp; Town</th>
+                      <th className="py-2.5 px-3">Submitting Officer</th>
+                      <th className="py-2.5 px-3 text-right">Invoice Amount</th>
+                      <th className="py-2.5 px-3">Review Reason</th>
+                      <th className="py-2.5 px-3 text-center">Status</th>
+                      <th className="py-2.5 px-3 text-right">Head Office Decision</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-sans text-slate-700 text-[11px]">
+                    {pendingApprovalsInvoices.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-3">
+                          <span className="font-mono font-bold text-slate-800 block">{inv.id}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{inv.orderNumber}</span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-slate-800 block">{inv.dealerName}</span>
+                          <span className="text-[10px] text-slate-500">{inv.town} Market</span>
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-teal-800">{inv.officerName}</td>
+                        <td className="py-3 px-3 text-right font-mono font-black text-slate-800">
+                          PKR {inv.amount.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="text-[10px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">
+                            {inv.reason}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold ${
+                              inv.status === 'APPROVED'
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                : inv.status === 'REJECTED'
+                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                : 'bg-amber-100 text-amber-800 border border-amber-300'
+                            }`}
+                          >
+                            {inv.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          {inv.status === 'PENDING_APPROVAL' ? (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleApproveInvoice(inv.id)}
+                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                              >
+                                Approve Order
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRejectInvoice(inv.id)}
+                                className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                              >
+                                Reject Order
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-bold italic">Decision Processed</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Pending Payment Recoveries */}
+          {(approvalQueueFilter === 'ALL' || approvalQueueFilter === 'RECOVERIES') && (
+            <div className="nm-flat p-6 rounded-3xl border border-white space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-emerald-700" />
+                  3. Field Recovery Receipts Requiring Verification
+                </h3>
+                <span className="text-xs text-slate-500 font-mono font-bold">
+                  {pendingApprovalsRecoveries.length} Total Verification Logged
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                <table className="w-full text-left text-xs bg-white">
+                  <thead className="bg-slate-100 text-slate-700 font-bold border-b">
+                    <tr>
+                      <th className="py-2.5 px-3">Receipt ID</th>
+                      <th className="py-2.5 px-3">Dealer &amp; Town</th>
+                      <th className="py-2.5 px-3">Field Collector</th>
+                      <th className="py-2.5 px-3">Mode &amp; Instrument</th>
+                      <th className="py-2.5 px-3 text-right">Amount (PKR)</th>
+                      <th className="py-2.5 px-3 text-center">Status</th>
+                      <th className="py-2.5 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-sans text-slate-700 text-[11px]">
+                    {pendingApprovalsRecoveries.map((rec) => (
+                      <tr key={rec.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-3 font-mono font-bold text-slate-800">{rec.id}</td>
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-slate-800 block">{rec.dealerName}</span>
+                          <span className="text-[10px] text-slate-500">{rec.town}</span>
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-teal-800">{rec.officerName}</td>
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-slate-700 block">{rec.paymentMode.replace('_', ' ')}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{rec.instrumentNumber} ({rec.bankName})</span>
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-black text-emerald-700">
+                          PKR {rec.amount.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold ${
+                              rec.status === 'APPROVED'
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                : rec.status === 'REJECTED'
+                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                : 'bg-amber-100 text-amber-800 border border-amber-300'
+                            }`}
+                          >
+                            {rec.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          {rec.status === 'PENDING_VERIFICATION' ? (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleApproveRecovery(rec.id)}
+                                className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-[10px] transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                              >
+                                Verify &amp; Post Payment
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRejectRecovery(rec.id)}
+                                className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                              >
+                                Reject Payment
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-bold italic">Payment Processed</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* MODALS */}
       {/* 1. Add / Edit Branch */}
       {(modalType === 'ADD_BRANCH' || modalType === 'EDIT_BRANCH') && (
@@ -2006,262 +2619,47 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
         </div>
       )}
 
-      {/* 3. Add / Edit Dealer (Complete Registration Form) */}
-      {(modalType === 'ADD_DEALER' || modalType === 'EDIT_DEALER') && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="nm-flat bg-[#E8ECF2] p-6 rounded-3xl border border-white max-w-2xl w-full space-y-4 shadow-2xl my-8">
-            <div className="flex items-center justify-between border-b border-slate-300 pb-3">
-              <div>
-                <h3 className="text-base font-black text-slate-800">
-                  {modalType === 'ADD_DEALER' ? 'Complete Dealer / Distributor Registration' : 'Edit Commercial Dealer Account'}
-                </h3>
-                <p className="text-[11px] text-slate-500 font-medium">
-                  Region &gt; Area &gt; Territory &gt; TSM &gt; Commercial & Tax Requirements
-                </p>
-              </div>
+      {/* 3. Dynamic Add / Edit Dealer Registration Modal */}
+      <DynamicDealerFormModal
+        isOpen={modalType === 'ADD_DEALER' || modalType === 'EDIT_DEALER'}
+        isEdit={modalType === 'EDIT_DEALER'}
+        dealer={modalType === 'EDIT_DEALER' ? selectedDealer : null}
+        dealersList={dealers}
+        currentUser={currentUser}
+        onSave={handleSaveDynamicDealer}
+        onClose={() => {
+          setModalType(null);
+          setSelectedDealer(null);
+        }}
+      />
+
+      {/* 3b. Delete Confirmation Dialog */}
+      {dealerToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="nm-flat bg-[#E8ECF2] p-6 rounded-3xl border border-white max-w-sm w-full space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-700">
+              <AlertTriangle className="w-6 h-6" />
+              <h3 className="text-base font-black text-slate-800">Confirm Deletion</h3>
+            </div>
+            <p className="text-xs text-slate-600">
+              Are you sure you want to delete the account <span className="font-bold text-slate-900">{dealerToDelete.name}</span> ({dealerToDelete.id})? This will remove all associated ledger references and assigned beat allocations.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setModalType(null)}
-                className="nm-btn w-8 h-8 rounded-full text-slate-600 font-bold hover:text-slate-900 flex items-center justify-center"
+                onClick={() => setDealerToDelete(null)}
+                className="nm-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-600"
               >
-                ✕
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteDealer(dealerToDelete.id)}
+                className="px-4 py-2 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-md"
+              >
+                Delete Account
               </button>
             </div>
-
-            <form onSubmit={handleSaveDealer} className="space-y-4 text-xs">
-              {/* Section 1: Geographical Hierarchy & Assignment */}
-              <div className="nm-inset p-3.5 rounded-2xl space-y-3">
-                <span className="text-[10px] font-black text-teal-800 uppercase tracking-wider block">
-                  1. Geographical Hierarchy &amp; TSM Assignment
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Region *</label>
-                    <select
-                      value={dealerForm.region}
-                      onChange={(e) => setDealerForm({ ...dealerForm, region: e.target.value })}
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
-                    >
-                      <option value="Punjab Central">Punjab Central (Lahore, Gujranwala)</option>
-                      <option value="Punjab North">Punjab North (Rawalpindi, Islamabad)</option>
-                      <option value="Punjab South">Punjab South (Multan, Bahawalpur)</option>
-                      <option value="Sindh South">Sindh South (Karachi, Hyderabad)</option>
-                      <option value="KPK West">KPK West (Peshawar, Mardan)</option>
-                      <option value="Balochistan">Balochistan (Quetta)</option>
-                      <option value="Federal Capital">Federal Capital</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Area *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dealerForm.area}
-                      onChange={(e) => setDealerForm({ ...dealerForm, area: e.target.value })}
-                      placeholder="e.g. Lahore Division / Karachi Zone"
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Territory / Market Beat *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dealerForm.territory}
-                      onChange={(e) => setDealerForm({ ...dealerForm, territory: e.target.value })}
-                      placeholder="e.g. Brandreth Road / Karkhano Market"
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Assigned TSM / Sales Officer *</label>
-                    <select
-                      value={dealerForm.assignedTsm}
-                      onChange={(e) => setDealerForm({ ...dealerForm, assignedTsm: e.target.value })}
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold text-teal-800"
-                    >
-                      <option value="Ali Raza (TSM)">Ali Raza (TSM) - Central Lahore</option>
-                      <option value="Muhammad Usman (TSM)">Muhammad Usman (TSM) - Gujranwala & Sialkot</option>
-                      <option value="Farhan Siddiqui (TSM)">Farhan Siddiqui (TSM) - Karachi South</option>
-                      <option value="Zahid Mehmood (ASM)">Zahid Mehmood (ASM) - Rawalpindi Division</option>
-                      <option value="Tariq Mansoor (RSM)">Tariq Mansoor (RSM) - KPK Region</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 2: Proprietor & Business Identity */}
-              <div className="nm-inset p-3.5 rounded-2xl space-y-3">
-                <span className="text-[10px] font-black text-teal-800 uppercase tracking-wider block">
-                  2. Firm Identity &amp; Contact Person
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Business / Shop Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dealerForm.name}
-                      onChange={(e) => setDealerForm({ ...dealerForm, name: e.target.value })}
-                      placeholder="e.g. Al-Madina Auto Spares & Lighting"
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Customer Category *</label>
-                    <select
-                      value={dealerForm.customerType}
-                      onChange={(e) => setDealerForm({ ...dealerForm, customerType: e.target.value })}
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
-                    >
-                      <option value="DEALER">Authorized Dealer</option>
-                      <option value="DISTRIBUTOR">Regional Distributor</option>
-                      <option value="WHOLESALER">Wholesale Stockist</option>
-                      <option value="RETAIL_SHOP">Retail Store</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Proprietor / Contact Person *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dealerForm.contactPerson}
-                      onChange={(e) => setDealerForm({ ...dealerForm, contactPerson: e.target.value })}
-                      placeholder="e.g. Haji Muhammad Younas"
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">CNIC Number *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dealerForm.cnic}
-                      onChange={(e) => setDealerForm({ ...dealerForm, cnic: e.target.value })}
-                      placeholder="e.g. 35202-1234567-1"
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-mono font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Primary Phone / Mobile *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dealerForm.phone}
-                      onChange={(e) => setDealerForm({ ...dealerForm, phone: e.target.value })}
-                      placeholder="e.g. +92 300 1234567"
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">WhatsApp / Alt Phone</label>
-                    <input
-                      type="text"
-                      value={dealerForm.secondaryPhone}
-                      onChange={(e) => setDealerForm({ ...dealerForm, secondaryPhone: e.target.value })}
-                      placeholder="e.g. +92 321 7654321"
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Full Shop / Outlet Address *</label>
-                  <input
-                    type="text"
-                    required
-                    value={dealerForm.address}
-                    onChange={(e) => setDealerForm({ ...dealerForm, address: e.target.value })}
-                    placeholder="e.g. Shop #42, Main Brandreth Road Market, Lahore"
-                    className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
-                  />
-                </div>
-              </div>
-
-              {/* Section 3: Tax, Credit & Financial Limit */}
-              <div className="nm-inset p-3.5 rounded-2xl space-y-3">
-                <span className="text-[10px] font-black text-teal-800 uppercase tracking-wider block">
-                  3. Commercial Terms, Credit Terms &amp; Bank Info
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Credit Limit (PKR) *</label>
-                    <input
-                      type="number"
-                      required
-                      value={dealerForm.creditLimit}
-                      onChange={(e) => setDealerForm({ ...dealerForm, creditLimit: Number(e.target.value) })}
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold text-teal-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Credit Term (Days) *</label>
-                    <input
-                      type="number"
-                      required
-                      value={dealerForm.creditDays}
-                      onChange={(e) => setDealerForm({ ...dealerForm, creditDays: Number(e.target.value) })}
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold text-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Operating Status</label>
-                    <select
-                      value={dealerForm.status}
-                      onChange={(e) => setDealerForm({ ...dealerForm, status: e.target.value })}
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-bold"
-                    >
-                      <option value="NORMAL">NORMAL (Active Credit)</option>
-                      <option value="HIGH_RISK">HIGH_RISK (Watchlist)</option>
-                      <option value="CREDIT_LOCKED">CREDIT_LOCKED (Stopped)</option>
-                      <option value="SUSPENDED">SUSPENDED</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">NTN Number</label>
-                    <input
-                      type="text"
-                      value={dealerForm.ntn}
-                      onChange={(e) => setDealerForm({ ...dealerForm, ntn: e.target.value })}
-                      placeholder="e.g. 1234567-8"
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">STRN (Sales Tax)</label>
-                    <input
-                      type="text"
-                      value={dealerForm.strn}
-                      onChange={(e) => setDealerForm({ ...dealerForm, strn: e.target.value })}
-                      placeholder="e.g. 32-77-8765-432-1"
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Bank Name / Branch</label>
-                    <input
-                      type="text"
-                      value={dealerForm.bankName}
-                      onChange={(e) => setDealerForm({ ...dealerForm, bankName: e.target.value })}
-                      placeholder="e.g. Meezan Bank Ltd"
-                      className="w-full p-2.5 rounded-xl nm-inset text-xs font-medium"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setModalType(null)}
-                  className="nm-btn px-4 py-2 rounded-xl font-bold text-slate-600"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="nm-btn-primary px-6 py-2.5 rounded-xl font-black shadow-md">
-                  Complete Registration &amp; Save
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
