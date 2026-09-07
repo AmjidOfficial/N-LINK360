@@ -9,7 +9,8 @@ import {
   X,
   Menu,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  FileSpreadsheet
 } from 'lucide-react';
 import { User as UserType } from '../types';
 import {
@@ -38,6 +39,7 @@ interface HeaderProps {
   isSidebarCollapsed?: boolean;
   setIsSidebarCollapsed?: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
   onToggleViewMode?: () => void;
+  onOpenGoogleSheets?: () => void;
 }
 
 export const NeumorphicHeader: React.FC<HeaderProps> = ({
@@ -52,6 +54,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
   onOpenAuditLogs,
   onRefreshData,
   onToggleViewMode,
+  onOpenGoogleSheets,
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -139,6 +142,16 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
           </button>
+
+          {onOpenGoogleSheets && (
+            <button
+              onClick={onOpenGoogleSheets}
+              className="nm-btn p-2.5 rounded-2xl text-emerald-700 hover:text-emerald-800 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              title="Google Sheets Storage & Live Sync"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            </button>
+          )}
 
           <button
             onClick={onOpenAuditLogs}

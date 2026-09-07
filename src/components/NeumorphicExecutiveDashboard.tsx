@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TrendingUp,
   Banknote,
@@ -15,7 +15,8 @@ import {
   Store,
   FileText,
   Target,
-  Users
+  Users,
+  RotateCw
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { User } from '../types';
@@ -24,6 +25,7 @@ import { isAdminUser, isFieldForceUser, getAssignedDealerIds } from '../services
 interface ExecutiveDashboardProps {
   currentUser: User;
   onNavigateToDomain: (domain: 'OPERATIONS' | 'REPORTS', subTab?: string) => void;
+  onRefresh?: () => Promise<void> | void;
 }
 
 interface TownPerformanceData {
@@ -41,10 +43,45 @@ interface TownPerformanceData {
 export const NeumorphicExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
   currentUser,
   onNavigateToDomain,
+  onRefresh,
 }) => {
   const [timeframe, setTimeframe] = useState<'TODAY' | 'MTD' | 'YTD'>('MTD');
   const [selectedTown, setSelectedTown] = useState<string | null>(null);
   const [isDrilldownExpanded, setIsDrilldownExpanded] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date>(new Date());
+  const [lastSyncedText, setLastSyncedText] = useState<string>('just now');
+
+  useEffect(() => {
+    const updateSyncText = () => {
+      const diffSecs = Math.floor((Date.now() - lastSyncedAt.getTime()) / 1000);
+      if (diffSecs < 60) {
+        setLastSyncedText('just now');
+      } else if (diffSecs < 120) {
+        setLastSyncedText('1 min ago');
+      } else if (diffSecs < 3600) {
+        setLastSyncedText(`${Math.floor(diffSecs / 60)} mins ago`);
+      } else {
+        setLastSyncedText(lastSyncedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      }
+    };
+    updateSyncText();
+    const interval = setInterval(updateSyncText, 15000);
+    return () => clearInterval(interval);
+  }, [lastSyncedAt]);
+
+  const handleRefresh = async () => {
+    if (onRefresh) {
+      setIsRefreshing(true);
+      try {
+        await onRefresh();
+        setLastSyncedAt(new Date());
+        setLastSyncedText('just now');
+      } finally {
+        setIsRefreshing(false);
+      }
+    }
+  };
 
   const isAdmin = isAdminUser(currentUser);
   const isField = isFieldForceUser(currentUser);
@@ -275,21 +312,44 @@ export const NeumorphicExecutiveDashboard: React.FC<ExecutiveDashboardProps> = (
           </p>
         </div>
 
-        {/* Timeframe Filter Switcher */}
-        <div className="flex items-center gap-1.5 p-1 nm-inset rounded-2xl self-start md:self-auto">
-          {(['TODAY', 'MTD', 'YTD'] as const).map((period) => (
-            <button
-              key={period}
-              onClick={() => setTimeframe(period)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                timeframe === period
-                  ? 'nm-btn-primary shadow-sm'
-                  : 'nm-btn text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              {period === 'TODAY' ? 'Today' : period === 'MTD' ? 'Month-to-Date' : 'Year-to-Date'}
-            </button>
-          ))}
+        {/* Actions & Filters: Manual Sync + Timeframe Switcher */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-start md:self-auto">
+          {/* Dedicated Manual Sync Button & Last Synced Timestamp */}
+          <div className="flex items-center gap-2 px-3 py-1.5 nm-inset rounded-2xl">
+            <span className={`inline-block w-2 h-2 rounded-full ${isRefreshing ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'}`} />
+            <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+              Last synced: <span className="font-bold text-slate-800">{lastSyncedText}</span>
+            </span>
+            {onRefresh && (
+              <button
+                id="executive-dashboard-manual-refresh-btn"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="ml-1 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer active:scale-95"
+                title="Manually trigger onRefresh() and ensure data consistency"
+              >
+                <RotateCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'Syncing...' : 'Sync Now'}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Timeframe Filter Switcher */}
+          <div className="flex items-center gap-1.5 p-1 nm-inset rounded-2xl">
+            {(['TODAY', 'MTD', 'YTD'] as const).map((period) => (
+              <button
+                key={period}
+                onClick={() => setTimeframe(period)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  timeframe === period
+                    ? 'nm-btn-primary shadow-sm'
+                    : 'nm-btn text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {period === 'TODAY' ? 'Today' : period === 'MTD' ? 'Month-to-Date' : 'Year-to-Date'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -333,7 +333,7 @@ export interface SKU {
 // ==============================================================================
 // 4. Customers & Visits
 // ==============================================================================
-export type CustomerType = 'DISTRIBUTOR' | 'DEALER' | 'CUSTOMER' | 'SHOP';
+export type CustomerType = 'DISTRIBUTOR' | 'DEALER';
 
 export interface Customer {
   id: string;
@@ -544,6 +544,7 @@ export interface SalesOrder {
   totalAmount: number;
   creditCheckStatus: CreditCheckStatus;
   creditCheckNotes?: string;
+  notes?: string;
   approvedBy?: string;
   approvedAt?: string;
   rejectionReason?: string;

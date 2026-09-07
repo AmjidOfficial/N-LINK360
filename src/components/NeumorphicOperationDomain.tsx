@@ -51,7 +51,8 @@ import {
   getAssignedDealerIds,
   getCentralEmployees,
   saveCentralEmployee,
-  deleteCentralEmployee
+  deleteCentralEmployee,
+  isAuthorizedApproverEmail
 } from '../services/production-users';
 import {
   approveCustomerRegistration,
@@ -78,6 +79,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
 }) => {
   const isAdmin = isAdminUser(currentUser);
   const isField = isFieldForceUser(currentUser);
+  const isAuthorizedApprover = isAuthorizedApproverEmail(currentUser.email);
 
   // Department filter for unified employee directory
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('ALL');
@@ -377,102 +379,126 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
   };
 
   const handleApproveRegistration = async (regId: string) => {
+    if (!isAuthorizedApprover) {
+      alert('Approval Denied: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to approve customer applications.');
+      return;
+    }
     const reg = pendingRegistrations.find((r) => r.id === regId);
     if (!reg) return;
 
     const newCode = `DLR-${dealers.length + 101}`;
-    setPendingRegistrations((prev) =>
-      prev.map((item) => (item.id === regId ? { ...item, status: 'APPROVED', assignedCode: newCode } : item))
-    );
-
-    // Add dealer to active dealers collection
-    const newDealerRecord = {
-      id: newCode,
-      name: reg.businessName,
-      contactPerson: reg.ownerName,
-      phone: reg.contactNumber,
-      cnic: reg.cnic,
-      address: reg.address,
-      town: reg.city,
-      area: reg.region,
-      city: reg.city,
-      region: reg.region,
-      type: reg.type,
-      creditLimit: Number(reg.proposedCreditLimit || 500000),
-      creditDays: Number(reg.proposedCreditDays || 15),
-      currentBalance: 0,
-      status: 'ACTIVE',
-      bankName: 'To be configured',
-      bankIban: 'PK-PENDING',
-    };
-    setDealers((prev) => [newDealerRecord, ...prev]);
 
     try {
-      await approveCustomerRegistration(regId, newCode);
-    } catch {
-      // Optimistic state preserved
+      await approveCustomerRegistration(regId, newCode, currentUser.email);
+      setPendingRegistrations((prev) =>
+        prev.map((item) => (item.id === regId ? { ...item, status: 'APPROVED', assignedCode: newCode } : item))
+      );
+
+      // Add dealer to active dealers collection
+      const newDealerRecord = {
+        id: newCode,
+        name: reg.businessName,
+        contactPerson: reg.ownerName,
+        phone: reg.contactNumber,
+        cnic: reg.cnic,
+        address: reg.address,
+        town: reg.city,
+        area: reg.region,
+        city: reg.city,
+        region: reg.region,
+        type: reg.type,
+        creditLimit: Number(reg.proposedCreditLimit || 500000),
+        creditDays: Number(reg.proposedCreditDays || 15),
+        currentBalance: 0,
+        status: 'ACTIVE',
+        bankName: 'To be configured',
+        bankIban: 'PK-PENDING',
+      };
+      setDealers((prev) => [newDealerRecord, ...prev]);
+      showApprovalToast(`Dealer Application ${regId} Approved. Assigned Code: ${newCode}`);
+    } catch (err: any) {
+      alert('Transaction was not saved: ' + (err?.message || 'Database error occurred. Please try again.'));
     }
-    showApprovalToast(`Dealer Application ${regId} Approved. Assigned Code: ${newCode}`);
   };
 
   const handleRejectRegistration = async (regId: string) => {
-    setPendingRegistrations((prev) =>
-      prev.map((item) => (item.id === regId ? { ...item, status: 'REJECTED' } : item))
-    );
-    try {
-      await rejectCustomerRegistration(regId, 'Credit policy non-compliance / incomplete territory documentation');
-    } catch {
-      // Handled
+    if (!isAuthorizedApprover) {
+      alert('Action Denied: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to reject customer applications.');
+      return;
     }
-    showApprovalToast(`Dealer Application ${regId} has been rejected.`);
+    try {
+      await rejectCustomerRegistration(regId, 'Credit policy non-compliance / incomplete territory documentation', currentUser.email);
+      setPendingRegistrations((prev) =>
+        prev.map((item) => (item.id === regId ? { ...item, status: 'REJECTED' } : item))
+      );
+      showApprovalToast(`Dealer Application ${regId} has been rejected.`);
+    } catch (err: any) {
+      alert('Transaction was not saved: ' + (err?.message || 'Database error occurred. Please try again.'));
+    }
   };
 
   const handleApproveInvoice = async (id: string) => {
-    setPendingApprovalsInvoices((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: 'APPROVED' } : item))
-    );
-    try {
-      await approveOrder(id, `Approved by ${currentUser.name}`);
-    } catch {
-      // Handled
+    if (!isAuthorizedApprover) {
+      alert('Approval Denied: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to clear orders/invoices.');
+      return;
     }
-    showApprovalToast(`Commercial Order / Invoice ${id} authorized and cleared for dispatch.`);
+    try {
+      await approveOrder(id, `Approved by ${currentUser.name}`, currentUser.email);
+      setPendingApprovalsInvoices((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status: 'APPROVED' } : item))
+      );
+      showApprovalToast(`Commercial Order / Invoice ${id} authorized and cleared for dispatch.`);
+    } catch (err: any) {
+      alert('Transaction was not saved: ' + (err?.message || 'Database error occurred. Please try again.'));
+    }
   };
 
   const handleRejectInvoice = async (id: string) => {
-    setPendingApprovalsInvoices((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: 'REJECTED' } : item))
-    );
-    try {
-      await rejectOrder(id, `Credit terms ceiling exceeded / overdue payments (by ${currentUser.name})`);
-    } catch {
-      // Handled
+    if (!isAuthorizedApprover) {
+      alert('Action Denied: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to reject orders/invoices.');
+      return;
     }
-    showApprovalToast(`Order ${id} rejected.`);
+    try {
+      await rejectOrder(id, `Credit terms ceiling exceeded / overdue payments (by ${currentUser.name})`, currentUser.email);
+      setPendingApprovalsInvoices((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status: 'REJECTED' } : item))
+      );
+      showApprovalToast(`Order ${id} rejected.`);
+    } catch (err: any) {
+      alert('Transaction was not saved: ' + (err?.message || 'Database error occurred. Please try again.'));
+    }
   };
 
   const handleApproveRecovery = async (id: string) => {
-    setPendingApprovalsRecoveries((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: 'APPROVED' } : item))
-    );
-    try {
-      await verifyRecovery(id);
-    } catch {
-      // Handled
+    if (!isAuthorizedApprover) {
+      alert('Approval Denied: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to verify recoveries.');
+      return;
     }
-    showApprovalToast(`Payment Recovery ${id} verified and ledger updated successfully.`);
+    try {
+      await verifyRecovery(id, currentUser.email);
+      setPendingApprovalsRecoveries((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status: 'APPROVED' } : item))
+      );
+      showApprovalToast(`Payment Recovery ${id} verified and ledger updated successfully.`);
+    } catch (err: any) {
+      alert('Transaction was not saved: ' + (err?.message || 'Database error occurred. Please try again.'));
+    }
   };
 
   const handleRejectRecovery = async (id: string) => {
-    setPendingApprovalsRecoveries((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: 'REJECTED' } : item))
-    );
-    try {
-      await rejectRecovery(id, `Payment instrument bounced or invalid IBFT proof (by ${currentUser.name})`);
-    } catch {
-      // Handled
+    if (!isAuthorizedApprover) {
+      alert('Action Denied: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to reject recoveries.');
+      return;
     }
-    showApprovalToast(`Payment Recovery ${id} marked as rejected.`);
+    try {
+      await rejectRecovery(id, `Payment instrument bounced or invalid IBFT proof (by ${currentUser.name})`, currentUser.email);
+      setPendingApprovalsRecoveries((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, status: 'REJECTED' } : item))
+      );
+      showApprovalToast(`Payment Recovery ${id} marked as rejected.`);
+    } catch (err: any) {
+      alert('Transaction was not saved: ' + (err?.message || 'Database error occurred. Please try again.'));
+    }
   };
 
   const [targets, setTargets] = useState<any[]>([
@@ -2163,10 +2189,34 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
 
               <div className="nm-inset p-4 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-slate-500 uppercase">Approval Authority</span>
-                <div className="text-sm font-extrabold text-emerald-800">
-                  Head Office Executive
+                <div className={`text-sm font-extrabold ${isAuthorizedApprover ? 'text-emerald-800' : 'text-amber-800'}`}>
+                  {isAuthorizedApprover ? 'Executive Approver' : 'View-Only Mode'}
                 </div>
                 <span className="text-[10px] text-slate-400 block font-medium">Role: {currentUser.role}</span>
+              </div>
+            </div>
+
+            {/* Critical Two-Person Approval Authorization Notice */}
+            <div className={`p-4 rounded-2xl border ${
+              isAuthorizedApprover
+                ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950'
+                : 'bg-amber-50/90 border-amber-300 text-amber-950'
+            } flex items-start gap-3 text-xs`}>
+              <ShieldAlert className={`w-5 h-5 shrink-0 mt-0.5 ${isAuthorizedApprover ? 'text-emerald-700' : 'text-amber-700'}`} />
+              <div className="space-y-1">
+                <div className="font-bold flex items-center gap-2">
+                  <span>Executive Two-Person Approval Governance (Sections 10 &amp; 11)</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                    isAuthorizedApprover ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-200 text-amber-900'
+                  }`}>
+                    {isAuthorizedApprover ? 'Authorized Executive' : 'View-Only Access'}
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  {isAuthorizedApprover
+                    ? `Authorized executive active: ${currentUser.name} (${currentUser.email}). You possess valid executive credentials to approve commercial invoices, verify customer recovery receipts, and issue new dealer party codes.`
+                    : `In compliance with National Lights enterprise financial protocol, only designated executive accounts (shahzadullah@nationallights.com & syedzain@nationallights.com) are authorized to clear invoices, customer applications, and recoveries. Current session (${currentUser.email}) is restricted to view-only audit mode.`}
+                </p>
               </div>
             </div>
           </div>

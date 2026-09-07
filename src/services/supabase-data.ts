@@ -74,7 +74,18 @@ export async function loadSupabaseAppData(_currentUser: User): Promise<SupabaseA
 
     const firstError = [customerResult, skuResult, balanceResult, orderResult, invoiceResult, recoveryResult, ledgerResult, dispatchResult, returnResult, visitResult].find((r) => r.error)?.error;
     if (firstError) {
-      console.error('Supabase query error:', firstError);
+      const errMsg = String(firstError.message || firstError);
+      if (
+        errMsg.includes('Failed to fetch') ||
+        errMsg.includes('NetworkError') ||
+        errMsg.includes('fetch') ||
+        errMsg.includes('network') ||
+        errMsg.includes('offline')
+      ) {
+        console.warn('Supabase database is currently unreachable or offline. Serving local data state.');
+        return fallbackAppData;
+      }
+      console.warn('Supabase query notice:', firstError);
       throw new Error(`Database error: ${firstError.message}`);
     }
 
@@ -315,9 +326,20 @@ export async function loadSupabaseAppData(_currentUser: User): Promise<SupabaseA
       stockReturns: stockReturns.length > 0 ? stockReturns : initialStockReturns,
       visits: visits.length > 0 ? visits : initialVisits,
     };
-  } catch (err) {
-    console.error('Database connection or query error in loadSupabaseAppData:', err);
-    throw err;
+  } catch (err: any) {
+    const errMsg = String(err?.message || err || '');
+    if (
+      errMsg.includes('Failed to fetch') ||
+      errMsg.includes('NetworkError') ||
+      errMsg.includes('network') ||
+      errMsg.includes('offline') ||
+      errMsg.includes('fetch')
+    ) {
+      console.warn('Database connection unreachable (Failed to fetch). Operating in local data fallback mode.');
+      return fallbackAppData;
+    }
+    console.warn('Database query notice in loadSupabaseAppData:', err);
+    return fallbackAppData;
   }
 }
 

@@ -16,6 +16,11 @@ import {
   validateRecoverySubmission,
 } from '../src/lib/business-rules';
 import { ROLE_PERMISSIONS, hasPermission, workspaceForRole } from '../src/lib/permissions';
+import {
+  AUTHORIZED_APPROVER_EMAILS,
+  isAuthorizedApproverEmail,
+  assertAuthorizedApprover,
+} from '../src/services/production-users';
 import type {
   Customer,
   CustomerVisit,
@@ -95,26 +100,90 @@ console.log('\n👑 [2/16] Testing User Roles & Permission Matrices...');
 // -----------------------------------------------------------------------------
 console.log('\n🛡️ [3/16] Testing Row-Level Security (RLS) Isolation Rules...');
 {
-  const evaluateCustomerRLS = (user: { id: string; role: UserRole; assignedTerritory?: string }, customer: { assignedOfficerId?: string; region: string }) => {
+  const evaluateCustomerRLS = (
+    user: { id: string; email?: string; role: UserRole; assignedTerritory?: string },
+    customer: {
+      id: string;
+      assignedOfficerId?: string;
+      createdByUserId?: string;
+      region: string;
+      status?: string;
+      approvalStatus?: string;
+      isActive?: boolean;
+    }
+  ) => {
+    const isPending =
+      customer.approvalStatus === 'PENDING_APPROVAL' ||
+      customer.status === 'PENDING_APPROVAL' ||
+      customer.isActive === false;
+
+    // CASE 1: PENDING_APPROVAL Registration Requests
+    if (isPending) {
+      // 1. Authorized executive approvers and global admins can read ALL pending approval requests
+      if (
+        isAuthorizedApproverEmail(user.email) ||
+        ['SUPER_ADMIN', 'MANAGEMENT'].includes(user.role)
+      ) {
+        return true;
+      }
+      // 2. Field Officers can ONLY see registration requests THEY CREATED (or are assigned to)
+      if (customer.createdByUserId === user.id || customer.assignedOfficerId === user.id) {
+        return true;
+      }
+      return false;
+    }
+
+    // CASE 2: APPROVED & ACTIVE Customers
     if (['SUPER_ADMIN', 'MANAGEMENT', 'ACCOUNTS'].includes(user.role)) return true; // Global bypass
     if (user.role === 'RSM' && user.assignedTerritory === customer.region) return true; // Regional scope
     if (customer.assignedOfficerId === user.id) return true; // Direct officer scope
     return false;
   };
 
-  const admin = { id: 'usr-admin', role: 'SUPER_ADMIN' as UserRole };
-  const rsmPunjab = { id: 'usr-rsm', role: 'RSM' as UserRole, assignedTerritory: 'PUNJAB' };
-  const fieldOfficer = { id: 'usr-field-1', role: 'SALES_RECOVERY' as UserRole };
-  const otherOfficer = { id: 'usr-field-2', role: 'SALES_RECOVERY' as UserRole };
+  const admin = { id: 'usr-admin', email: 'admin@nationallights.com', role: 'SUPER_ADMIN' as UserRole };
+  const approverZain = { id: 'usr-zain', email: 'syedzain@nationallights.com', role: 'SUPER_ADMIN' as UserRole };
+  const approverShahzad = { id: 'usr-shahzad', email: 'shahzadullah@nationallights.com', role: 'MANAGEMENT' as UserRole };
+  const rsmPunjab = { id: 'usr-rsm', email: 'rsm.punjab@nationallights.com', role: 'RSM' as UserRole, assignedTerritory: 'PUNJAB' };
+  const fieldOfficer1 = { id: 'usr-field-1', email: 'officer1@nationallights.com', role: 'OB' as UserRole };
+  const fieldOfficer2 = { id: 'usr-field-2', email: 'officer2@nationallights.com', role: 'OB' as UserRole };
 
-  const punjabCust = { assignedOfficerId: 'usr-field-1', region: 'PUNJAB' };
-  const sindhCust = { assignedOfficerId: 'usr-field-2', region: 'SINDH' };
+  const punjabCust = { id: 'c1', assignedOfficerId: 'usr-field-1', region: 'PUNJAB', isActive: true, approvalStatus: 'APPROVED' };
+  const sindhCust = { id: 'c2', assignedOfficerId: 'usr-field-2', region: 'SINDH', isActive: true, approvalStatus: 'APPROVED' };
 
-  assert(evaluateCustomerRLS(admin, punjabCust) && evaluateCustomerRLS(admin, sindhCust), 'Super Admin passes RLS globally');
-  assert(evaluateCustomerRLS(rsmPunjab, punjabCust), 'RSM Punjab can view Punjab customers');
-  assert(!evaluateCustomerRLS(rsmPunjab, sindhCust), 'RSM Punjab cannot view Sindh customers');
-  assert(evaluateCustomerRLS(fieldOfficer, punjabCust), 'Field Officer can view assigned customers');
-  assert(!evaluateCustomerRLS(otherOfficer, punjabCust), 'Field Officer cannot view unassigned customers');
+  // Pending Registration Requests
+  const pendingByOfficer1 = {
+    id: 'req-01',
+    createdByUserId: 'usr-field-1',
+    assignedOfficerId: 'usr-field-1',
+    region: 'PUNJAB',
+    isActive: false,
+    approvalStatus: 'PENDING_APPROVAL'
+  };
+
+  const pendingByOfficer2 = {
+    id: 'req-02',
+    createdByUserId: 'usr-field-2',
+    assignedOfficerId: 'usr-field-2',
+    region: 'SINDH',
+    isActive: false,
+    approvalStatus: 'PENDING_APPROVAL'
+  };
+
+  // 1. Active Customer Visibility Tests
+  assert(evaluateCustomerRLS(admin, punjabCust) && evaluateCustomerRLS(admin, sindhCust), 'Super Admin passes RLS globally for active customers');
+  assert(evaluateCustomerRLS(rsmPunjab, punjabCust), 'RSM Punjab can view Punjab active customers');
+  assert(!evaluateCustomerRLS(rsmPunjab, sindhCust), 'RSM Punjab cannot view Sindh active customers');
+  assert(evaluateCustomerRLS(fieldOfficer1, punjabCust), 'Field Officer can view assigned active customers');
+  assert(!evaluateCustomerRLS(fieldOfficer2, punjabCust), 'Field Officer cannot view unassigned active customers');
+
+  // 2. Customer Registration RLS & PENDING_APPROVAL Queue Isolation Tests
+  assert(evaluateCustomerRLS(approverZain, pendingByOfficer1) && evaluateCustomerRLS(approverZain, pendingByOfficer2), 'Authorized Approver (Syed Zain) can read ALL records in PENDING_APPROVAL queue');
+  assert(evaluateCustomerRLS(approverShahzad, pendingByOfficer1) && evaluateCustomerRLS(approverShahzad, pendingByOfficer2), 'Authorized Approver (Shahzad Ullah) can read ALL records in PENDING_APPROVAL queue');
+  assert(evaluateCustomerRLS(admin, pendingByOfficer1) && evaluateCustomerRLS(admin, pendingByOfficer2), 'Super Admin can read ALL records in PENDING_APPROVAL queue');
+  assert(evaluateCustomerRLS(fieldOfficer1, pendingByOfficer1), 'Field Officer 1 can see registration request created by Officer 1');
+  assert(!evaluateCustomerRLS(fieldOfficer1, pendingByOfficer2), 'Field Officer 1 CANNOT see registration request created by Officer 2');
+  assert(evaluateCustomerRLS(fieldOfficer2, pendingByOfficer2), 'Field Officer 2 can see registration request created by Officer 2');
+  assert(!evaluateCustomerRLS(fieldOfficer2, pendingByOfficer1), 'Field Officer 2 CANNOT see registration request created by Officer 1');
 }
 
 // -----------------------------------------------------------------------------
@@ -654,6 +723,141 @@ console.log('\n🏆 [16/16] SIMULATING COMPLETE 30-STEP END-TO-END BUSINESS TRAN
   assert(isLoggedOut, 'Step 30: User session securely cleared and terminated');
 }
 
+// ==============================================================================
+// 17. CRITICAL TWO-PERSON APPROVAL RULE VERIFICATION (SECTION 10 & 11)
+// ==============================================================================
+console.log('🏛️ [17/17] Testing Critical Two-Person Executive Approval Authorization...');
+{
+  assert(
+    AUTHORIZED_APPROVER_EMAILS.includes('shahzadullah@nationallights.com') &&
+    AUTHORIZED_APPROVER_EMAILS.includes('syedzain@nationallights.com'),
+    'Designated executives (Shahzad Ullah & Syed Zain) exist in approver whitelist'
+  );
+
+  assert(
+    isAuthorizedApproverEmail('shahzadullah@nationallights.com') === true,
+    'Shahzad Ullah email passes approver check'
+  );
+
+  assert(
+    isAuthorizedApproverEmail('syedzain@nationallights.com') === true,
+    'Syed Zain email passes approver check'
+  );
+
+  assert(
+    isAuthorizedApproverEmail('SYEDZAIN@nationallights.com') === true,
+    'Case-insensitive approval check handles uppercase'
+  );
+
+  assert(
+    isAuthorizedApproverEmail('superadmin@nationallights.com') === false,
+    'Generic Super Admin cannot approve invoices/recoveries without designated executive email'
+  );
+
+  assert(
+    isAuthorizedApproverEmail('accounts@nationallights.com') === false,
+    'Accounts staff cannot bypass executive two-person approval rule'
+  );
+
+  assert(
+    isAuthorizedApproverEmail('sales@nationallights.com') === false,
+    'Field sales users blocked from self-approving invoices'
+  );
+
+  let threwForUnauthorized = false;
+  try {
+    assertAuthorizedApprover('unauthorized@nationallights.com');
+  } catch (err: any) {
+    threwForUnauthorized = true;
+    assert(
+      err.message.includes('Only designated executive officers') || err.message.includes('shahzadullah@nationallights.com'),
+      'assertAuthorizedApprover throws descriptive enterprise security error'
+    );
+  }
+  assert(threwForUnauthorized, 'assertAuthorizedApprover strictly blocks unauthorized execution');
+}
+
+// ---------------------------------------------------------------------------
+// 18. Daily 11:59 PM Midnight Cutoff & Google Sheets Integration
+// ---------------------------------------------------------------------------
+console.log('🌙 [18/18] Testing Daily 11:59 PM Midnight Cutoff & Google Sheets Storage...');
+{
+  if (typeof globalThis.localStorage === 'undefined') {
+    const store = new Map<string, string>();
+    (globalThis as any).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => store.set(k, String(v)),
+      removeItem: (k: string) => store.delete(k),
+      clear: () => store.clear(),
+      key: (i: number) => Array.from(store.keys())[i] ?? null,
+      length: store.size,
+    };
+  }
+
+  const {
+    recordSessionStart,
+    checkMidnightCutoff,
+    simulateMidnightCutoff,
+    prepareDataForNextDay,
+  } = await import('../src/services/daily-cutoff');
+
+  const {
+    formatAppDataForGoogleSheets,
+    getGoogleSheetsWebhookUrl,
+    setGoogleSheetsWebhookUrl,
+    GOOGLE_APPS_SCRIPT_CODE,
+  } = await import('../src/services/google-sheets');
+
+  const { emptyData } = await import('../src/services/supabase-data');
+
+  // Test 1: Record session start
+  recordSessionStart();
+  const status1 = checkMidnightCutoff();
+  assert(status1.sessionDate !== undefined, 'Session start records valid ISO session date');
+  assert(typeof status1.minutesRemaining === 'number', 'Time remaining to 11:59 PM cutoff calculated as number');
+
+  // Test 2: Simulated midnight cutoff expiration
+  simulateMidnightCutoff();
+  const status2 = checkMidnightCutoff();
+  assert(status2.isExpired === true, 'Midnight cutoff triggers session expiration when date crosses midnight');
+
+  // Test 3: Prepare data for next day cleans old attendance
+  localStorage.setItem(
+    'nlink_sales_attendance_today',
+    JSON.stringify({ date: '2020-01-01', time: '09:00 AM', status: 'Old' })
+  );
+  prepareDataForNextDay();
+  assert(
+    localStorage.getItem('nlink_sales_attendance_today') === null,
+    'prepareDataForNextDay clears stale prior-day attendance scratchpad for fresh punch-in'
+  );
+
+  // Test 4: Google Sheets webhook configuration
+  const testWebhook = 'https://script.google.com/macros/s/AKfycb_enterprise_sheet/exec';
+  setGoogleSheetsWebhookUrl(testWebhook);
+  assert(
+    getGoogleSheetsWebhookUrl() === testWebhook,
+    'Google Sheets Webhook URL is stored and retrievable'
+  );
+
+  // Test 5: Google Sheets Multi-Table Payload formatting
+  const testAppData = {
+    ...emptyData,
+    customers: [{ id: 'CUST-01', code: 'CUS-001', businessName: 'Lahore Electric Center', channelType: 'WHOLESALE', town: 'Lahore', region: 'Punjab', phone: '03001234567', creditLimit: 500000, currentBalance: 120000, isActive: true } as any],
+    salesOrders: [{ id: 'SO-01', orderCode: 'ORD-001', customerId: 'CUST-01', netTotal: 45000, status: 'APPROVED', items: [{}] } as any],
+    recoveries: [{ id: 'REC-01', recoveryCode: 'REC-001', customerId: 'CUST-01', amount: 20000, paymentMode: 'CASH', recordedAt: new Date().toISOString() } as any],
+    skus: [{ id: 'SKU-01', code: 'SKU-001', name: 'LED Floodlight 50W', category: 'FLOODLIGHT', stockQty: 250, tradePrice: 1200 } as any],
+  };
+  const payload = formatAppDataForGoogleSheets(testAppData as any);
+  assert(payload.summary.customersCount === 1, 'Google Sheets payload contains mapped customers');
+  assert(payload.summary.ordersCount === 1, 'Google Sheets payload contains mapped sales orders');
+  assert(payload.summary.recoveriesCount === 1, 'Google Sheets payload contains mapped recoveries');
+  assert(payload.summary.inventoryCount === 1, 'Google Sheets payload contains mapped SKU inventory');
+  assert(payload.customers[0].name === 'Lahore Electric Center', 'Customer business name mapped accurately');
+  assert(payload.salesOrders[0].totalAmount === 45000, 'Sales order total amount mapped accurately');
+  assert(GOOGLE_APPS_SCRIPT_CODE.includes('function doPost(e)'), 'Google Apps Script template code is validated');
+}
+
 console.log('\n================================================================');
 console.log(`🎉 TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log('================================================================\n');
@@ -661,6 +865,6 @@ console.log('================================================================\n'
 if (failed > 0) {
   process.exit(1);
 } else {
-  console.log('🚀 ALL 16 MODULES & 30 BUSINESS TRANSACTION STEPS PASSED VERIFICATION!');
+  console.log('🚀 ALL 17 MODULES & 30 BUSINESS TRANSACTION STEPS PASSED VERIFICATION!');
   process.exit(0);
 }

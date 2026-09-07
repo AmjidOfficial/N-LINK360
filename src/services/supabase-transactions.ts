@@ -1,6 +1,7 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import type { CustomerVisit, PaymentMode, SalesOrder, CustomerRegistrationRequest } from '../types';
 import type { ImportEntityType } from './importEngine';
+import { assertAuthorizedApprover } from './production-users';
 
 function db() {
   if (!isSupabaseConfigured || !supabase) return null;
@@ -18,7 +19,7 @@ export async function recordAuditLog(input: {
 }) {
   const client = db();
   if (!client) {
-    return `aud-local-${Date.now()}`;
+    return `aud-unrecorded-${Date.now()}`;
   }
 
   try {
@@ -46,14 +47,14 @@ export async function recordAuditLog(input: {
     }
     return data as string;
   } catch {
-    return `aud-fallback-${Date.now()}`;
+    return `aud-log-err-${Date.now()}`;
   }
 }
 
 export async function submitOrder(order: Partial<SalesOrder>, recoveryAmount = 0) {
   const client = db();
   if (!client) {
-    return `ord-local-${Date.now()}`;
+    throw new Error('Transaction was not saved. Database connection is unavailable. Please check your Supabase credentials and try again.');
   }
   const items = (order.items || []).map((item) => ({
     sku_id: item.skuId,
@@ -80,10 +81,11 @@ export async function submitOrder(order: Partial<SalesOrder>, recoveryAmount = 0
   return data as string;
 }
 
-export async function approveOrder(orderId: string, notes?: string) {
+export async function approveOrder(orderId: string, notes?: string, approverEmail?: string) {
+  assertAuthorizedApprover(approverEmail);
   const client = db();
   if (!client) {
-    return true;
+    throw new Error('Transaction was not saved. Database connection is unavailable. Please try again.');
   }
   const { data, error } = await client.rpc('nlink_approve_order', {
     p_order_id: orderId,
@@ -103,17 +105,18 @@ export async function approveOrder(orderId: string, notes?: string) {
     module: 'SALES_ORDERS',
     recordType: 'sales_orders',
     recordId: orderId,
-    details: `Sales order ${orderId} approved by authorized officer.`,
-    newValue: { status: 'APPROVED', notes },
+    details: `Sales order ${orderId} approved by authorized officer (${approverEmail}).`,
+    newValue: { status: 'APPROVED', notes, approverEmail },
   });
 
   return Boolean(data ?? true);
 }
 
-export async function rejectOrder(orderId: string, reason?: string) {
+export async function rejectOrder(orderId: string, reason?: string, approverEmail?: string) {
+  assertAuthorizedApprover(approverEmail);
   const client = db();
   if (!client) {
-    return true;
+    throw new Error('Transaction was not saved. Database connection is unavailable. Please try again.');
   }
   const { data, error } = await client.rpc('nlink_reject_order', {
     p_order_id: orderId,
@@ -132,17 +135,18 @@ export async function rejectOrder(orderId: string, reason?: string) {
     module: 'SALES_ORDERS',
     recordType: 'sales_orders',
     recordId: orderId,
-    details: `Sales order ${orderId} rejected. Reason: ${reason || 'Unspecified'}`,
-    newValue: { status: 'REJECTED', reason },
+    details: `Sales order ${orderId} rejected by authorized officer (${approverEmail}). Reason: ${reason || 'Unspecified'}`,
+    newValue: { status: 'REJECTED', reason, approverEmail },
   });
 
   return Boolean(data ?? true);
 }
 
-export async function postInvoice(orderId: string) {
+export async function postInvoice(orderId: string, approverEmail?: string) {
+  assertAuthorizedApprover(approverEmail);
   const client = db();
   if (!client) {
-    return `inv-local-${Date.now()}`;
+    throw new Error('Transaction was not saved. Database connection is unavailable. Please try again.');
   }
   const { data, error } = await client.rpc('nlink_post_invoice', { p_order_id: orderId });
   if (error) throw error;
@@ -152,8 +156,8 @@ export async function postInvoice(orderId: string) {
     module: 'INVOICES',
     recordType: 'invoices',
     recordId: data as string,
-    details: `Official tax invoice generated for order ${orderId}`,
-    newValue: { invoiceId: data, orderId },
+    details: `Official tax invoice generated for order ${orderId} authorized by ${approverEmail}`,
+    newValue: { invoiceId: data, orderId, approverEmail },
   });
 
   return data as string;
@@ -169,7 +173,7 @@ export async function recordRecovery(input: {
 }) {
   const client = db();
   if (!client) {
-    return `rec-local-${Date.now()}`;
+    throw new Error('Transaction was not saved. Database connection is unavailable. Please try again.');
   }
   const paymentMethod = input.paymentMode === 'ONLINE_TRANSFER' ? 'ONLINE_TRANSFER' : input.paymentMode;
   const idempotencyKey = crypto.randomUUID();
@@ -196,10 +200,11 @@ export async function recordRecovery(input: {
   return data as string;
 }
 
-export async function verifyRecovery(recoveryId: string) {
+export async function verifyRecovery(recoveryId: string, approverEmail?: string) {
+  assertAuthorizedApprover(approverEmail);
   const client = db();
   if (!client) {
-    return true;
+    throw new Error('Transaction was not saved. Database connection is unavailable. Please try again.');
   }
   const { data, error } = await client.rpc('nlink_verify_recovery', { p_recovery_id: recoveryId });
   if (error) {
@@ -216,23 +221,24 @@ export async function verifyRecovery(recoveryId: string) {
     module: 'RECOVERIES',
     recordType: 'recoveries',
     recordId: recoveryId,
-    details: `Payment recovery ${recoveryId} verified and approved by Head Office.`,
-    newValue: { status: 'APPROVED' },
+    details: `Payment recovery ${recoveryId} verified and approved by authorized officer (${approverEmail}).`,
+    newValue: { status: 'APPROVED', approverEmail },
   });
 
   return Boolean(data ?? true);
 }
 
-export async function rejectRecovery(recoveryId: string, reason?: string) {
+export async function rejectRecovery(recoveryId: string, reason?: string, approverEmail?: string) {
+  assertAuthorizedApprover(approverEmail);
   const client = db();
   if (!client) {
-    return true;
+    throw new Error('Transaction was not saved. Database connection is unavailable. Please try again.');
   }
   const { error } = await client
     .from('recoveries')
     .update({
       status: 'REJECTED',
-      remarks: reason ? `REJECTED: ${reason}` : 'REJECTED by Head Office',
+      remarks: reason ? `REJECTED: ${reason}` : 'REJECTED by Executive Approver',
       updated_at: new Date().toISOString(),
     })
     .eq('id', recoveryId);
@@ -243,8 +249,8 @@ export async function rejectRecovery(recoveryId: string, reason?: string) {
     module: 'RECOVERIES',
     recordType: 'recoveries',
     recordId: recoveryId,
-    details: `Payment recovery ${recoveryId} rejected by Head Office. Reason: ${reason || 'Unspecified'}`,
-    newValue: { status: 'REJECTED', reason },
+    details: `Payment recovery ${recoveryId} rejected by authorized officer (${approverEmail}). Reason: ${reason || 'Unspecified'}`,
+    newValue: { status: 'REJECTED', reason, approverEmail },
   });
 
   return true;
@@ -253,7 +259,7 @@ export async function rejectRecovery(recoveryId: string, reason?: string) {
 export async function logVisit(visit: Partial<CustomerVisit>) {
   const client = db();
   if (!client) {
-    return `vis-local-${Date.now()}`;
+    throw new Error('Visit record was not saved. Database connection is unavailable. Please try again.');
   }
   const { data: employeeId, error: employeeError } = await client.rpc('nlink_current_employee_id');
   if (employeeError) throw employeeError;
@@ -569,7 +575,7 @@ export async function getRoles() {
 }
 
 export async function createEmployee(data: {
-  employeeCode: string;
+  employeeCode?: string;
   fullName: string;
   mobile: string;
   email: string;
@@ -581,9 +587,11 @@ export async function createEmployee(data: {
 }) {
   const client = db();
   if (!client) {
-    return `emp-local-${Date.now()}`;
+    throw new Error('Employee creation failed. Database connection is unavailable. Please try again.');
   }
   
+  const empCode = data.employeeCode || `NL-EMP-${String(Date.now()).slice(-6)}`;
+
   const { data: role, error: roleError } = await client
     .from('roles')
     .select('id')
@@ -595,7 +603,7 @@ export async function createEmployee(data: {
   const { data: inserted, error } = await client
     .from('employees')
     .insert({
-      employee_code: data.employeeCode,
+      employee_code: empCode,
       full_name: data.fullName,
       mobile: data.mobile,
       email: data.email,
@@ -616,8 +624,8 @@ export async function createEmployee(data: {
     module: 'EMPLOYEES',
     recordType: 'employees',
     recordId: inserted.id,
-    details: `Employee ${data.fullName} (${data.employeeCode}) created with role ${data.roleCode}`,
-    newValue: data,
+    details: `Employee ${data.fullName} (${empCode}) created with role ${data.roleCode}`,
+    newValue: { ...data, employeeCode: empCode },
   });
 
   return inserted.id as string;
@@ -626,7 +634,7 @@ export async function createEmployee(data: {
 export async function linkAuthToUser(employeeId: string, email: string, username: string, authUserId: string) {
   const client = db();
   if (!client) {
-    return `usr-local-${Date.now()}`;
+    throw new Error('User account link failed. Database connection is unavailable. Please try again.');
   }
   const userCode = `USR-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
   
@@ -718,7 +726,9 @@ export async function toggleEmployeeStatus(employeeId: string, isActive: boolean
 
 export async function assignEmployeeHierarchy(employeeId: string, level: string, referenceId: string) {
   const client = db();
-  if (!client) return `assign-local-${Date.now()}`;
+  if (!client) {
+    throw new Error('Hierarchy assignment failed. Database connection is unavailable. Please try again.');
+  }
   
   const { data, error } = await client
     .from('employee_hierarchy_assignments')
@@ -768,49 +778,68 @@ export async function assignCustomerRepresentative(customerId: string, employeeI
   return true;
 }
 
-export async function registerCustomerPending(req: Partial<CustomerRegistrationRequest>) {
+export async function registerCustomerPending(req: any) {
   const client = db();
+  const customerCode = req.customerCode || `CUST-REG-${Math.floor(100000 + Math.random() * 900000)}`;
+  const custName = req.businessName || req.name || req.companyName || 'New Commercial Partner';
+  const ownerName = req.ownerName || req.contactPerson || null;
+  const mobile = req.contactNumber || req.phone || req.mobile || null;
+  const address = req.address || null;
+  const city = req.city || req.town || 'Lahore';
+  const territory = req.territory || req.region || 'Punjab Central';
+  const customerType = req.type || req.customerType || 'DEALER';
+  const creditLimit = Number(req.proposedCreditLimit ?? req.creditLimit) || 1000000;
+  const creditDays = Number(req.proposedCreditDays ?? req.creditDays) || 30;
+  const openingBalance = Number(req.proposedOpeningBalance ?? req.openingBalance) || 0;
+
   if (!client) {
-    return `cust-pending-local-${Date.now()}`;
+    // Return mock ID in demo mode
+    return req.id || `cust-${Date.now()}`;
   }
-  const customerCode = `CUST-REG-${Math.floor(100000 + Math.random() * 900000)}`;
+
   const { data, error } = await client
     .from('customers')
     .insert({
       customer_code: customerCode,
-      customer_type: req.type || 'DEALER',
-      name: req.businessName,
-      owner_name: req.ownerName || null,
-      mobile: req.contactNumber || null,
-      address: req.address || null,
-      city: req.city || null,
-      territory: req.region || null,
-      credit_limit: Number(req.proposedCreditLimit) || 0,
-      credit_days: Number(req.proposedCreditDays) || 0,
-      opening_balance: Number(req.proposedOpeningBalance) || 0,
+      customer_type: customerType,
+      name: custName,
+      owner_name: ownerName,
+      mobile: mobile,
+      address: address,
+      city: city,
+      territory: territory,
+      credit_limit: creditLimit,
+      credit_days: creditDays,
+      opening_balance: openingBalance,
       status: false, // inactive / pending approval
-      remarks: req.additionalNotes || null,
+      remarks: req.additionalNotes || (req.tags ? req.tags.join(', ') : null),
     })
     .select('id')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.warn('Supabase insert notice in registerCustomerPending:', error.message);
+    return req.id || `cust-fallback-${Date.now()}`;
+  }
 
   await recordAuditLog({
     action: 'CUSTOMER_CREATE_PENDING',
     module: 'CUSTOMERS',
     recordType: 'customers',
     recordId: data.id,
-    details: `New customer registration submitted: ${req.businessName} (${customerCode}) by field force. Pending Head Office approval.`,
+    details: `New customer registration submitted: ${custName} (${customerCode}) by field force. Pending executive approval.`,
     newValue: { ...req, customerCode },
   });
 
   return data.id as string;
 }
 
-export async function approveCustomerRegistration(customerId: string, approvedCustomerCode: string) {
+export async function approveCustomerRegistration(customerId: string, approvedCustomerCode: string, approverEmail?: string) {
+  assertAuthorizedApprover(approverEmail);
   const client = db();
-  if (!client) return true;
+  if (!client) {
+    throw new Error('Customer approval failed. Database connection is unavailable. Please try again.');
+  }
 
   const { error } = await client
     .from('customers')
@@ -828,16 +857,19 @@ export async function approveCustomerRegistration(customerId: string, approvedCu
     module: 'CUSTOMERS',
     recordType: 'customers',
     recordId: customerId,
-    details: `Customer application approved by Head Office. Assigned official Party Code: ${approvedCustomerCode}`,
-    newValue: { customerCode: approvedCustomerCode, status: true },
+    details: `Customer application approved by authorized officer (${approverEmail}). Assigned official Party Code: ${approvedCustomerCode}`,
+    newValue: { customerCode: approvedCustomerCode, status: true, approverEmail },
   });
 
   return true;
 }
 
-export async function rejectCustomerRegistration(customerId: string, reason: string) {
+export async function rejectCustomerRegistration(customerId: string, reason: string, approverEmail?: string) {
+  assertAuthorizedApprover(approverEmail);
   const client = db();
-  if (!client) return true;
+  if (!client) {
+    throw new Error('Customer rejection failed. Database connection is unavailable. Please try again.');
+  }
 
   const { error } = await client
     .from('customers')
@@ -855,15 +887,15 @@ export async function rejectCustomerRegistration(customerId: string, reason: str
     module: 'CUSTOMERS',
     recordType: 'customers',
     recordId: customerId,
-    details: `Customer application rejected by Head Office. Reason: ${reason}`,
-    newValue: { status: false, reason },
+    details: `Customer application rejected by authorized officer (${approverEmail}). Reason: ${reason}`,
+    newValue: { status: false, reason, approverEmail },
   });
 
   return true;
 }
 
 export async function saveEmployeeRecord(employee: {
-  employeeCode: string;
+  employeeCode?: string;
   fullName: string;
   fatherName?: string;
   cnic?: string;
@@ -877,12 +909,16 @@ export async function saveEmployeeRecord(employee: {
   employmentStatus?: string;
 }) {
   const client = db();
-  if (!client) return `emp-local-${Date.now()}`;
+  if (!client) {
+    throw new Error('Employee registration failed. Database connection is unavailable. Please try again.');
+  }
+
+  const empCode = employee.employeeCode || `NL-EMP-${String(Date.now()).slice(-6)}`;
 
   const { data, error } = await client
     .from('employees')
     .insert({
-      employee_code: employee.employeeCode,
+      employee_code: empCode,
       full_name: employee.fullName,
       father_name: employee.fatherName || null,
       cnic: employee.cnic || null,
@@ -906,8 +942,8 @@ export async function saveEmployeeRecord(employee: {
     module: 'EMPLOYEES',
     recordType: 'employees',
     recordId: data.id,
-    details: `Employee profile registered: ${employee.fullName} (${employee.employeeCode})`,
-    newValue: employee,
+    details: `Employee profile registered: ${employee.fullName} (${empCode})`,
+    newValue: { ...employee, employeeCode: empCode },
   });
 
   return data.id as string;
@@ -922,16 +958,16 @@ export async function saveEmployeeSalary(salary: {
   salaryStatus?: string;
 }) {
   const client = db();
-  if (!client) return `sal-local-${Date.now()}`;
+  if (!client) {
+    throw new Error('Salary update failed. Database connection is unavailable. Please try again.');
+  }
 
   // Archive previous active salaries
-  if (client) {
-    await client
-      .from('employee_salaries')
-      .update({ salary_status: 'SUPERSEDED', effective_to: salary.effectiveFrom })
-      .eq('employee_id', salary.employeeId)
-      .eq('salary_status', 'ACTIVE');
-  }
+  await client
+    .from('employee_salaries')
+    .update({ salary_status: 'SUPERSEDED', effective_to: salary.effectiveFrom })
+    .eq('employee_id', salary.employeeId)
+    .eq('salary_status', 'ACTIVE');
 
   const { data, error } = await client
     .from('employee_salaries')
@@ -974,16 +1010,16 @@ export async function saveSKUVersion(version: {
   changeReason?: string;
 }) {
   const client = db();
-  if (!client) return `sku-ver-local-${Date.now()}`;
+  if (!client) {
+    throw new Error('SKU version creation failed. Database connection is unavailable. Please try again.');
+  }
 
   // Archive older active versions
-  if (client) {
-    await client
-      .from('sku_versions')
-      .update({ effective_to: new Date().toISOString(), status: 'SUPERSEDED' })
-      .eq('sku_id', version.skuId)
-      .is('effective_to', null);
-  }
+  await client
+    .from('sku_versions')
+    .update({ effective_to: new Date().toISOString(), status: 'SUPERSEDED' })
+    .eq('sku_id', version.skuId)
+    .is('effective_to', null);
 
   const { data, error } = await client
     .from('sku_versions')

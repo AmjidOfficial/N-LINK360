@@ -109,7 +109,7 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
   );
 
   // Searchable Tags & Categorization
-  const [tags, setTags] = useState<string[]>(dealer?.tags || ['Auto Lighting', 'LED Bulbs']);
+  const [tags, setTags] = useState<string[]>(dealer?.tags || []);
   const [tagSearchInput, setTagSearchInput] = useState<string>('');
 
   const AVAILABLE_TAG_OPTIONS = [
@@ -157,8 +157,9 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
     };
   }, [creditLimit, creditDays, cnic, phone, selectedRegion, selectedArea, selectedTown]);
 
-  // Toast / notification
+  // Toast / notification & validation
   const [aiAppliedNotification, setAiAppliedNotification] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // -------------------------------------------------------------
   // Dynamic Dependent Dropdown Calculations
@@ -243,15 +244,21 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
     setCreditLimit(aiParams.creditLimit);
     setCreditDays(aiParams.creditDays);
     setAssignedStaffId(aiParams.assignedStaff.id);
-    if (!cnic) setCnic(aiParams.sampleCnic);
-    if (!ntn) setNtn(aiParams.sampleNtn);
+    if (!name.trim()) setName(aiParams.sampleBusinessName);
+    if (!contactPerson.trim()) setContactPerson(aiParams.sampleContactPerson);
+    if (!phone.trim()) setPhone(aiParams.samplePhone);
+    if (!address.trim()) setAddress(aiParams.sampleAddress);
+    if (!cnic.trim()) setCnic(aiParams.sampleCnic);
+    if (!ntn.trim()) setNtn(aiParams.sampleNtn);
+    if (!bankIban.trim()) setBankIban(aiParams.sampleIban);
     setBankName(aiParams.recommendedBank);
     setOperatingStatus(aiParams.recommendedStatus);
+    setValidationError(null);
 
     setAiAppliedNotification(
-      `AI Auto-Parameters Configured: PKR ${(aiParams.creditLimit / 100000).toFixed(1)}L Limit, ${aiParams.creditDays} Days Credit Term, Assigned to ${aiParams.assignedStaff.name} (${aiParams.assignedStaff.role}).`
+      `AI Auto-Parameters Configured: "${name.trim() || aiParams.sampleBusinessName}" (${customerType}), PKR ${(aiParams.creditLimit / 100000).toFixed(1)}L Limit, Assigned to ${aiParams.assignedStaff.name}.`
     );
-    setTimeout(() => setAiAppliedNotification(null), 5000);
+    setTimeout(() => setAiAppliedNotification(null), 6000);
   };
 
   // -------------------------------------------------------------
@@ -259,30 +266,42 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
   // -------------------------------------------------------------
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
 
     if (!name.trim()) {
-      alert('Please provide the Commercial Business / Shop Name.');
+      setValidationError('Please provide the Commercial Business / Shop Name in Step 2.');
+      setActiveStep(2);
       return;
     }
     if (!contactPerson.trim()) {
-      alert('Please provide the Proprietor / Contact Person Name.');
+      setValidationError('Please provide the Proprietor / Contact Person Name in Step 2.');
+      setActiveStep(2);
       return;
     }
     if (!phone.trim()) {
-      alert('Please provide a Primary Phone Number.');
+      setValidationError('Please provide a Primary Mobile / WhatsApp Number in Step 2.');
+      setActiveStep(2);
       return;
     }
 
     const finalBeat = selectedBeat === 'CUSTOM_BEAT' ? customBeat.trim() || 'Custom Beat' : selectedBeat;
+    const generatedCustCode = dealer?.customerCode || `CUST-REG-${Math.floor(100000 + Math.random() * 900000)}`;
+    const custId = dealer?.id || `cust-reg-${Date.now()}`;
 
     const payload = {
       ...(dealer || {}),
+      id: custId,
+      customerCode: generatedCustCode,
       name: name.trim(),
+      companyName: name.trim(),
+      businessName: name.trim(),
       customerType,
+      type: customerType,
       parentDistributorId,
       region: selectedRegion,
       area: selectedArea,
       town: selectedTown,
+      city: selectedTown,
       territory: finalBeat,
       assignedTsm: `${selectedStaffMember.name} (${selectedStaffMember.role})`,
       assignedOfficerId: selectedStaffMember.id,
@@ -292,13 +311,20 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
       assignedAccountsOfficer,
       dedicatedDispatchOfficer,
       contactPerson: contactPerson.trim(),
+      ownerName: contactPerson.trim(),
       cnic: cnic.trim(),
       phone: phone.trim(),
+      mobile: phone.trim(),
+      contactNumber: phone.trim(),
       secondaryPhone: secondaryPhone.trim(),
       email: email.trim(),
-      address: address.trim() || `Market Shop, ${finalBeat}, ${selectedTown}`,
-      creditLimit: Number(creditLimit),
-      creditDays: Number(creditDays),
+      address: address.trim() || `${selectedTown}, ${selectedRegion}`,
+      creditLimit: Number(creditLimit) || 0,
+      proposedCreditLimit: Number(creditLimit) || 0,
+      creditDays: Number(creditDays) || 30,
+      proposedCreditDays: Number(creditDays) || 30,
+      openingBalance: 0,
+      proposedOpeningBalance: 0,
       status: isEdit ? operatingStatus : 'PENDING_APPROVAL',
       approvalStatus: isEdit ? (dealer?.approvalStatus || 'APPROVED') : 'PENDING_APPROVAL',
       isActive: isEdit ? (dealer?.isActive ?? true) : false,
@@ -316,6 +342,8 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
       currentBalance: dealer?.currentBalance ?? 0,
       submittedBy: currentUser.fullName,
       submittedById: currentUser.id,
+      salesUserId: currentUser.id,
+      salesUserName: currentUser.fullName,
       createdAt: dealer?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -376,9 +404,44 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
 
         {/* AI Notification Alert */}
         {aiAppliedNotification && (
-          <div className="mx-5 p-3 rounded-2xl bg-teal-100 text-teal-900 border border-teal-300 text-xs font-bold flex items-center gap-2 animate-fade-in shadow-sm">
-            <Sparkles className="w-4 h-4 text-teal-700 shrink-0" />
-            <span>{aiAppliedNotification}</span>
+          <div className="mx-5 p-3 rounded-2xl bg-teal-100 text-teal-900 border border-teal-300 text-xs font-bold flex items-center justify-between gap-2 animate-fade-in shadow-sm">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-teal-700 shrink-0" />
+              <span>{aiAppliedNotification}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAiAppliedNotification(null)}
+              className="text-teal-800 hover:text-teal-950 font-black p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Validation Error Alert */}
+        {validationError && (
+          <div className="mx-5 p-3 rounded-2xl bg-rose-100 text-rose-900 border border-rose-300 text-xs font-bold flex items-center justify-between gap-2 animate-fade-in shadow-sm">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-700 shrink-0" />
+              <span>{validationError}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleApplyAiDefaults}
+                className="px-2.5 py-1 rounded-lg bg-rose-200 hover:bg-rose-300 text-rose-950 text-[11px] font-black"
+              >
+                Auto-Fill All Required
+              </button>
+              <button
+                type="button"
+                onClick={() => setValidationError(null)}
+                className="text-rose-800 hover:text-rose-950 font-black p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -431,10 +494,8 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
                       onChange={(e) => setCustomerType(e.target.value)}
                       className="w-full p-2.5 rounded-xl nm-inset text-xs font-black text-teal-900 bg-white"
                     >
-                      <option value="DISTRIBUTOR">Regional Distributor (Primary Stockist)</option>
-                      <option value="WHOLESALER">Wholesale Stockist (Bulk Buyer)</option>
-                      <option value="DEALER">Authorized Dealer (Lighting &amp; Auto Spares)</option>
-                      <option value="RETAIL_SHOP">Retail Store / Auto Electrician Outlet</option>
+                      <option value="DISTRIBUTOR">Distributor (Primary Stockist)</option>
+                      <option value="DEALER">Dealer (Authorized Retailer &amp; Stockist)</option>
                     </select>
                   </div>
 

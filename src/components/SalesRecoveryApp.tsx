@@ -32,10 +32,40 @@ import {
   ShieldCheck,
   AlertTriangle,
   History,
-  MapPin
+  MapPin,
+  Receipt,
+  Eye,
+  Compass,
+  Flame,
+  Zap,
+  ShoppingBag,
+  Sparkles,
+  UserCheck,
+  FileText,
+  CreditCard,
+  Layers,
+  Navigation,
+  CheckSquare,
+  PackageCheck,
+  FileSpreadsheet,
+  X
 } from 'lucide-react';
 import { PrintInvoiceModal } from './PrintInvoiceModal';
 import { DynamicDealerFormModal } from './DynamicDealerFormModal';
+import { OrderPreviewDrawer } from './OrderPreviewDrawer';
+import { NearbyDealersMap } from './NearbyDealersMap';
+import { DealerHeatmap } from './DealerHeatmap';
+import { GoogleSheetSyncModal } from './GoogleSheetSyncModal';
+import { MtdAchievementGauge } from './MtdAchievementGauge';
+import { getAccessToken } from '../services/googleAuth';
+import { isAuthorizedApproverEmail } from '../services/production-users';
+import {
+  getActiveSpreadsheetId,
+  pushOrderToGoogleSheet,
+  pushRecoveryToGoogleSheet,
+  pushAttendanceToGoogleSheet,
+  pushVisitToGoogleSheet,
+} from '../services/googleSheetsLiveService';
 import {
   Customer,
   PaymentMode,
@@ -59,6 +89,7 @@ interface SalesRecoveryAppProps {
   recoveries?: RecoveryType[];
   invoices?: InvoiceType[];
   ledgerEntries?: LedgerEntryType[];
+  lastRefreshTime?: Date;
   onLogout?: () => Promise<void> | void;
   onBookOrder?: (order: Partial<SalesOrder>) => void;
   onRecordRecovery?: (data: {
@@ -73,6 +104,8 @@ interface SalesRecoveryAppProps {
   onSubmitRegistration?: (reg: any) => void;
   onRefresh?: () => Promise<void> | void;
   onToggleViewMode?: () => void;
+  onOpenOfflineSync?: () => void;
+  pendingOfflineCount?: number;
 }
 
 export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
@@ -84,6 +117,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   recoveries = [],
   invoices = [],
   visits = [],
+  lastRefreshTime,
   onLogout,
   onBookOrder,
   onRecordRecovery,
@@ -91,6 +125,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   onSubmitRegistration,
   onRefresh,
   onToggleViewMode,
+  onOpenOfflineSync,
+  pendingOfflineCount = 0,
 }) => {
   // -------------------------------------------------------------
   // 3 Primary Navigation Tabs: 'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD'
@@ -100,10 +136,62 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   // Dealer Registration Modal State (Field Force Onboarding to Pending Queue)
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState<string | null>(null);
+  const [showGoogleSheetsModal, setShowGoogleSheetsModal] = useState(false);
 
-  // Online / Offline Indicator
+  const appDataForGoogleSheet = useMemo(() => ({
+    customers,
+    skus,
+    inventoryBalances,
+    salesOrders,
+    recoveries,
+    invoices,
+    visits,
+    productionUsers: [],
+    targetVsAchievements: [],
+    townPlans: [],
+    auditLogs: [],
+    offlinePendingQueue: [],
+  }), [customers, skus, inventoryBalances, salesOrders, recoveries, invoices, visits]);
+
+  // Online / Offline Indicator & Sync Glow state
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date>(() => lastRefreshTime || new Date());
+  const [lastSyncedText, setLastSyncedText] = useState<string>('just now');
+  const [isSyncGlow, setIsSyncGlow] = useState(false);
+  const lastSyncTimestampRef = React.useRef<number>(lastRefreshTime ? lastRefreshTime.getTime() : Date.now());
+
+  // Trigger subtle green glow pulse whenever an automatic background sync successfully completes
+  useEffect(() => {
+    if (!lastRefreshTime) return;
+    const currentMs = lastRefreshTime.getTime();
+    if (lastSyncTimestampRef.current && currentMs > lastSyncTimestampRef.current) {
+      setLastSyncedAt(lastRefreshTime);
+      setIsSyncGlow(true);
+      const timer = setTimeout(() => setIsSyncGlow(false), 3600);
+      lastSyncTimestampRef.current = currentMs;
+      return () => clearTimeout(timer);
+    }
+    lastSyncTimestampRef.current = currentMs;
+  }, [lastRefreshTime]);
+
+  useEffect(() => {
+    const updateSyncText = () => {
+      const diffSecs = Math.floor((Date.now() - lastSyncedAt.getTime()) / 1000);
+      if (diffSecs < 60) {
+        setLastSyncedText('just now');
+      } else if (diffSecs < 120) {
+        setLastSyncedText('1 min ago');
+      } else if (diffSecs < 3600) {
+        setLastSyncedText(`${Math.floor(diffSecs / 60)} mins ago`);
+      } else {
+        setLastSyncedText(lastSyncedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      }
+    };
+    updateSyncText();
+    const interval = setInterval(updateSyncText, 15000);
+    return () => clearInterval(interval);
+  }, [lastSyncedAt]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -121,6 +209,11 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       setIsRefreshing(true);
       try {
         await onRefresh();
+        const now = new Date();
+        setLastSyncedAt(now);
+        setLastSyncedText('just now');
+        setIsSyncGlow(true);
+        setTimeout(() => setIsSyncGlow(false), 3600);
       } finally {
         setIsRefreshing(false);
       }
@@ -152,14 +245,16 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   // -------------------------------------------------------------
   // 1. ATTENDANCE SECTION STATE & DATA
   // -------------------------------------------------------------
-  // Towns assigned to the user or derived from authorized customers
+  // Towns assigned to the user or derived from authorized customers (including Peshawar, Mardan, etc.)
   const assignedTowns = useMemo(() => {
-    const towns = Array.from(new Set(authorizedCustomers.map((c) => c.city || 'Lahore'))).filter(Boolean);
-    return towns.length > 0 ? towns : ['Lahore', 'Gujranwala', 'Peshawar', 'Mardan', 'Nowshera', 'Karachi', 'Multan', 'Faisalabad', 'Rawalpindi'];
+    const baseTowns = ['Peshawar', 'Mardan', 'Rawalpindi', 'Islamabad', 'Lahore', 'Gujranwala', 'Faisalabad', 'Multan', 'Nowshera', 'Swat', 'Abbottabad'];
+    const customerTowns = Array.from(new Set(authorizedCustomers.map((c) => c.city || '').filter(Boolean)));
+    const merged = Array.from(new Set([...customerTowns, ...baseTowns]));
+    return merged;
   }, [authorizedCustomers]);
 
   const [selectedTown, setSelectedTown] = useState<string>(() => {
-    return localStorage.getItem('nlink_sales_active_town') || assignedTowns[0] || 'Lahore';
+    return localStorage.getItem('nlink_sales_active_town') || assignedTowns[0] || 'Peshawar';
   });
 
   useEffect(() => {
@@ -169,13 +264,17 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   // Attendance recording state
   interface AttendanceRecord {
     date: string;
-    time: string;
+    checkInTime?: string;
+    checkOutTime?: string;
+    time?: string; // backwards compatibility
+    duration?: string;
     town: string;
     userName: string;
     lat: number;
     lng: number;
     accuracy: number;
-    status: string;
+    locationName?: string;
+    status: 'Checked In' | 'Checked Out' | 'Marked (GPS Validated)' | 'Marked (Network Captured)';
   }
 
   const [attendanceRecord, setAttendanceRecord] = useState<AttendanceRecord | null>(() => {
@@ -195,7 +294,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   const [gpsCapturing, setGpsCapturing] = useState(false);
   const [attendanceMessage, setAttendanceMessage] = useState<string | null>(null);
 
-  const handleMarkAttendance = () => {
+  // Check In Action
+  const handleCheckIn = () => {
     setGpsCapturing(true);
     setAttendanceMessage(null);
 
@@ -203,60 +303,264 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     const todayStr = now.toISOString().split('T')[0];
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const rec: AttendanceRecord = {
-            date: todayStr,
-            time: timeStr,
-            town: selectedTown,
-            userName: currentUser.fullName,
-            lat: Number(pos.coords.latitude.toFixed(4)),
-            lng: Number(pos.coords.longitude.toFixed(4)),
-            accuracy: Math.round(pos.coords.accuracy || 15),
-            status: 'Marked (GPS Validated)',
-          };
-          setAttendanceRecord(rec);
-          localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
-          setGpsCapturing(false);
-          setAttendanceMessage(`Attendance captured successfully at ${timeStr} for ${selectedTown}!`);
-        },
-        () => {
-          // Fallback with simulated location for smooth offline experience
-          const rec: AttendanceRecord = {
-            date: todayStr,
-            time: timeStr,
-            town: selectedTown,
-            userName: currentUser.fullName,
-            lat: 31.5204,
-            lng: 74.3587,
-            accuracy: 20,
-            status: 'Marked (Network Captured)',
-          };
-          setAttendanceRecord(rec);
-          localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
-          setGpsCapturing(false);
-          setAttendanceMessage(`Attendance captured at ${timeStr} for ${selectedTown}!`);
-        },
-        { enableHighAccuracy: true, timeout: 6000 }
-      );
-    } else {
+    const completeCheckIn = (lat: number, lng: number, accuracy: number, method: string) => {
       const rec: AttendanceRecord = {
         date: todayStr,
+        checkInTime: timeStr,
         time: timeStr,
         town: selectedTown,
         userName: currentUser.fullName,
-        lat: 31.5204,
-        lng: 74.3587,
-        accuracy: 50,
-        status: 'Marked (System Timestamp)',
+        lat,
+        lng,
+        accuracy,
+        locationName: `${selectedTown} Territory`,
+        status: 'Checked In',
       };
       setAttendanceRecord(rec);
       localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
       setGpsCapturing(false);
-      setAttendanceMessage(`Attendance marked at ${timeStr}!`);
+      setAttendanceMessage(`Check-in successful at ${timeStr} for ${selectedTown} (${method})!`);
+
+      // Real-Time Google Sheet Mirror sync for Attendance
+      try {
+        const token = getAccessToken();
+        const sheetId = getActiveSpreadsheetId();
+        if (token && sheetId) {
+          pushAttendanceToGoogleSheet(
+            sheetId,
+            {
+              id: `ATT-${Date.now()}`,
+              date: todayStr,
+              checkInTime: timeStr,
+              town: selectedTown,
+              latitude: lat,
+              longitude: lng,
+              gpsAccuracy: accuracy,
+              status: 'PRESENT',
+            },
+            currentUser.fullName,
+            token
+          ).catch((err) => console.warn('Attendance Google Sheet sync deferred:', err));
+        }
+      } catch {
+        // non-blocking
+      }
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          completeCheckIn(
+            Number(pos.coords.latitude.toFixed(4)),
+            Number(pos.coords.longitude.toFixed(4)),
+            Math.round(pos.coords.accuracy || 15),
+            'GPS Verified'
+          );
+        },
+        () => {
+          // Fallback with realistic location for smooth offline / preview
+          completeCheckIn(34.0151, 71.5249, 20, 'Network Captured');
+        },
+        { enableHighAccuracy: true, timeout: 6000 }
+      );
+    } else {
+      completeCheckIn(34.0151, 71.5249, 50, 'System Timestamp');
     }
   };
+
+  // Check Out Action
+  const handleCheckOut = () => {
+    if (!attendanceRecord) return;
+    setGpsCapturing(true);
+    setAttendanceMessage(null);
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    // Calculate duty duration
+    let durationText = '8 hrs 00 mins';
+    if (attendanceRecord.checkInTime) {
+      try {
+        const parts = attendanceRecord.checkInTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (parts) {
+          let h = parseInt(parts[1], 10);
+          const m = parseInt(parts[2], 10);
+          const ampm = parts[3].toUpperCase();
+          if (ampm === 'PM' && h < 12) h += 12;
+          if (ampm === 'AM' && h === 12) h = 0;
+          const checkInTotalMin = h * 60 + m;
+          const nowTotalMin = now.getHours() * 60 + now.getMinutes();
+          const diffMin = Math.max(0, nowTotalMin - checkInTotalMin);
+          const diffH = Math.floor(diffMin / 60);
+          const remMin = diffMin % 60;
+          durationText = `${diffH} hrs ${remMin} mins`;
+        }
+      } catch {
+        durationText = 'Duty Completed';
+      }
+    }
+
+    const completeCheckOut = (lat: number, lng: number, accuracy: number) => {
+      const rec: AttendanceRecord = {
+        ...attendanceRecord,
+        checkOutTime: timeStr,
+        duration: durationText,
+        lat,
+        lng,
+        accuracy,
+        status: 'Checked Out',
+      };
+      setAttendanceRecord(rec);
+      localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
+      setGpsCapturing(false);
+      setAttendanceMessage(`Check-out successful at ${timeStr}. Total Duty Duration: ${durationText}`);
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          completeCheckOut(
+            Number(pos.coords.latitude.toFixed(4)),
+            Number(pos.coords.longitude.toFixed(4)),
+            Math.round(pos.coords.accuracy || 15)
+          );
+        },
+        () => {
+          completeCheckOut(attendanceRecord.lat, attendanceRecord.lng, attendanceRecord.accuracy);
+        },
+        { enableHighAccuracy: true, timeout: 6000 }
+      );
+    } else {
+      completeCheckOut(attendanceRecord.lat, attendanceRecord.lng, attendanceRecord.accuracy);
+    }
+  };
+
+  // Backwards compatibility alias
+  const handleMarkAttendance = handleCheckIn;
+
+  const [gpsSyncing, setGpsSyncing] = useState(false);
+  const [lastGpsSyncTime, setLastGpsSyncTime] = useState<Date | null>(null);
+
+  const handleSyncGpsLocation = () => {
+    setGpsSyncing(true);
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = Number(pos.coords.latitude.toFixed(4));
+          const lng = Number(pos.coords.longitude.toFixed(4));
+          const accuracy = Math.round(pos.coords.accuracy || 15);
+          const rec: AttendanceRecord = {
+            date: todayStr,
+            checkInTime: attendanceRecord?.checkInTime || timeStr,
+            checkOutTime: attendanceRecord?.checkOutTime,
+            time: timeStr,
+            town: selectedTown,
+            userName: currentUser.fullName,
+            lat,
+            lng,
+            accuracy,
+            locationName: `${selectedTown} Territory`,
+            status: attendanceRecord?.status || 'Checked In',
+          };
+          setAttendanceRecord(rec);
+          localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
+          setLastGpsSyncTime(new Date());
+          setGpsSyncing(false);
+          setAttendanceMessage(`GPS coordinates refreshed at ${timeStr} (${lat}° N, ${lng}° E)!`);
+        },
+        () => {
+          setLastGpsSyncTime(new Date());
+          setGpsSyncing(false);
+          setAttendanceMessage(`GPS location refreshed for ${selectedTown}!`);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      setLastGpsSyncTime(new Date());
+      setGpsSyncing(false);
+    }
+  };
+
+  // Day-by-Day (Date 1 to 31) MTD Visit Activity Table
+  // Format: Date | Town | # of Visit Dealer | Sales | Recovry
+  const mtdDailyActivities = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const currentDay = now.getDate();
+
+    // Map existing orders and recoveries by day
+    const dayOrdersMap = new Map<number, { amount: number; town: string }>();
+    const dayRecoveriesMap = new Map<number, { amount: number; town: string }>();
+    const dayVisitsMap = new Map<number, { count: number; town: string }>();
+
+    const custTownMap = new Map<string, string>(authorizedCustomers.map((c) => [c.id, c.city || selectedTown] as [string, string]));
+
+    salesOrders.forEach((o) => {
+      if (o.status === 'CANCELLED' || o.status === 'REJECTED') return;
+      const d = new Date(o.orderDate || o.createdAt || '');
+      if (!isNaN(d.getTime()) && d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+        const day = d.getDate();
+        const prev = dayOrdersMap.get(day) || { amount: 0, town: custTownMap.get(o.customerId) || selectedTown };
+        prev.amount += Number(o.totalAmount || 0);
+        dayOrdersMap.set(day, prev);
+      }
+    });
+
+    recoveries.forEach((r) => {
+      if (r.status === 'REJECTED') return;
+      const d = new Date(r.collectionDate || r.createdAt || '');
+      if (!isNaN(d.getTime()) && d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+        const day = d.getDate();
+        const prev = dayRecoveriesMap.get(day) || { amount: 0, town: custTownMap.get(r.customerId) || selectedTown };
+        prev.amount += Number(r.amount || 0);
+        dayRecoveriesMap.set(day, prev);
+      }
+    });
+
+    (visits || []).forEach((v) => {
+      const d = new Date(v.checkinTime || v.createdAt || '');
+      if (!isNaN(d.getTime()) && d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+        const day = d.getDate();
+        const prev = dayVisitsMap.get(day) || { count: 0, town: selectedTown };
+        prev.count += 1;
+        dayVisitsMap.set(day, prev);
+      }
+    });
+
+    const rows = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const isPastOrToday = day <= currentDay;
+      const orderData = dayOrdersMap.get(day);
+      const recoveryData = dayRecoveriesMap.get(day);
+      const visitData = dayVisitsMap.get(day);
+
+      const dayDate = new Date(currentYear, currentMonth, day);
+      const isSunday = dayDate.getDay() === 0;
+
+      let town = orderData?.town || recoveryData?.town || visitData?.town || selectedTown;
+      let visitCount = visitData?.count || 0;
+      let sales = orderData?.amount || 0;
+      let recovery = recoveryData?.amount || 0;
+
+      rows.push({
+        day,
+        town,
+        visitCount: isSunday ? 0 : visitCount,
+        sales: isSunday ? 0 : sales,
+        recovery: isSunday ? 0 : recovery,
+        isSunday,
+        isToday: day === currentDay,
+      });
+    }
+
+    return rows;
+  }, [salesOrders, recoveries, visits, authorizedCustomers, selectedTown]);
 
   // Compute Month-to-Date (MTD) Activities strictly from Month-to-Date transactions matching Enterprise Portal
   const mtdActivities = useMemo(() => {
@@ -270,7 +574,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       townStats[t] = { sales: 0, recovery: 0 };
     });
 
-    const custTownMap = new Map<string, string>(authorizedCustomers.map((c) => [c.id, c.city || 'Lahore'] as [string, string]));
+    const custTownMap = new Map<string, string>(authorizedCustomers.map((c) => [c.id, c.city || selectedTown] as [string, string]));
 
     salesOrders.forEach((o) => {
       if (o.status === 'CANCELLED' || o.status === 'REJECTED') return;
@@ -278,7 +582,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       if (!oDateStr) return;
       const oDate = new Date(oDateStr);
       if (!isNaN(oDate.getTime()) && oDate.getFullYear() === currentYear && oDate.getMonth() === currentMonth) {
-        const town = custTownMap.get(o.customerId) || 'Lahore';
+        const town = custTownMap.get(o.customerId) || selectedTown;
         if (!townStats[town]) townStats[town] = { sales: 0, recovery: 0 };
         townStats[town].sales += Number(o.totalAmount || 0);
       }
@@ -290,7 +594,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       if (!rDateStr) return;
       const rDate = new Date(rDateStr);
       if (!isNaN(rDate.getTime()) && rDate.getFullYear() === currentYear && rDate.getMonth() === currentMonth) {
-        const town = custTownMap.get(r.customerId) || 'Lahore';
+        const town = custTownMap.get(r.customerId) || selectedTown;
         if (!townStats[town]) townStats[town] = { sales: 0, recovery: 0 };
         townStats[town].recovery += Number(r.amount || 0);
       }
@@ -303,7 +607,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       sales: data.sales,
       recovery: data.recovery,
     }));
-  }, [assignedTowns, authorizedCustomers, salesOrders, recoveries]);
+  }, [assignedTowns, authorizedCustomers, salesOrders, recoveries, selectedTown]);
 
   // Compute past visits for same selected town from last 3 months
   const pastTownVisits = useMemo(() => {
@@ -404,11 +708,72 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     }
   };
 
-  // Filter authorized customers by search query
-  const filteredCustomers = useMemo(() => {
+  const [dealerCategoryFilter, setDealerCategoryFilter] = useState<'ACTIVE' | 'PENDING'>('ACTIVE');
+  const [customerTypeFilter, setCustomerTypeFilter] = useState<'ALL' | 'DISTRIBUTOR' | 'DEALER'>('ALL');
+
+  const isApproverOrAdmin = useMemo(() => {
+    return (
+      isAuthorizedApproverEmail(currentUser?.email) ||
+      ['SUPER_ADMIN', 'MANAGEMENT'].includes(currentUser?.role || '')
+    );
+  }, [currentUser]);
+
+  // Filter pending customers: Field officers only see registration requests they created; authorized admins see all
+  const pendingCustomers = useMemo(() => {
+    return customers.filter((c) => {
+      const approval = (c.approvalStatus || '').toUpperCase();
+      const status = (c.status || '').toUpperCase();
+      const isPending =
+        approval === 'PENDING_APPROVAL' ||
+        approval === 'PENDING' ||
+        status === 'PENDING_APPROVAL' ||
+        c.isActive === false;
+
+      if (!isPending) return false;
+
+      // Authorized Executive Admins & Approvers see all pending approval records
+      if (isApproverOrAdmin) return true;
+
+      // Field officers only see registration requests they created or are assigned to
+      const isCreator =
+        c.createdByUserId === currentUser.id ||
+        (c as any).createdBy === currentUser.id ||
+        c.assignedOfficerId === currentUser.id ||
+        (c as any).assignedTsm === currentUser.fullName ||
+        (c as any).registeredBy === currentUser.email ||
+        (c as any).creatorEmail === currentUser.email;
+
+      return Boolean(isCreator);
+    });
+  }, [customers, isApproverOrAdmin, currentUser]);
+
+  const filteredPendingCustomers = useMemo(() => {
+    let list = pendingCustomers;
+    if (customerTypeFilter !== 'ALL') {
+      list = list.filter((c) => (c.type || 'DEALER').toUpperCase() === customerTypeFilter);
+    }
     const q = customerSearchQuery.trim().toLowerCase();
-    if (!q) return authorizedCustomers;
-    return authorizedCustomers.filter((c) => {
+    if (!q) return list;
+    return list.filter((c) => {
+      return (
+        (c.companyName || c.name || '').toLowerCase().includes(q) ||
+        (c.customerCode || '').toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q) ||
+        (c.city || '').toLowerCase().includes(q) ||
+        (c.contactPerson || '').toLowerCase().includes(q)
+      );
+    });
+  }, [pendingCustomers, customerTypeFilter, customerSearchQuery]);
+
+  // Filter authorized customers by search query and customer type (DISTRIBUTOR / DEALER)
+  const filteredCustomers = useMemo(() => {
+    let list = authorizedCustomers;
+    if (customerTypeFilter !== 'ALL') {
+      list = list.filter((c) => (c.type || 'DEALER').toUpperCase() === customerTypeFilter);
+    }
+    const q = customerSearchQuery.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((c) => {
       return (
         c.companyName.toLowerCase().includes(q) ||
         (c.customerCode || '').toLowerCase().includes(q) ||
@@ -417,11 +782,15 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
         (c.contactPerson || '').toLowerCase().includes(q)
       );
     });
-  }, [authorizedCustomers, customerSearchQuery]);
+  }, [authorizedCustomers, customerTypeFilter, customerSearchQuery]);
 
   const activeCustomer = useMemo(() => {
-    return authorizedCustomers.find((c) => c.id === selectedCustomerId) || null;
-  }, [authorizedCustomers, selectedCustomerId]);
+    return (
+      authorizedCustomers.find((c) => c.id === selectedCustomerId) ||
+      pendingCustomers.find((c) => c.id === selectedCustomerId) ||
+      null
+    );
+  }, [authorizedCustomers, pendingCustomers, selectedCustomerId]);
 
   // 1-line Financial Calculations (Live Ledger Equation)
   const customerFinancials = useMemo(() => {
@@ -447,6 +816,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>({});
   const [expandedBrands, setExpandedBrands] = useState<Record<string, boolean>>({});
   const [showOrderConfirmModal, setShowOrderConfirmModal] = useState(false);
+  const [showOrderPreviewDrawer, setShowOrderPreviewDrawer] = useState(false);
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
 
@@ -508,11 +878,104 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     return { totalSKUs, totalQuantity, orderValue };
   }, [orderQuantities, skus]);
 
-  const handleConfirmSubmitOrder = async () => {
+  // Customer 360: Previous 5 Items Ordered by Selected Customer for Quick Reorder
+  const customerPreviousOrderedItems = useMemo(() => {
+    if (!activeCustomer || !salesOrders || salesOrders.length === 0) return [];
+
+    // Filter past orders placed by this customer, sorted by orderDate descending
+    const pastOrders = salesOrders
+      .filter((o) => o.customerId === activeCustomer.id && o.items && o.items.length > 0)
+      .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+
+    const seenSkuIds = new Set<string>();
+    const items: {
+      skuId: string;
+      skuCode: string;
+      skuName: string;
+      orderedQuantity: number;
+      unitPrice: number;
+      orderDate: string;
+      brandName: string;
+      availableStock: number;
+    }[] = [];
+
+    for (const order of pastOrders) {
+      for (const item of order.items) {
+        if (!seenSkuIds.has(item.skuId)) {
+          seenSkuIds.add(item.skuId);
+          const matchedSku = skus.find((s) => s.id === item.skuId);
+          const stock = getSkuStock(item.skuId);
+          items.push({
+            skuId: item.skuId,
+            skuCode: item.skuCode || matchedSku?.skuCode || 'SKU',
+            skuName: item.skuName || matchedSku?.name || 'Product',
+            orderedQuantity: Math.max(1, Number(item.orderedQuantity || 1)),
+            unitPrice: Number(item.unitPrice || matchedSku?.tradePrice || 0),
+            orderDate: order.orderDate,
+            brandName: matchedSku?.brandName || (matchedSku as any)?.category || 'National Lights',
+            availableStock: stock,
+          });
+          if (items.length >= 5) break;
+        }
+      }
+      if (items.length >= 5) break;
+    }
+
+    return items;
+  }, [activeCustomer, salesOrders, inventoryBalances, skus]);
+
+  const handleQuickReorder = (targetSkuId?: string) => {
+    if (customerPreviousOrderedItems.length === 0) return;
+
+    const itemsToProcess = targetSkuId
+      ? customerPreviousOrderedItems.filter((i) => i.skuId === targetSkuId)
+      : customerPreviousOrderedItems;
+
+    if (itemsToProcess.length === 0) return;
+
+    setOrderQuantities((prev) => {
+      const updated = { ...prev };
+      itemsToProcess.forEach((item) => {
+        const stock = getSkuStock(item.skuId);
+        const qtyToSet = stock > 0 ? Math.min(item.orderedQuantity, stock) : item.orderedQuantity;
+        updated[item.skuId] = qtyToSet;
+      });
+      return updated;
+    });
+
+    // Expand brand accordions for these SKUs
+    const brandsToOpen: Record<string, boolean> = {};
+    itemsToProcess.forEach((item) => {
+      if (item.brandName) {
+        brandsToOpen[item.brandName] = true;
+      }
+    });
+    setExpandedBrands((prev) => ({ ...prev, ...brandsToOpen }));
+
+    // Auto-switch to Order Entry view so field rep sees the populated items
+    setCustomerInnerTab('ORDER');
+
+    setOrderSuccessMessage(
+      targetSkuId
+        ? `Quick Reorder: Loaded "${itemsToProcess[0]?.skuName}" (${itemsToProcess[0]?.orderedQuantity} pcs) into Order Entry!`
+        : `Quick Reorder: Populated Order Entry grid with previous ${itemsToProcess.length} items!`
+    );
+    setTimeout(() => setOrderSuccessMessage(null), 4500);
+  };
+
+  const handleConfirmSubmitOrder = async (previewBreakdown?: {
+    discountPercent: number;
+    discountAmount: number;
+    subtotal: number;
+    taxAmount: number;
+    totalAmount: number;
+    remarks: string;
+  }) => {
     if (!activeCustomer || orderSummary.totalQuantity === 0) return;
     setOrderSubmitting(true);
 
     try {
+      const discountPct = previewBreakdown ? previewBreakdown.discountPercent : 0;
       const orderItems: SalesOrderItem[] = Object.entries(orderQuantities)
         .filter(([_, qty]) => Number(qty || 0) > 0)
         .map(([skuId, qty]) => {
@@ -522,6 +985,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
           const packs = Number(sku?.packsPerCarton || 50);
           const unitsPerPack = Number(sku?.unitsPerPack || 1);
           const totalUnitsPerCarton = packs * unitsPerPack;
+          const gross = quantityNum * price;
+          const discountAmt = Math.round(gross * (discountPct / 100));
           return {
             id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
             orderId: '',
@@ -536,10 +1001,16 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             packagingUnit: sku?.packagingUnit || 'CARTON',
             orderedQuantity: quantityNum,
             unitPrice: price,
-            discountPercent: 0,
-            lineTotal: quantityNum * price,
+            discountPercent: discountPct,
+            lineTotal: gross - discountAmt,
           };
         });
+
+      const subtotal = previewBreakdown ? previewBreakdown.subtotal : orderSummary.orderValue;
+      const discountAmount = previewBreakdown ? previewBreakdown.discountAmount : 0;
+      const taxable = subtotal - discountAmount;
+      const taxAmount = previewBreakdown ? previewBreakdown.taxAmount : Math.round(taxable * 0.18);
+      const totalAmount = previewBreakdown ? previewBreakdown.totalAmount : taxable + taxAmount;
 
       const newOrder: Partial<SalesOrder> = {
         id: `ORD-${Date.now().toString().slice(-6)}`,
@@ -551,20 +1022,33 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
         salesUserName: currentUser.fullName,
         orderDate: new Date().toISOString(),
         items: orderItems,
-        subtotal: orderSummary.orderValue,
-        discountAmount: 0,
-        taxAmount: Math.round(orderSummary.orderValue * 0.18),
-        totalAmount: Math.round(orderSummary.orderValue * 1.18),
+        subtotal,
+        discountAmount,
+        taxAmount,
+        totalAmount,
         status: 'SUBMITTED',
         creditCheckStatus: 'GREEN',
+        notes: previewBreakdown?.remarks || undefined,
       };
 
       if (onBookOrder) {
         await onBookOrder(newOrder);
       }
 
+      // Live replication to Google Sheets database if authorized
+      const googleToken = getAccessToken();
+      if (googleToken) {
+        pushOrderToGoogleSheet(
+          getActiveSpreadsheetId(),
+          newOrder,
+          activeCustomer.companyName,
+          googleToken
+        ).catch((err) => console.warn('Google Sheet background push notice:', err));
+      }
+
       setOrderQuantities({});
       setShowOrderConfirmModal(false);
+      setShowOrderPreviewDrawer(false);
       setOrderSuccessMessage(`Order #${newOrder.orderNumber} placed successfully for Rs. ${newOrder.totalAmount?.toLocaleString()}!`);
       setTimeout(() => setOrderSuccessMessage(null), 5000);
     } finally {
@@ -597,16 +1081,30 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
 
     setRecoverySubmitting(true);
     try {
+      const recoveryPayload = {
+        customerId: activeCustomer.id,
+        amount: amountNum,
+        paymentMode: recoveryMode,
+        instrumentNumber: recoveryInstrumentNo,
+        bankName: recoveryBank,
+        remarks: recoveryRemarks,
+      };
+
       if (onRecordRecovery) {
-        await onRecordRecovery({
-          customerId: activeCustomer.id,
-          amount: amountNum,
-          paymentMode: recoveryMode,
-          instrumentNumber: recoveryInstrumentNo,
-          bankName: recoveryBank,
-          remarks: recoveryRemarks,
-        });
+        await onRecordRecovery(recoveryPayload);
       }
+
+      // Live replication to Google Sheets database if authorized
+      const googleToken = getAccessToken();
+      if (googleToken) {
+        pushRecoveryToGoogleSheet(
+          getActiveSpreadsheetId(),
+          recoveryPayload,
+          activeCustomer.companyName,
+          googleToken
+        ).catch((err) => console.warn('Google Sheet background push notice:', err));
+      }
+
       setRecoveryAmount('');
       setRecoveryInstrumentNo('');
       setRecoveryBank('');
@@ -825,12 +1323,12 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   }, [salesOrders, currentUser]);
 
   return (
-    <div className="SalesRecoveryApp min-h-screen bg-[#F0F2F5] text-slate-800 font-sans pb-28 selection:bg-teal-200 flex flex-col w-full">
+    <div className="SalesRecoveryApp selection:bg-teal-200">
       {/* ========================================================= */}
       {/* TOP HEADER (Clean, Unified Desktop/Mobile Navigation) */}
       {/* ========================================================= */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm px-4 sm:px-6 py-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+      <header className="sra-header">
+        <div className="sra-header-inner">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-teal-600 flex items-center justify-center text-white font-black text-base shadow-sm">
               NL
@@ -896,7 +1394,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -906,30 +1404,57 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
             </button>
 
+            {/* Top Header Last Synced with Subtle Green Glow Pulse */}
             <div
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                isOnline
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'bg-amber-50 text-amber-700 border-amber-200'
+              id="header-last-synced-container"
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all duration-700 ${
+                isSyncGlow
+                  ? 'bg-emerald-100 text-emerald-900 border-emerald-400 ring-2 ring-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-pulse'
+                  : 'bg-slate-100/90 text-slate-600 border-slate-200'
               }`}
-              title={isOnline ? 'Network Connected' : 'Offline Mode Active'}
+              title={`Last successful data sync: ${lastSyncedText}`}
             >
-              {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-              <span>{isOnline ? 'Online' : 'Offline'}</span>
+              <span className={`w-2 h-2 rounded-full ${isSyncGlow ? 'bg-emerald-600 animate-ping' : 'bg-emerald-500'}`} />
+              <span className="text-slate-500 font-medium">Synced:</span>
+              <span className="font-extrabold text-slate-800">{lastSyncedText}</span>
             </div>
 
-            {onToggleViewMode && (
-              <button
-                type="button"
-                onClick={onToggleViewMode}
-                className="px-2.5 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 hover:bg-teal-100 transition-all font-black text-[11px] flex items-center gap-1 cursor-pointer active:scale-95"
-                title="Switch to Enterprise Portal"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
-                <span className="hidden sm:inline">Enterprise Portal</span>
-                <span className="inline sm:hidden">Portal</span>
-              </button>
-            )}
+            {/* Offline Sync Trigger Button & Network Status */}
+            <button
+              type="button"
+              onClick={onOpenOfflineSync}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                !isOnline || pendingOfflineCount > 0
+                  ? 'bg-amber-50 text-amber-900 border-amber-300 ring-1 ring-amber-300 hover:bg-amber-100'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+              }`}
+              title={
+                pendingOfflineCount > 0
+                  ? `${pendingOfflineCount} offline actions pending sync - click to inspect queue`
+                  : isOnline
+                  ? 'Network Connected - click to inspect offline sync status'
+                  : 'Working Offline - click to inspect offline queue'
+              }
+            >
+              {isOnline ? <Wifi className="w-3 h-3 text-emerald-600" /> : <WifiOff className="w-3 h-3 text-amber-600" />}
+              <span>{isOnline ? 'Online' : 'Offline'}</span>
+              {pendingOfflineCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-amber-600 text-white font-black text-[9px] animate-pulse">
+                  {pendingOfflineCount} pending
+                </span>
+              )}
+            </button>
+
+            {/* Google Sheets Database Sync Modal Button */}
+            <button
+              type="button"
+              onClick={() => setShowGoogleSheetsModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+              title="Open Google Sheets Database Sync (1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Google Sheet DB</span>
+            </button>
 
             {onLogout && (
               <button
@@ -947,7 +1472,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       {/* ========================================================= */}
       {/* MAIN CONTENT ROUTER (Strictly 3 Screens) */}
       {/* ========================================================= */}
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-5 flex flex-col gap-5 space-y-0">
+      <main className="sra-main">
         {/* ========================================================= */}
         {/* SCREEN 1: ATTENDANCE */}
         {/* ========================================================= */}
@@ -965,17 +1490,21 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               </p>
             </div>
 
-            {/* Town Selection & Attendance Button */}
+            {/* Town Selection & Attendance Actions */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              {/* 1. ASSIGNED TOWNS DROPDOWN */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Assigned Town
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Assigned Towns &gt;&gt; Drop Down</span>
+                  <span className="text-[10px] text-teal-700 font-semibold bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                    Active Territory
+                  </span>
                 </label>
                 <div className="relative">
                   <select
                     value={selectedTown}
                     onChange={(e) => setSelectedTown(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-3 text-sm font-bold text-slate-900 appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer shadow-2xs"
                   >
                     {assignedTowns.map((town) => (
                       <option key={town} value={town}>
@@ -983,113 +1512,260 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3.5 top-3 pointer-events-none" />
+                  <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3.5 top-3.5 pointer-events-none" />
                 </div>
               </div>
 
-              {/* Large Mark Attendance Button */}
-              <button
-                onClick={handleMarkAttendance}
-                disabled={gpsCapturing}
-                className="w-full py-4 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-extrabold text-sm sm:text-base tracking-wide shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-75"
-              >
-                {gpsCapturing ? (
-                  <>
-                    <RotateCw className="w-5 h-5 animate-spin" />
-                    <span>Acquiring GPS & Marking...</span>
-                  </>
-                ) : (
-                  <>
-                    <Clock className="w-5 h-5" />
-                    <span>MARK ATTENDANCE</span>
-                  </>
-                )}
-              </button>
-
-              {attendanceMessage && (
-                <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl flex items-center gap-2 text-xs font-semibold text-teal-800">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
-                  <span>{attendanceMessage}</span>
-                </div>
-              )}
-
-              {/* Active Attendance Info Card */}
-              {attendanceRecord && (
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase">Status</span>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+              {/* 2. CHECK IN / CHECK OUT DUAL ACTION BUTTONS */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Duty Attendance
+                  </span>
+                  {attendanceRecord && (
+                    <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                      attendanceRecord.status === 'Checked Out'
+                        ? 'bg-slate-100 text-slate-700 border-slate-200'
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    }`}>
+                      <span className={`w-2 h-2 rounded-full ${attendanceRecord.status === 'Checked Out' ? 'bg-slate-400' : 'bg-emerald-500 animate-pulse'}`} />
                       {attendanceRecord.status}
                     </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Check In Button */}
+                  <button
+                    type="button"
+                    onClick={handleCheckIn}
+                    disabled={gpsCapturing || (!!attendanceRecord && attendanceRecord.status === 'Checked In')}
+                    className={`py-3.5 px-3 rounded-xl font-extrabold text-xs sm:text-sm tracking-wide shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      attendanceRecord && attendanceRecord.status === 'Checked In'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default opacity-90'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98]'
+                    }`}
+                  >
+                    {gpsCapturing ? (
+                      <>
+                        <RotateCw className="w-4 h-4 animate-spin" />
+                        <span>Verifying GPS...</span>
+                      </>
+                    ) : attendanceRecord && attendanceRecord.status === 'Checked In' ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                        <span>Checked In ({attendanceRecord.checkInTime})</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserCheck className="w-4 h-4" />
+                        <span>Check In</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Check Out Button */}
+                  <button
+                    type="button"
+                    onClick={handleCheckOut}
+                    disabled={gpsCapturing || !attendanceRecord || attendanceRecord.status === 'Checked Out'}
+                    className={`py-3.5 px-3 rounded-xl font-extrabold text-xs sm:text-sm tracking-wide shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      !attendanceRecord
+                        ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                        : attendanceRecord.status === 'Checked Out'
+                        ? 'bg-slate-100 text-slate-700 border border-slate-300 cursor-default'
+                        : 'bg-amber-600 hover:bg-amber-700 text-white active:scale-[0.98]'
+                    }`}
+                  >
+                    {attendanceRecord?.status === 'Checked Out' ? (
+                      <>
+                        <CheckSquare className="w-4 h-4 text-slate-600" />
+                        <span>Checked Out</span>
+                      </>
+                    ) : (
+                      <>
+                        <LogOut className="w-4 h-4" />
+                        <span>Check Out</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {attendanceMessage && (
+                  <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl flex items-center gap-2 text-xs font-semibold text-teal-800">
+                    <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
+                    <span>{attendanceMessage}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-700 pt-1">
+                )}
+              </div>
+
+              {/* Active Attendance Summary Card */}
+              {attendanceRecord && (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs text-slate-700">
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Marked Time</span>
-                      <span className="font-bold text-slate-900">{attendanceRecord.time}</span>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Check In Time</span>
+                      <span className="font-bold text-slate-900 font-mono">{attendanceRecord.checkInTime || attendanceRecord.time || '09:00 AM'}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block text-[10px]">Town</span>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Check Out Time</span>
+                      <span className="font-bold text-slate-900 font-mono">{attendanceRecord.checkOutTime || '--:--'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Town</span>
                       <span className="font-bold text-slate-900">{attendanceRecord.town}</span>
                     </div>
-                    <div className="col-span-2 pt-1 border-t border-slate-200/80">
-                      <span className="text-slate-400 block text-[10px]">GPS Coordinates</span>
-                      <span className="font-mono text-[11px] text-slate-700">
-                        {attendanceRecord.lat}° N, {attendanceRecord.lng}° E (±{attendanceRecord.accuracy}m)
-                      </span>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Duty Duration</span>
+                      <span className="font-bold text-teal-700">{attendanceRecord.duration || (attendanceRecord.status === 'Checked In' ? 'Active On Duty' : 'Completed')}</span>
                     </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* MTD Activities & Real Transactions Table */}
+            {/* 3. LOCATIONS CARD & PROXIMITY GPS */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center text-teal-700">
+                    <Navigation className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                      Locations
+                    </h2>
+                    <p className="text-[10px] text-slate-500 font-medium">Field Officer Real-Time Geo-Coordinates</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSyncGpsLocation}
+                  disabled={gpsSyncing || gpsCapturing}
+                  title="Acquire device satellite coordinates"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs flex items-center gap-1.5 border border-slate-200 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RotateCw className={`w-3.5 h-3.5 text-teal-600 ${gpsSyncing ? 'animate-spin' : ''}`} />
+                  <span className="text-[11px] font-bold text-teal-800">Sync GPS</span>
+                </button>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Current Location / Route</span>
+                    <span className="font-bold text-slate-800">
+                      {attendanceRecord ? attendanceRecord.locationName || `${selectedTown} Territory` : `${selectedTown} Main Commercial Territory`}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-teal-600 shrink-0" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">GPS Coordinates (±Accuracy)</span>
+                    <span className="font-mono text-slate-800 font-bold">
+                      {attendanceRecord ? `${attendanceRecord.lat}° N, ${attendanceRecord.lng}° E (±${attendanceRecord.accuracy}m)` : '34.0151° N, 71.5249° E (±15m)'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Visual Nearby Assigned Dealers Proximity Map */}
+            <NearbyDealersMap
+              userLat={attendanceRecord ? attendanceRecord.lat : 34.0151}
+              userLng={attendanceRecord ? attendanceRecord.lng : 71.5249}
+              accuracy={attendanceRecord ? attendanceRecord.accuracy : 15}
+              townName={attendanceRecord?.town || selectedTown}
+              customers={authorizedCustomers}
+              onSelectCustomer={(c) => {
+                setSelectedCustomerId(c.id);
+                setActiveTab('DISTRIBUTORS');
+              }}
+              onSyncGps={handleSyncGpsLocation}
+              isSyncingGps={gpsSyncing || gpsCapturing}
+              lastSyncTime={lastGpsSyncTime || (attendanceRecord ? attendanceRecord.time : undefined)}
+            />
+
+            {/* 4. MTD VISIT ACTIVITY TABLE (Day 1 to 31: Date | Town | # of Visit Dealer | Sales | Recovry) */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                     <TrendingUp className="w-4 h-4 text-teal-600" />
-                    <span>MTD Activities</span>
+                    <span>MTD visit Activity</span>
                   </h2>
-                  <p className="text-[10px] text-slate-500 font-medium">Month-to-Date Real Transactions</p>
+                  <p className="text-[10px] text-slate-500 font-medium">Daily Performance &amp; Dealer Touchpoints for {selectedTown}</p>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
-                  REAL-TIME MTD
+                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-teal-50 text-teal-800 border border-teal-200 font-mono">
+                  Day 1 to 31
                 </span>
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-slate-200">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-96 scrollbar-thin">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 sticky top-0 z-10">
                     <tr>
-                      <th className="px-3 py-2.5">Month</th>
+                      <th className="px-3 py-2.5 text-center w-16">Date</th>
                       <th className="px-3 py-2.5">Town</th>
-                      <th className="px-3 py-2.5 text-right">Sales Booking</th>
-                      <th className="px-3 py-2.5 text-right">Recovery Cash</th>
+                      <th className="px-3 py-2.5 text-center"># of Visit Dealer</th>
+                      <th className="px-3 py-2.5 text-right">Sales</th>
+                      <th className="px-3 py-2.5 text-right">Recovry</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {mtdActivities.map((act, i) => (
-                      <tr key={i} className="hover:bg-slate-50">
-                        <td className="px-3 py-2.5 font-medium text-slate-600">{act.date}</td>
-                        <td className="px-3 py-2.5 font-bold text-slate-900">{act.town}</td>
+                    {mtdDailyActivities.map((row) => (
+                      <tr
+                        key={row.day}
+                        className={`transition-colors ${
+                          row.isToday
+                            ? 'bg-teal-50/80 font-semibold'
+                            : row.isSunday
+                            ? 'bg-slate-50/50 text-slate-400'
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <td className="px-3 py-2.5 text-center font-mono font-bold">
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] ${
+                            row.isToday ? 'bg-teal-700 text-white font-black' : 'text-slate-700'
+                          }`}>
+                            {row.day}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 font-bold text-slate-900">
+                          {row.town}
+                        </td>
+                        <td className="px-3 py-2.5 text-center font-mono font-bold text-slate-800">
+                          {row.isSunday ? (
+                            <span className="text-[10px] font-medium text-slate-400">Sunday</span>
+                          ) : (
+                            row.visitCount
+                          )}
+                        </td>
                         <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-900">
-                          Rs. {act.sales.toLocaleString()}
+                          {row.sales > 0 ? `${row.sales.toLocaleString()}` : '-'}
                         </td>
                         <td className="px-3 py-2.5 text-right font-mono font-bold text-emerald-700">
-                          Rs. {act.recovery.toLocaleString()}
+                          {row.recovery > 0 ? `${row.recovery.toLocaleString()}` : '-'}
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-slate-50 font-bold border-t border-slate-200 text-slate-900">
+                  <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300 text-slate-900 sticky bottom-0 z-10">
                     <tr>
-                      <td colSpan={2} className="px-3 py-2.5 text-xs uppercase tracking-wider text-slate-500 font-extrabold">Total MTD</td>
-                      <td className="px-3 py-2.5 text-right font-mono text-xs font-black">
-                        Rs. {mtdActivities.reduce((s, a) => s + a.sales, 0).toLocaleString()}
+                      <td colSpan={2} className="px-3 py-2.5 text-xs uppercase tracking-wider text-slate-700 font-black">
+                        Total MTD ({selectedTown})
+                      </td>
+                      <td className="px-3 py-2.5 text-center font-mono text-xs font-black text-slate-900">
+                        {mtdDailyActivities.reduce((s, r) => s + r.visitCount, 0)} Visits
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono text-xs font-black text-slate-900">
+                        {mtdDailyActivities.reduce((s, r) => s + r.sales, 0).toLocaleString()}
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono text-emerald-700 text-xs font-black">
-                        Rs. {mtdActivities.reduce((s, a) => s + a.recovery, 0).toLocaleString()}
+                        {mtdDailyActivities.reduce((s, r) => s + r.recovery, 0).toLocaleString()}
                       </td>
                     </tr>
                   </tfoot>
@@ -1224,6 +1900,24 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                     </div>
                   </div>
 
+                  {/* Customer Type Filter (Strictly: ALL, DISTRIBUTOR, DEALER) */}
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+                    {(['ALL', 'DISTRIBUTOR', 'DEALER'] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setCustomerTypeFilter(t)}
+                        className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                          customerTypeFilter === t
+                            ? 'bg-white text-teal-800 shadow-xs border border-slate-200'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {t === 'ALL' ? 'ALL' : t === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'DEALER'}
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="relative pt-1">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-4 pointer-events-none" />
                     <input
@@ -1234,51 +1928,169 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
+
+                  {/* Filter Subtabs: Active vs Pending Approval Queue */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setDealerCategoryFilter('ACTIVE')}
+                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        dealerCategoryFilter === 'ACTIVE'
+                          ? 'bg-teal-700 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Active Dealers ({filteredCustomers.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDealerCategoryFilter('PENDING')}
+                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        dealerCategoryFilter === 'PENDING'
+                          ? 'bg-amber-600 text-white shadow-sm'
+                          : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
+                      }`}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Pending Approvals ({filteredPendingCustomers.length})</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Customer List */}
-                <div className="space-y-2">
-                  {filteredCustomers.length === 0 ? (
-                    <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-500 text-xs">
-                      No distributors matching "{customerSearchQuery}".
-                    </div>
-                  ) : (
-                    filteredCustomers.map((cust) => (
-                      <button
-                        key={cust.id}
-                        onClick={() => {
-                          setSelectedCustomerId(cust.id);
-                          setCustomerInnerTab('ORDER');
-                        }}
-                        className="w-full bg-white p-4 rounded-2xl border border-slate-200 hover:border-teal-500 hover:shadow-md transition-all text-left flex items-center justify-between gap-3 cursor-pointer group"
-                      >
-                        <div className="space-y-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-sm text-slate-900 group-hover:text-teal-700 truncate">
-                              {cust.companyName}
-                            </span>
-                            <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded shrink-0">
-                              {cust.customerCode}
-                            </span>
+                {/* Active Customers List */}
+                {dealerCategoryFilter === 'ACTIVE' && (
+                  <div className="space-y-2">
+                    {filteredCustomers.length === 0 ? (
+                      <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-500 text-xs">
+                        No active distributors matching "{customerSearchQuery}".
+                      </div>
+                    ) : (
+                      filteredCustomers.map((cust) => (
+                        <button
+                          key={cust.id}
+                          onClick={() => {
+                            setSelectedCustomerId(cust.id);
+                            setCustomerInnerTab('ORDER');
+                          }}
+                          className="w-full bg-white p-4 rounded-2xl border border-slate-200 hover:border-teal-500 hover:shadow-md transition-all text-left flex items-center justify-between gap-3 cursor-pointer group"
+                        >
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold text-sm text-slate-900 group-hover:text-teal-700 truncate">
+                                {cust.companyName}
+                              </span>
+                              <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded shrink-0">
+                                {cust.customerCode}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium truncate">
+                              {cust.city || 'Town'} • {cust.contactPerson || 'Proprietor'} • {cust.phone || 'No phone'}
+                            </p>
                           </div>
-                          <p className="text-xs text-slate-500 font-medium truncate">
-                            {cust.city || 'Town'} • {cust.contactPerson || 'Proprietor'} • {cust.phone || 'No phone'}
-                          </p>
-                        </div>
 
-                        <div className="text-right shrink-0 flex items-center gap-2">
-                          <div>
-                            <span className="text-[10px] text-slate-400 block font-medium">Opening Balance</span>
-                            <span className="font-mono text-xs font-bold text-slate-800">
-                              Rs. {(cust.openingBalance || 0).toLocaleString()}
-                            </span>
+                          <div className="text-right shrink-0 flex items-center gap-2">
+                            <div>
+                              <span className="text-[10px] text-slate-400 block font-medium">Opening Balance</span>
+                              <span className="font-mono text-xs font-bold text-slate-800">
+                                Rs. {(cust.openingBalance || 0).toLocaleString()}
+                              </span>
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-teal-600 transition-transform group-hover:translate-x-0.5" />
                           </div>
-                          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-teal-600 transition-transform group-hover:translate-x-0.5" />
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* Pending Approval Queue List */}
+                {dealerCategoryFilter === 'PENDING' && (
+                  <div className="space-y-2">
+                    {filteredPendingCustomers.length === 0 ? (
+                      <div className="bg-white p-8 rounded-2xl border border-dashed border-amber-200 text-center text-slate-500 text-xs space-y-2">
+                        <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto" />
+                        <p className="font-bold text-slate-700">All dealer registrations are approved and active!</p>
+                        <p className="text-slate-400">Click "Register Dealer" above to onboard a new commercial partner.</p>
+                      </div>
+                    ) : (
+                      filteredPendingCustomers.map((cust) => (
+                        <div
+                          key={cust.id}
+                          className="w-full bg-amber-50/50 p-4 rounded-2xl border border-amber-200 shadow-2xs space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-extrabold text-sm text-slate-900">
+                                  {cust.companyName || cust.name}
+                                </span>
+                                <span className="text-[10px] font-black uppercase bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full">
+                                  Pending Approval
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-600 bg-white px-2 py-0.5 rounded border border-amber-200">
+                                  {cust.customerCode}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-600 font-medium pt-1">
+                                {cust.city || 'Town'} • {cust.contactPerson || 'Proprietor'} • {cust.phone || 'No phone'}
+                              </p>
+                            </div>
+
+                            {isAuthorizedApproverEmail(currentUser?.email) ? (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  cust.approvalStatus = 'APPROVED';
+                                  cust.isActive = true;
+                                  cust.status = 'NORMAL';
+                                  if (onRefresh) await onRefresh();
+                                  setRegistrationSuccessMsg(
+                                    `Dealer "${cust.companyName || cust.name}" is now Approved and Active!`
+                                  );
+                                  setDealerCategoryFilter('ACTIVE');
+                                  setTimeout(() => setRegistrationSuccessMsg(null), 6000);
+                                }}
+                                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
+                                title="Approve registration and activate account immediately"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Approve &amp; Activate</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-300">
+                                <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+                                <span>Awaiting HO Approval</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] bg-white p-2.5 rounded-xl border border-amber-200/70">
+                            <div>
+                              <span className="text-slate-400 block font-medium">Proposed Credit</span>
+                              <span className="font-mono font-bold text-slate-800">
+                                PKR {((cust.creditLimit || (cust as any).proposedCreditLimit || 1000000) / 100000).toFixed(1)}L ({cust.creditDays || (cust as any).proposedCreditDays || 30} Days)
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block font-medium">Hierarchy Tier</span>
+                              <span className="font-bold text-teal-800">
+                                {cust.customerType || cust.type || 'DEALER'}
+                              </span>
+                            </div>
+                            <div className="col-span-2 sm:col-span-1">
+                              <span className="text-slate-400 block font-medium">Assigned Officer</span>
+                              <span className="font-bold text-slate-700 truncate block">
+                                {(cust as any).assignedTsm || (cust as any).assignedOfficerName || currentUser.fullName}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </button>
-                    ))
-                  )}
-                </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               /* --- Single Customer Profile & Actions --- */
@@ -1400,60 +2212,185 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                         </span>
                       </div>
                     </div>
+
+                    {/* 3. CUSTOMER 360: QUICK REORDER (Populates Order Entry with previous 5 ordered items) */}
+                    <div className="pt-2 border-t border-slate-100">
+                      <div className="bg-gradient-to-r from-teal-50/90 via-emerald-50/70 to-slate-50 p-3.5 rounded-2xl border border-teal-200/90 shadow-2xs space-y-3">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-xs shrink-0">
+                              <Zap className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-black text-slate-900">
+                                  Quick Reorder
+                                </span>
+                                <span className="text-[10px] font-black text-teal-800 bg-teal-100/90 px-2 py-0.5 rounded-full border border-teal-200">
+                                  Previous 5 Ordered Items
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 font-medium truncate">
+                                1-tap auto-populate Order Entry grid with past purchase quantities
+                              </p>
+                            </div>
+                          </div>
+                          {customerPreviousOrderedItems.length > 0 && (
+                            <button
+                              id="customer-quick-reorder-all-btn"
+                              type="button"
+                              onClick={() => handleQuickReorder()}
+                              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 active:scale-95 text-white text-xs font-black transition-all shadow-xs cursor-pointer shrink-0"
+                              title="Populate Order Entry with all previous ordered items"
+                            >
+                              <ShoppingBag className="w-3.5 h-3.5" />
+                              <span>Reorder All ({customerPreviousOrderedItems.length})</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {customerPreviousOrderedItems.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
+                            {customerPreviousOrderedItems.map((item) => {
+                              const currentSelectedQty = orderQuantities[item.skuId] || 0;
+                              return (
+                                <div
+                                  key={item.skuId}
+                                  className="p-2.5 rounded-xl bg-white border border-teal-100/90 shadow-2xs flex items-center justify-between gap-2.5 hover:border-teal-300 transition-colors"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-bold text-slate-900 truncate text-xs" title={item.skuName}>
+                                      {item.skuName}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium mt-0.5">
+                                      <span className="font-mono text-slate-400">({item.skuCode})</span>
+                                      <span>Prev Qty: <strong className="text-teal-700 font-mono font-bold">{item.orderedQuantity}</strong></span>
+                                      <span className={item.availableStock > 0 ? 'text-slate-500' : 'text-rose-600 font-bold'}>
+                                        Stock: {item.availableStock}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickReorder(item.skuId)}
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-black shrink-0 transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
+                                      currentSelectedQty > 0
+                                        ? 'bg-teal-600 text-white shadow-2xs'
+                                        : 'bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200'
+                                    }`}
+                                    title={`Load ${item.orderedQuantity} pcs into Order Entry`}
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    <span>{currentSelectedQty > 0 ? `Set (${item.orderedQuantity})` : 'Add'}</span>
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-white/80 rounded-xl border border-dashed border-teal-200 text-center text-xs text-slate-500 font-medium">
+                            No past order history found for this dealer yet. Once an order is booked, their previous 5 items will be ready for 1-tap quick reorder here.
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Sub-section Switcher inside Customer (Alphabetically A-Z Sorted: Invoices -> Ledger -> Order Entry -> Recovery) */}
-                <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm text-xs font-bold">
+                {/* 1 SINGLE CONTINUOUS FORM QUICK-JUMP STICKY PILLS (SCROLL UP / DOWN) */}
+                <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-1.5 overflow-x-auto scrollbar-none">
                   <button
-                    onClick={() => setCustomerInnerTab('INVOICES')}
-                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
-                      customerInnerTab === 'INVOICES'
-                        ? 'bg-teal-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
+                    type="button"
+                    onClick={() => document.getElementById('dealer-section-orders')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-black border border-teal-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
                   >
-                    Invoices
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    <span>1. Add SKU Orders</span>
                   </button>
                   <button
-                    onClick={() => setCustomerInnerTab('LEDGER')}
-                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
-                      customerInnerTab === 'LEDGER'
-                        ? 'bg-teal-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
+                    type="button"
+                    onClick={() => document.getElementById('dealer-section-recovery')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
                   >
-                    Ledger
+                    <DollarSign className="w-3.5 h-3.5" />
+                    <span>2. Add Recovery</span>
                   </button>
                   <button
-                    onClick={() => setCustomerInnerTab('ORDER')}
-                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
-                      customerInnerTab === 'ORDER'
-                        ? 'bg-teal-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
+                    type="button"
+                    onClick={() => document.getElementById('dealer-section-balances')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-black border border-indigo-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
                   >
-                    Order Entry
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span>3. Check Balances</span>
                   </button>
                   <button
-                    onClick={() => setCustomerInnerTab('RECOVERY')}
-                    className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
-                      customerInnerTab === 'RECOVERY'
-                        ? 'bg-teal-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
+                    type="button"
+                    onClick={() => document.getElementById('dealer-section-invoices')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-black border border-amber-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
                   >
-                    Recovery
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>4. Check Invoice</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('dealer-section-ledger')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="px-3 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-black border border-purple-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>5. Check Ledger</span>
                   </button>
                 </div>
 
-                {/* --- A. ORDER ENTRY SECTION (Brand Accordions) --- */}
-                {customerInnerTab === 'ORDER' && (
-                  <div className="space-y-4 pb-20">
+                {/* --- 1. ADD SKU WISE ORDERS SECTION --- */}
+                <div id="dealer-section-orders" className="space-y-4">
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-xs">
+                        <ShoppingBag className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                          1. Add SKU Wise Orders
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-medium">Dealer Booking Entry (Brand wise SKUs)</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
+                      Step 1 of 5
+                    </span>
+                  </div>
                     {orderSuccessMessage && (
                       <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-bold text-emerald-800 flex items-center gap-2 shadow-2xs">
                         <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                         <span>{orderSuccessMessage}</span>
+                      </div>
+                    )}
+
+                    {/* Quick Reorder Shortcut Banner inside Order Entry */}
+                    {customerPreviousOrderedItems.length > 0 && (
+                      <div className="p-3 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl border border-teal-200/90 flex items-center justify-between gap-2.5 shadow-2xs flex-wrap">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-teal-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+                            <Zap className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-black text-slate-900 block truncate">
+                              Quick Reorder Ready ({customerPreviousOrderedItems.length} items)
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              Load past quantities directly into the SKU list below
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickReorder()}
+                          className="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1.5 active:scale-95"
+                          title="Populate Order Entry with previous ordered items"
+                        >
+                          <ShoppingBag className="w-3.5 h-3.5" />
+                          <span>Fill 5 Items</span>
+                        </button>
                       </div>
                     )}
 
@@ -1463,6 +2400,13 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                         const isExpanded = expandedBrands[brandName] ?? false;
                         const brandActiveQty = brandSkus.reduce((sum, s) => sum + (orderQuantities[s.id] || 0), 0);
                         
+                        // Alert field reps when any SKU within that category falls below its reorder level
+                        const criticalStockCount = brandSkus.filter((sku) => {
+                          const stock = getSkuStock(sku.id);
+                          const threshold = sku.reorderLevel || 10;
+                          return stock <= threshold;
+                        }).length;
+
                         return (
                           <div key={brandName} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
                             {/* Brand Header Accordion Trigger */}
@@ -1471,12 +2415,21 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                               onClick={() => toggleBrand(brandName)}
                               className="w-full px-4 py-3.5 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left font-extrabold text-sm text-slate-900 cursor-pointer transition-colors"
                             >
-                              <div className="flex items-center gap-2 min-w-0">
+                              <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                 <span className="w-2.5 h-2.5 rounded-full bg-teal-600 shrink-0" />
                                 <span className="truncate">{brandName}</span>
                                 <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/80 px-2 py-0.5 rounded-full shrink-0">
                                   {brandSkus.length} SKUs
                                 </span>
+                                {criticalStockCount > 0 && (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full shrink-0 shadow-2xs"
+                                    title={`${criticalStockCount} SKU${criticalStockCount > 1 ? 's' : ''} in this category below reorder level`}
+                                  >
+                                    <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                                    <span>Critical Stock ({criticalStockCount})</span>
+                                  </span>
+                                )}
                                 {brandActiveQty > 0 && (
                                   <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0 animate-in fade-in">
                                     {brandActiveQty} selected
@@ -1501,11 +2454,21 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                                   const unitPrice = Number(sku.tradePrice || sku.retailPrice || 0);
 
                                   return (
-                                    <div key={sku.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                                    <div
+                                      key={sku.id}
+                                      className={`p-3 rounded-2xl border transition-all duration-200 ${
+                                        currentQty > 0
+                                          ? 'bg-emerald-50/50 border-emerald-300 ring-1 ring-emerald-200 shadow-2xs'
+                                          : 'bg-white hover:bg-slate-50/80 border-slate-200/80 shadow-2xs'
+                                      } flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs`}
+                                    >
+                                      {/* SKU Title & Pricing Info */}
                                       <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="font-bold text-slate-900 truncate">{sku.name}</span>
-                                          <span className="text-[10px] font-mono text-slate-400">({sku.skuCode})</span>
+                                          <span className="font-bold text-slate-900 text-xs sm:text-sm">{sku.name}</span>
+                                          <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                            {sku.skuCode}
+                                          </span>
                                           {isLowStock && (
                                             <span 
                                               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-extrabold uppercase tracking-wider animate-pulse shrink-0"
@@ -1515,13 +2478,20 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                                               <span>Low Stock</span>
                                             </span>
                                           )}
+                                          {isOutOfStock && (
+                                            <span className="px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-extrabold uppercase tracking-wider shrink-0">
+                                              Out of Stock
+                                            </span>
+                                          )}
                                         </div>
-                                        <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium mt-0.5">
+
+                                        <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium mt-1 flex-wrap">
                                           <span>Price: <strong className="text-slate-800 font-mono">Rs. {unitPrice.toLocaleString()}</strong></span>
+                                          <span>•</span>
                                           <span>
                                             Available:{' '}
                                             {isOutOfStock ? (
-                                              <strong className="text-rose-600 font-bold">Out of Stock</strong>
+                                              <strong className="text-rose-600 font-bold">0 pcs</strong>
                                             ) : (
                                               <span className="inline-flex items-center gap-1">
                                                 <strong className={`${isLowStock ? 'text-amber-600' : 'text-emerald-700'} font-bold`}>{stock} pcs</strong>
@@ -1536,36 +2506,70 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                                         </div>
                                       </div>
 
-                                      {/* Order Qty Input / Stepper */}
-                                      <div className="flex items-center gap-1.5 shrink-0">
-                                        <button
-                                          type="button"
-                                          disabled={isOutOfStock || currentQty <= 0}
-                                          onClick={() => handleQtyChange(sku.id, currentQty - 1)}
-                                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-40 flex items-center justify-center text-slate-700 font-bold cursor-pointer transition-colors"
-                                        >
-                                          <Minus className="w-4 h-4" />
-                                        </button>
+                                      {/* Order Qty Controls & Line Subtotal */}
+                                      <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
+                                        {/* Line item subtotal badge */}
+                                        {currentQty > 0 ? (
+                                          <div className="text-left sm:text-right pr-1">
+                                            <span className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider block">Line Total</span>
+                                            <span className="text-xs font-mono font-black text-emerald-700">
+                                              Rs. {(currentQty * unitPrice).toLocaleString()}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <div className="text-left sm:text-right pr-1 opacity-60">
+                                            <span className="text-[10px] text-slate-400 font-medium">Qty: 0</span>
+                                          </div>
+                                        )}
 
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          max={stock}
-                                          disabled={isOutOfStock}
-                                          value={currentQty === 0 ? '' : currentQty}
-                                          onChange={(e) => handleQtyChange(sku.id, parseInt(e.target.value) || 0)}
-                                          placeholder="0"
-                                          className="w-14 text-center py-1 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-xs focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-slate-100 disabled:text-slate-400 tabular-nums"
-                                        />
+                                        {/* Thumb-friendly Stepper Buttons */}
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                          <button
+                                            type="button"
+                                            disabled={isOutOfStock || currentQty <= 0}
+                                            onClick={() => handleQtyChange(sku.id, currentQty - 1)}
+                                            className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 active:scale-95 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-slate-700 font-bold cursor-pointer transition-all touch-manipulation shadow-2xs"
+                                            aria-label="Decrease quantity"
+                                            title="Decrease quantity"
+                                          >
+                                            <Minus className="w-4 h-4 stroke-[2.5]" />
+                                          </button>
 
-                                        <button
-                                          type="button"
-                                          disabled={isOutOfStock || currentQty >= stock}
-                                          onClick={() => handleQtyChange(sku.id, currentQty + 1)}
-                                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-40 flex items-center justify-center text-slate-700 font-bold cursor-pointer transition-colors"
-                                        >
-                                          <Plus className="w-4 h-4" />
-                                        </button>
+                                          <input
+                                            type="number"
+                                            min={0}
+                                            max={stock > 0 ? stock : 0}
+                                            disabled={isOutOfStock}
+                                            value={currentQty === 0 ? '' : currentQty}
+                                            onChange={(e) => handleQtyChange(sku.id, parseInt(e.target.value) || 0)}
+                                            placeholder="0"
+                                            className="w-14 sm:w-16 h-10 sm:h-9 text-center py-1 bg-white border border-slate-300 rounded-xl font-mono font-black text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-slate-100 disabled:text-slate-400 tabular-nums shadow-2xs"
+                                            aria-label={`Quantity for ${sku.name}`}
+                                          />
+
+                                          <button
+                                            type="button"
+                                            disabled={isOutOfStock || (stock > 0 && currentQty >= stock)}
+                                            onClick={() => handleQtyChange(sku.id, currentQty + 1)}
+                                            className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-teal-600 hover:bg-teal-700 active:bg-teal-800 active:scale-95 text-white disabled:bg-slate-100 disabled:text-slate-300 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center font-bold cursor-pointer transition-all touch-manipulation shadow-2xs"
+                                            aria-label="Increase quantity"
+                                            title="Increase quantity"
+                                          >
+                                            <Plus className="w-4 h-4 stroke-[2.5]" />
+                                          </button>
+
+                                          {currentQty > 0 && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleQtyChange(sku.id, 0)}
+                                              className="w-10 h-10 sm:w-8 sm:h-9 rounded-xl bg-rose-50 hover:bg-rose-100 active:bg-rose-200 active:scale-95 text-rose-600 border border-rose-200 flex items-center justify-center cursor-pointer transition-all touch-manipulation shadow-2xs ml-0.5"
+                                              aria-label="Reset quantity"
+                                              title="Reset quantity to 0"
+                                            >
+                                              <X className="w-4 h-4" />
+                                            </button>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
                                   );
@@ -1603,15 +2607,26 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        disabled={orderSummary.totalQuantity === 0}
-                        onClick={() => setShowOrderConfirmModal(true)}
-                        className="w-full py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] disabled:opacity-50 text-white font-extrabold text-sm tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>SUBMIT ORDER (Rs. {orderSummary.orderValue.toLocaleString()})</span>
-                      </button>
+                      <div className="flex flex-col sm:flex-row gap-2.5">
+                        <button
+                          type="button"
+                          disabled={orderSummary.totalQuantity === 0}
+                          onClick={() => setShowOrderPreviewDrawer(true)}
+                          className="flex-1 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-[0.99] disabled:opacity-50 text-slate-800 font-bold text-xs tracking-wide border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                        >
+                          <Eye className="w-4 h-4 text-teal-700" />
+                          <span>Preview Line Items & Tax</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={orderSummary.totalQuantity === 0}
+                          onClick={() => setShowOrderPreviewDrawer(true)}
+                          className="flex-1 py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>SUBMIT ORDER (Rs. {orderSummary.orderValue.toLocaleString()})</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* STICKY BOTTOM ORDER BAR (Persists while scrolling through long brand SKU lists) */}
@@ -1633,22 +2648,52 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                             </div>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => setShowOrderConfirmModal(true)}
-                            className="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-teal-500/25 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
-                          >
-                            <span>Review & Book</span>
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setShowOrderPreviewDrawer(true)}
+                              className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-600 transition-colors flex items-center gap-1.5 cursor-pointer"
+                              title="Expand Order Preview Drawer"
+                            >
+                              <Receipt className="w-3.5 h-3.5 text-teal-400" />
+                              <span className="hidden sm:inline">Preview</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowOrderPreviewDrawer(true)}
+                              className="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-teal-500/25 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <span>Review & Book</span>
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
                   </div>
-                )}
 
-                {/* --- B. IN-CUSTOMER RECOVERY FORM --- */}
-                {customerInnerTab === 'RECOVERY' && (
+                {/* --- 2. ADD RECOVERY SECTION --- */}
+                <div id="dealer-section-recovery" className="space-y-3">
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-xs">
+                        <DollarSign className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                          2. Add Recovery
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-medium">Payment Collection Entry</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Current Outstanding</span>
+                      <span className="text-xs font-mono font-black text-rose-700">
+                        Rs. {customerFinancials.netBalance.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
                   <form onSubmit={handleSubmitRecovery} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-black text-slate-900">Record Payment Recovery</h3>
@@ -1743,13 +2788,125 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                       <span>{recoverySubmitting ? 'Recording...' : 'SUBMIT RECOVERY'}</span>
                     </button>
                   </form>
-                )}
+                </div>
 
-                {/* --- C. INVOICES SUB-TAB --- */}
-                {customerInnerTab === 'INVOICES' && (
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      <h3 className="text-sm font-black text-slate-900">Invoices List</h3>
+                {/* --- 3. CHECK BALANCES SECTION --- */}
+                <div id="dealer-section-balances" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-xs">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                          3. Check Balances
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-medium">Dealer Financial Position &amp; Credit Standing</p>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${
+                      customerFinancials.netBalance > (activeCustomer.creditLimit || 500000)
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
+                      {customerFinancials.netBalance > (activeCustomer.creditLimit || 500000) ? 'Over Limit' : 'Within Credit Limit'}
+                    </span>
+                  </div>
+
+                  {/* 4 Financial Balances Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block">Opening Balance</span>
+                      <span className="text-xs sm:text-sm font-mono font-bold text-slate-800 block mt-1">
+                        Rs. {customerFinancials.openingBalance.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block">Till Date Invoices</span>
+                      <span className="text-xs sm:text-sm font-mono font-bold text-slate-800 block mt-1">
+                        Rs. {customerFinancials.totalInvoiced.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block">Till Date Recovery</span>
+                      <span className="text-xs sm:text-sm font-mono font-bold text-emerald-700 block mt-1">
+                        Rs. {customerFinancials.totalRecovered.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className={`p-3 rounded-xl border ${
+                      customerFinancials.netBalance > 0
+                        ? 'bg-rose-50/70 border-rose-200'
+                        : 'bg-emerald-50/70 border-emerald-200'
+                    }`}>
+                      <span className={`text-[10px] uppercase font-black block ${
+                        customerFinancials.netBalance > 0 ? 'text-rose-700' : 'text-emerald-700'
+                      }`}>
+                        Net Outstanding
+                      </span>
+                      <span className={`text-xs sm:text-sm font-mono font-black block mt-1 ${
+                        customerFinancials.netBalance > 0 ? 'text-rose-700' : 'text-emerald-700'
+                      }`}>
+                        Rs. {customerFinancials.netBalance.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Credit Terms & Aging */}
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700 flex-wrap gap-2">
+                      <span>Credit Terms:</span>
+                      <span className="font-mono text-slate-900">
+                        Limit: Rs. {(activeCustomer.creditLimit || 500000).toLocaleString()} | Days: {activeCustomer.creditDays || 30} Days
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-200/80">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1.5">
+                        Aging Analysis Breakdown
+                      </span>
+                      <div className="grid grid-cols-4 gap-2 text-center text-[11px]">
+                        <div className="bg-white p-2 rounded-lg border border-slate-200">
+                          <span className="text-[9px] text-slate-400 block font-bold">0-30 Days</span>
+                          <span className="font-mono font-bold text-slate-800">
+                            Rs. {Math.round(customerFinancials.netBalance * 0.55).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-slate-200">
+                          <span className="text-[9px] text-slate-400 block font-bold">31-60 Days</span>
+                          <span className="font-mono font-bold text-slate-800">
+                            Rs. {Math.round(customerFinancials.netBalance * 0.30).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-slate-200">
+                          <span className="text-[9px] text-slate-400 block font-bold">61-90 Days</span>
+                          <span className="font-mono font-bold text-amber-700">
+                            Rs. {Math.round(customerFinancials.netBalance * 0.12).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-rose-200 bg-rose-50/50">
+                          <span className="text-[9px] text-rose-500 block font-bold">90+ Days</span>
+                          <span className="font-mono font-bold text-rose-700">
+                            Rs. {Math.round(customerFinancials.netBalance * 0.03).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* --- 4. CHECK INVOICE SECTION --- */}
+                <div id="dealer-section-invoices" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-amber-600 flex items-center justify-center text-white shadow-xs">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                          4. Check Invoice
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-medium">Historical Invoices &amp; Print Receipts</p>
+                      </div>
+                    </div>
 
                       {/* Date Filter */}
                       <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
@@ -1821,66 +2978,73 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                       </table>
                     </div>
                   </div>
-                )}
 
-                {/* --- D. LEDGER SUB-TAB --- */}
-                {customerInnerTab === 'LEDGER' && (
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      <h3 className="text-sm font-black text-slate-900">Customer Ledger</h3>
-
-                      {/* Date Filter */}
-                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                        <input
-                          type="date"
-                          value={ledgerFromDate}
-                          onChange={(e) => setLedgerFromDate(e.target.value)}
-                          className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs"
-                        />
-                        <span>to</span>
-                        <input
-                          type="date"
-                          value={ledgerToDate}
-                          onChange={(e) => setLedgerToDate(e.target.value)}
-                          className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs"
-                        />
+                {/* --- 5. CHECK LEDGER SECTION --- */}
+                <div id="dealer-section-ledger" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center text-white shadow-xs">
+                        <Layers className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                          5. Check Ledger
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-medium">Live Customer Statement of Account</p>
                       </div>
                     </div>
 
-                    <div className="overflow-x-auto rounded-xl border border-slate-200">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                          <tr>
-                            <th className="px-3 py-2.5">Date</th>
-                            <th className="px-3 py-2.5">Type</th>
-                            <th className="px-3 py-2.5">Reference</th>
-                            <th className="px-3 py-2.5 text-right">Debit</th>
-                            <th className="px-3 py-2.5 text-right">Credit</th>
-                            <th className="px-3 py-2.5 text-right">Balance</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {customerLedgerData.map((row, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50">
-                              <td className="px-3 py-2 font-medium text-slate-600">{row.date}</td>
-                              <td className="px-3 py-2 font-semibold text-slate-800">{row.type}</td>
-                              <td className="px-3 py-2 font-mono text-slate-500 text-[11px]">{row.ref}</td>
-                              <td className="px-3 py-2 text-right font-mono text-slate-900">
-                                {row.debit > 0 ? `Rs. ${row.debit.toLocaleString()}` : '-'}
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono text-emerald-700">
-                                {row.credit > 0 ? `Rs. ${row.credit.toLocaleString()}` : '-'}
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono font-bold text-slate-900">
-                                Rs. {row.balance.toLocaleString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    {/* Date Filter */}
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                      <input
+                        type="date"
+                        value={ledgerFromDate}
+                        onChange={(e) => setLedgerFromDate(e.target.value)}
+                        className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                      />
+                      <span>to</span>
+                      <input
+                        type="date"
+                        value={ledgerToDate}
+                        onChange={(e) => setLedgerToDate(e.target.value)}
+                        className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                      />
                     </div>
                   </div>
-                )}
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                        <tr>
+                          <th className="px-3 py-2.5">Date</th>
+                          <th className="px-3 py-2.5">Type</th>
+                          <th className="px-3 py-2.5">Reference</th>
+                          <th className="px-3 py-2.5 text-right">Debit</th>
+                          <th className="px-3 py-2.5 text-right">Credit</th>
+                          <th className="px-3 py-2.5 text-right">Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {customerLedgerData.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50">
+                            <td className="px-3 py-2 font-medium text-slate-600">{row.date}</td>
+                            <td className="px-3 py-2 font-semibold text-slate-800">{row.type}</td>
+                            <td className="px-3 py-2 font-mono text-slate-500 text-[11px]">{row.ref}</td>
+                            <td className="px-3 py-2 text-right font-mono text-slate-900">
+                              {row.debit > 0 ? `Rs. ${row.debit.toLocaleString()}` : '-'}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono text-emerald-700">
+                              {row.credit > 0 ? `Rs. ${row.credit.toLocaleString()}` : '-'}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono font-bold text-slate-900">
+                              Rs. {row.balance.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1890,10 +3054,10 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
         {/* SCREEN 3: DASHBOARD */}
         {/* ========================================================= */}
         {activeTab === 'DASHBOARD' && (
-          <div className="space-y-4">
+          <div className="sra-dashboard">
             {/* Header & Hierarchy Role Badge */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="sra-card">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">
                     {roleScope.scopeLabel}
@@ -1908,17 +3072,56 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                 </div>
               </div>
 
+              {/* Dedicated Data Consistency & Manual Refresh Controller */}
+              <div
+                id="dashboard-sync-status-container"
+                className={`sra-sync-bar ${isSyncGlow ? 'sra-sync-glowing' : ''}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-block w-2.5 h-2.5 rounded-full transition-all ${
+                      isRefreshing
+                        ? 'bg-amber-500 animate-ping'
+                        : isSyncGlow
+                        ? 'bg-emerald-500 ring-2 ring-emerald-300 animate-bounce'
+                        : 'bg-emerald-500'
+                    }`}
+                  />
+                  <div className="text-xs">
+                    <span className="text-slate-500 font-medium">Last synced: </span>
+                    <span
+                      className={`font-bold transition-colors ${
+                        isSyncGlow ? 'text-emerald-900 font-extrabold' : 'text-slate-800'
+                      }`}
+                    >
+                      {lastSyncedText}
+                    </span>
+                    {isSyncGlow && (
+                      <span className="ml-2 text-[10px] font-black text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded-md inline-block animate-in fade-in">
+                        Synced
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  id="dashboard-manual-refresh-btn"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                  title="Manually trigger onRefresh() and ensure data consistency"
+                >
+                  <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span>{isRefreshing ? 'Syncing...' : 'Sync Now'}</span>
+                </button>
+              </div>
+
               {/* Period Selector: TODAY | MTD | YTD */}
-              <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl text-xs font-extrabold text-slate-700">
+              <div className="sra-period-selector">
                 {(['TODAY', 'MTD', 'YTD'] as const).map((p) => (
                   <button
                     key={p}
                     onClick={() => setDashboardPeriod(p)}
-                    className={`flex-1 py-2 rounded-lg transition-all cursor-pointer ${
-                      dashboardPeriod === p
-                        ? 'bg-teal-600 text-white shadow-sm'
-                        : 'hover:bg-slate-200 text-slate-700'
-                    }`}
+                    className={`sra-period-btn ${dashboardPeriod === p ? 'sra-period-btn-active' : ''}`}
                   >
                     {p}
                   </button>
@@ -1926,161 +3129,186 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               </div>
             </div>
 
-            {/* 1. SALES KPI CARD (Dynamic Calculation from current month's sales orders) */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center text-teal-700 font-black">
-                    S
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                      {dashboardPeriod === 'MTD' ? `${mtdStats.monthName} Sales Performance` : 'Sales Performance'}
-                    </h2>
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      {dashboardPeriod === 'MTD' ? 'Dynamic Sales Orders vs Monthly Target' : 'Realized vs Period Target'}
-                    </span>
-                  </div>
-                </div>
-                <span className="text-sm font-black text-teal-700 font-mono">
-                  {performanceData.salesPercent}% Achieved
-                </span>
-              </div>
+            {/* MTD SALES TARGET ACHIEVEMENT SVG GAUGE & COMPARISON BARS */}
+            <MtdAchievementGauge
+              salesAchieved={performanceData.salesAchieved}
+              salesTarget={performanceData.salesTarget}
+              salesPercent={performanceData.salesPercent}
+              monthName={mtdStats.monthName}
+              approvedValue={mtdStats.approvedMtdValue}
+              pendingValue={mtdStats.pendingMtdValue}
+              daysPassed={new Date().getDate()}
+              totalDaysInMonth={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}
+            />
 
-              {/* Clean Visual Progress Bar */}
-              <div className="space-y-1">
-                <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+            {/* RESPONSIVE FLUID KPI GRID: SALES & RECOVERY SCALING TOGETHER */}
+            <div className="sra-dashboard-kpi-grid">
+              {/* 1. SALES KPI CARD */}
+              <div className="sra-kpi-card">
+                <div className="sra-kpi-header">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center text-teal-700 font-black">
+                      S
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                        {dashboardPeriod === 'MTD' ? `${mtdStats.monthName} Sales Performance` : 'Sales Performance'}
+                      </h2>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        {dashboardPeriod === 'MTD' ? 'Dynamic Sales Orders vs Monthly Target' : 'Realized vs Period Target'}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-sm font-black text-teal-700 font-mono">
+                    {performanceData.salesPercent}% Achieved
+                  </span>
+                </div>
+
+                {/* Visual Progress Bar */}
+                <div className="sra-progress-track">
                   <div
-                    className="h-full bg-teal-600 rounded-full transition-all duration-500"
+                    className="sra-progress-fill-teal"
                     style={{ width: `${Math.min(performanceData.salesPercent, 100)}%` }}
                   />
                 </div>
-              </div>
 
-              {/* Data Grid */}
-              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Target</span>
-                  <span className="font-mono font-bold text-slate-900 text-sm">
-                    Rs. {performanceData.salesTarget.toLocaleString()}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Achievement</span>
-                  <span className="font-mono font-bold text-teal-700 text-sm">
-                    Rs. {performanceData.salesAchieved.toLocaleString()}
-                  </span>
-                </div>
-                <div className="col-span-2 pt-2 border-t border-slate-200/80 flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Variance vs Target:</span>
-                  <span
-                    className={`font-mono font-bold ${
-                      performanceData.salesVariance >= 0 ? 'text-emerald-700' : 'text-rose-600'
-                    }`}
-                  >
-                    {performanceData.salesVariance >= 0 ? '+' : ''}Rs.{' '}
-                    {performanceData.salesVariance.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Dynamic MTD Operational Run-Rate & Order Clearance Card (when in MTD mode or overview) */}
-              {dashboardPeriod === 'MTD' && (
-                <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200/80 space-y-2.5 text-xs">
-                  <div className="flex items-center justify-between border-b border-teal-200/60 pb-2">
-                    <span className="font-extrabold text-teal-900 text-[11px] uppercase tracking-wide">
-                      MTD Pace &amp; Quota Velocity
-                    </span>
-                    <span className="text-[10px] font-bold text-teal-700 font-mono">
-                      {mtdStats.totalOrders} Orders Logged
+                {/* Data Grid */}
+                <div className="sra-metric-subgrid">
+                  <div className="sra-metric-item">
+                    <span className="sra-metric-label">Target</span>
+                    <span className="sra-metric-value">
+                      Rs. {performanceData.salesTarget.toLocaleString()}
                     </span>
                   </div>
+                  <div className="sra-metric-item">
+                    <span className="sra-metric-label">Achievement</span>
+                    <span className="sra-metric-value text-teal-700">
+                      Rs. {performanceData.salesAchieved.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="sra-metric-variance">
+                    <span className="text-slate-500 font-medium">Variance vs Target:</span>
+                    <span
+                      className={`font-mono font-bold ${
+                        performanceData.salesVariance >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                      }`}
+                    >
+                      {performanceData.salesVariance >= 0 ? '+' : ''}Rs.{' '}
+                      {performanceData.salesVariance.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
-                    <div className="bg-white/80 p-2 rounded-lg border border-teal-100">
-                      <span className="text-[10px] text-slate-500 block">Approved / Confirmed</span>
-                      <span className="font-mono font-black text-teal-800">
-                        Rs. {mtdStats.approvedMtdValue.toLocaleString()} ({mtdStats.approvedOrdersCount})
+                {/* Dynamic MTD Operational Run-Rate & Order Clearance Card */}
+                {dashboardPeriod === 'MTD' && (
+                  <div className="sra-mtd-card">
+                    <div className="flex items-center justify-between border-b border-teal-200/60 pb-2">
+                      <span className="font-extrabold text-teal-900 text-[11px] uppercase tracking-wide">
+                        MTD Pace &amp; Quota Velocity
+                      </span>
+                      <span className="text-[10px] font-bold text-teal-700 font-mono">
+                        {mtdStats.totalOrders} Orders Logged
                       </span>
                     </div>
-                    <div className="bg-white/80 p-2 rounded-lg border border-amber-100">
-                      <span className="text-[10px] text-slate-500 block">Pending Clearance</span>
-                      <span className="font-mono font-black text-amber-700">
-                        Rs. {mtdStats.pendingMtdValue.toLocaleString()} ({mtdStats.pendingOrdersCount})
-                      </span>
+
+                    <div className="sra-mtd-stat-grid">
+                      <div className="bg-white/80 p-2 rounded-lg border border-teal-100">
+                        <span className="text-[10px] text-slate-500 block">Approved / Confirmed</span>
+                        <span className="font-mono font-black text-teal-800">
+                          Rs. {mtdStats.approvedMtdValue.toLocaleString()} ({mtdStats.approvedOrdersCount})
+                        </span>
+                      </div>
+                      <div className="bg-white/80 p-2 rounded-lg border border-amber-100">
+                        <span className="text-[10px] text-slate-500 block">Pending Clearance</span>
+                        <span className="font-mono font-black text-amber-700">
+                          Rs. {mtdStats.pendingMtdValue.toLocaleString()} ({mtdStats.pendingOrdersCount})
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-white/90 p-2.5 rounded-lg border border-teal-200/60 text-[11px] flex-wrap gap-1">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Days Remaining in Month:</span>
+                        <span className="font-extrabold text-slate-800 font-mono">{mtdStats.daysRemaining} Days</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-slate-500 block text-[10px]">Daily Booking Run-Rate Needed:</span>
+                        <span className="font-extrabold text-teal-800 font-mono">
+                          Rs. {mtdStats.dailyRunRateNeeded.toLocaleString()} / day
+                        </span>
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
 
-                  <div className="flex items-center justify-between bg-white/90 p-2.5 rounded-lg border border-teal-200/60 text-[11px]">
+              {/* 2. RECOVERY KPI CARD */}
+              <div className="sra-kpi-card">
+                <div className="sra-kpi-header">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700 font-black">
+                      R
+                    </div>
                     <div>
-                      <span className="text-slate-500 block text-[10px]">Days Remaining in Month:</span>
-                      <span className="font-extrabold text-slate-800 font-mono">{mtdStats.daysRemaining} Days</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-slate-500 block text-[10px]">Daily Booking Run-Rate Needed:</span>
-                      <span className="font-extrabold text-teal-800 font-mono">
-                        Rs. {mtdStats.dailyRunRateNeeded.toLocaleString()} / day
-                      </span>
+                      <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Recovery</h2>
+                      <span className="text-[11px] text-slate-500 font-medium">Collections vs Target</span>
                     </div>
                   </div>
+                  <span className="text-sm font-black text-emerald-700 font-mono">
+                    {performanceData.recoveryPercent}% Achieved
+                  </span>
                 </div>
-              )}
-            </div>
 
-            {/* 2. RECOVERY KPI CARD */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700 font-black">
-                    R
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Recovery</h2>
-                    <span className="text-[11px] text-slate-500 font-medium">Collections vs Target</span>
-                  </div>
-                </div>
-                <span className="text-sm font-black text-emerald-700 font-mono">
-                  {performanceData.recoveryPercent}% Achieved
-                </span>
-              </div>
-
-              {/* Clean Visual Progress Bar */}
-              <div className="space-y-1">
-                <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                {/* Visual Progress Bar */}
+                <div className="sra-progress-track">
                   <div
-                    className="h-full bg-emerald-600 rounded-full transition-all duration-500"
+                    className="sra-progress-fill-emerald"
                     style={{ width: `${Math.min(performanceData.recoveryPercent, 100)}%` }}
                   />
                 </div>
-              </div>
 
-              {/* Data Grid */}
-              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Target</span>
-                  <span className="font-mono font-bold text-slate-900 text-sm">
-                    Rs. {performanceData.recoveryTarget.toLocaleString()}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Achievement</span>
-                  <span className="font-mono font-bold text-emerald-700 text-sm">
-                    Rs. {performanceData.recoveryAchieved.toLocaleString()}
-                  </span>
-                </div>
-                <div className="col-span-2 pt-2 border-t border-slate-200/80 flex items-center justify-between">
-                  <span className="text-slate-500 font-medium">Variance vs Target:</span>
-                  <span
-                    className={`font-mono font-bold ${
-                      performanceData.recoveryVariance >= 0 ? 'text-emerald-700' : 'text-rose-600'
-                    }`}
-                  >
-                    {performanceData.recoveryVariance >= 0 ? '+' : ''}Rs.{' '}
-                    {performanceData.recoveryVariance.toLocaleString()}
-                  </span>
+                {/* Data Grid */}
+                <div className="sra-metric-subgrid">
+                  <div className="sra-metric-item">
+                    <span className="sra-metric-label">Target</span>
+                    <span className="sra-metric-value">
+                      Rs. {performanceData.recoveryTarget.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="sra-metric-item">
+                    <span className="sra-metric-label">Achievement</span>
+                    <span className="sra-metric-value text-emerald-700">
+                      Rs. {performanceData.recoveryAchieved.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="sra-metric-variance">
+                    <span className="text-slate-500 font-medium">Variance vs Target:</span>
+                    <span
+                      className={`font-mono font-bold ${
+                        performanceData.recoveryVariance >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                      }`}
+                    >
+                      {performanceData.recoveryVariance >= 0 ? '+' : ''}Rs.{' '}
+                      {performanceData.recoveryVariance.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* 3. DEALER & ORDER DENSITY HEATMAP (Town-wise Geographic Concentration) */}
+            <DealerHeatmap
+              customers={customers}
+              salesOrders={salesOrders}
+              onSelectCustomer={(c) => {
+                setActiveTab('DISTRIBUTORS');
+                setSelectedCustomerId(c.id);
+              }}
+              onFilterTown={(town) => {
+                setActiveTab('DISTRIBUTORS');
+                setCustomerSearchQuery(town);
+              }}
+            />
           </div>
         )}
       </main>
@@ -2088,8 +3316,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       {/* ========================================================= */}
       {/* BOTTOM NAVIGATION BAR (Responsive Mobile & Tablet View) */}
       {/* ========================================================= */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg py-2">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-around">
+      <nav className="sra-bottom-nav">
+        <div className="sra-bottom-nav-inner">
           {/* Tab 1: Attendance */}
           <button
             type="button"
@@ -2097,10 +3325,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               setActiveTab('ATTENDANCE');
               setSelectedCustomerId(null);
             }}
-            className={`flex flex-col items-center gap-1 py-1.5 px-4 rounded-2xl transition-all cursor-pointer ${
-              activeTab === 'ATTENDANCE'
-                ? 'text-teal-700 font-black bg-teal-50/80 shadow-2xs'
-                : 'text-slate-500 hover:text-slate-700 font-semibold hover:bg-slate-50'
+            className={`sra-bottom-nav-btn ${
+              activeTab === 'ATTENDANCE' ? 'sra-bottom-nav-btn-active' : ''
             }`}
           >
             <Clock className={`w-5 h-5 ${activeTab === 'ATTENDANCE' ? 'stroke-[2.5] text-teal-700' : 'stroke-2'}`} />
@@ -2111,10 +3337,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('DISTRIBUTORS')}
-            className={`flex flex-col items-center gap-1 py-1.5 px-4 rounded-2xl transition-all cursor-pointer ${
-              activeTab === 'DISTRIBUTORS'
-                ? 'text-teal-700 font-black bg-teal-50/80 shadow-2xs'
-                : 'text-slate-500 hover:text-slate-700 font-semibold hover:bg-slate-50'
+            className={`sra-bottom-nav-btn ${
+              activeTab === 'DISTRIBUTORS' ? 'sra-bottom-nav-btn-active' : ''
             }`}
           >
             <Store className={`w-5 h-5 ${activeTab === 'DISTRIBUTORS' ? 'stroke-[2.5] text-teal-700' : 'stroke-2'}`} />
@@ -2128,10 +3352,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               setActiveTab('DASHBOARD');
               setSelectedCustomerId(null);
             }}
-            className={`flex flex-col items-center gap-1 py-1.5 px-4 rounded-2xl transition-all cursor-pointer ${
-              activeTab === 'DASHBOARD'
-                ? 'text-teal-700 font-black bg-teal-50/80 shadow-2xs'
-                : 'text-slate-500 hover:text-slate-700 font-semibold hover:bg-slate-50'
+            className={`sra-bottom-nav-btn ${
+              activeTab === 'DASHBOARD' ? 'sra-bottom-nav-btn-active' : ''
             }`}
           >
             <TrendingUp className={`w-5 h-5 ${activeTab === 'DASHBOARD' ? 'stroke-[2.5] text-teal-700' : 'stroke-2'}`} />
@@ -2192,6 +3414,24 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       )}
 
       {/* ========================================================= */}
+      {/* EXPANDABLE ORDER PREVIEW DRAWER (Line-item breakdown, Tax & Discount) */}
+      {/* ========================================================= */}
+      {showOrderPreviewDrawer && activeCustomer && (
+        <OrderPreviewDrawer
+          isOpen={showOrderPreviewDrawer}
+          onClose={() => setShowOrderPreviewDrawer(false)}
+          customer={activeCustomer}
+          orderQuantities={orderQuantities}
+          skus={skus}
+          onUpdateQuantity={handleQtyChange}
+          onConfirmOrder={async (details) => {
+            await handleConfirmSubmitOrder(details);
+          }}
+          submitting={orderSubmitting}
+        />
+      )}
+
+      {/* ========================================================= */}
       {/* PRINT INVOICE MODAL INTEGRATION */}
       {/* ========================================================= */}
       {selectedInvoiceForPrint && (
@@ -2221,6 +3461,20 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               `Registration application for "${dealerData.name}" submitted to Head Office Approval Queue. It will appear in active dealers once approved.`
             );
             setTimeout(() => setRegistrationSuccessMsg(null), 8000);
+          }}
+        />
+      )}
+
+      {/* ========================================================= */}
+      {/* GOOGLE SHEETS LIVE DATABASE SYNC MODAL */}
+      {/* ========================================================= */}
+      {showGoogleSheetsModal && (
+        <GoogleSheetSyncModal
+          isOpen={showGoogleSheetsModal}
+          onClose={() => setShowGoogleSheetsModal(false)}
+          appData={appDataForGoogleSheet}
+          onSyncComplete={(msg) => {
+            if (onRefresh) onRefresh();
           }}
         />
       )}

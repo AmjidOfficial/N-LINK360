@@ -344,8 +344,13 @@ export async function loadStateFromSupabase(): Promise<{
       ledgerEntries,
       visits,
     };
-  } catch (error) {
-    console.error('❌ N-LINK 360 DB Sync: Error downloading database tables from Supabase:', error);
+  } catch (error: any) {
+    const msg = String(error?.message || error || '');
+    if (msg.includes('Failed to fetch') || msg.includes('network') || msg.includes('offline')) {
+      console.warn('N-LINK 360 DB Sync: Supabase offline or unreachable, using local store.');
+    } else {
+      console.warn('N-LINK 360 DB Sync: Notice during table query:', error);
+    }
     return null;
   }
 }

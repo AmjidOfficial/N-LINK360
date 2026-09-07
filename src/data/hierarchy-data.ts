@@ -487,10 +487,15 @@ export function generateAiSmartDealerDefaults(category: string, region: string, 
     ALL_DESIGNATIONS_TEAM.find((s) => s.region.toLowerCase().includes(region.toLowerCase())) ||
     ALL_DESIGNATIONS_TEAM[0];
 
-  // Generate valid sample CNIC and NTN formats
+  // Generate valid sample CNIC, NTN, Phone, Business Name & Address formats
   const randomCnicSuffix = Math.floor(1000000 + Math.random() * 9000000);
   const sampleCnic = `35202-${randomCnicSuffix}-1`;
   const sampleNtn = `${Math.floor(1000000 + Math.random() * 9000000)}-${Math.floor(1 + Math.random() * 9)}`;
+  const samplePhone = `0300-${Math.floor(1000000 + Math.random() * 9000000)}`;
+  const sampleBusinessName = `${town || 'Khyber'} Auto Spares & Lighting Centre`;
+  const sampleContactPerson = 'Haji Muhammad Tariq Khan';
+  const sampleAddress = `Shop #${Math.floor(12 + Math.random() * 80)}, Main Auto Spares Market, ${town || 'Peshawar'}`;
+  const sampleIban = `PK36MEZN000${Math.floor(100000000000 + Math.random() * 900000000000)}`;
 
   return {
     creditLimit: recommendedCreditLimit,
@@ -498,6 +503,11 @@ export function generateAiSmartDealerDefaults(category: string, region: string, 
     assignedStaff: matchingStaff,
     sampleCnic,
     sampleNtn,
+    samplePhone,
+    sampleBusinessName,
+    sampleContactPerson,
+    sampleAddress,
+    sampleIban,
     recommendedBank: 'Meezan Bank Ltd',
     recommendedStatus: 'NORMAL',
   };

@@ -6,8 +6,11 @@ function normalizeSupabaseUrl(rawUrl?: string): string {
   return rawUrl.trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 }
 
-const rawUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || 'https://nigvxsjrvkmynwduvemy.supabase.co';
-const rawKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || 'sb_publishable_fqnVbiThIN9HpkCebQb42Q_7U3pfkxi';
+const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_URL : undefined;
+const envKey = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : undefined;
+
+const rawUrl = (envUrl as string | undefined) || (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) || '';
+const rawKey = (envKey as string | undefined) || (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) || '';
 
 const supabaseUrl = normalizeSupabaseUrl(rawUrl);
 const supabaseAnonKey = rawKey?.trim() || '';
@@ -15,6 +18,7 @@ const supabaseAnonKey = rawKey?.trim() || '';
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
   supabaseAnonKey &&
+  supabaseUrl.startsWith('http') &&
   !supabaseUrl.includes('[YOUR') &&
   !supabaseAnonKey.includes('[YOUR')
 );

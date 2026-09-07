@@ -23,6 +23,25 @@ export const MULTI_ROLE_ELIGIBLE_EMAILS = [
   'shahzadullah@nationallights.com',
 ];
 
+export const AUTHORIZED_APPROVER_EMAILS = [
+  'shahzadullah@nationallights.com',
+  'syedzain@nationallights.com',
+] as const;
+
+export function isAuthorizedApproverEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const clean = email.trim().toLowerCase();
+  return (AUTHORIZED_APPROVER_EMAILS as readonly string[]).includes(clean);
+}
+
+export function assertAuthorizedApprover(email?: string | null): void {
+  if (!isAuthorizedApproverEmail(email)) {
+    throw new Error(
+      'Unauthorized Approval Request: Only designated executive officers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to approve invoices, recovery, and commercial transactions.'
+    );
+  }
+}
+
 export function isMultiRoleEligibleEmail(email: string): boolean {
   const clean = email.trim().toLowerCase();
   if (!clean) return false;

@@ -81,22 +81,61 @@ export function clearSyncedItems(): void {
 // ==============================================================================
 export type NetworkStateListener = (isOnline: boolean) => void;
 export type QueueChangeListener = (queue: OfflineQueueItem[]) => void;
+export type SyncCompletionListener = (result: { syncedCount: number; failedCount: number }) => void;
+export type SyncItemHandler = (item: OfflineQueueItem) => Promise<{ success: boolean; error?: string }>;
+
+async function defaultSupabaseSyncHandler(item: OfflineQueueItem): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { submitOrder, recordRecovery, logVisit, registerCustomerPending } = await import('./supabase-transactions');
+    if (item.module === 'ORDERS') {
+      const p = item.payload as Record<string, unknown>;
+      const order = (p.order || p) as any;
+      const recoveryAmount = Number(p.recoveryAmount || 0);
+      await submitOrder(order, recoveryAmount);
+      return { success: true };
+    }
+    if (item.module === 'RECOVERY') {
+      const rec = item.payload as any;
+      await recordRecovery(rec);
+      return { success: true };
+    }
+    if (item.module === 'VISITS') {
+      const visit = item.payload as any;
+      await logVisit(visit);
+      return { success: true };
+    }
+    if (item.module === 'CUSTOMERS') {
+      const reg = item.payload as any;
+      await registerCustomerPending(reg);
+      return { success: true };
+    }
+    return { success: false, error: `Unrecognized module: ${item.module}` };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Transaction submission error' };
+  }
+}
 
 class SyncManager {
   private networkListeners: Set<NetworkStateListener> = new Set();
   private queueListeners: Set<QueueChangeListener> = new Set();
+  private completionListeners: Set<SyncCompletionListener> = new Set();
+  private defaultHandler: SyncItemHandler = defaultSupabaseSyncHandler;
   private isSyncing = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
         this.notifyNetworkState(true);
-        this.triggerSync();
+        void this.triggerSync();
       });
       window.addEventListener('offline', () => {
         this.notifyNetworkState(false);
       });
     }
+  }
+
+  public setDefaultHandler(handler: SyncItemHandler): void {
+    this.defaultHandler = handler;
   }
 
   public isOnline(): boolean {
@@ -118,6 +157,39 @@ class SyncManager {
     return () => this.queueListeners.delete(listener);
   }
 
+  public subscribeCompletion(listener: SyncCompletionListener): () => void {
+    this.completionListeners.add(listener);
+    return () => this.completionListeners.delete(listener);
+  }
+
+  public onSyncComplete(listener: SyncCompletionListener): () => void {
+    return this.subscribeCompletion(listener);
+  }
+
+  public getQueue(): OfflineQueueItem[] {
+    return getOfflineQueue();
+  }
+
+  public getPendingCount(): number {
+    return getOfflineQueue().filter(
+      (item) => item.status === 'PENDING_SYNC' || item.status === 'FAILED'
+    ).length;
+  }
+
+  public enqueue(
+    module: OfflineQueueItem['module'],
+    action: OfflineQueueItem['action'],
+    payload: Record<string, unknown>
+  ): OfflineQueueItem {
+    const item = enqueueOfflineAction(module, action, payload);
+    this.notifyQueue();
+    return item;
+  }
+
+  public async syncQueue(): Promise<{ syncedCount: number; failedCount: number }> {
+    return this.triggerSync();
+  }
+
   private notifyNetworkState(isOnline: boolean) {
     this.networkListeners.forEach((l) => l(isOnline));
   }
@@ -127,8 +199,12 @@ class SyncManager {
     this.queueListeners.forEach((l) => l(queue));
   }
 
+  private notifyCompletion(result: { syncedCount: number; failedCount: number }) {
+    this.completionListeners.forEach((l) => l(result));
+  }
+
   public async triggerSync(
-    customHandler?: (item: OfflineQueueItem) => Promise<{ success: boolean; error?: string }>
+    customHandler?: SyncItemHandler
   ): Promise<{ syncedCount: number; failedCount: number }> {
     if (this.isSyncing || !this.isOnline()) {
       return { syncedCount: 0, failedCount: 0 };
@@ -138,6 +214,7 @@ class SyncManager {
     const queue = getOfflineQueue();
     let syncedCount = 0;
     let failedCount = 0;
+    const handler = customHandler || this.defaultHandler;
 
     for (const item of queue) {
       if (item.status === 'PENDING_SYNC' || item.status === 'FAILED') {
@@ -145,22 +222,15 @@ class SyncManager {
         item.lastAttemptAt = new Date().toISOString();
 
         try {
-          if (customHandler) {
-            const res = await customHandler(item);
-            if (res.success) {
-              item.status = 'SYNCED';
-              item.errorMessage = undefined;
-              syncedCount++;
-            } else {
-              item.status = 'FAILED';
-              item.errorMessage = res.error || 'Server rejected payload';
-              failedCount++;
-            }
-          } else {
-            // Default mock simulation for offline sync success
-            await new Promise((r) => setTimeout(r, 200));
+          const res = await handler(item);
+          if (res.success) {
             item.status = 'SYNCED';
+            item.errorMessage = undefined;
             syncedCount++;
+          } else {
+            item.status = 'FAILED';
+            item.errorMessage = res.error || 'Server rejected payload';
+            failedCount++;
           }
         } catch (err: any) {
           item.status = 'FAILED';
@@ -174,7 +244,12 @@ class SyncManager {
     this.notifyQueue();
     this.isSyncing = false;
 
-    return { syncedCount, failedCount };
+    const result = { syncedCount, failedCount };
+    if (syncedCount > 0 || failedCount > 0) {
+      this.notifyCompletion(result);
+    }
+
+    return result;
   }
 }
 
