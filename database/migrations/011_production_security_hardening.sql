@@ -1,39 +1,84 @@
 -- ==============================================================================
 -- N-LINK 360 - 011_production_security_hardening.sql
 -- Production security hardening for exposed Supabase functions and customer RLS.
--- ==============================================================================
+-- ============================================================================
 
 -- Anonymous clients must never be able to call internal authorization helpers.
 revoke execute on function public.nlink_is_admin_or_approver() from anon;
 revoke execute on function public.nlink_is_authorized_approver() from anon;
 
--- Keep authorization helpers available only to signed-in application users.
 grant execute on function public.nlink_is_admin_or_approver() to authenticated;
 grant execute on function public.nlink_is_authorized_approver() to authenticated;
 
--- The customer registration workflow is an authenticated employee workflow.
--- Remove any accidental anonymous table access and keep RLS enabled.
+-- Customer registration is an authenticated employee workflow.
 alter table public.customers enable row level security;
 revoke all on table public.customers from anon;
 
--- Do not allow anonymous execution of sensitive transaction functions.
-revoke execute on function public.nlink_submit_order(uuid, jsonb, numeric, text) from anon;
-revoke execute on function public.nlink_post_invoice(uuid) from anon;
-revoke execute on function public.nlink_record_recovery(uuid, numeric, text, text, text, text, text) from anon;
-revoke execute on function public.nlink_verify_recovery(uuid) from anon;
-revoke execute on function public.nlink_current_employee_id() from anon;
-revoke execute on function public.nlink_customer_balance(uuid) from anon;
+-- Revoke anonymous execution for every N-LINK transaction/authorization helper
+-- without assuming overloaded function signatures.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select p.oid::regprocedure as signature
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in (
+        'nlink_submit_order',
+        'nlink_post_invoice',
+        'nlink_record_recovery',
+        'nlink_verify_recovery',
+        'nlink_current_employee_id',
+        'nlink_customer_balance',
+        'nlink_record_audit',
+        'nlink_customer_stamp_creator'
+      )
+  loop
+    execute format('revoke execute on function %s from anon', r.signature);
+  end loop;
+end $$;
 
--- Explicitly restore application access for authenticated users.
-grant execute on function public.nlink_submit_order(uuid, jsonb, numeric, text) to authenticated;
-grant execute on function public.nlink_post_invoice(uuid) to authenticated;
-grant execute on function public.nlink_record_recovery(uuid, numeric, text, text, text, text, text) to authenticated;
-grant execute on function public.nlink_verify_recovery(uuid) to authenticated;
-grant execute on function public.nlink_current_employee_id() to authenticated;
-grant execute on function public.nlink_customer_balance(uuid) to authenticated;
+-- Keep application transaction helpers available to authenticated users.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select p.oid::regprocedure as signature
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in (
+        'nlink_submit_order',
+        'nlink_post_invoice',
+        'nlink_record_recovery',
+        'nlink_verify_recovery',
+        'nlink_current_employee_id',
+        'nlink_customer_balance',
+        'nlink_record_audit'
+      )
+  loop
+    execute format('grant execute on function %s to authenticated', r.signature);
+  end loop;
+end $$;
 
--- Prevent the registration trigger helper from being directly invoked by clients.
-revoke execute on function public.nlink_customer_stamp_creator() from public, anon, authenticated;
+-- Trigger helpers are database-internal only.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select p.oid::regprocedure as signature
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'nlink_customer_stamp_creator'
+  loop
+    execute format('revoke execute on function %s from public, anon, authenticated', r.signature);
+  end loop;
+end $$;
 
--- Production rule: no direct anonymous access to audit records.
+-- Audit records are never directly readable by anonymous clients.
 revoke all on table public.audit_logs from anon;
