@@ -6,38 +6,18 @@ export interface ProductionAccount {
   branchId: string; branchName: string; assignedRegion?: string; assignedTowns?: string[]; assignedDealerIds?: string[];
   accessScope: 'GLOBAL_ADMIN' | 'ACCOUNTS_FINANCE' | 'LOGISTICS_WH' | 'FIELD_FORCE_SCOPED'; description: string;
 }
-
 export const AVAILABLE_ROLES: { role: UserRole; title: string; category: string }[] = [
-  { role:'SUPER_ADMIN', title:'Super Admin', category:'Executive' }, { role:'MANAGEMENT', title:'Management', category:'Executive' },
-  { role:'RSM', title:'RSM', category:'Sales Field' }, { role:'ASM', title:'ASM', category:'Sales Field' },
-  { role:'TSM', title:'TSM', category:'Sales Field' }, { role:'ACCOUNTS', title:'Accounts', category:'Finance' },
-  { role:'WAREHOUSE_MANAGER', title:'Warehouse Manager', category:'Supply Chain' }, { role:'FACTORY_MANAGER', title:'Factory Manager', category:'Manufacturing' },
+  { role:'SUPER_ADMIN', title:'Super Admin', category:'Executive' }, { role:'MANAGEMENT', title:'Management', category:'Executive' }, { role:'RSM', title:'RSM', category:'Sales Field' }, { role:'ASM', title:'ASM', category:'Sales Field' }, { role:'TSM', title:'TSM', category:'Sales Field' }, { role:'ACCOUNTS', title:'Accounts', category:'Finance' }, { role:'WAREHOUSE_MANAGER', title:'Warehouse Manager', category:'Supply Chain' }, { role:'FACTORY_MANAGER', title:'Factory Manager', category:'Manufacturing' },
 ];
-
 export const PRODUCTION_ACCOUNTS: ProductionAccount[] = [];
 export const INITIAL_EMPLOYEES: any[] = [];
-
-/** Designated executive approvers required by the two-person approval policy. */
-export const AUTHORIZED_APPROVER_EMAILS: readonly string[] = [
-  'shahzadullah@nationallights.com',
-  'syedzain@nationallights.com',
-];
-
+export const AUTHORIZED_APPROVER_EMAILS: readonly string[] = ['shahzadullah@nationallights.com','syedzain@nationallights.com'];
 export function isAdminUser(user: User | null | undefined): boolean { return Boolean(user && ['SUPER_ADMIN','MANAGEMENT'].includes(user.role)); }
 export function isFieldForceUser(user: User | null | undefined): boolean { return Boolean(user && ['OB','TSM','ASM','SS','SALES_RECOVERY','SALES_MANAGER','RSM'].includes(user.role)); }
-
-/** UX guard only. PostgreSQL RPCs perform the authoritative final authorization check. */
-export function isAuthorizedApproverEmail(email?: string | null): boolean {
-  const clean = String(email || '').trim().toLowerCase();
-  return AUTHORIZED_APPROVER_EMAILS.some(x => x.toLowerCase() === clean);
-}
-export function assertAuthorizedApprover(email?: string | null): void {
-  if (!isAuthorizedApproverEmail(email)) throw new Error('Only designated executive approvers may authorize this transaction.');
-}
+export function isAuthorizedApproverEmail(email?: string | null): boolean { const clean=String(email||'').trim().toLowerCase(); return AUTHORIZED_APPROVER_EMAILS.some(x=>x.toLowerCase()===clean); }
+export function assertAuthorizedApprover(email?: string | null): void { if (!isAuthorizedApproverEmail(email)) throw new Error('Only designated executive officers may authorize this transaction.'); }
 export function isMultiRoleEligibleEmail(_email: string): boolean { return false; }
 export function getAssignedDealerIds(_user: User | null | undefined): string[] { return []; }
-
-/** Legacy synchronous APIs cannot create, authenticate, or persist production records. */
 export function getCentralEmployees(): any[] { return []; }
 export function saveCentralEmployee(_employeeData: any): any[] { throw new Error('Employee master data is database-only.'); }
 export function deleteCentralEmployee(_id: string): any[] { throw new Error('Employee master data is database-only.'); }
