@@ -24,6 +24,7 @@ jobs:
             ("""  const assignedTowns = useMemo(() => {\n    const baseTowns = ['Peshawar', 'Mardan', 'Rawalpindi', 'Islamabad', 'Lahore', 'Gujranwala', 'Faisalabad', 'Multan', 'Nowshera', 'Swat', 'Abbottabad'];\n    const customerTowns = Array.from(new Set(authorizedCustomers.map((c) => c.city || '').filter(Boolean)));\n    const merged = Array.from(new Set([...customerTowns, ...baseTowns]));\n    return merged;\n  }, [authorizedCustomers]);\n\n  const [selectedTown, setSelectedTown] = useState<string>(() => {\n    return localStorage.getItem('nlink_sales_active_town') || assignedTowns[0] || 'Peshawar';\n  });\n""", """  const assignedTowns = useMemo(() => {\n    return Array.from(new Set(authorizedCustomers.map((c) => c.city || '').map((town) => town.trim()).filter(Boolean)));\n  }, [authorizedCustomers]);\n\n  const [selectedTown, setSelectedTown] = useState<string>(() => {\n    const cachedTown = localStorage.getItem('nlink_sales_active_town') || '';\n    return assignedTowns.includes(cachedTown) ? cachedTown : (assignedTowns[0] || '');\n  });\n\n  useEffect(() => {\n    if (selectedTown && !assignedTowns.includes(selectedTown)) {\n      setSelectedTown(assignedTowns[0] || '');\n    }\n  }, [assignedTowns, selectedTown]);\n"""),
             ("""        () => {\n          // Fallback with realistic location for smooth offline / preview\n          completeCheckIn(34.0151, 71.5249, 20, 'Network Captured');\n        },\n        { enableHighAccuracy: true, timeout: 6000 }\n      );\n    } else {\n      completeCheckIn(34.0151, 71.5249, 50, 'System Timestamp');\n    }\n""", """        () => {\n          setGpsCapturing(false);\n          setAttendanceMessage('GPS location is required for attendance. Check-in was not recorded.');\n        },\n        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }\n      );\n    } else {\n      setGpsCapturing(false);\n      setAttendanceMessage('This device does not provide GPS location. Check-in was not recorded.');\n    }\n"""),
             ("""                      {attendanceRecord ? `${attendanceRecord.lat}° N, ${attendanceRecord.lng}° E (±${attendanceRecord.accuracy}m)` : '34.0151° N, 71.5249° E (±15m)'}""", """                      {attendanceRecord ? `${attendanceRecord.lat}° N, ${attendanceRecord.lng}° E (±${attendanceRecord.accuracy}m)` : 'GPS not captured'}"""),
+            ("""    status: 'Checked In' | 'Checked Out' | 'Marked (GPS Validated)' | 'Marked (Network Captured)';""", """    status: 'Checked In' | 'Checked Out';"""),
           ]
           for old, new in replacements:
               if old not in s:
@@ -38,7 +39,7 @@ jobs:
           PY
           git diff --check
           if grep -n "34.0151\|71.5249\|baseTowns\|Network Captured\|System Timestamp" src/components/SalesRecoveryApp.tsx; then
-            echo 'Fabricated attendance fallback remains'
+            echo 'Fabricated attendance coordinates or fallback labels remain'
             exit 1
           fi
       - name: Commit hardened source
