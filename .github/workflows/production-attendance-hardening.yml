@@ -20,24 +20,27 @@ jobs:
           from pathlib import Path
           p = Path('src/components/SalesRecoveryApp.tsx')
           s = p.read_text()
-          old = """  const assignedTowns = useMemo(() => {\n    const baseTowns = ['Peshawar', 'Mardan', 'Rawalpindi', 'Islamabad', 'Lahore', 'Gujranwala', 'Faisalabad', 'Multan', 'Nowshera', 'Swat', 'Abbottabad'];\n    const customerTowns = Array.from(new Set(authorizedCustomers.map((c) => c.city || '').filter(Boolean)));\n    const merged = Array.from(new Set([...customerTowns, ...baseTowns]));\n    return merged;\n  }, [authorizedCustomers]);\n\n  const [selectedTown, setSelectedTown] = useState<string>(() => {\n    return localStorage.getItem('nlink_sales_active_town') || assignedTowns[0] || 'Peshawar';\n  });\n"""
-          new = """  const assignedTowns = useMemo(() => {\n    return Array.from(new Set(authorizedCustomers.map((c) => c.city || '').map((town) => town.trim()).filter(Boolean)));\n  }, [authorizedCustomers]);\n\n  const [selectedTown, setSelectedTown] = useState<string>(() => {\n    const cachedTown = localStorage.getItem('nlink_sales_active_town') || '';\n    return assignedTowns.includes(cachedTown) ? cachedTown : (assignedTowns[0] || '');\n  });\n\n  useEffect(() => {\n    if (selectedTown && !assignedTowns.includes(selectedTown)) {\n      setSelectedTown(assignedTowns[0] || '');\n    }\n  }, [assignedTowns, selectedTown]);\n"""
-          if old not in s:
-              raise SystemExit('Expected assigned-town fallback block not found')
-          s = s.replace(old, new, 1)
-          old = """    const completeCheckIn = (lat: number, lng: number, accuracy: number, method: string) => {"""
-          new = """    const completeCheckIn = (lat: number, lng: number, accuracy: number, method: string) => {"""
-          if old not in s:
-              raise SystemExit('Expected check-in function not found')
-          old = """        () => {\n          // Fallback with realistic location for smooth offline / preview\n          completeCheckIn(34.0151, 71.5249, 20, 'Network Captured');\n        },\n        { enableHighAccuracy: true, timeout: 6000 }\n      );\n    } else {\n      completeCheckIn(34.0151, 71.5249, 50, 'System Timestamp');\n    }\n"""
-          new = """        () => {\n          setGpsCapturing(false);\n          setAttendanceMessage('GPS location is required for attendance. Check-in was not recorded.');\n        },\n        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }\n      );\n    } else {\n      setGpsCapturing(false);\n      setAttendanceMessage('This device does not provide GPS location. Check-in was not recorded.');\n    }\n"""
-          if old not in s:
-              raise SystemExit('Expected fabricated GPS fallback block not found')
-          s = s.replace(old, new, 1)
+          replacements = [
+            ("""  const assignedTowns = useMemo(() => {\n    const baseTowns = ['Peshawar', 'Mardan', 'Rawalpindi', 'Islamabad', 'Lahore', 'Gujranwala', 'Faisalabad', 'Multan', 'Nowshera', 'Swat', 'Abbottabad'];\n    const customerTowns = Array.from(new Set(authorizedCustomers.map((c) => c.city || '').filter(Boolean)));\n    const merged = Array.from(new Set([...customerTowns, ...baseTowns]));\n    return merged;\n  }, [authorizedCustomers]);\n\n  const [selectedTown, setSelectedTown] = useState<string>(() => {\n    return localStorage.getItem('nlink_sales_active_town') || assignedTowns[0] || 'Peshawar';\n  });\n""", """  const assignedTowns = useMemo(() => {\n    return Array.from(new Set(authorizedCustomers.map((c) => c.city || '').map((town) => town.trim()).filter(Boolean)));\n  }, [authorizedCustomers]);\n\n  const [selectedTown, setSelectedTown] = useState<string>(() => {\n    const cachedTown = localStorage.getItem('nlink_sales_active_town') || '';\n    return assignedTowns.includes(cachedTown) ? cachedTown : (assignedTowns[0] || '');\n  });\n\n  useEffect(() => {\n    if (selectedTown && !assignedTowns.includes(selectedTown)) {\n      setSelectedTown(assignedTowns[0] || '');\n    }\n  }, [assignedTowns, selectedTown]);\n"""),
+            ("""        () => {\n          // Fallback with realistic location for smooth offline / preview\n          completeCheckIn(34.0151, 71.5249, 20, 'Network Captured');\n        },\n        { enableHighAccuracy: true, timeout: 6000 }\n      );\n    } else {\n      completeCheckIn(34.0151, 71.5249, 50, 'System Timestamp');\n    }\n""", """        () => {\n          setGpsCapturing(false);\n          setAttendanceMessage('GPS location is required for attendance. Check-in was not recorded.');\n        },\n        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }\n      );\n    } else {\n      setGpsCapturing(false);\n      setAttendanceMessage('This device does not provide GPS location. Check-in was not recorded.');\n    }\n"""),
+            ("""                      {attendanceRecord ? `${attendanceRecord.lat}° N, ${attendanceRecord.lng}° E (±${attendanceRecord.accuracy}m)` : '34.0151° N, 71.5249° E (±15m)'}""", """                      {attendanceRecord ? `${attendanceRecord.lat}° N, ${attendanceRecord.lng}° E (±${attendanceRecord.accuracy}m)` : 'GPS not captured'}"""),
+          ]
+          for old, new in replacements:
+              if old not in s:
+                  raise SystemExit('Expected production fallback block not found')
+              s = s.replace(old, new, 1)
+          old_map = """            {/* Visual Nearby Assigned Dealers Proximity Map */}\n            <NearbyDealersMap\n              userLat={attendanceRecord ? attendanceRecord.lat : 34.0151}\n              userLng={attendanceRecord ? attendanceRecord.lng : 71.5249}\n              accuracy={attendanceRecord ? attendanceRecord.accuracy : 15}\n              townName={attendanceRecord?.town || selectedTown}\n              customers={authorizedCustomers}\n              onSelectCustomer={(c) => {\n                setSelectedCustomerId(c.id);\n                setActiveTab('DISTRIBUTORS');\n              }}\n              onSyncGps={handleSyncGpsLocation}\n              isSyncingGps={gpsSyncing || gpsCapturing}\n              lastSyncTime={lastGpsSyncTime || (attendanceRecord ? attendanceRecord.time : undefined)}\n            />\n"""
+          new_map = """            {/* Visual Nearby Assigned Dealers Proximity Map — only rendered after real GPS capture */}\n            {attendanceRecord && (\n              <NearbyDealersMap\n                userLat={attendanceRecord.lat}\n                userLng={attendanceRecord.lng}\n                accuracy={attendanceRecord.accuracy}\n                townName={attendanceRecord.town}\n                customers={authorizedCustomers}\n                onSelectCustomer={(c) => {\n                  setSelectedCustomerId(c.id);\n                  setActiveTab('DISTRIBUTORS');\n                }}\n                onSyncGps={handleSyncGpsLocation}\n                isSyncingGps={gpsSyncing || gpsCapturing}\n                lastSyncTime={lastGpsSyncTime || attendanceRecord.time}\n              />\n            )}\n"""
+          if old_map not in s:
+              raise SystemExit('Expected GPS map fallback block not found')
+          s = s.replace(old_map, new_map, 1)
           p.write_text(s)
           PY
           git diff --check
-          grep -n "34.0151\|71.5249\|baseTowns\|Network Captured\|System Timestamp" src/components/SalesRecoveryApp.tsx && exit 1 || true
+          if grep -n "34.0151\|71.5249\|baseTowns\|Network Captured\|System Timestamp" src/components/SalesRecoveryApp.tsx; then
+            echo 'Fabricated attendance fallback remains'
+            exit 1
+          fi
       - name: Commit hardened source
         shell: bash
         run: |
