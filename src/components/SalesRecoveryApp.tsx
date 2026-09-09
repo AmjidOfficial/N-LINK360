@@ -247,15 +247,19 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   // -------------------------------------------------------------
   // Towns assigned to the user or derived from authorized customers (including Peshawar, Mardan, etc.)
   const assignedTowns = useMemo(() => {
-    const baseTowns = ['Peshawar', 'Mardan', 'Rawalpindi', 'Islamabad', 'Lahore', 'Gujranwala', 'Faisalabad', 'Multan', 'Nowshera', 'Swat', 'Abbottabad'];
-    const customerTowns = Array.from(new Set(authorizedCustomers.map((c) => c.city || '').filter(Boolean)));
-    const merged = Array.from(new Set([...customerTowns, ...baseTowns]));
-    return merged;
+    return Array.from(new Set(authorizedCustomers.map((c) => c.city || '').map((town) => town.trim()).filter(Boolean)));
   }, [authorizedCustomers]);
 
   const [selectedTown, setSelectedTown] = useState<string>(() => {
-    return localStorage.getItem('nlink_sales_active_town') || assignedTowns[0] || 'Peshawar';
+    const cachedTown = localStorage.getItem('nlink_sales_active_town') || '';
+    return assignedTowns.includes(cachedTown) ? cachedTown : (assignedTowns[0] || '');
   });
+
+  useEffect(() => {
+    if (selectedTown && !assignedTowns.includes(selectedTown)) {
+      setSelectedTown(assignedTowns[0] || '');
+    }
+  }, [assignedTowns, selectedTown]);
 
   useEffect(() => {
     localStorage.setItem('nlink_sales_active_town', selectedTown);
@@ -274,7 +278,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     lng: number;
     accuracy: number;
     locationName?: string;
-    status: 'Checked In' | 'Checked Out' | 'Marked (GPS Validated)' | 'Marked (Network Captured)';
+    status: 'Checked In' | 'Checked Out';
   }
 
   const [attendanceRecord, setAttendanceRecord] = useState<AttendanceRecord | null>(() => {
@@ -358,13 +362,14 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
           );
         },
         () => {
-          // Fallback with realistic location for smooth offline / preview
-          completeCheckIn(34.0151, 71.5249, 20, 'Network Captured');
+          setGpsCapturing(false);
+          setAttendanceMessage('GPS location is required for attendance. Check-in was not recorded.');
         },
-        { enableHighAccuracy: true, timeout: 6000 }
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
       );
     } else {
-      completeCheckIn(34.0151, 71.5249, 50, 'System Timestamp');
+      setGpsCapturing(false);
+      setAttendanceMessage('This device does not provide GPS location. Check-in was not recorded.');
     }
   };
 
@@ -1666,28 +1671,30 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase font-bold block">GPS Coordinates (±Accuracy)</span>
                     <span className="font-mono text-slate-800 font-bold">
-                      {attendanceRecord ? `${attendanceRecord.lat}° N, ${attendanceRecord.lng}° E (±${attendanceRecord.accuracy}m)` : '34.0151° N, 71.5249° E (±15m)'}
+                      {attendanceRecord ? `${attendanceRecord.lat}° N, ${attendanceRecord.lng}° E (±${attendanceRecord.accuracy}m)` : 'GPS not captured'}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Visual Nearby Assigned Dealers Proximity Map */}
-            <NearbyDealersMap
-              userLat={attendanceRecord ? attendanceRecord.lat : 34.0151}
-              userLng={attendanceRecord ? attendanceRecord.lng : 71.5249}
-              accuracy={attendanceRecord ? attendanceRecord.accuracy : 15}
-              townName={attendanceRecord?.town || selectedTown}
-              customers={authorizedCustomers}
-              onSelectCustomer={(c) => {
-                setSelectedCustomerId(c.id);
-                setActiveTab('DISTRIBUTORS');
-              }}
-              onSyncGps={handleSyncGpsLocation}
-              isSyncingGps={gpsSyncing || gpsCapturing}
-              lastSyncTime={lastGpsSyncTime || (attendanceRecord ? attendanceRecord.time : undefined)}
-            />
+            {/* Visual Nearby Assigned Dealers Proximity Map — only rendered after real GPS capture */}
+            {attendanceRecord && (
+              <NearbyDealersMap
+                userLat={attendanceRecord.lat}
+                userLng={attendanceRecord.lng}
+                accuracy={attendanceRecord.accuracy}
+                townName={attendanceRecord.town}
+                customers={authorizedCustomers}
+                onSelectCustomer={(c) => {
+                  setSelectedCustomerId(c.id);
+                  setActiveTab('DISTRIBUTORS');
+                }}
+                onSyncGps={handleSyncGpsLocation}
+                isSyncingGps={gpsSyncing || gpsCapturing}
+                lastSyncTime={lastGpsSyncTime || attendanceRecord.time}
+              />
+            )}
 
             {/* 4. MTD VISIT ACTIVITY TABLE (Day 1 to 31: Date | Town | # of Visit Dealer | Sales | Recovry) */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
