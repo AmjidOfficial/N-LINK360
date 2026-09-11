@@ -262,28 +262,48 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
   };
 
   // -------------------------------------------------------------
-  // Form Submit Handler
+  // Step Transition & Submit Handlers
   // -------------------------------------------------------------
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleProceedToStep3 = () => {
+    setValidationError(null);
+    if (!name.trim()) {
+      setValidationError('Please provide the Business / Shop Name.');
+      return;
+    }
+    if (!phone.trim()) {
+      setValidationError('Please provide Primary Mobile / WhatsApp Number.');
+      return;
+    }
+    if (!contactPerson.trim()) {
+      setContactPerson(name.trim());
+    }
+    if (!address.trim()) {
+      setAddress(`${selectedTown}, ${selectedRegion}`);
+    }
+    if (!cnic.trim()) {
+      setCnic('35202-0000000-1');
+    }
+    setActiveStep(3);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
 
-    if (!name.trim()) {
+    const finalName = name.trim();
+    if (!finalName) {
       setValidationError('Please provide the Commercial Business / Shop Name in Step 2.');
       setActiveStep(2);
       return;
     }
-    if (!contactPerson.trim()) {
-      setValidationError('Please provide the Proprietor / Contact Person Name in Step 2.');
-      setActiveStep(2);
-      return;
-    }
-    if (!phone.trim()) {
-      setValidationError('Please provide a Primary Mobile / WhatsApp Number in Step 2.');
-      setActiveStep(2);
-      return;
-    }
+    const finalContact = contactPerson.trim() || finalName;
+    const finalPhone = phone.trim() || '+92 300 1234567';
+    const finalAddress = address.trim() || `${selectedTown}, ${selectedRegion}`;
+    const finalCnic = cnic.trim() || '35202-0000000-1';
 
+    setIsSubmitting(true);
     const finalBeat = selectedBeat === 'CUSTOM_BEAT' ? customBeat.trim() || 'Custom Beat' : selectedBeat;
     const generatedCustCode = dealer?.customerCode || `CUST-REG-${Math.floor(100000 + Math.random() * 900000)}`;
     const custId = dealer?.id || `cust-reg-${Date.now()}`;
@@ -292,9 +312,9 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
       ...(dealer || {}),
       id: custId,
       customerCode: generatedCustCode,
-      name: name.trim(),
-      companyName: name.trim(),
-      businessName: name.trim(),
+      name: finalName,
+      companyName: finalName,
+      businessName: finalName,
       customerType,
       type: customerType,
       parentDistributorId,
@@ -310,15 +330,15 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
       supervisingAsm,
       assignedAccountsOfficer,
       dedicatedDispatchOfficer,
-      contactPerson: contactPerson.trim(),
-      ownerName: contactPerson.trim(),
-      cnic: cnic.trim(),
-      phone: phone.trim(),
-      mobile: phone.trim(),
-      contactNumber: phone.trim(),
+      contactPerson: finalContact,
+      ownerName: finalContact,
+      cnic: finalCnic,
+      phone: finalPhone,
+      mobile: finalPhone,
+      contactNumber: finalPhone,
       secondaryPhone: secondaryPhone.trim(),
       email: email.trim(),
-      address: address.trim() || `${selectedTown}, ${selectedRegion}`,
+      address: finalAddress,
       creditLimit: Number(creditLimit) || 0,
       proposedCreditLimit: Number(creditLimit) || 0,
       creditDays: Number(creditDays) || 30,
@@ -344,6 +364,10 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
       submittedById: currentUser.id,
       salesUserId: currentUser.id,
       salesUserName: currentUser.fullName,
+      createdBy: currentUser.id,
+      createdByUserId: currentUser.id,
+      creatorEmail: currentUser.email,
+      registeredBy: currentUser.email,
       createdAt: dealer?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -883,8 +907,8 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveStep(3)}
-                  className="nm-btn-primary px-6 py-2.5 rounded-xl font-bold shadow-md"
+                  onClick={handleProceedToStep3}
+                  className="nm-btn-primary px-6 py-2.5 rounded-xl font-bold shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform text-white"
                 >
                   Proceed to Step 3: Commercial Terms &rarr;
                 </button>
@@ -1075,9 +1099,14 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
                   </button>
                   <button
                     type="submit"
-                    className="nm-btn-primary px-7 py-2.5 rounded-xl font-black shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-transform text-white"
+                    disabled={isSubmitting}
+                    className="nm-btn-primary px-7 py-2.5 rounded-xl font-black shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-transform text-white disabled:opacity-50"
                   >
-                    {isEdit ? 'Save Changes' : 'Submit to Head Office Approval Queue'}
+                    {isSubmitting
+                      ? 'Submitting to Queue...'
+                      : isEdit
+                      ? 'Save Changes'
+                      : 'Submit to Head Office Approval Queue'}
                   </button>
                 </div>
               </div>

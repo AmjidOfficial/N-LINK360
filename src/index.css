@@ -37,11 +37,58 @@
   --nm-concave: linear-gradient(145deg, #d6dbe3, #f8fbff);
 }
 
-* { box-sizing: border-box; }
-html { min-width: 320px; scroll-behavior: smooth; }
-body { margin: 0; min-width: 320px; min-height: 100vh; background-color: #E8ECF2; color: #1E293B; }
-button, input, select, textarea { font: inherit; }
-button { -webkit-tap-highlight-color: transparent; }
+*, *::before, *::after { 
+  box-sizing: border-box; 
+}
+
+html { 
+  min-width: 320px; 
+  scroll-behavior: smooth; 
+  -webkit-text-size-adjust: 100%;
+}
+
+body { 
+  margin: 0; 
+  padding: 0;
+  min-width: 320px; 
+  min-height: 100vh; 
+  background-color: #E8ECF2; 
+  color: #1E293B; 
+  overflow-x: hidden;
+}
+
+img, svg, video, canvas, audio, iframe, embed, object {
+  max-width: 100%;
+  height: auto;
+}
+
+button, input, select, textarea { 
+  font: inherit; 
+}
+
+button { 
+  -webkit-tap-highlight-color: transparent; 
+}
+
+/* Accessible focus ring for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid #0D9488;
+  outline-offset: 2px;
+}
+
+/* Global Responsive Fluid Grid Helpers */
+.fluid-grid-responsive {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+.fluid-flex-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
 
 /* Neumorphic UI Utility Classes */
 .nm-flat {
@@ -274,6 +321,22 @@ button { -webkit-tap-highlight-color: transparent; }
 .SalesRecoveryApp *:focus-visible {
   outline: 2px solid #0D9488;
   outline-offset: 2px;
+}
+
+/* Accessibility: Ensure minimum 44px x 44px touch target size for field force usability */
+@utility min-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.min-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.SalesRecoveryApp button {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 /* 2. Top Header */

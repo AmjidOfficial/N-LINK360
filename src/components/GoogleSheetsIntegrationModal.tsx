@@ -10,7 +10,8 @@ import {
   AlertCircle,
   Database,
   CloudUpload,
-  Layers
+  Layers,
+  ShieldCheck
 } from 'lucide-react';
 import {
   getGoogleSheetsWebhookUrl,
@@ -38,7 +39,40 @@ export const GoogleSheetsIntegrationModal: React.FC<GoogleSheetsIntegrationModal
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [copiedScript, setCopiedScript] = useState(false);
-  const [activeTab, setActiveTab] = useState<'SYNC' | 'SCRIPT_SETUP' | 'CSV_EXPORT'>('SYNC');
+  const [activeTab, setActiveTab] = useState<'SYNC' | 'SCRIPT_SETUP' | 'SERVER_EDGE_FUNCTION' | 'CSV_EXPORT'>('SYNC');
+  const [copiedEdgeScript, setCopiedEdgeScript] = useState(false);
+
+  const handleCopyEdgeScript = () => {
+    const edgeFuncSnippet = `// Supabase Edge Function: supabase/functions/sync-google-sheets/index.ts
+// Secure Server-to-Server Mirroring for Google Sheet: 1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const SPREADSHEET_ID = "1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo";
+
+serve(async (req) => {
+  const payload = await req.json();
+  const webhookUrl = Deno.env.get("GOOGLE_SHEETS_WEBHOOK_URL");
+  
+  if (webhookUrl) {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        spreadsheetId: SPREADSHEET_ID,
+        timestamp: new Date().toISOString()
+      }),
+    });
+  }
+  
+  return new Response(JSON.stringify({ status: "mirrored_securely" }), {
+    headers: { "Content-Type": "application/json" }
+  });
+});`;
+    navigator.clipboard.writeText(edgeFuncSnippet);
+    setCopiedEdgeScript(true);
+    setTimeout(() => setCopiedEdgeScript(false), 2000);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -120,10 +154,10 @@ export const GoogleSheetsIntegrationModal: React.FC<GoogleSheetsIntegrationModal
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 px-6 pt-4 border-b border-slate-200">
+        <div className="flex items-center gap-1.5 px-6 pt-4 border-b border-slate-200 overflow-x-auto">
           <button
             onClick={() => setActiveTab('SYNC')}
-            className={`pb-2.5 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+            className={`pb-2.5 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'SYNC'
                 ? 'border-emerald-600 text-emerald-800'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -134,7 +168,7 @@ export const GoogleSheetsIntegrationModal: React.FC<GoogleSheetsIntegrationModal
           </button>
           <button
             onClick={() => setActiveTab('SCRIPT_SETUP')}
-            className={`pb-2.5 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+            className={`pb-2.5 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'SCRIPT_SETUP'
                 ? 'border-emerald-600 text-emerald-800'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -144,15 +178,26 @@ export const GoogleSheetsIntegrationModal: React.FC<GoogleSheetsIntegrationModal
             <span>Apps Script Setup (2 Mins)</span>
           </button>
           <button
+            onClick={() => setActiveTab('SERVER_EDGE_FUNCTION')}
+            className={`pb-2.5 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === 'SERVER_EDGE_FUNCTION'
+                ? 'border-emerald-600 text-emerald-800'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Supabase Edge Server Sync</span>
+          </button>
+          <button
             onClick={() => setActiveTab('CSV_EXPORT')}
-            className={`pb-2.5 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+            className={`pb-2.5 px-3 text-xs font-black transition-all border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'CSV_EXPORT'
                 ? 'border-emerald-600 text-emerald-800'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Direct CSV / Excel Export</span>
+            <span>Direct CSV Export</span>
           </button>
         </div>
 
@@ -289,7 +334,82 @@ export const GoogleSheetsIntegrationModal: React.FC<GoogleSheetsIntegrationModal
             </div>
           )}
 
-          {/* TAB 3: DIRECT CSV / EXCEL EXPORT */}
+          {/* TAB 3: SERVER-SIDE SUPABASE EDGE FUNCTION SYNC */}
+          {activeTab === 'SERVER_EDGE_FUNCTION' && (
+            <div className="space-y-4">
+              <div className="space-y-2 text-xs text-slate-700 bg-white/60 p-4 rounded-2xl border border-slate-200">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-black text-slate-900 text-sm">Server-to-Server Zero Credential Exposure</span>
+                </div>
+                <p className="text-slate-600">
+                  Confirmed transactions (Orders, Recoveries, Approved Dealers) trigger PostgreSQL database webhooks in Supabase, which immediately replicate data directly to Google Sheet <strong className="font-mono text-slate-800">1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo</strong> without exposing API credentials to browser clients.
+                </p>
+                <div className="pt-2 border-t border-slate-200 text-slate-600">
+                  <span className="font-bold text-slate-800 block mb-1">Architecture Pipeline:</span>
+                  <p className="font-mono text-[11px] bg-slate-100 p-2 rounded-lg text-slate-700">
+                    Supabase PostgreSQL (Triggers) ➔ Supabase Edge Function (Deno) ➔ Google Apps Script Webhook ➔ Google Sheets DB
+                  </p>
+                </div>
+              </div>
+
+              {/* Edge Function Code Box */}
+              <div className="relative">
+                <div className="flex items-center justify-between pb-1.5">
+                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5 text-indigo-600" />
+                    Supabase Edge Function Code (<span className="font-mono">supabase/functions/sync-google-sheets/index.ts</span>)
+                  </span>
+                  <button
+                    onClick={handleCopyEdgeScript}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-[11px] font-bold text-slate-700 transition-all cursor-pointer"
+                  >
+                    {copiedEdgeScript ? (
+                      <>
+                        <CheckCircle className="w-3 h-3 text-emerald-600" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy Edge Function</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <pre className="nm-inset p-3.5 rounded-xl text-[11px] font-mono text-slate-800 max-h-52 overflow-y-auto border border-slate-200">
+{`// Supabase Edge Function (Deno): sync-google-sheets
+// Target Spreadsheet ID: 1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const SPREADSHEET_ID = "1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo";
+
+serve(async (req) => {
+  const payload = await req.json();
+  const webhookUrl = Deno.env.get("GOOGLE_SHEETS_WEBHOOK_URL");
+  
+  if (webhookUrl) {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        spreadsheetId: SPREADSHEET_ID,
+        timestamp: new Date().toISOString()
+      }),
+    });
+  }
+  
+  return new Response(JSON.stringify({ status: "mirrored_securely" }), {
+    headers: { "Content-Type": "application/json" }
+  });
+});`}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: DIRECT CSV / EXCEL EXPORT */}
           {activeTab === 'CSV_EXPORT' && (
             <div className="space-y-4 text-center py-4">
               <div className="w-12 h-12 mx-auto rounded-2xl nm-flat text-emerald-600 flex items-center justify-center border border-white">

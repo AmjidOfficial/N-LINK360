@@ -10,7 +10,10 @@ import {
   Menu,
   ChevronRight,
   ChevronDown,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Wifi,
+  WifiOff,
+  AlertTriangle,
 } from 'lucide-react';
 import { User as UserType } from '../types';
 import {
@@ -40,6 +43,9 @@ interface HeaderProps {
   setIsSidebarCollapsed?: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
   onToggleViewMode?: () => void;
   onOpenGoogleSheets?: () => void;
+  onOpenOfflineSync?: (tab?: 'FAILED' | 'PENDING' | 'HISTORY' | 'ALL') => void;
+  pendingOfflineCount?: number;
+  failedOfflineCount?: number;
 }
 
 export const NeumorphicHeader: React.FC<HeaderProps> = ({
@@ -55,6 +61,9 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
   onRefreshData,
   onToggleViewMode,
   onOpenGoogleSheets,
+  onOpenOfflineSync,
+  pendingOfflineCount = 0,
+  failedOfflineCount = 0,
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -142,6 +151,44 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
           </button>
+
+          {onOpenOfflineSync && (
+            <button
+              onClick={() => onOpenOfflineSync(failedOfflineCount > 0 ? 'FAILED' : 'ALL')}
+              className={`p-2.5 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 cursor-pointer ${
+                failedOfflineCount > 0
+                  ? 'bg-rose-50 border-2 border-rose-300 text-rose-700 shadow-sm animate-pulse'
+                  : pendingOfflineCount > 0
+                  ? 'bg-amber-50 border border-amber-300 text-amber-800'
+                  : 'nm-btn text-slate-700 hover:text-teal-700'
+              }`}
+              title={
+                failedOfflineCount > 0
+                  ? `Sync Error Alert: ${failedOfflineCount} offline transaction(s) failed to sync to Supabase. Click to inspect errors and retry.`
+                  : pendingOfflineCount > 0
+                  ? `${pendingOfflineCount} transaction(s) pending sync to Supabase. Click to view queue.`
+                  : 'Supabase Offline Sync Manager: All transactions synced.'
+              }
+            >
+              {failedOfflineCount > 0 ? (
+                <>
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span className="text-xs font-black text-rose-800 hidden sm:inline">
+                    Sync Error ({failedOfflineCount})
+                  </span>
+                </>
+              ) : pendingOfflineCount > 0 ? (
+                <>
+                  <Wifi className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="text-xs font-bold text-amber-800 hidden sm:inline">
+                    Syncing ({pendingOfflineCount})
+                  </span>
+                </>
+              ) : (
+                <Wifi className="w-4 h-4 text-teal-600 shrink-0" />
+              )}
+            </button>
+          )}
 
           {onOpenGoogleSheets && (
             <button

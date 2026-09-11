@@ -13,6 +13,7 @@ import {
   UserRound,
   Wifi,
   WifiOff,
+  AlertTriangle,
 } from 'lucide-react';
 import { User } from '../types';
 import { syncManager, getOfflineQueue } from '../services/offlineSyncEngine';
@@ -55,11 +56,15 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+  const [failedSyncCount, setFailedSyncCount] = useState<number>(0);
 
   useEffect(() => {
     const unsubNet = syncManager.subscribeNetwork((online) => setIsOnline(online));
     const unsubQueue = syncManager.subscribeQueue((q) => {
-      setPendingSyncCount((q || []).filter((i) => i.status === 'PENDING_SYNC' || i.status === 'FAILED').length);
+      const failed = (q || []).filter((i) => i.status === 'FAILED');
+      const pending = (q || []).filter((i) => i.status === 'PENDING_SYNC');
+      setFailedSyncCount(failed.length);
+      setPendingSyncCount(pending.length);
     });
 
     // Keyboard shortcut for Cmd+K / Ctrl+K
@@ -152,28 +157,50 @@ export const Header: React.FC<HeaderProps> = ({
           {onOpenOfflineSync && (
             <button
               onClick={onOpenOfflineSync}
-              className={`flex min-h-[38px] items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold active:scale-95 transition-all ${
-                !isOnline
-                  ? 'border-rose-300 bg-rose-50 text-rose-800 animate-pulse'
+              className={`flex min-h-[38px] items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold active:scale-95 transition-all cursor-pointer ${
+                failedSyncCount > 0
+                  ? 'border-rose-400 bg-rose-50 text-rose-900 ring-2 ring-rose-200 animate-pulse'
+                  : !isOnline
+                  ? 'border-amber-300 bg-amber-50 text-amber-900 animate-pulse'
                   : pendingSyncCount > 0
                   ? 'border-amber-300 bg-amber-50 text-amber-900'
                   : 'border-emerald-200 bg-emerald-50 text-emerald-800'
               }`}
-              title="Network & Offline Sync Status"
+              title={
+                failedSyncCount > 0
+                  ? `Sync Error: ${failedSyncCount} offline transaction(s) failed to sync to Supabase. Click to inspect details.`
+                  : !isOnline
+                  ? 'Network Offline: transactions will queue locally'
+                  : pendingSyncCount > 0
+                  ? `${pendingSyncCount} transactions queued for background sync`
+                  : 'Network Online: Supabase database sync operational'
+              }
             >
-              {isOnline ? (
+              {failedSyncCount > 0 ? (
+                <AlertTriangle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+              ) : isOnline ? (
                 <Wifi className="h-3.5 w-3.5 text-deep-teal shrink-0" />
               ) : (
-                <WifiOff className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                <WifiOff className="h-3.5 w-3.5 text-amber-600 shrink-0" />
               )}
               <span className="hidden sm:inline">
-                {!isOnline ? 'Offline' : pendingSyncCount > 0 ? `Sync (${pendingSyncCount})` : 'Online'}
+                {failedSyncCount > 0
+                  ? `Sync Error (${failedSyncCount})`
+                  : !isOnline
+                  ? 'Offline'
+                  : pendingSyncCount > 0
+                  ? `Syncing (${pendingSyncCount})`
+                  : 'Online'}
               </span>
-              {pendingSyncCount > 0 && (
+              {failedSyncCount > 0 ? (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-black text-white">
+                  {failedSyncCount}
+                </span>
+              ) : pendingSyncCount > 0 ? (
                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[9px] font-black text-deep-green">
                   {pendingSyncCount}
                 </span>
-              )}
+              ) : null}
             </button>
           )}
 

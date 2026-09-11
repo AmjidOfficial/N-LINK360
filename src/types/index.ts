@@ -363,9 +363,21 @@ export interface Customer {
   town?: string;
   route?: string;
   assignedEmployee?: string;
+  assignedOfficerId?: string;
+  assignedOfficerName?: string;
+  assignedTsm?: string;
+  createdByUserId?: string;
+  createdBy?: string;
+  creatorEmail?: string;
+  registeredBy?: string;
+  submittedById?: string;
+  submittedBy?: string;
+  salesUserId?: string;
+  salesUserName?: string;
+  tags?: string[];
   priceTier?: 'STANDARD' | 'WHOLESALE' | 'DISTRIBUTOR' | 'SPECIAL' | string;
   approvalStatus?: RegistrationRequestStatus | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
-  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'NORMAL' | 'PENDING_APPROVAL';
 }
 
 export interface CustomerVisit {

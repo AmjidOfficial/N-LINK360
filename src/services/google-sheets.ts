@@ -38,7 +38,9 @@ export interface GoogleSheetsSyncPayload {
     name: string;
     type: string;
     town: string;
-    region: string;
+    route?: string;
+    region?: string;
+    contactPerson?: string;
     phone: string;
     creditLimit: number;
     currentBalance: number;
@@ -110,10 +112,11 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
       name: c.companyName || c.businessName || 'Customer',
       type: c.type || c.channelType || 'DEALER',
       town: c.city || c.town || '',
-      region: c.region || '',
-      phone: c.phone || '',
-      creditLimit: c.creditLimit || 0,
-      currentBalance: c.currentBalance || 0,
+      route: c.route || c.territory || '',
+      contactPerson: c.contactPerson || c.ownerName || '',
+      phone: c.phone || c.contactNumber || c.mobile || '',
+      creditLimit: Number(c.creditLimit || 0),
+      currentBalance: Number(c.currentBalance || 0),
       status: c.isActive ? 'ACTIVE' : 'INACTIVE',
     })),
     salesOrders: appData.salesOrders.map((o: any) => {
@@ -220,9 +223,9 @@ export function exportGoogleSheetsCsv(appData: SupabaseAppData): void {
 
   // Section 1: Customers
   csvContent += '=== CUSTOMERS & DEALERS ===\n';
-  csvContent += 'Code,Business Name,Type,Town,Region,Phone,Credit Limit (PKR),Current Balance (PKR),Status\n';
+  csvContent += 'Customer Code,Business Name,Type,Town / City,Route,Contact Person,Phone,Credit Limit (PKR),Current Balance (PKR),Status,Last Synced\n';
   payload.customers.forEach((c) => {
-    csvContent += `"${c.code}","${c.name}","${c.type}","${c.town}","${c.region}","${c.phone}",${c.creditLimit},${c.currentBalance},"${c.status}"\n`;
+    csvContent += `"${c.code}","${c.name}","${c.type}","${c.town}","${c.route}","${c.contactPerson}","${c.phone}",${c.creditLimit},${c.currentBalance},"${c.status}","${payload.timestamp}"\n`;
   });
 
   csvContent += '\n=== SALES ORDERS ===\n';
@@ -269,17 +272,17 @@ function doPost(e) {
     // 1. Sync Customers Sheet
     var custSheet = sheet.getSheetByName("Customers") || sheet.insertSheet("Customers");
     if (custSheet.getLastRow() === 0) {
-      custSheet.appendRow(["Code", "Business Name", "Type", "Town", "Region", "Phone", "Credit Limit (PKR)", "Outstanding Balance (PKR)", "Status", "Last Synced"]);
+      custSheet.appendRow(["Customer Code", "Business Name", "Type", "Town / City", "Route", "Contact Person", "Phone", "Credit Limit (PKR)", "Current Balance (PKR)", "Status", "Last Synced"]);
     }
     if (payload.customers && payload.customers.length > 0) {
       // Clear previous data rows (keep header)
       if (custSheet.getLastRow() > 1) {
-        custSheet.getRange(2, 1, custSheet.getLastRow() - 1, 10).clearContent();
+        custSheet.getRange(2, 1, custSheet.getLastRow() - 1, 11).clearContent();
       }
       var custRows = payload.customers.map(function(c) {
-        return [c.code, c.name, c.type, c.town, c.region, c.phone, c.creditLimit, c.currentBalance, c.status, payload.timestamp];
+        return [c.code, c.name, c.type, c.town, c.route || c.region || '', c.contactPerson || '', c.phone || '', c.creditLimit, c.currentBalance, c.status, payload.timestamp];
       });
-      custSheet.getRange(2, 1, custRows.length, 10).setValues(custRows);
+      custSheet.getRange(2, 1, custRows.length, 11).setValues(custRows);
     }
 
     // 2. Sync Sales Orders Sheet

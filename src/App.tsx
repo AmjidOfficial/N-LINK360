@@ -6,6 +6,7 @@ import {
 } from './services/supabase-data';
 import {
   User,
+  Customer,
   AuditLog,
 } from './types';
 import { ImportEntityType } from './services/importEngine';
@@ -30,9 +31,10 @@ import { getCurrentUser, signOut } from './services/auth';
 import { isSupabaseConfigured } from './lib/supabase';
 import { isAdminUser, isFieldForceUser, isMultiRoleEligibleEmail } from './services/production-users';
 import { SalesRecoveryApp } from './components/SalesRecoveryApp';
-import { registerCustomerPending } from './services/supabase-transactions';
+import { registerCustomerPending, approveCustomerRegistration, rejectCustomerRegistration } from './services/supabase-transactions';
 import { GoogleSheetsIntegrationModal } from './components/GoogleSheetsIntegrationModal';
 import { FinancialSyncToast } from './components/FinancialSyncToast';
+import { ToastContainer, toast } from './components/ui/ToastNotification';
 import {
   recordSessionStart,
   checkMidnightCutoff,
@@ -88,11 +90,21 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
   });
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
   const lastSyncTimestampRef = useRef<number>(Date.now());
+  const hasInitiallyLoadedRef = useRef<boolean>(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(() => new Date());
   const [pendingOfflineCount, setPendingOfflineCount] = useState(0);
+  const [failedOfflineCount, setFailedOfflineCount] = useState(0);
+  const [syncModalInitialTab, setSyncModalInitialTab] = useState<'FAILED' | 'PENDING' | 'HISTORY' | 'ALL'>('FAILED');
+
+  const handleOpenOfflineSync = useCallback((tab: 'FAILED' | 'PENDING' | 'HISTORY' | 'ALL' = 'FAILED') => {
+    setSyncModalInitialTab(tab);
+    setIsOfflineSyncOpen(true);
+  }, []);
 
   const refresh = useCallback(async (isBackground = false) => {
-    if (!isBackground) {
+    // Only show full-screen blocking loader on initial cold start before any data has loaded
+    const shouldBlock = !hasInitiallyLoadedRef.current && !isBackground;
+    if (shouldBlock) {
       setLoading(true);
     } else {
       setIsBackgroundSyncing(true);
@@ -100,14 +112,26 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
     setError('');
     try {
       const freshData = await loadSupabaseAppData(currentUser);
-      setData(freshData);
+      setData((prev) => {
+        // Merge & preserve any locally submitted pending customers that might not yet be returned by Supabase
+        const pendingLocal = prev.customers.filter(
+          (c) =>
+            (c.approvalStatus === 'PENDING_APPROVAL' || c.status === 'PENDING_APPROVAL' || !c.isActive) &&
+            !freshData.customers.some((fc) => fc.id === c.id || (fc.customerCode && fc.customerCode === c.customerCode))
+        );
+        return {
+          ...freshData,
+          customers: [...pendingLocal, ...freshData.customers],
+        };
+      });
+      hasInitiallyLoadedRef.current = true;
 
       const now = Date.now();
       const elapsed = Math.max(1, Math.round((now - lastSyncTimestampRef.current) / 1000));
       lastSyncTimestampRef.current = now;
       setLastRefreshTime(new Date());
 
-      if (isBackground) {
+      if (isBackground || hasInitiallyLoadedRef.current) {
         const totalEntities =
           freshData.customers.length +
           freshData.invoices.length +
@@ -122,13 +146,13 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
         });
       }
     } catch (err) {
-      if (!isBackground) {
+      if (shouldBlock) {
         setError(err instanceof Error ? err.message : 'Unable to load N-LINK data.');
       } else {
         console.warn('Background sync note:', err);
       }
     } finally {
-      if (!isBackground) {
+      if (shouldBlock) {
         setLoading(false);
       } else {
         setIsBackgroundSyncing(false);
@@ -156,10 +180,10 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
     // Listen for queue updates
     const unsubscribeQueue = syncManager.subscribeQueue((queue) => {
       if (isMounted) {
-        const count = queue.filter(
-          (item) => item.status === 'PENDING_SYNC' || item.status === 'FAILED'
-        ).length;
-        setPendingOfflineCount(count);
+        const pending = (queue || []).filter((item) => item.status === 'PENDING_SYNC').length;
+        const failed = (queue || []).filter((item) => item.status === 'FAILED').length;
+        setPendingOfflineCount(pending);
+        setFailedOfflineCount(failed);
       }
     });
 
@@ -169,6 +193,12 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
       if (result.syncedCount > 0 || result.failedCount > 0) {
         // Automatically refresh app data so newly synced records reflect in tables and metrics
         void refresh(true);
+        if (result.failedCount > 0) {
+          toast.error(
+            'Background Sync Failure',
+            `${result.failedCount} transaction(s) failed to sync to Supabase. Click Offline Sync to view error details.`
+          );
+        }
         setToastInfo({
           isVisible: true,
           elapsedSeconds: 1,
@@ -317,7 +347,7 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
           lastRefreshTime={lastRefreshTime}
           onLogout={onSignOut}
           onRefresh={refresh}
-          onOpenOfflineSync={() => setIsOfflineSyncOpen(true)}
+          onOpenOfflineSync={handleOpenOfflineSync}
           pendingOfflineCount={pendingOfflineCount}
           onBookOrder={async (order) => {
             if (!navigator.onLine) {
@@ -328,6 +358,10 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
               });
               const count = syncManager.getPendingCount();
               setPendingOfflineCount(count);
+              toast.info(
+                'Order Saved Offline',
+                `Order #${order.orderNumber || order.id} queued for background sync.`
+              );
               setToastInfo({
                 isVisible: true,
                 elapsedSeconds: 1,
@@ -339,8 +373,12 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
             try {
               const { submitOrder } = await import('./services/supabase-transactions');
               await submitOrder(order as any);
-              await refresh();
-            } catch (err) {
+              await refresh(true);
+              toast.success(
+                'Order Placed Successfully',
+                `Sales Order #${order.orderNumber || order.id} saved to database.`
+              );
+            } catch (err: any) {
               console.warn('Online submit failed, queueing offline transaction:', err);
               syncManager.enqueue('ORDERS', 'CREATE', {
                 order,
@@ -349,6 +387,10 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
               });
               const count = syncManager.getPendingCount();
               setPendingOfflineCount(count);
+              toast.warning(
+                'Order Queued Offline',
+                'Network deferred: order stored locally for automated sync.'
+              );
               setToastInfo({
                 isVisible: true,
                 elapsedSeconds: 1,
@@ -362,6 +404,10 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
               syncManager.enqueue('RECOVERY', 'CREATE', rec as any);
               const count = syncManager.getPendingCount();
               setPendingOfflineCount(count);
+              toast.info(
+                'Payment Saved Offline',
+                `Payment of Rs. ${Number(rec.amount || 0).toLocaleString()} queued for background sync.`
+              );
               setToastInfo({
                 isVisible: true,
                 elapsedSeconds: 1,
@@ -373,12 +419,20 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
             try {
               const { recordRecovery } = await import('./services/supabase-transactions');
               await recordRecovery(rec);
-              await refresh();
-            } catch (err) {
+              await refresh(true);
+              toast.success(
+                'Recovery Recorded Successfully',
+                `Payment of Rs. ${Number(rec.amount || 0).toLocaleString()} recorded and verified.`
+              );
+            } catch (err: any) {
               console.warn('Online recovery failed, queueing offline transaction:', err);
               syncManager.enqueue('RECOVERY', 'CREATE', rec as any);
               const count = syncManager.getPendingCount();
               setPendingOfflineCount(count);
+              toast.warning(
+                'Payment Queued Offline',
+                'Network deferred: recovery payment stored locally for sync.'
+              );
               setToastInfo({
                 isVisible: true,
                 elapsedSeconds: 1,
@@ -392,6 +446,7 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
               syncManager.enqueue('VISITS', 'CREATE', visit as any);
               const count = syncManager.getPendingCount();
               setPendingOfflineCount(count);
+              toast.info('Visit Queued Offline', 'Visit report queued for sync.');
               setToastInfo({
                 isVisible: true,
                 elapsedSeconds: 1,
@@ -403,12 +458,14 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
             try {
               const { logVisit } = await import('./services/supabase-transactions');
               await logVisit(visit);
-              await refresh();
-            } catch (err) {
+              await refresh(true);
+              toast.success('Customer Visit Logged', `Field visit report saved.`);
+            } catch (err: any) {
               console.warn('Online visit failed, queueing offline transaction:', err);
               syncManager.enqueue('VISITS', 'CREATE', visit as any);
               const count = syncManager.getPendingCount();
               setPendingOfflineCount(count);
+              toast.warning('Visit Queued Offline', 'Visit stored locally for sync.');
               setToastInfo({
                 isVisible: true,
                 elapsedSeconds: 1,
@@ -418,6 +475,13 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
             }
           }}
           onSubmitRegistration={async (reg) => {
+            const isAutoApproved =
+              reg.approvalStatus === 'APPROVED' ||
+              reg.isActive === true ||
+              isAdminUser(currentUser) ||
+              (currentUser.role as string) === 'SUPER_ADMIN' ||
+              (currentUser.role as string) === 'HEAD_OFFICE';
+
             const custCode = reg.customerCode || `CUST-REG-${Math.floor(100000 + Math.random() * 900000)}`;
             const newCustObj: any = {
               id: reg.id || `cust-reg-${Date.now()}`,
@@ -426,23 +490,36 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
               name: reg.businessName || reg.name || reg.companyName || 'New Commercial Partner',
               customerType: reg.customerType || reg.type || 'DEALER',
               type: reg.customerType || reg.type || 'DEALER',
-              region: reg.region || 'Punjab Central',
+              region: reg.region || (currentUser as any).region || 'Punjab Central',
               area: reg.area || '',
               town: reg.town || reg.city || '',
               city: reg.town || reg.city || '',
               territory: reg.territory || reg.region || '',
               address: reg.address || '',
-              contactPerson: reg.ownerName || reg.contactPerson || '',
-              ownerName: reg.ownerName || reg.contactPerson || '',
+              contactPerson: reg.contactPerson || reg.ownerName || reg.name || '',
+              ownerName: reg.ownerName || reg.contactPerson || reg.name || '',
               phone: reg.contactNumber || reg.phone || reg.mobile || '',
               mobile: reg.contactNumber || reg.phone || reg.mobile || '',
               creditLimit: Number(reg.proposedCreditLimit ?? reg.creditLimit) || 1000000,
               creditDays: Number(reg.proposedCreditDays ?? reg.creditDays) || 30,
-              currentBalance: 0,
-              openingBalance: 0,
-              isActive: reg.isActive ?? false,
-              approvalStatus: reg.approvalStatus || 'PENDING_APPROVAL',
-              status: reg.status || 'PENDING_APPROVAL',
+              currentBalance: Number(reg.proposedOpeningBalance ?? reg.openingBalance) || 0,
+              openingBalance: Number(reg.proposedOpeningBalance ?? reg.openingBalance) || 0,
+              isActive: isAutoApproved ? true : (reg.isActive ?? false),
+              approvalStatus: isAutoApproved ? 'APPROVED' : (reg.approvalStatus || 'PENDING_APPROVAL'),
+              status: isAutoApproved ? 'NORMAL' : (reg.status || 'PENDING_APPROVAL'),
+              createdByUserId: currentUser.id,
+              createdBy: currentUser.id,
+              creatorEmail: currentUser.email,
+              registeredBy: currentUser.email,
+              submittedById: currentUser.id,
+              submittedBy: currentUser.fullName,
+              salesUserId: currentUser.id,
+              salesUserName: currentUser.fullName,
+              assignedOfficerId: reg.assignedOfficerId || currentUser.id,
+              assignedOfficerName: reg.assignedOfficerName || currentUser.fullName,
+              assignedTsm: reg.assignedTsm || currentUser.fullName,
+              tags: reg.tags || [],
+              cnic: reg.cnic || '',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             };
@@ -478,8 +555,12 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
               return;
             }
             try {
-              await registerCustomerPending(reg);
-              await refresh();
+              if (isAutoApproved) {
+                await approveCustomerRegistration(newCustObj.id, currentUser.fullName);
+              } else {
+                await registerCustomerPending(reg);
+              }
+              await refresh(true);
             } catch (err) {
               console.warn('Online registration note, queueing offline transaction:', err);
               syncManager.enqueue('CUSTOMERS', 'CREATE', reg as any);
@@ -504,7 +585,11 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
         <OfflineSyncModal
           isOpen={isOfflineSyncOpen}
           onClose={() => setIsOfflineSyncOpen(false)}
+          initialTab={syncModalInitialTab}
         />
+
+        {/* Universal Action Feedback Toast Container */}
+        <ToastContainer />
 
         {/* Operational / Financial Toast for Field Force */}
         <FinancialSyncToast
@@ -520,6 +605,121 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
       </div>
     );
   }
+
+  const handleCustomerAdd = async (newCust: any) => {
+    const isAutoApproved =
+      newCust.approvalStatus === 'APPROVED' ||
+      newCust.isActive === true ||
+      isAdminUser(currentUser) ||
+      (currentUser.role as string) === 'SUPER_ADMIN' ||
+      (currentUser.role as string) === 'HEAD_OFFICE';
+
+    const formatted: Customer = {
+      id: newCust.id || `cust-${Date.now()}`,
+      customerCode: newCust.customerCode || `CUST-${Math.floor(100000 + Math.random() * 900000)}`,
+      companyName: newCust.businessName || newCust.companyName || newCust.name || 'New Commercial Partner',
+      contactPerson: newCust.contactPerson || newCust.ownerName || '',
+      phone: newCust.phone || newCust.mobile || newCust.contactNumber || '',
+      email: newCust.email || `${(newCust.customerCode || 'cust').toLowerCase()}@nationallights.com`,
+      type: (newCust.customerType || newCust.type || 'DEALER') as any,
+      address: newCust.address || '',
+      city: newCust.town || newCust.city || 'Lahore',
+      town: newCust.town || newCust.city || 'Lahore',
+      region: newCust.region || 'Punjab Central',
+      area: newCust.area || '',
+      territory: newCust.territory || newCust.beat || '',
+      priceTier: newCust.priceTier || 'TIER_1',
+      creditLimit: Number(newCust.proposedCreditLimit ?? newCust.creditLimit) || 1000000,
+      creditDays: Number(newCust.proposedCreditDays ?? newCust.creditDays) || 30,
+      openingBalance: Number(newCust.proposedOpeningBalance ?? newCust.openingBalance) || 0,
+      currentBalance: Number(newCust.currentBalance) || 0,
+      isCreditLocked: false,
+      isActive: isAutoApproved ? true : (newCust.isActive ?? false),
+      approvalStatus: isAutoApproved ? 'APPROVED' : (newCust.approvalStatus || 'PENDING_APPROVAL'),
+      cnic: newCust.cnic || '',
+      status: isAutoApproved ? 'ACTIVE' : 'INACTIVE',
+      createdAt: newCust.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setData((prev) => ({
+      ...prev,
+      customers: [formatted, ...prev.customers.filter((c) => c.id !== formatted.id)],
+    }));
+
+    try {
+      const sheetToken = localStorage.getItem('nlink_live_sheets_token');
+      if (sheetToken) {
+        const sheetId = localStorage.getItem('nlink_active_google_sheet_id') || '1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo';
+        const { pushCustomerToGoogleSheet } = await import('./services/googleSheetsLiveService');
+        await pushCustomerToGoogleSheet(sheetId, formatted, sheetToken);
+      }
+    } catch (sheetErr) {
+      console.warn('Google Sheets dealer push note:', sheetErr);
+    }
+
+    if (!navigator.onLine) {
+      syncManager.enqueue('CUSTOMERS', 'CREATE', formatted as any);
+      setPendingOfflineCount(syncManager.getPendingCount());
+      return;
+    }
+
+    try {
+      if (isAutoApproved) {
+        await approveCustomerRegistration(formatted.id, currentUser.fullName);
+      } else {
+        await registerCustomerPending(formatted as any);
+      }
+      await refresh(true);
+    } catch (err) {
+      console.warn('Online dealer creation note:', err);
+      syncManager.enqueue('CUSTOMERS', 'CREATE', formatted as any);
+      setPendingOfflineCount(syncManager.getPendingCount());
+    }
+  };
+
+  const handleCustomerUpdate = async (updatedCust: any) => {
+    setData((prev) => ({
+      ...prev,
+      customers: prev.customers.map((c) => (c.id === updatedCust.id ? { ...c, ...updatedCust } : c)),
+    }));
+    try {
+      await registerCustomerPending(updatedCust as any);
+      await refresh(true);
+    } catch (err) {
+      console.warn('Customer update note:', err);
+    }
+  };
+
+  const handleCustomerApprove = async (id: string, approverName?: string) => {
+    setData((prev) => ({
+      ...prev,
+      customers: prev.customers.map((c) =>
+        c.id === id ? { ...c, isActive: true, approvalStatus: 'APPROVED', status: 'NORMAL' } : c
+      ),
+    }));
+    try {
+      await approveCustomerRegistration(id, approverName || currentUser.fullName);
+      await refresh(true);
+    } catch (err) {
+      console.warn('Customer approval note:', err);
+    }
+  };
+
+  const handleCustomerReject = async (id: string, reason?: string) => {
+    setData((prev) => ({
+      ...prev,
+      customers: prev.customers.map((c) =>
+        c.id === id ? { ...c, isActive: false, approvalStatus: 'REJECTED', status: 'REJECTED' } : c
+      ),
+    }));
+    try {
+      await rejectCustomerRegistration(id, reason || 'Registration request declined');
+      await refresh(true);
+    } catch (err) {
+      console.warn('Customer rejection note:', err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#E8ECF2] text-slate-800 font-sans antialiased selection:bg-teal-200 selection:text-teal-900 flex">
@@ -554,6 +754,9 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
           setSearchQuery={setSearchQuery}
           isSidebarCollapsed={isSidebarCollapsed}
           setIsSidebarCollapsed={setIsSidebarCollapsed}
+          onOpenOfflineSync={handleOpenOfflineSync}
+          pendingOfflineCount={pendingOfflineCount}
+          failedOfflineCount={failedOfflineCount}
           onToggleViewMode={
             isMultiRoleEligibleEmail(currentUser.email)
               ? () => setViewMode('MOBILE')
@@ -581,6 +784,11 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
               setActiveSubTab={setActiveOpTab}
               currentUser={currentUser}
               searchQuery={searchQuery}
+              customers={data.customers}
+              onAddCustomer={handleCustomerAdd}
+              onUpdateCustomer={handleCustomerUpdate}
+              onApproveCustomer={handleCustomerApprove}
+              onRejectCustomer={handleCustomerReject}
             />
           )}
 
@@ -634,6 +842,7 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
       <OfflineSyncModal
         isOpen={isOfflineSyncOpen}
         onClose={() => setIsOfflineSyncOpen(false)}
+        initialTab={syncModalInitialTab}
       />
 
       <GoogleSheetsIntegrationModal
@@ -641,6 +850,9 @@ function AuthenticatedApp({ currentUser, onSignOut }: { currentUser: User; onSig
         onClose={() => setIsGoogleSheetsOpen(false)}
         appData={data}
       />
+
+      {/* Universal Action Feedback Toast Container */}
+      <ToastContainer />
 
       {/* Background Financial Sync Notification Toast */}
       <FinancialSyncToast

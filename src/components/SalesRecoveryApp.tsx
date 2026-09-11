@@ -8,7 +8,7 @@
  * 3. DASHBOARD (Role-scoped Target vs Achievement, TODAY/MTD/YTD)
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Clock,
   Store,
@@ -48,8 +48,11 @@ import {
   CheckSquare,
   PackageCheck,
   FileSpreadsheet,
-  X
+  Download,
+  X,
+  AlertOctagon,
 } from 'lucide-react';
+import { syncManager, OfflineQueueItem } from '../services/offlineSyncEngine';
 import { PrintInvoiceModal } from './PrintInvoiceModal';
 import { DynamicDealerFormModal } from './DynamicDealerFormModal';
 import { OrderPreviewDrawer } from './OrderPreviewDrawer';
@@ -57,6 +60,8 @@ import { NearbyDealersMap } from './NearbyDealersMap';
 import { DealerHeatmap } from './DealerHeatmap';
 import { GoogleSheetSyncModal } from './GoogleSheetSyncModal';
 import { MtdAchievementGauge } from './MtdAchievementGauge';
+import { DailySummaryCard } from './DailySummaryCard';
+import { toast } from './ui/ToastNotification';
 import { getAccessToken } from '../services/googleAuth';
 import { isAuthorizedApproverEmail } from '../services/production-users';
 import {
@@ -104,7 +109,7 @@ interface SalesRecoveryAppProps {
   onSubmitRegistration?: (reg: any) => void;
   onRefresh?: () => Promise<void> | void;
   onToggleViewMode?: () => void;
-  onOpenOfflineSync?: () => void;
+  onOpenOfflineSync?: (tab?: 'FAILED' | 'PENDING' | 'HISTORY' | 'ALL') => void;
   pendingOfflineCount?: number;
 }
 
@@ -129,14 +134,99 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   pendingOfflineCount = 0,
 }) => {
   // -------------------------------------------------------------
+  // Offline Sync Failure Indicator & Real-Time Queue Monitor
+  // -------------------------------------------------------------
+  const [failedOfflineCount, setFailedOfflineCount] = useState<number>(0);
+  const [latestFailedItem, setLatestFailedItem] = useState<OfflineQueueItem | null>(null);
+
+  useEffect(() => {
+    const unsubQueue = syncManager.subscribeQueue((q) => {
+      const failed = (q || []).filter((i) => i.status === 'FAILED');
+      setFailedOfflineCount(failed.length);
+      if (failed.length > 0) {
+        const sorted = [...failed].sort((a, b) =>
+          (b.lastAttemptAt || b.createdAt).localeCompare(a.lastAttemptAt || a.createdAt)
+        );
+        setLatestFailedItem(sorted[0]);
+      } else {
+        setLatestFailedItem(null);
+      }
+    });
+
+    return () => {
+      unsubQueue();
+    };
+  }, []);
+
+  // -------------------------------------------------------------
   // 3 Primary Navigation Tabs: 'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD'
   // -------------------------------------------------------------
-  const [activeTab, setActiveTab] = useState<'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD'>('ATTENDANCE');
+  const [activeTab, setActiveTabState] = useState<'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD'>(() => {
+    try {
+      const saved = localStorage.getItem('nlink_mobile_active_tab');
+      if (saved === 'ATTENDANCE' || saved === 'DISTRIBUTORS' || saved === 'DASHBOARD') {
+        return saved;
+      }
+    } catch {}
+    return 'ATTENDANCE';
+  });
+
+  const setActiveTab = useCallback((tab: 'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD') => {
+    setActiveTabState(tab);
+    try {
+      localStorage.setItem('nlink_mobile_active_tab', tab);
+    } catch {}
+  }, []);
 
   // Dealer Registration Modal State (Field Force Onboarding to Pending Queue)
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState<string | null>(null);
   const [showGoogleSheetsModal, setShowGoogleSheetsModal] = useState(false);
+  const [isAutoDownloadPdf, setIsAutoDownloadPdf] = useState(false);
+
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const dailySummaryData = useMemo(() => {
+    const todayOrders = salesOrders.filter((o) => {
+      const d = (o.createdAt || o.orderDate || '').split('T')[0];
+      return d === todayStr && o.status !== 'REJECTED' && o.status !== 'CANCELLED';
+    });
+    const todaySalesVal = todayOrders.reduce((sum, o) => sum + Number((o as any).totalAmount || o.requestedAmount || o.netAmount || 0), 0);
+
+    const todayRecs = recoveries.filter((r) => {
+      const d = (r.createdAt || r.paymentDate || '').split('T')[0];
+      return d === todayStr && r.status !== 'REJECTED';
+    });
+    const todayRecoveryVal = todayRecs.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+
+    const todayVisits = (visits || []).filter((v) => {
+      const d = (v.createdAt || v.checkInTime || v.time || v.date || '').split('T')[0];
+      return d === todayStr;
+    });
+
+    const productiveCount = todayVisits.filter((v) => {
+      if (v.isProductive || v.hasOrder || v.hasRecovery) return true;
+      const purpose = (v.visitPurpose || v.purpose || '').toUpperCase();
+      if (purpose.includes('ORDER') || purpose.includes('RECOVERY') || purpose.includes('COLLECTION')) return true;
+      const custId = v.customerId;
+      const hasOrderToday = todayOrders.some((o) => o.customerId === custId);
+      const hasRecoveryToday = todayRecs.some((r) => r.customerId === custId);
+      return hasOrderToday || hasRecoveryToday;
+    }).length;
+
+    const totalVisitsCount = todayVisits.length;
+    const rate = totalVisitsCount > 0 ? Math.round((productiveCount / totalVisitsCount) * 100) : (todayOrders.length > 0 || todayRecs.length > 0 ? 100 : 0);
+
+    return {
+      todaySalesVal,
+      todayOrdersCount: todayOrders.length,
+      todayRecoveryVal,
+      todayRecoveriesCount: todayRecs.length,
+      totalVisitsCount,
+      productiveCount,
+      rate,
+    };
+  }, [salesOrders, recoveries, visits, todayStr]);
 
   const appDataForGoogleSheet = useMemo(() => ({
     customers,
@@ -324,6 +414,10 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
       setGpsCapturing(false);
       setAttendanceMessage(`Check-in successful at ${timeStr} for ${selectedTown} (${method})!`);
+      toast.success(
+        'Attendance Check-In Logged',
+        `Shift started at ${selectedTown} (${timeStr}) via ${method}.`
+      );
 
       // Real-Time Google Sheet Mirror sync for Attendance
       try {
@@ -419,6 +513,10 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
       setGpsCapturing(false);
       setAttendanceMessage(`Check-out successful at ${timeStr}. Total Duty Duration: ${durationText}`);
+      toast.info(
+        'Shift Completed',
+        `Check-out logged at ${timeStr}. Total Duty: ${durationText}.`
+      );
     };
 
     if (navigator.geolocation) {
@@ -739,14 +837,26 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       // Authorized Executive Admins & Approvers see all pending approval records
       if (isApproverOrAdmin) return true;
 
-      // Field officers only see registration requests they created or are assigned to
+      // Field officers and managers see registration requests they created, submitted, or in their assigned region/town
       const isCreator =
         c.createdByUserId === currentUser.id ||
         (c as any).createdBy === currentUser.id ||
+        (c as any).submittedById === currentUser.id ||
+        (c as any).submittedBy === currentUser.fullName ||
+        (c as any).salesUserId === currentUser.id ||
+        (c as any).salesUserName === currentUser.fullName ||
         c.assignedOfficerId === currentUser.id ||
         (c as any).assignedTsm === currentUser.fullName ||
         (c as any).registeredBy === currentUser.email ||
-        (c as any).creatorEmail === currentUser.email;
+        (c as any).creatorEmail === currentUser.email ||
+        (currentUser.region && (
+          (c.region || '').toLowerCase().includes(currentUser.region.toLowerCase()) ||
+          currentUser.region.toLowerCase().includes((c.region || '').toLowerCase())
+        )) ||
+        (currentUser.town && (
+          (c.city || '').toLowerCase().includes(currentUser.town.toLowerCase()) ||
+          (c.town || '').toLowerCase().includes(currentUser.town.toLowerCase())
+        ));
 
       return Boolean(isCreator);
     });
@@ -1055,6 +1165,10 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       setShowOrderConfirmModal(false);
       setShowOrderPreviewDrawer(false);
       setOrderSuccessMessage(`Order #${newOrder.orderNumber} placed successfully for Rs. ${newOrder.totalAmount?.toLocaleString()}!`);
+      toast.success(
+        'Order Placed Successfully',
+        `Order #${newOrder.orderNumber} booked for Rs. ${newOrder.totalAmount?.toLocaleString()} (${newOrder.items?.length || 0} line items).`
+      );
       setTimeout(() => setOrderSuccessMessage(null), 5000);
     } finally {
       setOrderSubmitting(false);
@@ -1075,12 +1189,12 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     if (!activeCustomer) return;
     const amountNum = Number(recoveryAmount);
     if (!amountNum || amountNum <= 0) {
-      alert('Please enter a valid recovery amount.');
+      toast.warning('Invalid Amount', 'Please enter a valid recovery amount.');
       return;
     }
 
     if (recoveryMode !== 'CASH' && !recoveryInstrumentNo.trim()) {
-      alert('Please enter the Cheque Number or Transaction Reference ID.');
+      toast.warning('Reference Required', 'Please enter the Cheque Number or Transaction Reference ID.');
       return;
     }
 
@@ -1115,6 +1229,10 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       setRecoveryBank('');
       setRecoveryRemarks('');
       setRecoverySuccessMessage(`Recovery of Rs. ${amountNum.toLocaleString()} recorded successfully!`);
+      toast.success(
+        'Recovery Payment Recorded',
+        `Payment of Rs. ${amountNum.toLocaleString()} collected for ${activeCustomer.companyName} via ${recoveryMode}.`
+      );
       setTimeout(() => setRecoverySuccessMessage(null), 5000);
     } finally {
       setRecoverySubmitting(false);
@@ -1427,23 +1545,39 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             {/* Offline Sync Trigger Button & Network Status */}
             <button
               type="button"
-              onClick={onOpenOfflineSync}
+              onClick={() => onOpenOfflineSync?.(failedOfflineCount > 0 ? 'FAILED' : 'ALL')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
-                !isOnline || pendingOfflineCount > 0
+                failedOfflineCount > 0
+                  ? 'bg-rose-50 text-rose-900 border-rose-400 ring-2 ring-rose-300 shadow-sm animate-pulse font-black'
+                  : !isOnline || pendingOfflineCount > 0
                   ? 'bg-amber-50 text-amber-900 border-amber-300 ring-1 ring-amber-300 hover:bg-amber-100'
                   : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
               }`}
               title={
-                pendingOfflineCount > 0
+                failedOfflineCount > 0
+                  ? `Sync Error: ${failedOfflineCount} background sync attempt(s) failed to Supabase! Click to inspect errors and retry.`
+                  : pendingOfflineCount > 0
                   ? `${pendingOfflineCount} offline actions pending sync - click to inspect queue`
                   : isOnline
                   ? 'Network Connected - click to inspect offline sync status'
                   : 'Working Offline - click to inspect offline queue'
               }
             >
-              {isOnline ? <Wifi className="w-3 h-3 text-emerald-600" /> : <WifiOff className="w-3 h-3 text-amber-600" />}
-              <span>{isOnline ? 'Online' : 'Offline'}</span>
-              {pendingOfflineCount > 0 && (
+              {failedOfflineCount > 0 ? (
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+              ) : isOnline ? (
+                <Wifi className="w-3 h-3 text-emerald-600" />
+              ) : (
+                <WifiOff className="w-3 h-3 text-amber-600" />
+              )}
+              <span>
+                {failedOfflineCount > 0
+                  ? `${failedOfflineCount} Sync Failed`
+                  : isOnline
+                  ? 'Online'
+                  : 'Offline'}
+              </span>
+              {failedOfflineCount === 0 && pendingOfflineCount > 0 && (
                 <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-amber-600 text-white font-black text-[9px] animate-pulse">
                   {pendingOfflineCount} pending
                 </span>
@@ -1473,6 +1607,59 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
           </div>
         </div>
       </header>
+
+      {/* Persistent Visual Indicator & Detail Callout for Failed Background Sync Attempts */}
+      {failedOfflineCount > 0 && (
+        <div className="bg-rose-50 border-b-2 border-rose-300 px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs z-30 animate-fadeIn">
+          <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center shrink-0 border border-rose-300 mt-0.5 sm:mt-0">
+              <AlertOctagon className="w-4 h-4 text-rose-700 animate-pulse" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-extrabold text-rose-900 text-[13px]">
+                  Supabase Background Sync Failed
+                </span>
+                <span className="px-1.5 py-0.5 rounded-full bg-rose-600 text-white font-black text-[10px]">
+                  {failedOfflineCount} {failedOfflineCount === 1 ? 'transaction' : 'transactions'}
+                </span>
+                {latestFailedItem?.lastAttemptAt && (
+                  <span className="text-[11px] text-rose-700 font-semibold flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-rose-500" />
+                    Attempted at {new Date(latestFailedItem.lastAttemptAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                )}
+              </div>
+              {latestFailedItem?.errorMessage && (
+                <p className="text-[11px] text-rose-800 font-mono mt-0.5 truncate max-w-xl">
+                  <span className="font-bold text-rose-900">[{latestFailedItem.module} {latestFailedItem.action}]:</span> {latestFailedItem.errorMessage}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={() => onOpenOfflineSync?.('FAILED')}
+              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-95"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>View Error Details</span>
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                toast.info('Retrying background sync to Supabase...');
+                await syncManager.syncQueue();
+              }}
+              className="px-3 py-1.5 rounded-xl bg-white hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-95"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+              <span>Retry Now</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* MAIN CONTENT ROUTER (Strictly 3 Screens) */}
@@ -2969,14 +3156,40 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                                   </span>
                                 </td>
                                 <td className="px-3 py-2.5 text-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelectedInvoiceForPrint(inv)}
-                                    className="px-2 py-1 bg-slate-100 hover:bg-teal-50 text-teal-700 rounded-md font-bold text-[11px] cursor-pointer inline-flex items-center gap-1"
-                                  >
-                                    <Printer className="w-3 h-3" />
-                                    <span>Print</span>
-                                  </button>
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setIsAutoDownloadPdf(true);
+                                        setSelectedInvoiceForPrint(inv);
+                                        toast.info(
+                                          'Generating PDF Invoice',
+                                          `Preparing official tax invoice #${inv.invoiceNumber || inv.id}...`
+                                        );
+                                      }}
+                                      className="px-2 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-md font-bold text-[11px] cursor-pointer inline-flex items-center gap-1 shadow-2xs transition-all active:scale-95"
+                                      title="Download PDF invoice directly"
+                                    >
+                                      <Download className="w-3 h-3" />
+                                      <span>Download PDF</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setIsAutoDownloadPdf(false);
+                                        setSelectedInvoiceForPrint(inv);
+                                        toast.info(
+                                          'Opening Invoice Preview',
+                                          `Loading print preview for #${inv.invoiceNumber || inv.id}...`
+                                        );
+                                      }}
+                                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md font-bold text-[11px] cursor-pointer inline-flex items-center gap-1 border border-slate-200 transition-all active:scale-95"
+                                      title="View print-friendly invoice"
+                                    >
+                                      <Printer className="w-3 h-3" />
+                                      <span>Print</span>
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))
@@ -3061,7 +3274,20 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
         {/* SCREEN 3: DASHBOARD */}
         {/* ========================================================= */}
         {activeTab === 'DASHBOARD' && (
-          <div className="sra-dashboard">
+          <div className="sra-dashboard space-y-4">
+            {/* FIELD OFFICER DAILY SUMMARY CARD */}
+            <DailySummaryCard
+              currentUser={currentUser}
+              todaySales={dailySummaryData.todaySalesVal}
+              todayOrdersCount={dailySummaryData.todayOrdersCount}
+              todayRecovery={dailySummaryData.todayRecoveryVal}
+              todayRecoveriesCount={dailySummaryData.todayRecoveriesCount}
+              totalVisitsCount={dailySummaryData.totalVisitsCount}
+              productiveVisitsCount={dailySummaryData.productiveCount}
+              productivityRate={dailySummaryData.rate}
+              activeTown={selectedTown}
+            />
+
             {/* Header & Hierarchy Role Badge */}
             <div className="sra-card">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -3445,7 +3671,13 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
         <PrintInvoiceModal
           invoice={selectedInvoiceForPrint}
           customer={activeCustomer || undefined}
-          onClose={() => setSelectedInvoiceForPrint(null)}
+          skus={skus}
+          currentUser={currentUser}
+          autoDownloadPdfOnLoad={isAutoDownloadPdf}
+          onClose={() => {
+            setSelectedInvoiceForPrint(null);
+            setIsAutoDownloadPdf(false);
+          }}
         />
       )}
 
@@ -3464,6 +3696,13 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             if (onSubmitRegistration) {
               await onSubmitRegistration(dealerData);
             }
+            setActiveTab('DISTRIBUTORS');
+            setDealerCategoryFilter('PENDING');
+            setSelectedCustomerId(null);
+            toast.success(
+              'Dealer Registration Submitted',
+              `Application for "${dealerData.name}" submitted to Executive Approval Queue.`
+            );
             setRegistrationSuccessMsg(
               `Registration application for "${dealerData.name}" submitted to Head Office Approval Queue. It will appear in active dealers once approved.`
             );

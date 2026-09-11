@@ -30,25 +30,36 @@ import { Customer, Invoice, SKU, User } from '../types';
 import { numberToPakistaniRupeesWords } from '../services/security';
 
 interface PrintInvoiceModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   invoice: Invoice | null;
-  customer: Customer | null;
-  skus: SKU[];
+  customer?: Customer | null;
+  skus?: SKU[];
   currentUser?: User;
+  autoDownloadPdfOnLoad?: boolean;
 }
 
 export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   invoice,
-  customer,
-  skus,
+  customer = null,
+  skus = [],
   currentUser,
+  autoDownloadPdfOnLoad = false,
 }) => {
   type PaperFormat = 'A4_FORMAL' | 'A5_COMPACT' | 'LETTER_STANDARD' | 'THERMAL_80MM';
   const [printMode, setPrintMode] = useState<PaperFormat>('A5_COMPACT');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  React.useEffect(() => {
+    if (autoDownloadPdfOnLoad && invoice) {
+      const timer = setTimeout(() => {
+        downloadPdf();
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [autoDownloadPdfOnLoad, invoice]);
 
   // Live PDF preview customizations
   const [accentColor, setAccentColor] = useState<'EMERALD' | 'TEAL' | 'GOLD' | 'CHARCOAL'>('EMERALD');

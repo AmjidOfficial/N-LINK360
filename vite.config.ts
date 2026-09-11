@@ -6,7 +6,7 @@ import { defineConfig } from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
-    base: process.env.GITHUB_PAGES === 'true' ? '/N-LINK360/' : '/',
+    base: '/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -17,6 +17,11 @@ export default defineConfig(() => {
       host: '0.0.0.0',
       allowedHosts: true as const,
       hmr: process.env.DISABLE_HMR === 'true' ? false : true,
+    },
+    preview: {
+      port: 3000,
+      host: '0.0.0.0',
+      allowedHosts: true as const,
     },
   };
 });
