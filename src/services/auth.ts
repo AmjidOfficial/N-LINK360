@@ -12,14 +12,51 @@ function requireAuthBackend() {
   return supabase;
 }
 
-export async function signIn(email: string, password: string) {
+function productionRedirectUrl() {
+  const configured = (import.meta.env.VITE_AUTH_REDIRECT_URL || '').trim();
+  if (configured) return configured;
+  return window.location.origin;
+}
+
+/** Send a real passwordless email OTP. This never creates an unapproved N-LINK user. */
+export async function sendLoginCode(email: string) {
   const client = requireAuthBackend();
   const cleanEmail = email.trim().toLowerCase();
-  if (!cleanEmail || !password) throw new Error('Corporate email and password are required.');
-  const { data, error } = await client.auth.signInWithPassword({ email: cleanEmail, password });
+  if (!cleanEmail) throw new Error('Registered corporate email is required.');
+
+  const { error } = await client.auth.signInWithOtp({
+    email: cleanEmail,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: productionRedirectUrl(),
+    },
+  });
   if (error) throw error;
-  if (!data.session) throw new Error('Login succeeded but no authenticated session was returned.');
+}
+
+/** Verify the OTP and return the authenticated Supabase session. */
+export async function verifyLoginCode(email: string, token: string) {
+  const client = requireAuthBackend();
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanToken = token.trim();
+  if (!cleanEmail || !cleanToken) throw new Error('Email and verification code are required.');
+
+  const { data, error } = await client.auth.verifyOtp({
+    email: cleanEmail,
+    token: cleanToken,
+    type: 'email',
+  });
+  if (error) throw error;
+  if (!data.session) throw new Error('Verification succeeded but no authenticated session was returned.');
   return data.session;
+}
+
+/** Backward-compatible alias. New UI should use sendLoginCode + verifyLoginCode. */
+export async function signIn(email: string, password?: string) {
+  if (password) {
+    throw new Error('Password login has been disabled for N-LINK 360. Use the email verification code.');
+  }
+  return sendLoginCode(email);
 }
 
 export async function signOut() {
@@ -33,7 +70,7 @@ export async function getCurrentUser(): Promise<User | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   const cleanUserEmail = (user.email || '').trim().toLowerCase();
-  const { data: account, error: accountError } = await supabase.from('users').select('id,user_code,employee_id,status,last_login_at,created_at').eq('auth_user_id', user.id).maybeSingle();
+  const { data: account, error: accountError } = await supabase.from('users').select('id,user_code,employee_id,auth_user_id,username,status,last_login_at,created_at').eq('auth_user_id', user.id).maybeSingle();
   if (accountError) throw accountError;
   if (!account?.employee_id || !account.status) return null;
   const { data: employee, error: employeeError } = await supabase.from('employees').select('id,full_name,mobile,email,role_id,branch_id,status').eq('id', account.employee_id).maybeSingle();
@@ -49,7 +86,14 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function resetPassword(email: string): Promise<void> {
   const client = requireAuthBackend();
   const cleanEmail = email.trim().toLowerCase();
-  const { error } = await client.auth.resetPasswordForEmail(cleanEmail, { redirectTo: `${window.location.origin}/` });
+  if (!cleanEmail) throw new Error('Registered corporate email is required.');
+  const { error } = await client.auth.signInWithOtp({
+    email: cleanEmail,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: productionRedirectUrl(),
+    },
+  });
   if (error) throw error;
 }
 
