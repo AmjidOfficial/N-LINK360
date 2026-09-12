@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { LogIn, Mail, Lock, Eye, EyeOff, ShieldAlert, KeyRound, CheckCircle2 } from 'lucide-react';
-import { signIn, getCurrentUser, resetPassword } from '../services/auth';
+import { LogIn, Mail, ShieldAlert, CheckCircle2, RefreshCw } from 'lucide-react';
+import { getCurrentUser, sendLoginCode, verifyLoginCode } from '../services/auth';
 import type { User } from '../types';
 
 interface AuthGateProps {
@@ -13,41 +13,15 @@ interface AuthGateProps {
 
 export const AuthGate: React.FC<AuthGateProps> = ({ children, currentUser, onSignIn, midnightCutoffNotice }) => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [code, setCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [resetNotice, setResetNotice] = useState('');
-  const [resetMode, setResetMode] = useState(false);
+  const [notice, setNotice] = useState('');
 
   if (currentUser) return <>{children}</>;
 
-  const handleLogin = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail || !password) {
-      setError('Enter your registered corporate email and password.');
-      return;
-    }
-    setSubmitting(true);
-    setError('');
-    setResetNotice('');
-    try {
-      await signIn(cleanEmail, password);
-      const user = await getCurrentUser();
-      if (!user) throw new Error('Authentication succeeded but no active employee profile is linked to this account. Contact system administration.');
-      await onSignIn(user);
-    } catch (err: any) {
-      const message = String(err?.message || 'Authentication failed.');
-      if (/invalid login credentials|invalid credentials/i.test(message)) setError('Invalid email or password.');
-      else if (/email not confirmed/i.test(message)) setError('Your email address has not been confirmed.');
-      else setError(message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleReset = async (event: React.FormEvent) => {
+  const handleSendCode = async (event: React.FormEvent) => {
     event.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
@@ -56,42 +30,82 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children, currentUser, onSig
     }
     setSubmitting(true);
     setError('');
+    setNotice('');
     try {
-      await resetPassword(cleanEmail);
-      setResetNotice('If the account exists, password reset instructions have been sent to the registered email address.');
-      setResetMode(false);
+      await sendLoginCode(cleanEmail);
+      setCodeSent(true);
+      setNotice('A verification code has been sent to your registered email.');
     } catch (err: any) {
-      setError(err?.message || 'Unable to send password reset instructions.');
+      setError(err?.message || 'Unable to send the verification code.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifyCode = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+    if (!cleanEmail || !/^\d{6}$/.test(cleanCode)) {
+      setError('Enter the 6-digit verification code sent to your email.');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    setNotice('');
+    try {
+      await verifyLoginCode(cleanEmail, cleanCode);
+      const user = await getCurrentUser();
+      if (!user) throw new Error('Your email was verified, but no active N-LINK employee profile is linked to this account. Contact system administration.');
+      await onSignIn(user);
+    } catch (err: any) {
+      setError(err?.message || 'Verification failed.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#E8ECF2] flex items-center justify-center p-4">
-      <div className="w-full max-w-lg nm-flat p-6 sm:p-8 rounded-3xl border border-white space-y-6 shadow-2xl">
+    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md rounded-3xl bg-white border border-slate-200 shadow-xl p-6 sm:p-8 space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 mx-auto rounded-2xl nm-inset flex items-center justify-center text-teal-700 font-black text-2xl border border-white">NL</div>
-          <h1 className="text-2xl font-black text-slate-800">N-LINK <span className="text-teal-600">360</span></h1>
-          <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">National Lights Business Management Platform</p>
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-black text-2xl">NL</div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">N-LINK <span className="text-emerald-600">360</span></h1>
+          <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">National Lights Management Platform</p>
         </div>
 
-        {midnightCutoffNotice && <div className="p-3 rounded-2xl text-xs font-bold text-teal-900 bg-teal-50 border border-teal-200">{midnightCutoffNotice}</div>}
-        {resetNotice && <div className="p-3 rounded-2xl text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 flex gap-2"><CheckCircle2 className="w-4 h-4" />{resetNotice}</div>}
-        {error && <div className="nm-inset p-3 rounded-2xl text-xs font-bold text-rose-700 flex items-center gap-2 border border-rose-200"><ShieldAlert className="w-4 h-4" />{error}</div>}
+        {midnightCutoffNotice && <div className="p-3 rounded-2xl text-xs font-semibold text-emerald-900 bg-emerald-50 border border-emerald-200">{midnightCutoffNotice}</div>}
+        {notice && <div className="p-3 rounded-2xl text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 flex gap-2"><CheckCircle2 className="w-4 h-4 shrink-0" />{notice}</div>}
+        {error && <div className="p-3 rounded-2xl text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 flex items-center gap-2"><ShieldAlert className="w-4 h-4 shrink-0" />{error}</div>}
 
-        {resetMode ? (
-          <form onSubmit={handleReset} className="space-y-4">
-            <label className="block text-xs font-bold text-slate-700">Registered Personnel Email</label>
-            <div className="relative"><Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" /><input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="name@nationallights.com" className="w-full pl-10 pr-4 py-3 rounded-2xl nm-inset text-xs font-bold" /></div>
-            <button type="submit" disabled={submitting} className="w-full nm-btn-primary py-3.5 rounded-2xl text-xs font-black uppercase flex items-center justify-center gap-2"><KeyRound className="w-4 h-4" />{submitting ? 'Sending…' : 'Send Password Reset Link'}</button>
-            <button type="button" onClick={() => { setResetMode(false); setError(''); }} className="w-full text-xs font-bold text-teal-700 underline">Back to Sign In</button>
+        {!codeSent ? (
+          <form onSubmit={handleSendCode} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">Registered Email</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@nationallights.com" className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-medium outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+              </div>
+            </div>
+            <button type="submit" disabled={submitting} className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-colors">
+              <Mail className="w-4 h-4" />{submitting ? 'Sending Code…' : 'Send Login Code'}
+            </button>
+            <p className="text-center text-[11px] text-slate-500">No password is required. Use your registered N-LINK email.</p>
           </form>
         ) : (
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div><label className="block text-xs font-bold text-slate-700 mb-1.5">Corporate Personnel Email</label><div className="relative"><Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" /><input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="name@nationallights.com" className="w-full pl-10 pr-4 py-3 rounded-2xl nm-inset text-xs font-bold" /></div></div>
-            <div><div className="flex items-center justify-between mb-1.5"><label className="text-xs font-bold text-slate-700">Password</label><button type="button" onClick={() => { setResetMode(true); setError(''); }} className="text-[11px] font-bold text-teal-700">Forgot password?</button></div><div className="relative"><Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" /><input type={showPassword ? 'text' : 'password'} required value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your account password" className="w-full pl-10 pr-10 py-3 rounded-2xl nm-inset text-xs font-bold" /><button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3.5 top-3.5 text-slate-400" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button></div></div>
-            <button type="submit" disabled={submitting} className="w-full nm-btn-primary py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2"><LogIn className="w-4 h-4" />{submitting ? 'Authenticating…' : 'Sign In to N-LINK 360'}</button>
+          <form onSubmit={handleVerifyCode} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">6-Digit Verification Code</label>
+              <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" className="w-full py-4 rounded-2xl border border-slate-200 bg-slate-50 text-center text-2xl tracking-[0.45em] font-black outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+            </div>
+            <button type="submit" disabled={submitting} className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-colors">
+              <LogIn className="w-4 h-4" />{submitting ? 'Verifying…' : 'Verify & Enter N-LINK'}
+            </button>
+            <div className="flex gap-2">
+              <button type="button" disabled={submitting} onClick={() => { setCodeSent(false); setCode(''); setError(''); setNotice(''); }} className="flex-1 py-3 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600">Change Email</button>
+              <button type="button" disabled={submitting} onClick={handleSendCode as any} className="flex-1 py-3 rounded-2xl border border-emerald-200 text-xs font-bold text-emerald-700 flex items-center justify-center gap-1"><RefreshCw className="w-3.5 h-3.5" />Resend Code</button>
+            </div>
+            <p className="text-center text-[11px] text-slate-500">Code delivery requires the production email/SMTP configuration in Supabase.</p>
           </form>
         )}
       </div>
