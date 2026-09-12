@@ -4,9 +4,9 @@
  */
 
 import {
-  LayoutDashboard, Building2, Package, Store, Target, Users, GitFork,
+  LayoutDashboard, Package, Store, Target, Users, GitFork,
   CheckCircle2, BarChart3, Banknote, CreditCard, BookOpen, Warehouse,
-  Factory, FileSpreadsheet
+  Factory
 } from 'lucide-react';
 import { User } from '../types';
 import { isAdminUser } from '../services/production-users';
