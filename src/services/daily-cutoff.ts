@@ -7,6 +7,7 @@
  */
 
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { buildIsoTimestamp } from './attendance';
 
 const SESSION_DATE_KEY = 'nlink_session_date';
 const SESSION_LOGIN_TIME_KEY = 'nlink_session_login_time';
@@ -26,8 +27,7 @@ export interface MidnightCutoffStatus {
 
 function parseLocalAttendanceTimestamp(date: string, time?: string): string | null {
   if (!date || !time) return null;
-  const parsed = new Date(`${date} ${time}`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  return buildIsoTimestamp(date, time);
 }
 
 /** Persist the current device attendance cache into the authoritative Supabase table. */

@@ -5,7 +5,28 @@ import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(), 
+      tailwindcss(),
+      {
+        name: 'api-health-plugin',
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            if (req.url === '/api/health') {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ status: 'healthy', system: 'N-LINK 360' }));
+              return;
+            }
+            if (req.url === '/api/status') {
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ application: 'N-LINK 360', status: 'ready' }));
+              return;
+            }
+            next();
+          });
+        }
+      }
+    ],
     base: '/',
     resolve: {
       alias: {

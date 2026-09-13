@@ -262,8 +262,68 @@ export const WarehouseOperationsTab: React.FC<WarehouseOperationsTabProps> = ({
           />
         </div>
 
-        {/* Balance Grid Table */}
-        <div className="overflow-x-auto">
+        {/* Balance Grid Table / Cards */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filteredBalances.length === 0 ? (
+            <div className="p-6 text-center text-slate-400 text-xs font-bold">
+              No inventory balances found.
+            </div>
+          ) : (
+            filteredBalances.map(b => {
+              const floorOpening = Math.floor(b.opening / 8);
+              const floorIn = Math.floor(b.stockIn / 6);
+              const floorOut = Math.floor(b.stockOut / 6);
+              const floorTransfer = Math.floor(b.transfer / 5);
+              const floorAdjustment = Math.floor(b.adjustment / 10);
+              const floorCurrentBalance = floorOpening + floorIn - floorOut + floorTransfer + floorAdjustment;
+
+              const isFloor = stockViewType === 'FLOOR';
+              const currentBal = isFloor ? floorCurrentBalance : b.calculatedStock;
+
+              return (
+                <div key={b.skuId} className="p-3.5 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono text-indigo-700 font-bold text-xs bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                        {b.skuCode}
+                      </span>
+                      <h4 className="font-bold text-slate-800 text-xs mt-1">{b.name}</h4>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block">Current Stock</span>
+                      <span className="font-mono font-black text-sm text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg inline-block">
+                        {currentBal.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-[11px] bg-slate-50 p-2 rounded-xl text-center">
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block">Opening</span>
+                      <span className="font-mono text-slate-700 font-bold">
+                        {(isFloor ? floorOpening : b.opening).toLocaleString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-emerald-600 uppercase block">In (+)</span>
+                      <span className="font-mono text-emerald-700 font-bold">
+                        +{(isFloor ? floorIn : b.stockIn).toLocaleString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-rose-600 uppercase block">Out (-)</span>
+                      <span className="font-mono text-rose-700 font-bold">
+                        -{(isFloor ? floorOut : b.stockOut).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-bg-secondary text-slate-600 font-bold border-b">
               {stockViewType === 'WAREHOUSE' ? (
@@ -367,7 +427,55 @@ export const WarehouseOperationsTab: React.FC<WarehouseOperationsTabProps> = ({
           <p className="text-xs text-slate-500">Comprehensive, unalterable physical transactions list across the N-LINK 360 ecosystem.</p>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* MOBILE TRANSACTIONS LIST */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {inventoryTransactions.slice(0, 15).length === 0 ? (
+            <div className="p-6 text-center text-slate-400 text-xs font-bold">
+              No transactions recorded yet.
+            </div>
+          ) : (
+            inventoryTransactions.slice(0, 15).map(tx => {
+              const sku = skus.find(s => s.id === tx.skuId);
+              const isDeduction = [
+                'STOCK_OUT', 'DISPATCH_OUT', 'TRANSFER_OUT', 'DAMAGE_OUT', 'ADJUSTMENT_SUB'
+              ].includes(tx.transactionType);
+
+              return (
+                <div key={tx.id} className="p-3 space-y-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                      {tx.transactionNumber || 'TX-NEW'}
+                    </span>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                      isDeduction ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {tx.transactionType}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-indigo-700 text-xs block">{sku?.skuCode || 'Unknown SKU'}</span>
+                      <span className="text-[10px] text-slate-400 block">{new Date(tx.createdAt || Date.now()).toLocaleDateString() || tx.date} &bull; {selectedWarehouse}</span>
+                    </div>
+                    <span className={`font-mono font-bold text-sm ${isDeduction ? 'text-rose-600' : 'text-emerald-700'}`}>
+                      {isDeduction ? '-' : '+'}{tx.quantity.toLocaleString()} Pcs
+                    </span>
+                  </div>
+
+                  {tx.notes && (
+                    <p className="text-[10px] text-slate-500 bg-slate-50 p-1.5 rounded truncate font-sans">
+                      {tx.notes}
+                    </p>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* DESKTOP TRANSACTIONS TABLE */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-[11px]">
             <thead className="bg-bg-secondary text-slate-600 font-bold border-b">
               <tr>

@@ -291,7 +291,49 @@ export const FactoryOperationsTab: React.FC<FactoryOperationsTabProps> = ({
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* MOBILE BATCHES CARDS */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {productionBatches.map(b => (
+              <div key={b.id} className="p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                    {b.batchCode}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    b.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800 animate-pulse'
+                  }`}>
+                    {b.status}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-indigo-700 text-xs block">{b.skuCode}</span>
+                    <span className="text-[10px] text-slate-400 block">{b.factoryName} &bull; {b.date}</span>
+                  </div>
+                  <span className="font-mono font-bold text-sm text-slate-900">
+                    {b.quantity.toLocaleString()} Pcs
+                  </span>
+                </div>
+
+                {b.status === 'PENDING_QA' ? (
+                  <button
+                    onClick={() => handleQAApproval(b.id)}
+                    className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors"
+                  >
+                    Approve QA
+                  </button>
+                ) : (
+                  <span className="text-emerald-700 text-[11px] font-semibold flex items-center justify-center gap-1 bg-emerald-50 py-1 rounded">
+                    ✓ QA Passed
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* DESKTOP BATCHES TABLE */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-bg-secondary text-slate-600 font-bold border-b">
                 <tr>
@@ -352,7 +394,38 @@ export const FactoryOperationsTab: React.FC<FactoryOperationsTabProps> = ({
           <p className="text-xs text-slate-500">Audit trail of finished goods dispatched to central storage depots.</p>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* MOBILE TRANSFERS CARDS */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {transfers.map(t => (
+            <div key={t.id} className="p-3 space-y-2 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                  {t.transferCode}
+                </span>
+                <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">
+                  {t.status}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-indigo-700 text-xs block">{t.skuCode}</span>
+                  <span className="text-[10px] text-slate-400 block">{t.sourceFactory} &rarr; {t.destinationWarehouseName}</span>
+                </div>
+                <span className="font-mono font-black text-sm text-slate-900">
+                  {t.quantity.toLocaleString()} Pcs
+                </span>
+              </div>
+
+              <span className="text-[10px] text-slate-400 font-mono block">
+                Date: {t.date}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* DESKTOP TRANSFERS TABLE */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-bg-secondary text-slate-600 font-bold border-b">
               <tr>

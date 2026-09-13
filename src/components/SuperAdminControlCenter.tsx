@@ -305,7 +305,7 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
                 </div>
                 <div>
                   <h4 className="font-bold text-deep-green text-sm">Hierarchy & Roles</h4>
-                  <p className="text-xs text-slate-500">RSM, ASM, TSM & Order Bookers</p>
+                  <p className="text-xs text-slate-500">TSM, ZSM, RSM &amp; Top Management</p>
                 </div>
               </div>
               <p className="mt-3 text-xs text-slate-600 leading-relaxed">

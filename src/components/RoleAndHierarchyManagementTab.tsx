@@ -92,12 +92,10 @@ export const RoleAndHierarchyManagementTab: React.FC<RoleAndHierarchyManagementT
 
   // Controlled Designations fallback (seeded from enterprise architecture)
   const defaultDesignations: Designation[] = [
-    { id: 'des-nsm', code: 'NSM', name: 'National Sales Manager', description: 'Overall nationwide sales director', department: 'SALES', gradeLevel: 'M-1', isActive: true },
-    { id: 'des-rsm', code: 'RSM', name: 'Regional Sales Manager', description: 'Head of regional distribution', department: 'SALES', gradeLevel: 'M-2', isActive: true },
-    { id: 'des-asm', code: 'ASM', name: 'Area Sales Manager', description: 'Supervises territory sales managers', department: 'SALES', gradeLevel: 'M-3', isActive: true },
-    { id: 'des-tsm', code: 'TSM', name: 'Territory Sales Manager', description: 'Field sales supervision', department: 'SALES', gradeLevel: 'O-1', isActive: true },
-    { id: 'des-ss', code: 'SS', name: 'Sales Supervisor', description: 'Field operations & route management', department: 'SALES', gradeLevel: 'O-2', isActive: true },
-    { id: 'des-ob', code: 'OB', name: 'Order Booker / Recovery Officer', description: 'Direct customer visits & recovery', department: 'SALES', gradeLevel: 'O-3', isActive: true },
+    { id: 'des-mgmt', code: 'MANAGEMENT', name: 'Top Management / Executive', description: 'National leadership, approvals & board command', department: 'EXECUTIVE', gradeLevel: 'M-1', isActive: true },
+    { id: 'des-rsm', code: 'RSM', name: 'Regional Sales Manager (RSM)', description: 'Head of regional zone & distribution', department: 'SALES', gradeLevel: 'M-2', isActive: true },
+    { id: 'des-zsm', code: 'ZSM', name: 'Zonal Sales Manager (ZSM)', description: 'Supervises zones, territories & sales targets', department: 'SALES', gradeLevel: 'M-3', isActive: true },
+    { id: 'des-tsm', code: 'TSM', name: 'Territory Sales Manager (TSM)', description: 'Direct field sales, order booking & recovery', department: 'SALES', gradeLevel: 'O-1', isActive: true },
     { id: 'des-acc', code: 'ACCOUNTS_OFFICER', name: 'Accounts Officer', description: 'Ledger, invoices & verification', department: 'ACCOUNTS', gradeLevel: 'O-1', isActive: true },
     { id: 'des-whm', code: 'WAREHOUSE_MANAGER', name: 'Warehouse Manager', description: 'Inventory stock & transfers', department: 'WAREHOUSE', gradeLevel: 'M-3', isActive: true },
     { id: 'des-fac', code: 'FACTORY_MANAGER', name: 'Factory Operations Manager', description: 'Production & quality control', department: 'FACTORY', gradeLevel: 'M-2', isActive: true },
@@ -158,7 +156,6 @@ export const RoleAndHierarchyManagementTab: React.FC<RoleAndHierarchyManagementT
   const [userPhone, setUserPhone] = useState('');
   const [userRole, setUserRole] = useState<UserRole>('MANAGEMENT');
   const [userBranchName, setUserBranchName] = useState('Lahore Head Office');
-  const [userPassword, setUserPassword] = useState('National@2026');
   const [userStatus, setUserStatus] = useState<'ACTIVE' | 'SUSPENDED'>('ACTIVE');
 
   // Custom Roles state
@@ -393,7 +390,6 @@ export const RoleAndHierarchyManagementTab: React.FC<RoleAndHierarchyManagementT
       setUserRole('MANAGEMENT');
     }
     setUserBranchName('Lahore Head Office');
-    setUserPassword('National@2026');
     setUserStatus('ACTIVE');
     setIsUserModalOpen(true);
   };
@@ -1694,12 +1690,13 @@ export const RoleAndHierarchyManagementTab: React.FC<RoleAndHierarchyManagementT
                     onChange={(e) => setUserRole(e.target.value as UserRole)}
                     className="w-full rounded-xl border border-slate-200 p-2.5 font-bold text-indigo-700 focus:border-teal-600 focus:outline-none"
                   >
-                    <option value="MANAGEMENT">MANAGEMENT (Executive Oversight &amp; Approvals)</option>
+                    <option value="MANAGEMENT">Top Management (Executive Leadership &amp; Approvals)</option>
+                    <option value="RSM">RSM (Regional Sales Manager)</option>
+                    <option value="ZSM">ZSM (Zonal Sales Manager)</option>
+                    <option value="TSM">TSM (Territory Sales Manager - Field Order &amp; Recovery)</option>
                     <option value="ACCOUNTS">ACCOUNTS (Ledger, Invoices, Receipts &amp; Finance)</option>
                     <option value="WAREHOUSE_MANAGER">WAREHOUSE_MANAGER (Stock In/Out, Adjustments)</option>
                     <option value="FACTORY_MANAGER">FACTORY_MANAGER (Production, QA &amp; Transfers)</option>
-                    <option value="SALES_MANAGER">SALES_MANAGER (NSM, RSM, ASM Hierarchy)</option>
-                    <option value="SALES_RECOVERY">SALES_RECOVERY (TSM, SS, Order Bookers)</option>
                     <option value="DISPATCH_OFFICER">DISPATCH_OFFICER (Bility, Loading &amp; Logistics)</option>
                     <option value="SUPER_ADMIN">SUPER_ADMIN (Full Enterprise Master Access)</option>
                   </select>
@@ -1723,14 +1720,11 @@ export const RoleAndHierarchyManagementTab: React.FC<RoleAndHierarchyManagementT
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Temporary Password</label>
-                  <input
-                    type="password"
-                    value={userPassword}
-                    onChange={(e) => setUserPassword(e.target.value)}
-                    placeholder="National@2026"
-                    className="w-full rounded-xl border border-slate-200 p-2.5 font-mono focus:border-teal-600 focus:outline-none"
-                  />
+                  <label className="font-bold text-slate-700 block mb-1">Authentication Method</label>
+                  <div className="w-full rounded-xl border border-slate-200 p-2.5 bg-slate-50 text-xs font-semibold text-teal-800 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Passwordless OTP (Code sent to registered email)</span>
+                  </div>
                 </div>
               </div>
 

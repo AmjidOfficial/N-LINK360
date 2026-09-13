@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { NationalLightLogo } from './NationalLightLogo';
 import {
   Bell,
   RefreshCw,
@@ -14,8 +15,14 @@ import {
   Wifi,
   WifiOff,
   AlertTriangle,
+  UserCheck,
 } from 'lucide-react';
-import { User as UserType } from '../types';
+import { User as UserType, UserRole } from '../types';
+import {
+  AVAILABLE_ROLES,
+  isAdminUser,
+  isMultiRoleEligibleEmail,
+} from '../services/production-users';
 import {
   NAVIGATION_CONFIG,
   MainDomain,
@@ -44,6 +51,7 @@ interface HeaderProps {
   onToggleViewMode?: () => void;
   onOpenGoogleSheets?: () => void;
   onOpenOfflineSync?: (tab?: 'FAILED' | 'PENDING' | 'HISTORY' | 'ALL') => void;
+  onRoleSwitch?: (role: UserRole) => void;
   pendingOfflineCount?: number;
   failedOfflineCount?: number;
 }
@@ -62,6 +70,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
   onToggleViewMode,
   onOpenGoogleSheets,
   onOpenOfflineSync,
+  onRoleSwitch,
   pendingOfflineCount = 0,
   failedOfflineCount = 0,
 }) => {
@@ -99,7 +108,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-[#E8ECF2]/95 backdrop-blur-md border-b border-white/60 shadow-sm transition-all">
       {/* Top Command Bar */}
-      <div className="nm-container py-4 md:py-4.5 flex items-center justify-between gap-4 md:gap-6">
+      <div className="nm-container py-2 md:py-2.5 flex items-center justify-between gap-3 md:gap-4">
         {/* Brand, Logo & Mobile Drawer Trigger (Mobile/Tablet Only on < lg) */}
         <div className="flex items-center gap-3 md:gap-4">
           <button
@@ -112,9 +121,7 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
           </button>
 
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center nm-flat text-teal-700 font-black text-sm sm:text-base tracking-wider border border-white shrink-0 shadow-sm">
-              NL
-            </div>
+            <NationalLightLogo size="md" showGlow={false} />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-base sm:text-lg tracking-tight text-slate-800 leading-none">
@@ -227,6 +234,25 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
             </div>
           </button>
 
+          {/* Multi-Role Quick Switcher for Admins */}
+          {(isMultiRoleEligibleEmail(currentUser.email) || isAdminUser(currentUser) || onRoleSwitch) && onRoleSwitch && (
+            <div className="hidden lg:flex items-center gap-1.5 nm-flat-sm px-3 py-1.5 rounded-2xl border border-teal-200/80 bg-teal-50/40">
+              <UserCheck className="w-3.5 h-3.5 text-teal-700 shrink-0" />
+              <select
+                value={currentUser.role}
+                onChange={(e) => onRoleSwitch(e.target.value as UserRole)}
+                className="bg-transparent text-xs font-black text-slate-800 focus:outline-none cursor-pointer pr-1"
+                title="Switch Operational Role Perspective"
+              >
+                {AVAILABLE_ROLES.map((r) => (
+                  <option key={r.role} value={r.role}>
+                    {r.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {onToggleViewMode && (
             <button
               onClick={onToggleViewMode}
@@ -274,13 +300,31 @@ export const NeumorphicHeader: React.FC<HeaderProps> = ({
               </div>
 
               {/* User Profile Summary */}
-              <div className="nm-inset p-3.5 rounded-2xl space-y-1">
+              <div className="nm-inset p-3.5 rounded-2xl space-y-2">
                 <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider block">Signed In User</span>
                 <p className="text-xs font-black text-slate-800">{currentUser.fullName}</p>
                 <p className="text-[11px] text-slate-500 font-mono truncate">{currentUser.email}</p>
-                <span className="inline-block mt-1 text-[9px] px-2.5 py-0.5 rounded-md bg-teal-100 text-teal-800 font-bold">
-                  {currentUser.role.replace('_', ' ')}
-                </span>
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/60">
+                  <span className="inline-block text-[9px] px-2.5 py-0.5 rounded-md bg-teal-100 text-teal-800 font-bold">
+                    {currentUser.role.replace('_', ' ')}
+                  </span>
+                  {(isMultiRoleEligibleEmail(currentUser.email) || isAdminUser(currentUser) || onRoleSwitch) && onRoleSwitch && (
+                    <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-teal-200 shadow-2xs">
+                      <UserCheck className="w-3 h-3 text-teal-700" />
+                      <select
+                        value={currentUser.role}
+                        onChange={(e) => onRoleSwitch(e.target.value as UserRole)}
+                        className="bg-transparent text-[10px] font-black text-slate-800 focus:outline-none cursor-pointer"
+                      >
+                        {AVAILABLE_ROLES.map((r) => (
+                          <option key={r.role} value={r.role}>
+                            {r.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Synchronized Navigation Groups */}

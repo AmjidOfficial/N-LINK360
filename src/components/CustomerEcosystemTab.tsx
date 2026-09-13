@@ -172,16 +172,16 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Header Bar */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700 border border-indigo-200">
               <Users className="h-3.5 w-3.5" />
               CUSTOMER ECOSYSTEM MASTER
             </span>
-            <span className="text-xs text-slate-400 font-mono">DISTRIBUTOR & DEALER NETWORK</span>
+            <span className="text-xs text-slate-400 font-mono">DISTRIBUTOR &amp; DEALER NETWORK</span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 mt-1">Channel Partners & Approvals</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">Channel Partners &amp; Approvals</h1>
           <p className="text-xs text-slate-500 max-w-xl">
             Controlled partner onboarding with unique code generation, dynamic town scoping, and Head Office credit approval workflow.
           </p>
@@ -190,7 +190,7 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 text-xs font-black shadow-lg shadow-indigo-600/20 transition active:scale-95"
+            className="w-full sm:w-auto justify-center inline-flex items-center gap-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 text-xs font-black shadow-lg shadow-indigo-600/20 transition active:scale-95"
           >
             <Plus className="h-4 w-4" />
             Register New Partner
@@ -405,7 +405,7 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 pt-2 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 pt-2 text-xs">
                   <div>
                     <span className="text-slate-400 block text-[10px]">Authorized Credit</span>
                     <span className="font-mono font-bold text-slate-900">PKR {(selCustomer.creditLimit || 0).toLocaleString()}</span>

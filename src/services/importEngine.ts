@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * N-LINK 360 - SalesPulse-Inspired Controlled Import Engine
+ * N-LINK 360 - Controlled Import Engine
  * Handles CSV parsing, schema validation, reference integrity, duplicate detection, and import execution.
  */
 

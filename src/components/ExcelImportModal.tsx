@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * N-LINK 360 - SalesPulse-Inspired Controlled Excel/CSV Import Studio
+ * N-LINK 360 - Controlled Excel/CSV Import Studio
  * Controlled workflow: UPLOAD -> MAP -> VALIDATE -> DUPLICATES -> PREVIEW -> CONFIRM -> RESULT
  */
 
@@ -197,7 +197,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold tracking-tight text-white sm:text-lg">Controlled Data Import Studio</h3>
                 <span className="rounded-md bg-secondary/80/20 px-2 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-400/30">
-                  SalesPulse Verified
+                  N-LINK 360 Verified
                 </span>
               </div>
               <p className="text-xs text-slate-400">Strict validation, reference checks & anti-formula injection defense</p>

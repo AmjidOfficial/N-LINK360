@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { NationalLightLogo } from './NationalLightLogo';
 import {
   Printer,
   Download,
@@ -453,9 +454,7 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                 {/* Header */}
                 <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-slate-900 pb-4 gap-4">
                   <div className="flex items-center gap-3">
-                    <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${branding.logoBg} font-black text-2xl ${branding.logoText} border ${branding.logoBorder} shadow-xs`}>
-                      NL
-                    </div>
+                    <NationalLightLogo size="lg" showGlow={false} />
                     <div>
                       <h1 className={`text-xl font-black tracking-tight ${branding.textAccent} uppercase`}>National Lights (Pvt) Ltd.</h1>
                       <p className="text-[11px] text-slate-600 font-medium leading-tight">

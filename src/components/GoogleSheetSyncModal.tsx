@@ -1,26 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import {
   FileSpreadsheet,
-  CheckCircle2,
-  RefreshCw,
-  ExternalLink,
   X,
+  ExternalLink,
+  CheckCircle2,
   AlertCircle,
-  LogIn,
+  RefreshCw,
   LogOut,
-  Database,
   Users,
+  Building2,
+  Store,
+  Layers,
   ShoppingBag,
   DollarSign,
   Package,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ShieldCheck,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  History,
+  Clock,
+  HardDrive,
+  UploadCloud,
+  Check,
 } from 'lucide-react';
-import {
-  googleSignIn,
-  googleLogout,
-  getAccessToken,
-  getCurrentGoogleUser,
-  initAuth,
-} from '../services/googleAuth';
 import {
   TARGET_SPREADSHEET_ID,
   getActiveSpreadsheetId,
@@ -29,7 +34,28 @@ import {
   syncDatabaseToGoogleSheet,
   SheetMetadata,
 } from '../services/googleSheetsLiveService';
-import { SupabaseAppData } from '../services/supabase-data';
+import type { SupabaseAppData } from '../services/supabase-data';
+import {
+  executeGoogleSheetImport,
+  getSavedImportAuditLogs,
+  ImportSummary,
+} from '../services/googleSheetImportService';
+import {
+  initAuth,
+  googleSignIn,
+  googleLogout,
+  getCurrentGoogleUser,
+  getAccessToken,
+} from '../services/googleAuth';
+import {
+  executeTwoWaySync,
+  subscribeToAutoSync,
+  isAutoSyncEnabled,
+  setAutoSyncEnabled,
+  AutoSyncStatus,
+  getPendingUploads,
+  getLocalDatabaseCache,
+} from '../services/googleSheetsTwoWaySyncService';
 
 interface GoogleSheetSyncModalProps {
   isOpen: boolean;
@@ -44,17 +70,46 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
   appData,
   onSyncComplete,
 }) => {
+  const [activeMode, setActiveMode] = useState<'FULL_SYNC' | 'IMPORT' | 'EXPORT'>('FULL_SYNC');
   const [spreadsheetId, setSpreadsheetId] = useState<string>(getActiveSpreadsheetId());
   const [user, setUser] = useState<any>(getCurrentGoogleUser());
   const [token, setToken] = useState<string | null>(getAccessToken());
   const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(false);
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [isOperating, setIsOperating] = useState<boolean>(false);
   const [metadata, setMetadata] = useState<SheetMetadata | null>(null);
-  const [syncStatus, setSyncStatus] = useState<{
+
+  // Import states
+  const [importSummary, setImportSummary] = useState<ImportSummary | null>(() => {
+    const logs = getSavedImportAuditLogs();
+    return logs.length > 0 ? logs[0] : null;
+  });
+  const [showErrorDetails, setShowErrorDetails] = useState<boolean>(false);
+  const [pendingImportScope, setPendingImportScope] = useState<'USERS' | 'CUSTOMERS' | 'ALL' | null>(null);
+
+  // Export states
+  const [showConfirmExport, setShowConfirmExport] = useState<boolean>(false);
+  const [opStatus, setOpStatus] = useState<{
     type: 'idle' | 'success' | 'error';
     message?: string;
   }>({ type: 'idle' });
-  const [showConfirmSync, setShowConfirmSync] = useState<boolean>(false);
+
+  const [autoSyncStatus, setAutoSyncStatus] = useState<AutoSyncStatus>({
+    isEnabled: true,
+    isSyncing: false,
+    lastSyncTime: null,
+    nextSyncTarget: Date.now() + 30 * 60 * 1000,
+    secondsRemaining: 1800,
+    pendingUploadsCount: 0,
+    lastError: null,
+    lastSummaryMessage: null,
+  });
+
+  useEffect(() => {
+    const unsub = subscribeToAutoSync((status) => {
+      setAutoSyncStatus(status);
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     const unsubscribe = initAuth(
@@ -88,19 +143,19 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
 
   const handleGoogleLogin = async () => {
     setIsLoadingAuth(true);
-    setSyncStatus({ type: 'idle' });
+    setOpStatus({ type: 'idle' });
     try {
       const res = await googleSignIn();
       if (res) {
         setUser(res.user);
         setToken(res.accessToken);
-        setSyncStatus({
+        setOpStatus({
           type: 'success',
           message: `Connected Google Account: ${res.user.email}`,
         });
       }
     } catch (err: any) {
-      setSyncStatus({
+      setOpStatus({
         type: 'error',
         message: err.message || 'Failed to sign in with Google',
       });
@@ -114,25 +169,97 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
     setUser(null);
     setToken(null);
     setMetadata(null);
-    setSyncStatus({ type: 'idle' });
+    setOpStatus({ type: 'idle' });
   };
 
-  const executeSync = async () => {
+  // Run Full 2-Way Sync (Update All Database & All Google Sheets)
+  const handleExecuteFullSync = async () => {
     if (!token) {
-      setSyncStatus({
+      setOpStatus({
+        type: 'error',
+        message: 'Please sign in with Google first to authorize spreadsheet synchronization.',
+      });
+      return;
+    }
+
+    setIsOperating(true);
+    setOpStatus({ type: 'idle' });
+
+    try {
+      const res = await executeTwoWaySync(appData, token);
+      if (res.importedSummary) {
+        setImportSummary(res.importedSummary);
+      }
+
+      setOpStatus({
+        type: 'success',
+        message: res.message,
+      });
+      if (onSyncComplete) {
+        onSyncComplete(res.message);
+      }
+      loadSheetMetadata();
+    } catch (err: any) {
+      setOpStatus({
+        type: 'error',
+        message: err?.message || 'Failed during two-way synchronization with Google Sheets.',
+      });
+    } finally {
+      setIsOperating(false);
+    }
+  };
+
+  // Run Import from Sheet to Supabase
+  const handleExecuteImport = async (scope: 'USERS' | 'CUSTOMERS' | 'ALL') => {
+    if (!token) {
+      setOpStatus({
+        type: 'error',
+        message: 'Please sign in with Google first to authorize access to the spreadsheet.',
+      });
+      return;
+    }
+
+    setPendingImportScope(null);
+    setIsOperating(true);
+    setOpStatus({ type: 'idle' });
+
+    try {
+      const summary = await executeGoogleSheetImport(spreadsheetId, token, scope);
+      setImportSummary(summary);
+      setOpStatus({
+        type: 'success',
+        message: `Import complete: ${summary.createdCount} created, ${summary.updatedCount} updated, ${summary.failedCount} failed.`,
+      });
+      if (onSyncComplete) {
+        onSyncComplete(`Synchronized ${summary.createdCount + summary.updatedCount} records from Google Sheet.`);
+      }
+    } catch (err: any) {
+      setOpStatus({
+        type: 'error',
+        message: err?.message || 'Failed to import data from Google Sheet.',
+      });
+    } finally {
+      setIsOperating(false);
+    }
+  };
+
+  // Run Export from Supabase to Sheet
+  const handleExecuteExport = async () => {
+    if (!token) {
+      setOpStatus({
         type: 'error',
         message: 'Please sign in with Google first to authorize Google Sheets API.',
       });
       return;
     }
 
-    setShowConfirmSync(false);
-    setIsSyncing(true);
-    setSyncStatus({ type: 'idle' });
+    setShowConfirmExport(false);
+    setIsOperating(true);
+    setOpStatus({ type: 'idle' });
 
     try {
       const result = await syncDatabaseToGoogleSheet(spreadsheetId, appData, token);
-      setSyncStatus({
+      setOpStatus({
         type: 'success',
         message: result.message,
       });
@@ -141,12 +268,12 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
       }
       loadSheetMetadata();
     } catch (err: any) {
-      setSyncStatus({
+      setOpStatus({
         type: 'error',
-        message: err.message || 'Failed to sync with Google Sheet',
+        message: err.message || 'Failed to export to Google Sheet',
       });
     } finally {
-      setIsSyncing(false);
+      setIsOperating(false);
     }
   };
 
@@ -155,18 +282,18 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
   const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-800 p-5 text-white flex items-center justify-between relative">
+        <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 p-4 sm:p-5 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-emerald-100 border border-white/20 shadow-xs">
               <FileSpreadsheet className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-base font-black tracking-wide">Google Sheets Database</h2>
+              <h2 className="text-base font-black tracking-wide">Google Sheets Integration</h2>
               <p className="text-xs text-emerald-100 font-medium">
-                Live Spreadsheet Sync & Data Cloud
+                Master Data Import & Production Database Synchronization
               </p>
             </div>
           </div>
@@ -178,13 +305,53 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-5 space-y-4">
+        {/* Mode Selector Tabs */}
+        <div className="grid grid-cols-3 p-2 bg-slate-100 border-b border-slate-200 shrink-0 gap-1">
+          <button
+            type="button"
+            onClick={() => { setActiveMode('FULL_SYNC'); setOpStatus({ type: 'idle' }); }}
+            className={`py-2 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              activeMode === 'FULL_SYNC'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 bg-white/60'
+            }`}
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>2-Way Sync All</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setActiveMode('IMPORT'); setOpStatus({ type: 'idle' }); }}
+            className={`py-2 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              activeMode === 'IMPORT'
+                ? 'bg-teal-700 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 bg-white/60'
+            }`}
+          >
+            <ArrowDownToLine className="w-3.5 h-3.5" />
+            <span>Import &rarr; DB</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setActiveMode('EXPORT'); setOpStatus({ type: 'idle' }); }}
+            className={`py-2 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              activeMode === 'EXPORT'
+                ? 'bg-teal-700 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 bg-white/60'
+            }`}
+          >
+            <ArrowUpFromLine className="w-3.5 h-3.5" />
+            <span>Push &rarr; Sheet</span>
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
           {/* Target Spreadsheet Card */}
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                Configured Spreadsheet
+                Target Google Spreadsheet
               </span>
               <a
                 href={sheetUrl}
@@ -192,43 +359,38 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                 rel="noreferrer"
                 className="text-xs font-bold text-teal-700 hover:text-teal-800 flex items-center gap-1 hover:underline"
               >
-                <span>Open in Google Sheets</span>
+                <span>Open in Sheets</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
-            <div className="space-y-1">
-              <input
-                type="text"
-                value={spreadsheetId}
-                onChange={(e) => {
-                  setSpreadsheetId(e.target.value);
-                  setActiveSpreadsheetId(e.target.value);
-                }}
-                placeholder="Google Spreadsheet ID"
-                className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
-              <p className="text-[10px] text-slate-500">
-                Default ID: <strong className="font-mono text-slate-700">{TARGET_SPREADSHEET_ID}</strong>
-              </p>
-            </div>
+            <input
+              type="text"
+              value={spreadsheetId}
+              onChange={(e) => {
+                setSpreadsheetId(e.target.value);
+                setActiveSpreadsheetId(e.target.value);
+              }}
+              placeholder="Google Spreadsheet ID"
+              className="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
             {metadata && (
-              <div className="pt-2 border-t border-slate-200 flex items-center gap-2 flex-wrap text-xs">
-                <span className="text-slate-600 font-medium">Sheet Title:</span>
+              <div className="pt-1 flex items-center gap-2 flex-wrap text-xs">
+                <span className="text-slate-600 font-medium">Sheet:</span>
                 <span className="font-bold text-slate-900 bg-white px-2 py-0.5 rounded-md border border-slate-200">
                   {metadata.title}
                 </span>
                 <span className="text-[10px] text-slate-500">
-                  ({metadata.sheets.length} tabs found)
+                  ({metadata.sheets.length} worksheets detected)
                 </span>
               </div>
             )}
           </div>
 
-          {/* Google Auth Section */}
-          <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-3">
+          {/* Google Auth Status Card */}
+          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <div className={`w-2.5 h-2.5 rounded-full ${user ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
                 <span className="text-xs font-black text-emerald-900">
                   {user ? 'Google Account Connected' : 'Google Authentication Required'}
                 </span>
@@ -247,7 +409,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
 
             {user ? (
               <div className="flex items-center gap-2.5 bg-white p-2.5 rounded-xl border border-emerald-200">
-                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs">
+                <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs">
                   {user.email ? user.email.charAt(0).toUpperCase() : 'G'}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -256,149 +418,452 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                   </div>
                   <div className="text-[10px] text-slate-500 truncate">{user.email}</div>
                 </div>
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               </div>
             ) : (
-              <div>
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={isLoadingAuth}
-                  className="w-full bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs py-2.5 px-4 rounded-xl border border-slate-300 shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-3 cursor-pointer"
-                >
-                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 48 48">
-                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-                  </svg>
-                  <span>{isLoadingAuth ? 'Signing in...' : 'Sign in with Google Account'}</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isLoadingAuth}
+                className="w-full bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs py-2 px-3 rounded-xl border border-slate-300 shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 48 48">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                </svg>
+                <span>{isLoadingAuth ? 'Connecting Google Account...' : 'Sign in with Google Account'}</span>
+              </button>
             )}
           </div>
 
-          {/* Sync Stats Overview */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
-                <Users className="w-3 h-3 text-teal-600" />
-                <span>Dealers</span>
-              </div>
-              <div className="text-sm font-black text-slate-900 mt-1">
-                {appData.customers.length}
-              </div>
-            </div>
-            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
-                <ShoppingBag className="w-3 h-3 text-emerald-600" />
-                <span>Orders</span>
-              </div>
-              <div className="text-sm font-black text-slate-900 mt-1">
-                {appData.salesOrders.length}
-              </div>
-            </div>
-            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
-                <DollarSign className="w-3 h-3 text-indigo-600" />
-                <span>Recovery</span>
-              </div>
-              <div className="text-sm font-black text-slate-900 mt-1">
-                {appData.recoveries.length}
-              </div>
-            </div>
-            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
-                <Package className="w-3 h-3 text-amber-600" />
-                <span>SKUs</span>
-              </div>
-              <div className="text-sm font-black text-slate-900 mt-1">
-                {appData.skus.length}
-              </div>
-            </div>
-          </div>
+          {/* ========================================================= */}
+          {/* TAB 0: 2-WAY FULL SYNC (ALL DATABASE & ALL GOOGLE SHEETS) */}
+          {/* ========================================================= */}
+          {activeMode === 'FULL_SYNC' && (
+            <div className="space-y-4">
+              {/* 30-Minute Auto-Sync & Local Storage Banner */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-900 to-teal-950 text-white border border-emerald-500/40 shadow-sm space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shrink-0">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-xs font-black uppercase tracking-wide text-emerald-300">
+                          Auto-Sync Engine (Every 30 Minutes)
+                        </h4>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          {autoSyncStatus.isEnabled ? 'Active' : 'Paused'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 mt-0.5">
+                        Automatically runs full 2-way database synchronization every 30 minutes in background.
+                      </p>
+                    </div>
+                  </div>
 
-          {/* Status Message */}
-          {syncStatus.type !== 'idle' && (
+                  {/* Toggle button */}
+                  <button
+                    type="button"
+                    onClick={() => setAutoSyncEnabled(!autoSyncStatus.isEnabled)}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 border border-white/10 transition-colors cursor-pointer"
+                  >
+                    {autoSyncStatus.isEnabled ? 'Pause Auto-Sync' : 'Resume Auto-Sync'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-emerald-500/20 text-xs">
+                  <div className="bg-white/5 rounded-xl p-2.5 border border-white/5">
+                    <span className="text-[10px] text-slate-400 block font-medium">Next Cycle In</span>
+                    <span className="text-sm font-mono font-black text-emerald-300">
+                      {Math.floor(autoSyncStatus.secondsRemaining / 60)}m{' '}
+                      {autoSyncStatus.secondsRemaining % 60 < 10 ? '0' : ''}
+                      {autoSyncStatus.secondsRemaining % 60}s
+                    </span>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-2.5 border border-white/5">
+                    <span className="text-[10px] text-slate-400 block font-medium">Local Storage Status</span>
+                    <span className="text-sm font-bold text-teal-300 flex items-center gap-1">
+                      <HardDrive className="w-3.5 h-3.5" />
+                      100% Persisted
+                    </span>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-2.5 border border-white/5">
+                    <span className="text-[10px] text-slate-400 block font-medium">Pending Queue</span>
+                    <span className="text-sm font-bold text-white">
+                      {autoSyncStatus.pendingUploadsCount > 0 ? (
+                        <span className="text-amber-300 font-bold">{autoSyncStatus.pendingUploadsCount} queued</span>
+                      ) : (
+                        <span className="text-emerald-400">All Synced</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-emerald-200/80 italic leading-relaxed">
+                  * All customer orders, recoveries, registrations, and visits are buffered in local storage until the 30-minute interval, or uploaded immediately when clicking Submit from the user side.
+                </p>
+              </div>
+
+              {/* Action Box */}
+              <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <UploadCloud className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                      Submit & Upload All Local Data Now
+                    </h4>
+                    <p className="text-[11px] text-emerald-800 mt-1 leading-relaxed">
+                      Flushes all locally stored data immediately into Google Sheets and pulls fresh updates from the spreadsheet:
+                    </p>
+                    <ul className="text-[11px] text-emerald-900 mt-2 space-y-1 list-disc list-inside font-medium">
+                      <li>Imports registered <strong>Users, Distributors & Dealers</strong> from Google Sheets into Database</li>
+                      <li>Pushes live <strong>Customers, Orders, Recoveries, Inventory & Ledger</strong> into Google Sheets tabs</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!user) handleGoogleLogin();
+                    else handleExecuteFullSync();
+                  }}
+                  disabled={isOperating}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-black text-xs sm:text-sm shadow-md active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <UploadCloud className={`w-4 h-4 ${isOperating ? 'animate-bounce' : ''}`} />
+                  <span>
+                    {isOperating
+                      ? 'Uploading Local Data to Google Sheets...'
+                      : user
+                      ? 'Submit / Upload All Local Data to Sheet Now'
+                      : 'Sign in to Google to Upload All'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Data Summary */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Customers</div>
+                  <div className="text-sm font-black text-slate-900 mt-0.5">{appData.customers.length}</div>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Orders</div>
+                  <div className="text-sm font-black text-slate-900 mt-0.5">{appData.salesOrders.length}</div>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Recoveries</div>
+                  <div className="text-sm font-black text-slate-900 mt-0.5">{appData.recoveries.length}</div>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">SKUs</div>
+                  <div className="text-sm font-black text-slate-900 mt-0.5">{appData.skus.length}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 1: DATA IMPORT / GOOGLE SHEET SYNC (SECTION 30) */}
+          {/* ========================================================= */}
+          {activeMode === 'IMPORT' && (
+            <div className="space-y-4">
+              {/* Last Sync & Statistics Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-teal-700" />
+                    <span className="text-xs font-black text-slate-800">Latest Import Status</span>
+                  </div>
+                  <span className="text-[10px] font-medium text-slate-500">
+                    {importSummary
+                      ? `Last sync: ${new Date(importSummary.timestamp).toLocaleString()}`
+                      : 'No previous import recorded'}
+                  </span>
+                </div>
+
+                {/* 6 Key Stat Counters */}
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
+                  <div className="p-2 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <span className="text-[10px] text-slate-500 block font-bold">Users</span>
+                    <span className="font-mono font-black text-teal-700 text-sm">
+                      {importSummary?.usersCount ?? 0}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <span className="text-[10px] text-slate-500 block font-bold">Distributors</span>
+                    <span className="font-mono font-black text-blue-700 text-sm">
+                      {importSummary?.distributorsCount ?? 0}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <span className="text-[10px] text-slate-500 block font-bold">Dealers</span>
+                    <span className="font-mono font-black text-indigo-700 text-sm">
+                      {importSummary?.dealersCount ?? 0}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-emerald-200 shadow-2xs">
+                    <span className="text-[10px] text-emerald-600 block font-bold">Created</span>
+                    <span className="font-mono font-black text-emerald-700 text-sm">
+                      {importSummary?.createdCount ?? 0}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-blue-200 shadow-2xs">
+                    <span className="text-[10px] text-blue-600 block font-bold">Updated</span>
+                    <span className="font-mono font-black text-blue-700 text-sm">
+                      {importSummary?.updatedCount ?? 0}
+                    </span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-rose-200 shadow-2xs">
+                    <span className="text-[10px] text-rose-600 block font-bold">Failed</span>
+                    <span className="font-mono font-black text-rose-700 text-sm">
+                      {importSummary?.failedCount ?? 0}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Error Report Collapsible */}
+                {importSummary && importSummary.errors.length > 0 && (
+                  <div className="border border-rose-200 bg-rose-50/50 rounded-xl p-3 space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowErrorDetails((v) => !v)}
+                      className="w-full flex items-center justify-between text-xs font-bold text-rose-700 cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>{importSummary.errors.length} Import Warning(s) / Error(s)</span>
+                      </span>
+                      {showErrorDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    {showErrorDetails && (
+                      <div className="max-h-36 overflow-y-auto space-y-1.5 text-[11px] pt-1">
+                        {importSummary.errors.map((err, idx) => (
+                          <div key={idx} className="bg-white p-2 rounded-lg border border-rose-100 text-slate-700">
+                            <strong>{err.identifier}</strong> (Row {err.row}): {err.reason}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Confirmation Prompt Before Large Imports */}
+              {pendingImportScope && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
+                  <div className="flex items-start gap-2.5">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-black text-amber-900">
+                        Confirm Google Sheet Master Import ({pendingImportScope})
+                      </h4>
+                      <p className="text-[11px] text-amber-800 mt-1">
+                        This action will fetch records from the spreadsheet, validate data integrity, check for duplicates, and synchronize them directly with your operational Supabase tables.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteImport(pendingImportScope)}
+                      className="flex-1 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-black text-xs shadow-sm cursor-pointer"
+                    >
+                      Confirm & Start Import
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingImportScope(null)}
+                      className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-300 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 3 Explicit Import Action Buttons (Section 30) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!user) handleGoogleLogin();
+                    else setPendingImportScope('USERS');
+                  }}
+                  disabled={isOperating}
+                  className="p-3.5 rounded-2xl bg-white border border-slate-300 hover:border-teal-500 hover:shadow-md transition-all text-left group cursor-pointer disabled:opacity-50"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div className="text-xs font-black text-slate-900">Sync Users</div>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Import & match corporate staff profiles</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!user) handleGoogleLogin();
+                    else setPendingImportScope('CUSTOMERS');
+                  }}
+                  disabled={isOperating}
+                  className="p-3.5 rounded-2xl bg-white border border-slate-300 hover:border-teal-500 hover:shadow-md transition-all text-left group cursor-pointer disabled:opacity-50"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                    <Store className="w-4 h-4" />
+                  </div>
+                  <div className="text-xs font-black text-slate-900">Sync Customers</div>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Distributors & Dealers with balances</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!user) handleGoogleLogin();
+                    else setPendingImportScope('ALL');
+                  }}
+                  disabled={isOperating}
+                  className="p-3.5 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white shadow-sm hover:shadow-md transition-all text-left group cursor-pointer disabled:opacity-50"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-white/20 text-white flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                    <RefreshCw className={`w-4 h-4 ${isOperating ? 'animate-spin' : ''}`} />
+                  </div>
+                  <div className="text-xs font-black text-white">Sync All</div>
+                  <p className="text-[10px] text-teal-100 mt-0.5">Full batch synchronization</p>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* TAB 2: DATABASE PUSH (MIRRORING TO GOOGLE SHEET) */}
+          {/* ========================================================= */}
+          {activeMode === 'EXPORT' && (
+            <div className="space-y-4">
+              {/* Push Summary Counters */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
+                    <Store className="w-3 h-3 text-teal-600" />
+                    <span>Customers</span>
+                  </div>
+                  <div className="text-sm font-black text-slate-900 mt-1">
+                    {appData.customers.length}
+                  </div>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
+                    <ShoppingBag className="w-3 h-3 text-emerald-600" />
+                    <span>Orders</span>
+                  </div>
+                  <div className="text-sm font-black text-slate-900 mt-1">
+                    {appData.salesOrders.length}
+                  </div>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
+                    <DollarSign className="w-3 h-3 text-indigo-600" />
+                    <span>Recovery</span>
+                  </div>
+                  <div className="text-sm font-black text-slate-900 mt-1">
+                    {appData.recoveries.length}
+                  </div>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
+                    <Package className="w-3 h-3 text-amber-600" />
+                    <span>SKUs</span>
+                  </div>
+                  <div className="text-sm font-black text-slate-900 mt-1">
+                    {appData.skus.length}
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirmation Dialog for Push */}
+              {showConfirmExport ? (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-black text-amber-900">
+                        Confirm Google Sheets Push Mirroring
+                      </h4>
+                      <p className="text-[11px] text-amber-800 mt-1">
+                        This action will write {appData.customers.length} Customers, {appData.salesOrders.length} Orders, and {appData.recoveries.length} Recoveries to the designated spreadsheet.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleExecuteExport}
+                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-sm cursor-pointer"
+                    >
+                      Confirm & Push Now
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmExport(false)}
+                      className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-300 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!user) handleGoogleLogin();
+                    else setShowConfirmExport(true);
+                  }}
+                  disabled={isOperating}
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isOperating ? 'animate-spin' : ''}`} />
+                  <span>
+                    {isOperating
+                      ? 'Pushing Database to Sheets...'
+                      : user
+                      ? 'Push N-LINK 360 to Google Sheets'
+                      : 'Sign in to Push Database'}
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Operation Status Feedback */}
+          {opStatus.type !== 'idle' && (
             <div
               className={`p-3 rounded-2xl text-xs font-bold flex items-start gap-2 ${
-                syncStatus.type === 'success'
+                opStatus.type === 'success'
                   ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
                   : 'bg-rose-50 text-rose-900 border border-rose-200'
               }`}
             >
-              {syncStatus.type === 'success' ? (
+              {opStatus.type === 'success' ? (
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               ) : (
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               )}
-              <span className="leading-relaxed">{syncStatus.message}</span>
+              <span className="leading-relaxed">{opStatus.message}</span>
             </div>
-          )}
-
-          {/* Explicit User Confirmation Dialog for Workspace API Data Mutation */}
-          {showConfirmSync ? (
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-black text-amber-900">
-                    Confirm Google Sheets Synchronization
-                  </h4>
-                  <p className="text-[11px] text-amber-800 mt-1">
-                    This action will update data in spreadsheet{' '}
-                    <span className="font-mono font-bold">({spreadsheetId.slice(0, 8)}...)</span> across{' '}
-                    <strong>{appData.customers.length} Dealers</strong>,{' '}
-                    <strong>{appData.salesOrders.length} Orders</strong>, and{' '}
-                    <strong>{appData.recoveries.length} Recoveries</strong>.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={executeSync}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
-                >
-                  Confirm & Sync Now
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmSync(false)}
-                  className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-300 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                if (!user) {
-                  handleGoogleLogin();
-                } else {
-                  setShowConfirmSync(true);
-                }
-              }}
-              disabled={isSyncing}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-700/25 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>
-                {isSyncing
-                  ? 'Synchronizing Database...'
-                  : user
-                  ? 'Sync N-LINK 360 to Google Sheets'
-                  : 'Sign in to Sync Database'}
-              </span>
-            </button>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 text-center text-[10px] text-slate-500 font-medium">
-          Connected to Google Sheets API v4 • Instant cloud replication for National Lights
+        <div className="p-3 bg-slate-50 border-t border-slate-200 text-center text-[10px] text-slate-500 font-medium shrink-0">
+          Connected to Google Sheets API v4 • Two-way synchronization engine for National Lights
         </div>
       </div>
     </div>

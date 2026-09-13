@@ -343,7 +343,7 @@ serve(async (req) => {
                   <span className="font-black text-slate-900 text-sm">Server-to-Server Zero Credential Exposure</span>
                 </div>
                 <p className="text-slate-600">
-                  Confirmed transactions (Orders, Recoveries, Approved Dealers) trigger PostgreSQL database webhooks in Supabase, which immediately replicate data directly to Google Sheet <strong className="font-mono text-slate-800">1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo</strong> without exposing API credentials to browser clients.
+                  Confirmed transactions (Orders, Recoveries, Approved Dealers) trigger PostgreSQL database webhooks in Supabase, which immediately replicate data directly to your Enterprise Google Sheet without exposing API credentials to browser clients.
                 </p>
                 <div className="pt-2 border-t border-slate-200 text-slate-600">
                   <span className="font-bold text-slate-800 block mb-1">Architecture Pipeline:</span>

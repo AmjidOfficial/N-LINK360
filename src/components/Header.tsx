@@ -37,6 +37,7 @@ const roleLabel: Record<User['role'], string> = {
   SALES_RECOVERY: 'Sales & Recovery',
   DISPATCH_OFFICER: 'Dispatch & Logistics',
   RSM: 'Regional Sales Manager',
+  ZSM: 'Zonal Sales Manager',
   ASM: 'Area Sales Manager',
   TSM: 'Territory Sales Manager',
   SS: 'Sales Supervisor',

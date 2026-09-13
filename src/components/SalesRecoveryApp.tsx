@@ -47,23 +47,61 @@ import {
   Navigation,
   CheckSquare,
   PackageCheck,
+  Package,
   FileSpreadsheet,
   Download,
   X,
   AlertOctagon,
+  Menu,
+  KeyRound,
+  Lock,
+  EyeOff,
 } from 'lucide-react';
+import { resetPassword, updatePassword } from '../services/auth';
 import { syncManager, OfflineQueueItem } from '../services/offlineSyncEngine';
 import { PrintInvoiceModal } from './PrintInvoiceModal';
+import { PrintLedgerModal } from './PrintLedgerModal';
 import { DynamicDealerFormModal } from './DynamicDealerFormModal';
 import { OrderPreviewDrawer } from './OrderPreviewDrawer';
 import { NearbyDealersMap } from './NearbyDealersMap';
 import { DealerHeatmap } from './DealerHeatmap';
 import { GoogleSheetSyncModal } from './GoogleSheetSyncModal';
+import { AutoSyncStatusBanner } from './AutoSyncStatusBanner';
 import { MtdAchievementGauge } from './MtdAchievementGauge';
 import { DailySummaryCard } from './DailySummaryCard';
+import { FmcgCommandCenter } from './FmcgCommandCenter';
 import { toast } from './ui/ToastNotification';
 import { getAccessToken } from '../services/googleAuth';
-import { isAuthorizedApproverEmail } from '../services/production-users';
+import { validateTownGeofence, getTownCoordinates } from '../services/townCoordinates';
+import { exportCustomerLedgerToCsv } from '../services/exportEngine';
+import {
+  submitAndSaveOrder,
+  submitAndSaveRecovery,
+  submitAndSaveCustomer,
+  submitAndSaveAttendance,
+  submitAndSaveVisit,
+  registerAppDataProvider,
+  startAutoSyncEngine,
+  stopAutoSyncEngine,
+} from '../services/googleSheetsTwoWaySyncService';
+import {
+  isAuthorizedApproverEmail,
+  isAdminUser,
+  isMultiRoleEligibleEmail,
+  AVAILABLE_ROLES,
+  getRoleDisplayTitle,
+} from '../services/production-users';
+import {
+  approveCustomerRegistration,
+  rejectCustomerRegistration,
+} from '../services/supabase-transactions';
+import {
+  persistAttendanceRecord,
+  fetchTodayAttendance,
+  fetchAttendanceHistory,
+  FieldAttendanceRecord,
+  formatTimeFromIso,
+} from '../services/attendance';
 import {
   getActiveSpreadsheetId,
   pushOrderToGoogleSheet,
@@ -79,9 +117,10 @@ import {
   SKU,
   InventoryBalance,
   User as UserType,
+  UserRole,
   Recovery as RecoveryType,
   Invoice as InvoiceType,
-  LedgerEntry as LedgerEntryType
+  LedgerEntry,
 } from '../types';
 
 interface SalesRecoveryAppProps {
@@ -93,7 +132,7 @@ interface SalesRecoveryAppProps {
   salesOrders?: SalesOrder[];
   recoveries?: RecoveryType[];
   invoices?: InvoiceType[];
-  ledgerEntries?: LedgerEntryType[];
+  ledgerEntries?: LedgerEntry[];
   lastRefreshTime?: Date;
   onLogout?: () => Promise<void> | void;
   onBookOrder?: (order: Partial<SalesOrder>) => void;
@@ -107,6 +146,9 @@ interface SalesRecoveryAppProps {
   }) => void;
   onLogVisit?: (visit: Partial<any>) => void;
   onSubmitRegistration?: (reg: any) => void;
+  onApproveCustomer?: (customerId: string, approverName?: string) => Promise<void> | void;
+  onRejectCustomer?: (customerId: string, reason?: string) => Promise<void> | void;
+  onRoleSwitch?: (role: UserRole) => void;
   onRefresh?: () => Promise<void> | void;
   onToggleViewMode?: () => void;
   onOpenOfflineSync?: (tab?: 'FAILED' | 'PENDING' | 'HISTORY' | 'ALL') => void;
@@ -128,6 +170,9 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   onRecordRecovery,
   onLogVisit,
   onSubmitRegistration,
+  onApproveCustomer,
+  onRejectCustomer,
+  onRoleSwitch,
   onRefresh,
   onToggleViewMode,
   onOpenOfflineSync,
@@ -171,6 +216,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     return 'ATTENDANCE';
   });
 
+  const [dashboardSubTab, setDashboardSubTab] = useState<'FINANCIAL' | 'FMCG_COMMAND'>('FMCG_COMMAND');
+
   const setActiveTab = useCallback((tab: 'ATTENDANCE' | 'DISTRIBUTORS' | 'DASHBOARD') => {
     setActiveTabState(tab);
     try {
@@ -183,6 +230,17 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState<string | null>(null);
   const [showGoogleSheetsModal, setShowGoogleSheetsModal] = useState(false);
   const [isAutoDownloadPdf, setIsAutoDownloadPdf] = useState(false);
+
+  // Field Force Menu Drawer & Password Restore Modal State (Sections 11 & 29)
+  const [showFieldForceMenu, setShowFieldForceMenu] = useState(false);
+  const [showPasswordRestoreModal, setShowPasswordRestoreModal] = useState(false);
+  const [restoreEmail, setRestoreEmail] = useState(currentUser.email || '');
+  const [restoreSubmitting, setRestoreSubmitting] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [directNewPassword, setDirectNewPassword] = useState('');
+  const [directConfirmPassword, setDirectConfirmPassword] = useState('');
+  const [showDirectPass, setShowDirectPass] = useState(false);
+  const [restoreTabMode, setRestoreTabMode] = useState<'RESET_LINK' | 'DIRECT_CHANGE'>('RESET_LINK');
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
@@ -294,6 +352,15 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     };
   }, []);
 
+  // 2-Way Google Sheets Database & 30-Minute Background Auto-Sync Engine
+  useEffect(() => {
+    registerAppDataProvider(() => appDataForGoogleSheet);
+    startAutoSyncEngine(() => appDataForGoogleSheet);
+    return () => {
+      stopAutoSyncEngine();
+    };
+  }, [appDataForGoogleSheet]);
+
   const handleRefresh = async () => {
     if (onRefresh) {
       setIsRefreshing(true);
@@ -385,11 +452,62 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     return null;
   });
 
+  const [attendanceLogs, setAttendanceLogs] = useState<FieldAttendanceRecord[]>([]);
+  const [loadingAttendanceLogs, setLoadingAttendanceLogs] = useState<boolean>(false);
   const [gpsCapturing, setGpsCapturing] = useState(false);
   const [attendanceMessage, setAttendanceMessage] = useState<string | null>(null);
 
-  // Check In Action
-  const handleCheckIn = () => {
+  // Load authoritative today attendance & recent logs from Supabase on mount
+  const refreshAttendanceHistory = useCallback(async () => {
+    setLoadingAttendanceLogs(true);
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const [todayDbRec, history] = await Promise.all([
+        fetchTodayAttendance(todayStr),
+        fetchAttendanceHistory(30),
+      ]);
+
+      if (todayDbRec) {
+        setAttendanceRecord({
+          date: todayDbRec.attendance_date,
+          checkInTime: formatTimeFromIso(todayDbRec.check_in_at),
+          checkOutTime: todayDbRec.check_out_at ? formatTimeFromIso(todayDbRec.check_out_at) : undefined,
+          time: formatTimeFromIso(todayDbRec.check_in_at),
+          town: todayDbRec.town,
+          userName: currentUser.fullName,
+          lat: todayDbRec.latitude,
+          lng: todayDbRec.longitude,
+          accuracy: todayDbRec.gps_accuracy_m || 15,
+          locationName: `${todayDbRec.town} Territory`,
+          status: todayDbRec.status === 'CHECKED_OUT' ? 'Checked Out' : 'Checked In',
+          duration: todayDbRec.duration_text,
+        });
+      }
+      setAttendanceLogs(history);
+    } catch (err) {
+      console.warn('[Attendance] History refresh warning:', err);
+    } finally {
+      setLoadingAttendanceLogs(false);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    void refreshAttendanceHistory();
+  }, [refreshAttendanceHistory]);
+
+  const [geofenceViolationModal, setGeofenceViolationModal] = useState<{
+    isOpen: boolean;
+    distanceMeters: number;
+    distanceKm: number;
+    townName: string;
+    townCoords: { lat: number; lng: number };
+    userCoords: { lat: number; lng: number; accuracy: number };
+  } | null>(null);
+
+  const [printLedgerModalOpen, setPrintLedgerModalOpen] = useState(false);
+
+  // Check In Action with 500m Town Geofence Enforcement
+  const handleCheckIn = (allowGeofenceOverride = false) => {
     setGpsCapturing(true);
     setAttendanceMessage(null);
 
@@ -411,35 +529,44 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
         status: 'Checked In',
       };
       setAttendanceRecord(rec);
-      localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
       setGpsCapturing(false);
-      setAttendanceMessage(`Check-in successful at ${timeStr} for ${selectedTown} (${method})!`);
+      setAttendanceMessage(`Check-in successful at ${timeStr} for ${selectedTown} (${method})! Record persisted.`);
       toast.success(
-        'Attendance Check-In Logged',
-        `Shift started at ${selectedTown} (${timeStr}) via ${method}.`
+        'Attendance Check-In Recorded',
+        `Check-in at ${selectedTown} (${timeStr}) verified with 500m geofence perimeter.`
       );
 
-      // Real-Time Google Sheet Mirror sync for Attendance
+      // 1. Authoritative Supabase persistence
+      void persistAttendanceRecord({
+        date: todayStr,
+        checkInTime: timeStr,
+        town: selectedTown,
+        lat,
+        lng,
+        accuracy,
+        status: 'Checked In',
+        userName: currentUser.fullName,
+      }).then(() => {
+        void refreshAttendanceHistory();
+      });
+
+      // 2. 2-Way Local Storage buffering & Google Sheet sync for Attendance
       try {
         const token = getAccessToken();
-        const sheetId = getActiveSpreadsheetId();
-        if (token && sheetId) {
-          pushAttendanceToGoogleSheet(
-            sheetId,
-            {
-              id: `ATT-${Date.now()}`,
-              date: todayStr,
-              checkInTime: timeStr,
-              town: selectedTown,
-              latitude: lat,
-              longitude: lng,
-              gpsAccuracy: accuracy,
-              status: 'PRESENT',
-            },
-            currentUser.fullName,
-            token
-          ).catch((err) => console.warn('Attendance Google Sheet sync deferred:', err));
-        }
+        submitAndSaveAttendance(
+          {
+            id: `ATT-${Date.now()}`,
+            date: todayStr,
+            checkInTime: timeStr,
+            town: selectedTown,
+            latitude: lat,
+            longitude: lng,
+            gpsAccuracy: accuracy,
+            status: 'PRESENT',
+          },
+          currentUser.fullName,
+          token
+        ).catch((err) => console.warn('Attendance 2-way sync notice:', err));
       } catch {
         // non-blocking
       }
@@ -448,16 +575,48 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          completeCheckIn(
-            Number(pos.coords.latitude.toFixed(4)),
-            Number(pos.coords.longitude.toFixed(4)),
-            Math.round(pos.coords.accuracy || 15),
-            'GPS Verified'
-          );
+          const lat = Number(pos.coords.latitude.toFixed(4));
+          const lng = Number(pos.coords.longitude.toFixed(4));
+          const accuracy = Math.round(pos.coords.accuracy || 15);
+
+          // 500m Geofence Radius Check against assigned town coordinates
+          const geofence = validateTownGeofence(lat, lng, selectedTown, 500);
+
+          if (!geofence.isWithinGeofence && !allowGeofenceOverride) {
+            setGpsCapturing(false);
+            const distLabel = geofence.distanceMeters >= 1000
+              ? `${geofence.distanceKm.toFixed(2)} km`
+              : `${Math.round(geofence.distanceMeters)} meters`;
+
+            setAttendanceMessage(
+              `⚠️ Geofence Alert: You are ${distLabel} away from ${geofence.townCenter.town} beat center. Attendance requires being within 500m.`
+            );
+            toast.error(
+              '500m Geofence Check Failed',
+              `Your GPS is ${distLabel} away from ${geofence.townCenter.town}. Check-in requires being within 500m of the town.`
+            );
+
+            setGeofenceViolationModal({
+              isOpen: true,
+              distanceMeters: geofence.distanceMeters,
+              distanceKm: geofence.distanceKm,
+              townName: selectedTown,
+              townCoords: { lat: geofence.townCenter.lat, lng: geofence.townCenter.lng },
+              userCoords: { lat, lng, accuracy },
+            });
+            return;
+          }
+
+          const methodTag = geofence.isWithinGeofence
+            ? `500m Geofence Verified - ${Math.round(geofence.distanceMeters)}m from ${geofence.townCenter.town}`
+            : `Geofence Flagged - ${Math.round(geofence.distanceMeters)}m distance`;
+
+          completeCheckIn(lat, lng, accuracy, methodTag);
         },
         () => {
           setGpsCapturing(false);
-          setAttendanceMessage('GPS location is required for attendance. Check-in was not recorded.');
+          setAttendanceMessage('GPS location is required for attendance and 500m geofence validation. Check-in was not recorded.');
+          toast.error('GPS Signal Required', 'Please enable device location services to verify 500m geofence.');
         },
         { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
       );
@@ -510,13 +669,27 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
         status: 'Checked Out',
       };
       setAttendanceRecord(rec);
-      localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
       setGpsCapturing(false);
-      setAttendanceMessage(`Check-out successful at ${timeStr}. Total Duty Duration: ${durationText}`);
+      setAttendanceMessage(`Check-out recorded at ${timeStr}. Total Duty Duration: ${durationText}`);
       toast.info(
         'Shift Completed',
-        `Check-out logged at ${timeStr}. Total Duty: ${durationText}.`
+        `Check-out logged at ${timeStr}. Total Duty: ${durationText}. Record persisted.`
       );
+
+      // Authoritative Supabase persistence
+      void persistAttendanceRecord({
+        date: rec.date,
+        checkInTime: rec.checkInTime,
+        checkOutTime: timeStr,
+        town: rec.town,
+        lat,
+        lng,
+        accuracy,
+        status: 'Checked Out',
+        userName: currentUser.fullName,
+      }).then(() => {
+        void refreshAttendanceHistory();
+      });
     };
 
     if (navigator.geolocation) {
@@ -570,10 +743,21 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             status: attendanceRecord?.status || 'Checked In',
           };
           setAttendanceRecord(rec);
-          localStorage.setItem('nlink_sales_attendance_today', JSON.stringify(rec));
           setLastGpsSyncTime(new Date());
           setGpsSyncing(false);
           setAttendanceMessage(`GPS coordinates refreshed at ${timeStr} (${lat}° N, ${lng}° E)!`);
+
+          void persistAttendanceRecord({
+            date: rec.date,
+            checkInTime: rec.checkInTime,
+            checkOutTime: rec.checkOutTime,
+            town: rec.town,
+            lat,
+            lng,
+            accuracy,
+            status: rec.status === 'Checked Out' ? 'Checked Out' : 'Checked In',
+            userName: currentUser.fullName,
+          });
         },
         () => {
           setLastGpsSyncTime(new Date());
@@ -817,7 +1001,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   const isApproverOrAdmin = useMemo(() => {
     return (
       isAuthorizedApproverEmail(currentUser?.email) ||
-      ['SUPER_ADMIN', 'MANAGEMENT'].includes(currentUser?.role || '')
+      isAdminUser(currentUser) ||
+      ['SUPER_ADMIN', 'MANAGEMENT', 'HEAD_OFFICE'].includes(currentUser?.role || '')
     );
   }, [currentUser]);
 
@@ -934,17 +1119,62 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   const [showOrderPreviewDrawer, setShowOrderPreviewDrawer] = useState(false);
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
+  const [skuSearchQuery, setSkuSearchQuery] = useState('');
+  const [skuStockFilter, setSkuStockFilter] = useState<'ALL' | 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'SELECTED'>('ALL');
 
-  // Group SKUs by Brand
+  const getSkuStock = (skuId: string): number => {
+    const bal = inventoryBalances.find((b) => b.skuId === skuId);
+    if (bal) return Number(bal.currentQuantity || 0);
+    const sku = skus.find((s) => s.id === skuId);
+    return Number(sku?.currentStock || 0);
+  };
+
+  // Group SKUs by Brand with Live Search & Stock Filter
   const brandsGrouped = useMemo<Record<string, SKU[]>>(() => {
     const map: Record<string, SKU[]> = {};
+    const searchLower = skuSearchQuery.trim().toLowerCase();
+
     skus.forEach((sku) => {
+      // 1. Search Query Filter
+      if (searchLower) {
+        const matchesName = sku.name.toLowerCase().includes(searchLower);
+        const matchesCode = (sku.skuCode || '').toLowerCase().includes(searchLower);
+        const matchesBrand = (sku.brandName || '').toLowerCase().includes(searchLower);
+        const matchesCategory = (sku.category || '').toLowerCase().includes(searchLower);
+        if (!matchesName && !matchesCode && !matchesBrand && !matchesCategory) {
+          return;
+        }
+      }
+
+      // 2. Stock Filter
+      const stock = getSkuStock(sku.id);
+      const reorderLevel = sku.reorderLevel || 10;
+      const isOutOfStock = stock <= 0;
+      const isLowStock = !isOutOfStock && stock <= reorderLevel;
+      const currentQty = orderQuantities[sku.id] || 0;
+
+      if (skuStockFilter === 'IN_STOCK' && stock <= 0) return;
+      if (skuStockFilter === 'LOW_STOCK' && !isLowStock) return;
+      if (skuStockFilter === 'OUT_OF_STOCK' && stock > 0) return;
+      if (skuStockFilter === 'SELECTED' && currentQty <= 0) return;
+
       const brand = sku.brandName || sku.category || 'National Lights';
       if (!map[brand]) map[brand] = [];
       map[brand].push(sku);
     });
     return map;
-  }, [skus]);
+  }, [skus, skuSearchQuery, skuStockFilter, inventoryBalances, orderQuantities]);
+
+  // Auto-expand brands when searching or filtering
+  useEffect(() => {
+    if (skuSearchQuery.trim() || skuStockFilter !== 'ALL') {
+      const allBrands: Record<string, boolean> = {};
+      Object.keys(brandsGrouped).forEach((b) => {
+        allBrands[b] = true;
+      });
+      setExpandedBrands(allBrands);
+    }
+  }, [skuSearchQuery, skuStockFilter, brandsGrouped]);
 
   // Expand first brand by default
   useEffect(() => {
@@ -958,11 +1188,14 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     setExpandedBrands((prev) => ({ ...prev, [brand]: !prev[brand] }));
   };
 
-  const getSkuStock = (skuId: string): number => {
-    const bal = inventoryBalances.find((b) => b.skuId === skuId);
-    if (bal) return Number(bal.currentQuantity || 0);
-    const sku = skus.find((s) => s.id === skuId);
-    return Number(sku?.currentStock || 0);
+  const toggleExpandAllBrands = () => {
+    const allKeys = Object.keys(brandsGrouped);
+    const areAllExpanded = allKeys.length > 0 && allKeys.every((k) => expandedBrands[k]);
+    const nextState: Record<string, boolean> = {};
+    allKeys.forEach((k) => {
+      nextState[k] = !areAllExpanded;
+    });
+    setExpandedBrands(nextState);
   };
 
   const handleQtyChange = (skuId: string, val: number) => {
@@ -1150,16 +1383,11 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
         await onBookOrder(newOrder);
       }
 
-      // Live replication to Google Sheets database if authorized
+      // 2-Way Local Storage buffering & immediate submission to Google Sheets
       const googleToken = getAccessToken();
-      if (googleToken) {
-        pushOrderToGoogleSheet(
-          getActiveSpreadsheetId(),
-          newOrder,
-          activeCustomer.companyName,
-          googleToken
-        ).catch((err) => console.warn('Google Sheet background push notice:', err));
-      }
+      submitAndSaveOrder(newOrder, activeCustomer.companyName, googleToken).catch((err) =>
+        console.warn('Google Sheet 2-way order sync notice:', err)
+      );
 
       setOrderQuantities({});
       setShowOrderConfirmModal(false);
@@ -1213,16 +1441,11 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
         await onRecordRecovery(recoveryPayload);
       }
 
-      // Live replication to Google Sheets database if authorized
+      // 2-Way Local Storage buffering & immediate submission to Google Sheets
       const googleToken = getAccessToken();
-      if (googleToken) {
-        pushRecoveryToGoogleSheet(
-          getActiveSpreadsheetId(),
-          recoveryPayload,
-          activeCustomer.companyName,
-          googleToken
-        ).catch((err) => console.warn('Google Sheet background push notice:', err));
-      }
+      submitAndSaveRecovery(recoveryPayload, activeCustomer.companyName, googleToken).catch((err) =>
+        console.warn('Google Sheet 2-way recovery sync notice:', err)
+      );
 
       setRecoveryAmount('');
       setRecoveryInstrumentNo('');
@@ -1319,6 +1542,22 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     rest.sort((a, b) => a.date.localeCompare(b.date));
     return [ob, ...rest];
   }, [activeCustomer, invoices, recoveries, ledgerFromDate, ledgerToDate]);
+
+  const activeCustomerLedgerEntries: LedgerEntry[] = useMemo(() => {
+    if (!activeCustomer) return [];
+    return customerLedgerData.map((row, idx) => ({
+      id: `led-${activeCustomer.id}-${idx}`,
+      customerId: activeCustomer.id,
+      entryDate: row.date,
+      transactionType: row.type === 'Opening Balance' ? 'OPENING_BALANCE' : row.type === 'Invoice' ? 'INVOICE' : 'PAYMENT',
+      referenceNumber: row.ref,
+      description: `${row.type} Ref: ${row.ref}`,
+      debitAmount: row.debit,
+      creditAmount: row.credit,
+      runningBalance: row.balance,
+      createdAt: row.date,
+    }));
+  }, [activeCustomer, customerLedgerData]);
 
   // -------------------------------------------------------------
   // 3. DASHBOARD SECTION (Role-Scoped Target vs Achievement)
@@ -1452,7 +1691,18 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       {/* ========================================================= */}
       <header className="sra-header">
         <div className="sra-header-inner">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Field Force Menu Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setShowFieldForceMenu(true)}
+              className="p-2 rounded-xl text-slate-700 hover:text-teal-700 hover:bg-slate-100 transition-all cursor-pointer"
+              title="Open Field Force Menu"
+              aria-label="Navigation Menu"
+            >
+              <Menu className="w-5 h-5 stroke-[2.5]" />
+            </button>
+
             <div className="w-10 h-10 rounded-2xl bg-teal-600 flex items-center justify-center text-white font-black text-base shadow-sm">
               NL
             </div>
@@ -1471,8 +1721,23 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             </div>
           </div>
 
-          {/* Unified Desktop/Tablet Navigation Bar */}
+          {/* Unified Desktop/Tablet Navigation Bar - Strict 3-Tab Architecture (Section 10) */}
           <div className="hidden md:flex items-center gap-1 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('DASHBOARD');
+                setSelectedCustomerId(null);
+              }}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'DASHBOARD'
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>Dashboard</span>
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -1498,22 +1763,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               }`}
             >
               <Store className="w-4 h-4" />
-              <span>Distributors</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('DASHBOARD');
-                setSelectedCustomerId(null);
-              }}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'DASHBOARD'
-                  ? 'bg-teal-700 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              <span>Dashboard</span>
+              <span>Customers</span>
             </button>
           </div>
 
@@ -1583,6 +1833,25 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                 </span>
               )}
             </button>
+
+            {/* Multi-Role Quick Switcher for Admins */}
+            {(isMultiRoleEligibleEmail(currentUser.email) || isAdminUser(currentUser) || onRoleSwitch) && onRoleSwitch && (
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-300">
+                <UserCheck className="w-3.5 h-3.5 text-teal-700 ml-1 shrink-0" />
+                <select
+                  value={currentUser.role}
+                  onChange={(e) => onRoleSwitch(e.target.value as UserRole)}
+                  className="bg-transparent text-[10px] font-black text-slate-800 focus:outline-none cursor-pointer pr-1"
+                  title="Switch Role Perspective"
+                >
+                  {AVAILABLE_ROLES.map((r) => (
+                    <option key={r.role} value={r.role}>
+                      {r.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Google Sheets Database Sync Modal Button */}
             <button
@@ -1662,6 +1931,20 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       )}
 
       {/* ========================================================= */}
+      {/* 2-WAY GOOGLE SHEETS AUTO-SYNC & LOCAL STORAGE STATUS BANNER */}
+      {/* ========================================================= */}
+      <div className="px-4 pt-3 pb-1 max-w-7xl mx-auto w-full">
+        <AutoSyncStatusBanner
+          appData={appDataForGoogleSheet}
+          onOpenSyncModal={() => setShowGoogleSheetsModal(true)}
+          onSyncComplete={(msg) => {
+            toast.success('Google Sheet Synced', msg);
+            if (onRefresh) onRefresh();
+          }}
+        />
+      </div>
+
+      {/* ========================================================= */}
       {/* MAIN CONTENT ROUTER (Strictly 3 Screens) */}
       {/* ========================================================= */}
       <main className="sra-main">
@@ -1706,6 +1989,27 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                   </select>
                   <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3.5 top-3.5 pointer-events-none" />
                 </div>
+
+                {/* 500m Geofence Perimeter Status */}
+                {selectedTown && (
+                  <div className="mt-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <Compass className="w-4 h-4 text-teal-600 shrink-0" />
+                      <div>
+                        <span className="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
+                          <span>500m Geofence Radius Active</span>
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">
+                          Beat Hub: {getTownCoordinates(selectedTown).town} ({getTownCoordinates(selectedTown).lat}° N, {getTownCoordinates(selectedTown).lng}° E)
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200 shrink-0">
+                      Max 500m
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* 2. CHECK IN / CHECK OUT DUAL ACTION BUTTONS */}
@@ -1812,6 +2116,96 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                       <span className="font-bold text-teal-700">{attendanceRecord.duration || (attendanceRecord.status === 'Checked In' ? 'Active On Duty' : 'Completed')}</span>
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Field Force Attendance History & Verified Records */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center text-teal-700">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                      Attendance Records &amp; History
+                    </h2>
+                    <p className="text-[10px] text-slate-500 font-medium">Persisted Check-In, Check-Out, Duration &amp; GPS Location Records</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void refreshAttendanceHistory()}
+                  disabled={loadingAttendanceLogs}
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs flex items-center gap-1.5 border border-slate-200 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RotateCw className={`w-3.5 h-3.5 text-teal-600 ${loadingAttendanceLogs ? 'animate-spin' : ''}`} />
+                  <span className="text-[11px] font-bold text-teal-800">Refresh Records</span>
+                </button>
+              </div>
+
+              {loadingAttendanceLogs && attendanceLogs.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2 bg-slate-50 rounded-xl border border-slate-200">
+                  <RotateCw className="w-5 h-5 animate-spin text-teal-600" />
+                  <span>Loading attendance records from database...</span>
+                </div>
+              ) : attendanceLogs.length === 0 ? (
+                <div className="p-6 text-center text-slate-500 text-xs bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <UserCheck className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                  <p className="font-bold text-slate-700">No attendance records found</p>
+                  <p className="text-[11px] text-slate-500">Check in above to record your first duty log with GPS location.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-72 scrollbar-thin">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-3 py-2.5">Date</th>
+                        <th className="px-3 py-2.5">Town</th>
+                        <th className="px-3 py-2.5">Check In</th>
+                        <th className="px-3 py-2.5">Check Out</th>
+                        <th className="px-3 py-2.5">Duration</th>
+                        <th className="px-3 py-2.5">GPS Location</th>
+                        <th className="px-3 py-2.5 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {attendanceLogs.map((log) => (
+                        <tr key={log.id || `${log.attendance_date}-${log.town}`} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-3 py-2.5 font-bold text-slate-800 whitespace-nowrap">
+                            {log.attendance_date}
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap">
+                            {log.town}
+                          </td>
+                          <td className="px-3 py-2.5 font-mono text-emerald-700 font-bold whitespace-nowrap">
+                            {formatTimeFromIso(log.check_in_at)}
+                          </td>
+                          <td className="px-3 py-2.5 font-mono text-slate-700 font-bold whitespace-nowrap">
+                            {formatTimeFromIso(log.check_out_at)}
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap">
+                            {log.duration_text || 'Duty Completed'}
+                          </td>
+                          <td className="px-3 py-2.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                            {log.latitude ? `${log.latitude.toFixed(4)}°, ${log.longitude.toFixed(4)}°` : 'GPS'}
+                            {log.gps_accuracy_m ? ` (±${Math.round(log.gps_accuracy_m)}m)` : ''}
+                          </td>
+                          <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              log.status === 'CHECKED_OUT'
+                                ? 'bg-slate-100 text-slate-700 border-slate-200'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            }`}>
+                              {log.status === 'CHECKED_OUT' ? 'Shift Completed' : 'Checked In'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -2232,26 +2626,73 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                               </p>
                             </div>
 
-                            {isAuthorizedApproverEmail(currentUser?.email) ? (
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  cust.approvalStatus = 'APPROVED';
-                                  cust.isActive = true;
-                                  cust.status = 'NORMAL';
-                                  if (onRefresh) await onRefresh();
-                                  setRegistrationSuccessMsg(
-                                    `Dealer "${cust.companyName || cust.name}" is now Approved and Active!`
-                                  );
-                                  setDealerCategoryFilter('ACTIVE');
-                                  setTimeout(() => setRegistrationSuccessMsg(null), 6000);
-                                }}
-                                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
-                                title="Approve registration and activate account immediately"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Approve &amp; Activate</span>
-                              </button>
+                            {isApproverOrAdmin ? (
+                              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      cust.approvalStatus = 'APPROVED';
+                                      cust.isActive = true;
+                                      cust.status = 'NORMAL';
+                                      if (onApproveCustomer) {
+                                        await onApproveCustomer(cust.id, currentUser.fullName);
+                                      } else {
+                                        await approveCustomerRegistration(cust.id, currentUser.fullName);
+                                      }
+                                      setRegistrationSuccessMsg(
+                                        `Dealer "${cust.companyName || cust.name}" is now Approved and Active!`
+                                      );
+                                      setDealerCategoryFilter('ACTIVE');
+                                      toast.success(
+                                        'Dealer Approved & Activated',
+                                        `Partner "${cust.companyName || cust.name}" is approved for commercial transactions.`
+                                      );
+                                      if (onRefresh) await onRefresh();
+                                      setTimeout(() => setRegistrationSuccessMsg(null), 6000);
+                                    } catch (err: any) {
+                                      toast.error('Approval Failed', err?.message || 'Unable to approve dealer.');
+                                    }
+                                  }}
+                                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
+                                  title="Approve registration and activate account immediately"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Approve &amp; Activate</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const reason = window.prompt(
+                                      `Enter rejection reason for "${cust.companyName || cust.name}":`,
+                                      'Incomplete KYC / credit profile'
+                                    );
+                                    if (reason) {
+                                      try {
+                                        cust.approvalStatus = 'REJECTED';
+                                        cust.status = 'REJECTED';
+                                        if (onRejectCustomer) {
+                                          await onRejectCustomer(cust.id, reason);
+                                        } else {
+                                          await rejectCustomerRegistration(cust.id, reason);
+                                        }
+                                        toast.info(
+                                          'Dealer Registration Rejected',
+                                          `Application for "${cust.companyName || cust.name}" was declined.`
+                                        );
+                                        if (onRefresh) await onRefresh();
+                                      } catch (err: any) {
+                                        toast.error('Rejection Failed', err?.message || 'Unable to reject dealer.');
+                                      }
+                                    }
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer shrink-0"
+                                  title="Decline registration request"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  <span>Reject</span>
+                                </button>
+                              </div>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-300">
                                 <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin" />
@@ -2588,192 +3029,314 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                       </div>
                     )}
 
-                    {/* Brand Accordion SKU Lists */}
-                    <div className="space-y-3">
-                      {(Object.entries(brandsGrouped) as [string, SKU[]][]).map(([brandName, brandSkus]) => {
-                        const isExpanded = expandedBrands[brandName] ?? false;
-                        const brandActiveQty = brandSkus.reduce((sum, s) => sum + (orderQuantities[s.id] || 0), 0);
-                        
-                        // Alert field reps when any SKU within that category falls below its reorder level
-                        const criticalStockCount = brandSkus.filter((sku) => {
-                          const stock = getSkuStock(sku.id);
-                          const threshold = sku.reorderLevel || 10;
-                          return stock <= threshold;
-                        }).length;
-
-                        return (
-                          <div key={brandName} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
-                            {/* Brand Header Accordion Trigger */}
+                    {/* SKU Quick Search, Stock Status Filter & Expand Toolbar */}
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2.5">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                        {/* Search Input */}
+                        <div className="relative flex-1">
+                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                          <input
+                            type="text"
+                            value={skuSearchQuery}
+                            onChange={(e) => setSkuSearchQuery(e.target.value)}
+                            placeholder="Search SKU name, code, brand..."
+                            className="w-full pl-9 pr-8 py-1.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-2xs font-medium"
+                          />
+                          {skuSearchQuery && (
                             <button
                               type="button"
-                              onClick={() => toggleBrand(brandName)}
-                              className="w-full px-4 py-3.5 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left font-extrabold text-sm text-slate-900 cursor-pointer transition-colors"
+                              onClick={() => setSkuSearchQuery('')}
+                              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                              title="Clear search"
                             >
-                              <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                                <span className="w-2.5 h-2.5 rounded-full bg-teal-600 shrink-0" />
-                                <span className="truncate">{brandName}</span>
-                                <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/80 px-2 py-0.5 rounded-full shrink-0">
-                                  {brandSkus.length} SKUs
-                                </span>
-                                {criticalStockCount > 0 && (
-                                  <span
-                                    className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full shrink-0 shadow-2xs"
-                                    title={`${criticalStockCount} SKU${criticalStockCount > 1 ? 's' : ''} in this category below reorder level`}
-                                  >
-                                    <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                                    <span>Critical Stock ({criticalStockCount})</span>
-                                  </span>
-                                )}
-                                {brandActiveQty > 0 && (
-                                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0 animate-in fade-in">
-                                    {brandActiveQty} selected
-                                  </span>
-                                )}
-                              </div>
-                              {isExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
-                              )}
+                              <X className="w-3.5 h-3.5" />
                             </button>
+                          )}
+                        </div>
 
-                            {/* SKU Table Inside Brand */}
-                            {isExpanded && (
-                              <div className="p-3 divide-y divide-slate-100">
-                                {brandSkus.map((sku) => {
-                                  const stock = getSkuStock(sku.id);
-                                  const isOutOfStock = stock <= 0;
-                                  const isLowStock = !isOutOfStock && stock < (sku.reorderLevel || 10);
-                                  const currentQty = orderQuantities[sku.id] || 0;
-                                  const unitPrice = Number(sku.tradePrice || sku.retailPrice || 0);
+                        {/* Expand / Collapse All Accordions Button */}
+                        <button
+                          type="button"
+                          onClick={toggleExpandAllBrands}
+                          className="px-3 py-1.5 bg-white hover:bg-slate-100 active:scale-95 text-slate-700 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-2xs"
+                          title="Toggle all brand categories"
+                        >
+                          <Layers className="w-3.5 h-3.5 text-teal-600" />
+                          <span>{Object.values(expandedBrands).every(Boolean) ? 'Collapse All' : 'Expand All'}</span>
+                        </button>
+                      </div>
 
-                                  return (
-                                    <div
-                                      key={sku.id}
-                                      className={`p-3 rounded-2xl border transition-all duration-200 ${
-                                        currentQty > 0
-                                          ? 'bg-emerald-50/50 border-emerald-300 ring-1 ring-emerald-200 shadow-2xs'
-                                          : 'bg-white hover:bg-slate-50/80 border-slate-200/80 shadow-2xs'
-                                      } flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs`}
+                      {/* Stock Status Filter Pills */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setSkuStockFilter('ALL')}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap cursor-pointer transition-all ${
+                            skuStockFilter === 'ALL'
+                              ? 'bg-slate-900 text-white shadow-2xs'
+                              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                          }`}
+                        >
+                          All SKUs ({skus.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSkuStockFilter('IN_STOCK')}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
+                            skuStockFilter === 'IN_STOCK'
+                              ? 'bg-emerald-600 text-white shadow-2xs'
+                              : 'bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200'
+                          }`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          <span>In Stock</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSkuStockFilter('LOW_STOCK')}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
+                            skuStockFilter === 'LOW_STOCK'
+                              ? 'bg-amber-600 text-white shadow-2xs'
+                              : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200'
+                          }`}
+                        >
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>Low Stock</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSkuStockFilter('OUT_OF_STOCK')}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
+                            skuStockFilter === 'OUT_OF_STOCK'
+                              ? 'bg-rose-600 text-white shadow-2xs'
+                              : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200'
+                          }`}
+                        >
+                          <span>0 Stock</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSkuStockFilter('SELECTED')}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
+                            skuStockFilter === 'SELECTED'
+                              ? 'bg-teal-700 text-white shadow-2xs'
+                              : 'bg-white text-teal-800 hover:bg-teal-50 border border-teal-200'
+                          }`}
+                        >
+                          <span>Selected ({orderSummary.totalSKUs})</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Brand Accordion SKU Lists */}
+                    {Object.keys(brandsGrouped).length === 0 ? (
+                      <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-2">
+                        <Package className="w-8 h-8 text-slate-300 mx-auto" />
+                        <h4 className="text-sm font-black text-slate-800">No Matching SKUs Found</h4>
+                        <p className="text-xs text-slate-500">
+                          Try adjusting your search query or changing the stock filter above.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSkuSearchQuery('');
+                            setSkuStockFilter('ALL');
+                          }}
+                          className="mt-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"
+                        >
+                          Reset Filters
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {(Object.entries(brandsGrouped) as [string, SKU[]][]).map(([brandName, brandSkus]) => {
+                          const isExpanded = expandedBrands[brandName] ?? false;
+                          const brandActiveQty = brandSkus.reduce((sum, s) => sum + (orderQuantities[s.id] || 0), 0);
+                          
+                          // Alert field reps when any SKU within that category falls below its reorder level
+                          const criticalStockCount = brandSkus.filter((sku) => {
+                            const stock = getSkuStock(sku.id);
+                            const threshold = sku.reorderLevel || 10;
+                            return stock <= threshold;
+                          }).length;
+
+                          return (
+                            <div key={brandName} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                              {/* Brand Header Accordion Trigger */}
+                              <button
+                                type="button"
+                                onClick={() => toggleBrand(brandName)}
+                                className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left font-extrabold text-sm text-slate-900 cursor-pointer transition-colors"
+                              >
+                                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-teal-600 shrink-0" />
+                                  <span className="truncate">{brandName}</span>
+                                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/80 px-2 py-0.5 rounded-full shrink-0">
+                                    {brandSkus.length} SKUs
+                                  </span>
+                                  {criticalStockCount > 0 && (
+                                    <span
+                                      className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full shrink-0 shadow-2xs"
+                                      title={`${criticalStockCount} SKU${criticalStockCount > 1 ? 's' : ''} in this category below reorder level`}
                                     >
-                                      {/* SKU Title & Pricing Info */}
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className="font-bold text-slate-900 text-xs sm:text-sm">{sku.name}</span>
-                                          <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                                            {sku.skuCode}
-                                          </span>
-                                          {isLowStock && (
-                                            <span 
-                                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-extrabold uppercase tracking-wider animate-pulse shrink-0"
-                                              title={`Current stock is below the reorder level of ${sku.reorderLevel || 10} pcs.`}
+                                      <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                                      <span>Critical Stock ({criticalStockCount})</span>
+                                    </span>
+                                  )}
+                                  {brandActiveQty > 0 && (
+                                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0 animate-in fade-in">
+                                      {brandActiveQty} selected
+                                    </span>
+                                  )}
+                                </div>
+                                {isExpanded ? (
+                                  <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                                )}
+                              </button>
+
+                              {/* SKU Grid Inside Brand (Compact High-Density Responsive Grid) */}
+                              {isExpanded && (
+                                <div className="p-2 sm:p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-2.5">
+                                  {brandSkus.map((sku) => {
+                                    const stock = getSkuStock(sku.id);
+                                    const isOutOfStock = stock <= 0;
+                                    const isLowStock = !isOutOfStock && stock <= (sku.reorderLevel || 10);
+                                    const currentQty = orderQuantities[sku.id] || 0;
+                                    const unitPrice = Number(sku.tradePrice || sku.retailPrice || 0);
+
+                                    return (
+                                      <div
+                                        key={sku.id}
+                                        className={`p-2.5 rounded-xl border transition-all duration-200 flex flex-col justify-between gap-2 text-xs relative ${
+                                          currentQty > 0
+                                            ? 'bg-emerald-50/80 border-emerald-300 ring-1 ring-emerald-300 shadow-xs'
+                                            : 'bg-white hover:bg-slate-50 border-slate-200 shadow-2xs'
+                                        }`}
+                                      >
+                                        {/* Row 1: SKU Name & Code */}
+                                        <div className="space-y-1">
+                                          <div className="flex items-start justify-between gap-1.5">
+                                            <h4
+                                              className="font-black text-slate-900 text-xs line-clamp-2 leading-tight flex-1"
+                                              title={sku.name}
                                             >
-                                              <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
-                                              <span>Low Stock</span>
+                                              {sku.name}
+                                            </h4>
+                                            <span className="text-[9px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-semibold shrink-0">
+                                              {sku.skuCode}
                                             </span>
-                                          )}
-                                          {isOutOfStock && (
-                                            <span className="px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-extrabold uppercase tracking-wider shrink-0">
-                                              Out of Stock
-                                            </span>
-                                          )}
+                                          </div>
+
+                                          {/* Row 2: PRIORITIZED Stock Status & Price - Prominent for Small Screens */}
+                                          <div className="pt-1 flex items-center justify-between gap-1.5 flex-wrap">
+                                            {/* Price Badge */}
+                                            <div className="bg-slate-900 text-white px-2 py-0.5 rounded-md font-mono font-black text-xs inline-flex items-center gap-1 shadow-2xs">
+                                              <span className="text-[9px] text-teal-300 font-sans uppercase font-bold">Rs.</span>
+                                              <span>{unitPrice.toLocaleString()}</span>
+                                            </div>
+
+                                            {/* Stock Status Badge */}
+                                            <div className="shrink-0">
+                                              {isOutOfStock ? (
+                                                <span className="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-0.5">
+                                                  0 Stock
+                                                </span>
+                                              ) : isLowStock ? (
+                                                <span
+                                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black shadow-2xs"
+                                                  title={`Stock (${stock}) is below reorder trigger of ${sku.reorderLevel || 10} pcs`}
+                                                >
+                                                  <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                                                  <span>{stock} pcs (Low)</span>
+                                                </span>
+                                              ) : (
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-black">
+                                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                                                  <span>{stock} pcs</span>
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
                                         </div>
 
-                                        <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium mt-1 flex-wrap">
-                                          <span>Price: <strong className="text-slate-800 font-mono">Rs. {unitPrice.toLocaleString()}</strong></span>
-                                          <span>•</span>
-                                          <span>
-                                            Available:{' '}
-                                            {isOutOfStock ? (
-                                              <strong className="text-rose-600 font-bold">0 pcs</strong>
+                                        {/* Row 3: Order Stepper Controls & Line Subtotal */}
+                                        <div className="pt-2 border-t border-slate-100/90 flex items-center justify-between gap-1.5">
+                                          <div className="min-w-0">
+                                            {currentQty > 0 ? (
+                                              <div>
+                                                <span className="text-[8px] text-emerald-800 font-bold uppercase tracking-wider block leading-none">
+                                                  Line Total
+                                                </span>
+                                                <span className="text-xs font-mono font-black text-emerald-700 truncate block">
+                                                  Rs. {(currentQty * unitPrice).toLocaleString()}
+                                                </span>
+                                              </div>
                                             ) : (
-                                              <span className="inline-flex items-center gap-1">
-                                                <strong className={`${isLowStock ? 'text-amber-600' : 'text-emerald-700'} font-bold`}>{stock} pcs</strong>
-                                                {isLowStock && (
-                                                  <span className="text-[10px] text-slate-400 font-medium font-mono">
-                                                    (Reorder Trigger: {sku.reorderLevel || 10})
-                                                  </span>
-                                                )}
-                                              </span>
+                                              <span className="text-[10px] text-slate-400 font-medium font-mono">Qty: 0</span>
                                             )}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      {/* Order Qty Controls & Line Subtotal */}
-                                      <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
-                                        {/* Line item subtotal badge */}
-                                        {currentQty > 0 ? (
-                                          <div className="text-left sm:text-right pr-1">
-                                            <span className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider block">Line Total</span>
-                                            <span className="text-xs font-mono font-black text-emerald-700">
-                                              Rs. {(currentQty * unitPrice).toLocaleString()}
-                                            </span>
                                           </div>
-                                        ) : (
-                                          <div className="text-left sm:text-right pr-1 opacity-60">
-                                            <span className="text-[10px] text-slate-400 font-medium">Qty: 0</span>
-                                          </div>
-                                        )}
 
-                                        {/* Thumb-friendly Stepper Buttons */}
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                          <button
-                                            type="button"
-                                            disabled={isOutOfStock || currentQty <= 0}
-                                            onClick={() => handleQtyChange(sku.id, currentQty - 1)}
-                                            className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 active:scale-95 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-slate-700 font-bold cursor-pointer transition-all touch-manipulation shadow-2xs"
-                                            aria-label="Decrease quantity"
-                                            title="Decrease quantity"
-                                          >
-                                            <Minus className="w-4 h-4 stroke-[2.5]" />
-                                          </button>
-
-                                          <input
-                                            type="number"
-                                            min={0}
-                                            max={stock > 0 ? stock : 0}
-                                            disabled={isOutOfStock}
-                                            value={currentQty === 0 ? '' : currentQty}
-                                            onChange={(e) => handleQtyChange(sku.id, parseInt(e.target.value) || 0)}
-                                            placeholder="0"
-                                            className="w-14 sm:w-16 h-10 sm:h-9 text-center py-1 bg-white border border-slate-300 rounded-xl font-mono font-black text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-slate-100 disabled:text-slate-400 tabular-nums shadow-2xs"
-                                            aria-label={`Quantity for ${sku.name}`}
-                                          />
-
-                                          <button
-                                            type="button"
-                                            disabled={isOutOfStock || (stock > 0 && currentQty >= stock)}
-                                            onClick={() => handleQtyChange(sku.id, currentQty + 1)}
-                                            className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-teal-600 hover:bg-teal-700 active:bg-teal-800 active:scale-95 text-white disabled:bg-slate-100 disabled:text-slate-300 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center font-bold cursor-pointer transition-all touch-manipulation shadow-2xs"
-                                            aria-label="Increase quantity"
-                                            title="Increase quantity"
-                                          >
-                                            <Plus className="w-4 h-4 stroke-[2.5]" />
-                                          </button>
-
-                                          {currentQty > 0 && (
+                                          {/* Compact Stepper Buttons */}
+                                          <div className="flex items-center gap-1 shrink-0">
                                             <button
                                               type="button"
-                                              onClick={() => handleQtyChange(sku.id, 0)}
-                                              className="w-10 h-10 sm:w-8 sm:h-9 rounded-xl bg-rose-50 hover:bg-rose-100 active:bg-rose-200 active:scale-95 text-rose-600 border border-rose-200 flex items-center justify-center cursor-pointer transition-all touch-manipulation shadow-2xs ml-0.5"
-                                              aria-label="Reset quantity"
-                                              title="Reset quantity to 0"
+                                              disabled={isOutOfStock || currentQty <= 0}
+                                              onClick={() => handleQtyChange(sku.id, currentQty - 1)}
+                                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-slate-700 font-bold cursor-pointer transition-all touch-manipulation border border-slate-200/80 shadow-2xs"
+                                              aria-label="Decrease quantity"
+                                              title="Decrease quantity"
                                             >
-                                              <X className="w-4 h-4" />
+                                              <Minus className="w-3 h-3 stroke-[2.5]" />
                                             </button>
-                                          )}
+
+                                            <input
+                                              type="number"
+                                              min={0}
+                                              max={stock > 0 ? stock : 0}
+                                              disabled={isOutOfStock}
+                                              value={currentQty === 0 ? '' : currentQty}
+                                              onChange={(e) => handleQtyChange(sku.id, parseInt(e.target.value) || 0)}
+                                              placeholder="0"
+                                              className="w-10 sm:w-11 h-7 text-center py-0 bg-white border border-slate-300 rounded-lg font-mono font-black text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-slate-100 disabled:text-slate-400 tabular-nums shadow-2xs"
+                                              aria-label={`Quantity for ${sku.name}`}
+                                            />
+
+                                            <button
+                                              type="button"
+                                              disabled={isOutOfStock || (stock > 0 && currentQty >= stock)}
+                                              onClick={() => handleQtyChange(sku.id, currentQty + 1)}
+                                              className="w-7 h-7 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white disabled:bg-slate-100 disabled:text-slate-300 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center font-bold cursor-pointer transition-all touch-manipulation shadow-2xs"
+                                              aria-label="Increase quantity"
+                                              title="Increase quantity"
+                                            >
+                                              <Plus className="w-3 h-3 stroke-[2.5]" />
+                                            </button>
+
+                                            {currentQty > 0 && (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleQtyChange(sku.id, 0)}
+                                                className="w-6 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 border border-rose-200 flex items-center justify-center cursor-pointer transition-all touch-manipulation shadow-2xs"
+                                                aria-label="Reset quantity"
+                                                title="Reset to 0"
+                                              >
+                                                <X className="w-3 h-3" />
+                                              </button>
+                                            )}
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {/* IN-PAGE ORDER SUMMARY (Comprehensive Breakdown Card) */}
                     <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -3201,34 +3764,69 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
 
                 {/* --- 5. CHECK LEDGER SECTION --- */}
                 <div id="dealer-section-ledger" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center text-white shadow-xs">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-white shadow-xs shrink-0">
                         <Layers className="w-4 h-4" />
                       </div>
                       <div>
                         <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
                           5. Check Ledger
                         </h3>
-                        <p className="text-[10px] text-slate-500 font-medium">Live Customer Statement of Account</p>
+                        <p className="text-[10px] text-slate-500 font-medium">Live Customer Statement &amp; Running Balance</p>
                       </div>
                     </div>
 
-                    {/* Date Filter */}
-                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                      <input
-                        type="date"
-                        value={ledgerFromDate}
-                        onChange={(e) => setLedgerFromDate(e.target.value)}
-                        className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs"
-                      />
-                      <span>to</span>
-                      <input
-                        type="date"
-                        value={ledgerToDate}
-                        onChange={(e) => setLedgerToDate(e.target.value)}
-                        className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs"
-                      />
+                    {/* Actions Toolbar & Date Filter */}
+                    <div className="flex flex-wrap items-center gap-2 text-xs w-full md:w-auto justify-between md:justify-end">
+                      <div className="flex items-center gap-1.5 font-semibold text-slate-600">
+                        <input
+                          type="date"
+                          value={ledgerFromDate}
+                          onChange={(e) => setLedgerFromDate(e.target.value)}
+                          className="px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                        />
+                        <span className="text-slate-400 font-normal">to</span>
+                        <input
+                          type="date"
+                          value={ledgerToDate}
+                          onChange={(e) => setLedgerToDate(e.target.value)}
+                          className="px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!activeCustomer) return;
+                            exportCustomerLedgerToCsv(activeCustomer, activeCustomerLedgerEntries);
+                            toast.success('Ledger Exported', `CSV Statement generated for ${activeCustomer.companyName}.`);
+                          }}
+                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-lg font-bold text-xs cursor-pointer inline-flex items-center gap-1 border border-slate-200 shadow-2xs transition-all"
+                          title="Export Ledger to CSV"
+                        >
+                          <Download className="w-3.5 h-3.5 text-slate-600" />
+                          <span className="hidden sm:inline">CSV</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!activeCustomer) {
+                              toast.error('No Customer Selected', 'Please select a distributor or dealer to print statement.');
+                              return;
+                            }
+                            setPrintLedgerModalOpen(true);
+                            toast.info('Statement of Account', `Opening official print preview for ${activeCustomer.companyName}...`);
+                          }}
+                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white rounded-lg font-bold text-xs cursor-pointer inline-flex items-center gap-1.5 shadow-2xs transition-all"
+                          title="Print official A4 Statement of Account"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Print Ledger</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -3288,270 +3886,331 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               activeTown={selectedTown}
             />
 
-            {/* Header & Hierarchy Role Badge */}
-            <div className="sra-card">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">
-                    {roleScope.scopeLabel}
-                  </span>
-                  <h1 className="text-xl font-black text-slate-900">Sales Performance</h1>
-                  <p className="text-xs text-slate-500 font-medium">{roleScope.subtitle}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full uppercase">
-                    Role: {roleScope.level}
-                  </span>
-                </div>
+            {/* DASHBOARD MODULE SWITCHER CONTROL */}
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 pl-1">
+                <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse" />
+                <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Active Dashboard Workspace
+                </span>
               </div>
-
-              {/* Dedicated Data Consistency & Manual Refresh Controller */}
-              <div
-                id="dashboard-sync-status-container"
-                className={`sra-sync-bar ${isSyncGlow ? 'sra-sync-glowing' : ''}`}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-block w-2.5 h-2.5 rounded-full transition-all ${
-                      isRefreshing
-                        ? 'bg-amber-500 animate-ping'
-                        : isSyncGlow
-                        ? 'bg-emerald-500 ring-2 ring-emerald-300 animate-bounce'
-                        : 'bg-emerald-500'
-                    }`}
-                  />
-                  <div className="text-xs">
-                    <span className="text-slate-500 font-medium">Last synced: </span>
-                    <span
-                      className={`font-bold transition-colors ${
-                        isSyncGlow ? 'text-emerald-900 font-extrabold' : 'text-slate-800'
-                      }`}
-                    >
-                      {lastSyncedText}
-                    </span>
-                    {isSyncGlow && (
-                      <span className="ml-2 text-[10px] font-black text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded-md inline-block animate-in fade-in">
-                        Synced
-                      </span>
-                    )}
-                  </div>
-                </div>
+              <div className="flex bg-slate-100 p-1 rounded-xl">
                 <button
-                  id="dashboard-manual-refresh-btn"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-                  title="Manually trigger onRefresh() and ensure data consistency"
+                  onClick={() => setDashboardSubTab('FMCG_COMMAND')}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                    dashboardSubTab === 'FMCG_COMMAND'
+                      ? 'bg-teal-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
                 >
-                  <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  <span>{isRefreshing ? 'Syncing...' : 'Sync Now'}</span>
+                  FMCG Sales Command (N-LINK Core)
+                </button>
+                <button
+                  onClick={() => setDashboardSubTab('FINANCIAL')}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                    dashboardSubTab === 'FINANCIAL'
+                      ? 'bg-teal-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  Financial Performance
                 </button>
               </div>
+            </div>
 
-              {/* Period Selector: TODAY | MTD | YTD */}
-              <div className="sra-period-selector">
-                {(['TODAY', 'MTD', 'YTD'] as const).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setDashboardPeriod(p)}
-                    className={`sra-period-btn ${dashboardPeriod === p ? 'sra-period-btn-active' : ''}`}
+            {/* Sub-tab Router */}
+            {dashboardSubTab === 'FMCG_COMMAND' ? (
+              <FmcgCommandCenter
+                currentUser={currentUser}
+                customers={customers}
+                skus={skus}
+                salesOrders={salesOrders}
+                recoveries={recoveries}
+                visits={visits}
+              />
+            ) : (
+              <>
+                {/* Header & Hierarchy Role Badge */}
+                <div className="sra-card">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">
+                        {roleScope.scopeLabel}
+                      </span>
+                      <h1 className="text-xl font-black text-slate-900">Sales Performance</h1>
+                      <p className="text-xs text-slate-500 font-medium">{roleScope.subtitle}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full uppercase">
+                        Role: {roleScope.level}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Dedicated Data Consistency & Manual Refresh Controller */}
+                  <div
+                    id="dashboard-sync-status-container"
+                    className={`sra-sync-bar ${isSyncGlow ? 'sra-sync-glowing' : ''}`}
                   >
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* MTD SALES TARGET ACHIEVEMENT SVG GAUGE & COMPARISON BARS */}
-            <MtdAchievementGauge
-              salesAchieved={performanceData.salesAchieved}
-              salesTarget={performanceData.salesTarget}
-              salesPercent={performanceData.salesPercent}
-              monthName={mtdStats.monthName}
-              approvedValue={mtdStats.approvedMtdValue}
-              pendingValue={mtdStats.pendingMtdValue}
-              daysPassed={new Date().getDate()}
-              totalDaysInMonth={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}
-            />
-
-            {/* RESPONSIVE FLUID KPI GRID: SALES & RECOVERY SCALING TOGETHER */}
-            <div className="sra-dashboard-kpi-grid">
-              {/* 1. SALES KPI CARD */}
-              <div className="sra-kpi-card">
-                <div className="sra-kpi-header">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center text-teal-700 font-black">
-                      S
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-block w-2.5 h-2.5 rounded-full transition-all ${
+                          isRefreshing
+                            ? 'bg-amber-500 animate-ping'
+                            : isSyncGlow
+                            ? 'bg-emerald-500 ring-2 ring-emerald-300 animate-bounce'
+                            : 'bg-emerald-500'
+                        }`}
+                      />
+                      <div className="text-xs">
+                        <span className="text-slate-500 font-medium">Last synced: </span>
+                        <span
+                          className={`font-bold transition-colors ${
+                            isSyncGlow ? 'text-emerald-900 font-extrabold' : 'text-slate-800'
+                          }`}
+                        >
+                          {lastSyncedText}
+                        </span>
+                        {isSyncGlow && (
+                          <span className="ml-2 text-[10px] font-black text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded-md inline-block animate-in fade-in">
+                            Synced
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                        {dashboardPeriod === 'MTD' ? `${mtdStats.monthName} Sales Performance` : 'Sales Performance'}
-                      </h2>
-                      <span className="text-[11px] text-slate-500 font-medium">
-                        {dashboardPeriod === 'MTD' ? 'Dynamic Sales Orders vs Monthly Target' : 'Realized vs Period Target'}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-sm font-black text-teal-700 font-mono">
-                    {performanceData.salesPercent}% Achieved
-                  </span>
-                </div>
-
-                {/* Visual Progress Bar */}
-                <div className="sra-progress-track">
-                  <div
-                    className="sra-progress-fill-teal"
-                    style={{ width: `${Math.min(performanceData.salesPercent, 100)}%` }}
-                  />
-                </div>
-
-                {/* Data Grid */}
-                <div className="sra-metric-subgrid">
-                  <div className="sra-metric-item">
-                    <span className="sra-metric-label">Target</span>
-                    <span className="sra-metric-value">
-                      Rs. {performanceData.salesTarget.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="sra-metric-item">
-                    <span className="sra-metric-label">Achievement</span>
-                    <span className="sra-metric-value text-teal-700">
-                      Rs. {performanceData.salesAchieved.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="sra-metric-variance">
-                    <span className="text-slate-500 font-medium">Variance vs Target:</span>
-                    <span
-                      className={`font-mono font-bold ${
-                        performanceData.salesVariance >= 0 ? 'text-emerald-700' : 'text-rose-600'
-                      }`}
+                    <button
+                      id="dashboard-manual-refresh-btn"
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                      title="Manually trigger onRefresh() and ensure data consistency"
                     >
-                      {performanceData.salesVariance >= 0 ? '+' : ''}Rs.{' '}
-                      {performanceData.salesVariance.toLocaleString()}
-                    </span>
+                      <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      <span>{isRefreshing ? 'Syncing...' : 'Sync Now'}</span>
+                    </button>
+                  </div>
+
+                  {/* Period Selector: TODAY | MTD | YTD */}
+                  <div className="sra-period-selector">
+                    {(['TODAY', 'MTD', 'YTD'] as const).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setDashboardPeriod(p)}
+                        className={`sra-period-btn ${dashboardPeriod === p ? 'sra-period-btn-active' : ''}`}
+                      >
+                        {p}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Dynamic MTD Operational Run-Rate & Order Clearance Card */}
-                {dashboardPeriod === 'MTD' && (
-                  <div className="sra-mtd-card">
-                    <div className="flex items-center justify-between border-b border-teal-200/60 pb-2">
-                      <span className="font-extrabold text-teal-900 text-[11px] uppercase tracking-wide">
-                        MTD Pace &amp; Quota Velocity
+                {/* MTD SALES TARGET ACHIEVEMENT SVG GAUGE & COMPARISON BARS */}
+                <MtdAchievementGauge
+                  salesAchieved={performanceData.salesAchieved}
+                  salesTarget={performanceData.salesTarget}
+                  salesPercent={performanceData.salesPercent}
+                  monthName={mtdStats.monthName}
+                  approvedValue={mtdStats.approvedMtdValue}
+                  pendingValue={mtdStats.pendingMtdValue}
+                  daysPassed={new Date().getDate()}
+                  totalDaysInMonth={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}
+                />
+
+                {/* RESPONSIVE FLUID KPI GRID: SALES & RECOVERY SCALING TOGETHER */}
+                <div className="sra-dashboard-kpi-grid">
+                  {/* 1. SALES KPI CARD */}
+                  <div className="sra-kpi-card">
+                    <div className="sra-kpi-header">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center text-teal-700 font-black">
+                          S
+                        </div>
+                        <div>
+                          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                            {dashboardPeriod === 'MTD' ? `${mtdStats.monthName} Sales Performance` : 'Sales Performance'}
+                          </h2>
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            {dashboardPeriod === 'MTD' ? 'Dynamic Sales Orders vs Monthly Target' : 'Realized vs Period Target'}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-black text-teal-700 font-mono">
+                        {performanceData.salesPercent}% Achieved
                       </span>
-                      <span className="text-[10px] font-bold text-teal-700 font-mono">
-                        {mtdStats.totalOrders} Orders Logged
+                    </div>
+
+                    {/* Visual Progress Bar */}
+                    <div className="sra-progress-track">
+                      <div
+                        className="sra-progress-fill-teal"
+                        style={{ width: `${Math.min(performanceData.salesPercent, 100)}%` }}
+                      />
+                    </div>
+
+                    {/* Data Grid */}
+                    <div className="sra-metric-subgrid">
+                      <div className="sra-metric-item">
+                        <span className="sra-metric-label">Target</span>
+                        <span className="sra-metric-value">
+                          Rs. {performanceData.salesTarget.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="sra-metric-item">
+                        <span className="sra-metric-label">Achievement</span>
+                        <span className="sra-metric-value text-teal-700">
+                          Rs. {performanceData.salesAchieved.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="sra-metric-variance">
+                        <span className="text-slate-500 font-medium">Variance vs Target:</span>
+                        <span
+                          className={`font-mono font-bold ${
+                            performanceData.salesVariance >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                          }`}
+                        >
+                          {performanceData.salesVariance >= 0 ? '+' : ''}Rs.{' '}
+                          {performanceData.salesVariance.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Dynamic MTD Operational Run-Rate & Order Clearance Card */}
+                    {dashboardPeriod === 'MTD' && (
+                      <div className="sra-mtd-card">
+                        <div className="flex items-center justify-between border-b border-teal-200/60 pb-2">
+                          <span className="font-extrabold text-teal-900 text-[11px] uppercase tracking-wide">
+                            MTD Pace &amp; Quota Velocity
+                          </span>
+                          <span className="text-[10px] font-bold text-teal-700 font-mono">
+                            {mtdStats.totalOrders} Orders Logged
+                          </span>
+                        </div>
+
+                        <div className="sra-mtd-stat-grid">
+                          <div className="bg-white/80 p-2 rounded-lg border border-teal-100">
+                            <span className="text-[10px] text-slate-500 block">Approved / Confirmed</span>
+                            <span className="font-mono font-black text-teal-800">
+                              Rs. {mtdStats.approvedMtdValue.toLocaleString()} ({mtdStats.approvedOrdersCount})
+                            </span>
+                          </div>
+                          <div className="bg-white/80 p-2 rounded-lg border border-amber-100">
+                            <span className="text-[10px] text-slate-500 block">Pending Clearance</span>
+                            <span className="font-mono font-black text-amber-700">
+                              Rs. {mtdStats.pendingMtdValue.toLocaleString()} ({mtdStats.pendingOrdersCount})
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-white/90 p-2.5 rounded-lg border border-teal-200/60 text-[11px] flex-wrap gap-1">
+                          <div>
+                            <span className="text-slate-500 block text-[10px]">Days Remaining in Month:</span>
+                            <span className="font-extrabold text-slate-800 font-mono">{mtdStats.daysRemaining} Days</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-slate-500 block text-[10px]">Daily Booking Run-Rate Needed:</span>
+                            <span className="font-extrabold text-teal-800 font-mono">
+                              Rs. {mtdStats.dailyRunRateNeeded.toLocaleString()} / day
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. RECOVERY KPI CARD */}
+                  <div className="sra-kpi-card">
+                    <div className="sra-kpi-header">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700 font-black">
+                          R
+                        </div>
+                        <div>
+                          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Recovery</h2>
+                          <span className="text-[11px] text-slate-500 font-medium">Collections vs Target</span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-black text-emerald-700 font-mono">
+                        {performanceData.recoveryPercent}% Achieved
                       </span>
                     </div>
 
-                    <div className="sra-mtd-stat-grid">
-                      <div className="bg-white/80 p-2 rounded-lg border border-teal-100">
-                        <span className="text-[10px] text-slate-500 block">Approved / Confirmed</span>
-                        <span className="font-mono font-black text-teal-800">
-                          Rs. {mtdStats.approvedMtdValue.toLocaleString()} ({mtdStats.approvedOrdersCount})
+                    {/* Visual Progress Bar */}
+                    <div className="sra-progress-track">
+                      <div
+                        className="sra-progress-fill-emerald"
+                        style={{ width: `${Math.min(performanceData.recoveryPercent, 100)}%` }}
+                      />
+                    </div>
+
+                    {/* Data Grid */}
+                    <div className="sra-metric-subgrid">
+                      <div className="sra-metric-item">
+                        <span className="sra-metric-label">Target</span>
+                        <span className="sra-metric-value">
+                          Rs. {performanceData.recoveryTarget.toLocaleString()}
                         </span>
                       </div>
-                      <div className="bg-white/80 p-2 rounded-lg border border-amber-100">
-                        <span className="text-[10px] text-slate-500 block">Pending Clearance</span>
-                        <span className="font-mono font-black text-amber-700">
-                          Rs. {mtdStats.pendingMtdValue.toLocaleString()} ({mtdStats.pendingOrdersCount})
+                      <div className="sra-metric-item">
+                        <span className="sra-metric-label">Achievement</span>
+                        <span className="sra-metric-value text-emerald-700">
+                          Rs. {performanceData.recoveryAchieved.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="sra-metric-variance">
+                        <span className="text-slate-500 font-medium">Variance vs Target:</span>
+                        <span
+                          className={`font-mono font-bold ${
+                            performanceData.recoveryVariance >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                          }`}
+                        >
+                          {performanceData.recoveryVariance >= 0 ? '+' : ''}Rs.{' '}
+                          {performanceData.recoveryVariance.toLocaleString()}
                         </span>
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-between bg-white/90 p-2.5 rounded-lg border border-teal-200/60 text-[11px] flex-wrap gap-1">
-                      <div>
-                        <span className="text-slate-500 block text-[10px]">Days Remaining in Month:</span>
-                        <span className="font-extrabold text-slate-800 font-mono">{mtdStats.daysRemaining} Days</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-slate-500 block text-[10px]">Daily Booking Run-Rate Needed:</span>
-                        <span className="font-extrabold text-teal-800 font-mono">
-                          Rs. {mtdStats.dailyRunRateNeeded.toLocaleString()} / day
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 2. RECOVERY KPI CARD */}
-              <div className="sra-kpi-card">
-                <div className="sra-kpi-header">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700 font-black">
-                      R
-                    </div>
-                    <div>
-                      <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Recovery</h2>
-                      <span className="text-[11px] text-slate-500 font-medium">Collections vs Target</span>
-                    </div>
-                  </div>
-                  <span className="text-sm font-black text-emerald-700 font-mono">
-                    {performanceData.recoveryPercent}% Achieved
-                  </span>
-                </div>
-
-                {/* Visual Progress Bar */}
-                <div className="sra-progress-track">
-                  <div
-                    className="sra-progress-fill-emerald"
-                    style={{ width: `${Math.min(performanceData.recoveryPercent, 100)}%` }}
-                  />
-                </div>
-
-                {/* Data Grid */}
-                <div className="sra-metric-subgrid">
-                  <div className="sra-metric-item">
-                    <span className="sra-metric-label">Target</span>
-                    <span className="sra-metric-value">
-                      Rs. {performanceData.recoveryTarget.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="sra-metric-item">
-                    <span className="sra-metric-label">Achievement</span>
-                    <span className="sra-metric-value text-emerald-700">
-                      Rs. {performanceData.recoveryAchieved.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="sra-metric-variance">
-                    <span className="text-slate-500 font-medium">Variance vs Target:</span>
-                    <span
-                      className={`font-mono font-bold ${
-                        performanceData.recoveryVariance >= 0 ? 'text-emerald-700' : 'text-rose-600'
-                      }`}
-                    >
-                      {performanceData.recoveryVariance >= 0 ? '+' : ''}Rs.{' '}
-                      {performanceData.recoveryVariance.toLocaleString()}
-                    </span>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* 3. DEALER & ORDER DENSITY HEATMAP (Town-wise Geographic Concentration) */}
-            <DealerHeatmap
-              customers={customers}
-              salesOrders={salesOrders}
-              onSelectCustomer={(c) => {
-                setActiveTab('DISTRIBUTORS');
-                setSelectedCustomerId(c.id);
-              }}
-              onFilterTown={(town) => {
-                setActiveTab('DISTRIBUTORS');
-                setCustomerSearchQuery(town);
-              }}
-            />
+                {/* 3. DEALER & ORDER DENSITY HEATMAP (Town-wise Geographic Concentration) */}
+                <DealerHeatmap
+                  customers={customers}
+                  salesOrders={salesOrders}
+                  onSelectCustomer={(c) => {
+                    setActiveTab('DISTRIBUTORS');
+                    setSelectedCustomerId(c.id);
+                  }}
+                  onFilterTown={(town) => {
+                    setActiveTab('DISTRIBUTORS');
+                    setCustomerSearchQuery(town);
+                  }}
+                />
+              </>
+            )}
           </div>
         )}
       </main>
 
       {/* ========================================================= */}
-      {/* BOTTOM NAVIGATION BAR (Responsive Mobile & Tablet View) */}
+      {/* BOTTOM NAVIGATION BAR (Strict 3-Tab Architecture) */}
       {/* ========================================================= */}
       <nav className="sra-bottom-nav">
         <div className="sra-bottom-nav-inner">
-          {/* Tab 1: Attendance */}
+          {/* Tab 1: Dashboard */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('DASHBOARD');
+              setSelectedCustomerId(null);
+            }}
+            className={`sra-bottom-nav-btn ${
+              activeTab === 'DASHBOARD' ? 'sra-bottom-nav-btn-active' : ''
+            }`}
+          >
+            <TrendingUp className={`w-5 h-5 ${activeTab === 'DASHBOARD' ? 'stroke-[2.5] text-teal-700' : 'stroke-2'}`} />
+            <span className="text-[11px] leading-none">Dashboard</span>
+          </button>
+
+          {/* Tab 2: Attendance */}
           <button
             type="button"
             onClick={() => {
@@ -3566,7 +4225,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             <span className="text-[11px] leading-none">Attendance</span>
           </button>
 
-          {/* Tab 2: Distributor */}
+          {/* Tab 3: Customers */}
           <button
             type="button"
             onClick={() => setActiveTab('DISTRIBUTORS')}
@@ -3575,25 +4234,388 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             }`}
           >
             <Store className={`w-5 h-5 ${activeTab === 'DISTRIBUTORS' ? 'stroke-[2.5] text-teal-700' : 'stroke-2'}`} />
-            <span className="text-[11px] leading-none">Distributors</span>
-          </button>
-
-          {/* Tab 3: Dashboard */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('DASHBOARD');
-              setSelectedCustomerId(null);
-            }}
-            className={`sra-bottom-nav-btn ${
-              activeTab === 'DASHBOARD' ? 'sra-bottom-nav-btn-active' : ''
-            }`}
-          >
-            <TrendingUp className={`w-5 h-5 ${activeTab === 'DASHBOARD' ? 'stroke-[2.5] text-teal-700' : 'stroke-2'}`} />
-            <span className="text-[11px] leading-none">Dashboard</span>
+            <span className="text-[11px] leading-none">Customers</span>
           </button>
         </div>
       </nav>
+
+      {/* ========================================================= */}
+      {/* FIELD FORCE SIDEBAR / MENU (SECTION 11) */}
+      {/* ========================================================= */}
+      {showFieldForceMenu && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex">
+          <div
+            className="fixed inset-0"
+            onClick={() => setShowFieldForceMenu(false)}
+            aria-hidden="true"
+          />
+          <div className="relative w-72 sm:w-80 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+            {/* Drawer Header */}
+            <div className="p-5 bg-gradient-to-r from-teal-700 to-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center font-black text-lg border border-white/20">
+                  NL
+                </div>
+                <div>
+                  <h3 className="font-black text-sm tracking-tight">N-LINK 360</h3>
+                  <p className="text-[10px] text-teal-200 font-medium">Field Force System</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFieldForceMenu(false)}
+                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* User Profile Snippet */}
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-xs border border-teal-200">
+                {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-black text-slate-800 truncate">{currentUser.fullName}</div>
+                <div className="text-[10px] text-slate-500 truncate">{currentUser.email || roleScope.level}</div>
+              </div>
+            </div>
+
+            {/* 7 Strict Menu Items (Section 11) */}
+            <div className="p-3 space-y-1 overflow-y-auto flex-1 text-xs font-bold text-slate-700">
+              {/* 1. Dashboard */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('DASHBOARD');
+                  setSelectedCustomerId(null);
+                  setShowFieldForceMenu(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-colors cursor-pointer ${
+                  activeTab === 'DASHBOARD' ? 'bg-teal-50 text-teal-800 font-black' : 'hover:bg-slate-100'
+                }`}
+              >
+                <TrendingUp className="w-4 h-4 text-teal-600" />
+                <span>1. Dashboard</span>
+              </button>
+
+              {/* 2. Attendance */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('ATTENDANCE');
+                  setSelectedCustomerId(null);
+                  setShowFieldForceMenu(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-colors cursor-pointer ${
+                  activeTab === 'ATTENDANCE' ? 'bg-teal-50 text-teal-800 font-black' : 'hover:bg-slate-100'
+                }`}
+              >
+                <Clock className="w-4 h-4 text-teal-600" />
+                <span>2. Attendance</span>
+              </button>
+
+              {/* 3. Dealers / Distributors */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('DISTRIBUTORS');
+                  setSelectedCustomerId(null);
+                  setShowFieldForceMenu(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-colors cursor-pointer ${
+                  activeTab === 'DISTRIBUTORS' && !selectedCustomerId ? 'bg-teal-50 text-teal-800 font-black' : 'hover:bg-slate-100'
+                }`}
+              >
+                <Store className="w-4 h-4 text-teal-600" />
+                <span>3. Dealers / Distributors</span>
+              </button>
+
+              {/* 4. Invoices */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('DISTRIBUTORS');
+                  setCustomerInnerTab('INVOICES');
+                  setShowFieldForceMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <Receipt className="w-4 h-4 text-emerald-600" />
+                <span>4. Invoices</span>
+              </button>
+
+              {/* 5. Ledgers */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('DISTRIBUTORS');
+                  setCustomerInnerTab('LEDGER');
+                  setShowFieldForceMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span>5. Ledgers</span>
+              </button>
+
+              <div className="pt-3 pb-1">
+                <div className="h-px bg-slate-200" />
+              </div>
+
+              {/* 6. Restore Password (Section 29) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFieldForceMenu(false);
+                  setShowPasswordRestoreModal(true);
+                  setRestoreMessage(null);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer text-slate-700"
+              >
+                <KeyRound className="w-4 h-4 text-amber-600" />
+                <span>6. Restore Password</span>
+              </button>
+
+              {/* 7. Logout */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFieldForceMenu(false);
+                  if (onLogout) onLogout();
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer font-black"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>7. Logout</span>
+              </button>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="p-3.5 bg-slate-50 border-t border-slate-200 text-center text-[10px] text-slate-500 font-medium">
+              National Lights • Field Force v3.60
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* RESTORE PASSWORD MODAL (SECTION 29) */}
+      {/* ========================================================= */}
+      {showPasswordRestoreModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150 my-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900">Restore Password</h3>
+                  <p className="text-[11px] text-slate-500">Secure Password Reset Flow</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPasswordRestoreModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Tab switch between sending reset link vs direct in-session password update */}
+            <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => { setRestoreTabMode('RESET_LINK'); setRestoreMessage(null); }}
+                className={`py-2 px-3 rounded-lg transition-all cursor-pointer ${
+                  restoreTabMode === 'RESET_LINK' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                Send Reset Link
+              </button>
+              <button
+                type="button"
+                onClick={() => { setRestoreTabMode('DIRECT_CHANGE'); setRestoreMessage(null); }}
+                className={`py-2 px-3 rounded-lg transition-all cursor-pointer ${
+                  restoreTabMode === 'DIRECT_CHANGE' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                Set New Password
+              </button>
+            </div>
+
+            {restoreMessage && (
+              <div
+                className={`p-3 rounded-2xl text-xs font-bold flex items-start gap-2 ${
+                  restoreMessage.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                    : 'bg-rose-50 text-rose-900 border border-rose-200'
+                }`}
+              >
+                {restoreMessage.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                )}
+                <span className="leading-relaxed">{restoreMessage.text}</span>
+              </div>
+            )}
+
+            {restoreTabMode === 'RESET_LINK' ? (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const cleanEmail = restoreEmail.trim().toLowerCase();
+                  if (!cleanEmail) {
+                    setRestoreMessage({ type: 'error', text: 'Please enter your registered corporate email.' });
+                    return;
+                  }
+                  setRestoreSubmitting(true);
+                  setRestoreMessage(null);
+                  try {
+                    await resetPassword(cleanEmail);
+                    setRestoreMessage({
+                      type: 'success',
+                      text: `Password reset instructions have been dispatched to ${cleanEmail}. Please check your inbox or spam folder.`,
+                    });
+                  } catch (err: any) {
+                    setRestoreMessage({
+                      type: 'error',
+                      text: err?.message || 'Password reset email could not be sent. Please contact your administrator.',
+                    });
+                  } finally {
+                    setRestoreSubmitting(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Registered Personnel Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={restoreEmail}
+                    onChange={(e) => setRestoreEmail(e.target.value)}
+                    placeholder="user@nationallights.com"
+                    className="w-full text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Instructions will be delivered with a secure redirect link.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900">
+                  <strong>Corporate Email Note:</strong> If external transactional emails are blocked by corporate firewall, contact National Lights IT Admin directly for assisted password reset.
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={restoreSubmitting}
+                  className="w-full py-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  {restoreSubmitting ? 'Sending Link…' : 'Send Reset Link'}
+                </button>
+              </form>
+            ) : (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!directNewPassword || directNewPassword.length < 6) {
+                    setRestoreMessage({ type: 'error', text: 'Password must be at least 6 characters in length.' });
+                    return;
+                  }
+                  if (directNewPassword !== directConfirmPassword) {
+                    setRestoreMessage({ type: 'error', text: 'New passwords do not match. Please re-enter.' });
+                    return;
+                  }
+                  setRestoreSubmitting(true);
+                  setRestoreMessage(null);
+                  try {
+                    await updatePassword(directNewPassword);
+                    setDirectNewPassword('');
+                    setDirectConfirmPassword('');
+                    setRestoreMessage({
+                      type: 'success',
+                      text: 'Your password has been successfully updated in your account!',
+                    });
+                  } catch (err: any) {
+                    setRestoreMessage({
+                      type: 'error',
+                      text: err?.message || 'Failed to update password. Please contact your administrator.',
+                    });
+                  } finally {
+                    setRestoreSubmitting(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    New Account Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showDirectPass ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      value={directNewPassword}
+                      onChange={(e) => setDirectNewPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      className="w-full text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowDirectPass((v) => !v)}
+                      className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      {showDirectPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type={showDirectPass ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={directConfirmPassword}
+                    onChange={(e) => setDirectConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="w-full text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={restoreSubmitting}
+                  className="w-full py-3 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Lock className="w-4 h-4" />
+                  {restoreSubmitting ? 'Updating Password…' : 'Save New Password'}
+                </button>
+              </form>
+            )}
+
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={() => setShowPasswordRestoreModal(false)}
+                className="text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* ORDER CONFIRMATION MODAL */}
@@ -3696,6 +4718,9 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             if (onSubmitRegistration) {
               await onSubmitRegistration(dealerData);
             }
+            submitAndSaveCustomer(dealerData, getAccessToken()).catch((err) =>
+              console.warn('Dealer registration 2-way sync notice:', err)
+            );
             setActiveTab('DISTRIBUTORS');
             setDealerCategoryFilter('PENDING');
             setSelectedCustomerId(null);
@@ -3709,6 +4734,99 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             setTimeout(() => setRegistrationSuccessMsg(null), 8000);
           }}
         />
+      )}
+
+      {/* ========================================================= */}
+      {/* PRINT CUSTOMER STATEMENT & LEDGER MODAL */}
+      {/* ========================================================= */}
+      {printLedgerModalOpen && activeCustomer && (
+        <PrintLedgerModal
+          isOpen={printLedgerModalOpen}
+          onClose={() => setPrintLedgerModalOpen(false)}
+          customer={activeCustomer}
+          ledgerEntries={activeCustomerLedgerEntries}
+        />
+      )}
+
+      {/* ========================================================= */}
+      {/* 500m GEOFENCE VIOLATION SECURITY MODAL */}
+      {/* ========================================================= */}
+      {geofenceViolationModal && geofenceViolationModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+            {/* Header Icon & Warning */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                <Compass className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                  500m Geofence Perimeter Check Failed
+                </span>
+                <h3 className="text-base font-black text-slate-900 mt-0.5">Outside Assigned Beat Boundary</h3>
+              </div>
+            </div>
+
+            {/* Explanation & Measured Distance */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-2.5">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                <span className="text-slate-500 font-medium">Assigned Town:</span>
+                <span className="font-bold text-slate-900 text-sm">{geofenceViolationModal.townName}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                <span className="text-slate-500 font-medium">Town Hub Coordinates:</span>
+                <span className="font-mono text-slate-700">
+                  {geofenceViolationModal.townCoords.lat.toFixed(4)}° N, {geofenceViolationModal.townCoords.lng.toFixed(4)}° E
+                </span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                <span className="text-slate-500 font-medium">Your GPS Location:</span>
+                <span className="font-mono text-slate-700">
+                  {geofenceViolationModal.userCoords.lat.toFixed(4)}° N, {geofenceViolationModal.userCoords.lng.toFixed(4)}° E
+                  <span className="text-[10px] text-slate-400 block text-right font-sans">
+                    (Accuracy: ±{geofenceViolationModal.userCoords.accuracy}m)
+                  </span>
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-0.5">
+                <span className="text-slate-700 font-bold">Measured Distance:</span>
+                <span className="font-mono font-black text-rose-600 text-sm">
+                  {geofenceViolationModal.distanceMeters >= 1000
+                    ? `${geofenceViolationModal.distanceKm.toFixed(2)} km`
+                    : `${Math.round(geofenceViolationModal.distanceMeters)} meters`}
+                  <span className="text-[10px] text-rose-500 block font-sans font-normal text-right">
+                    Allowed: Within 500m
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Company policy requires field representatives to be within <strong>500 meters</strong> of the assigned beat center for legitimate attendance verification.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setGeofenceViolationModal(null)}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer transition-colors"
+              >
+                Dismiss
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGeofenceViolationModal(null);
+                  handleCheckIn();
+                }}
+                className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-colors"
+              >
+                Retry GPS Check
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ========================================================= */}
