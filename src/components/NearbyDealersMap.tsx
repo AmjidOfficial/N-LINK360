@@ -260,6 +260,13 @@ export const NearbyDealersMap: React.FC<NearbyDealersMapProps> = ({
       filteredDealers.forEach((d) => bounds.extend([d.lat, d.lng]));
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
     }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
   }, [userLat, userLng, accuracy, townName, filteredDealers, selectedDealerId]);
 
   return (

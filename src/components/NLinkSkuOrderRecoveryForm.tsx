@@ -37,11 +37,20 @@ import {
   TrendingUp,
   AlertTriangle,
   Trophy,
+  Printer,
+  Download,
+  FileSpreadsheet,
+  ExternalLink,
+  Receipt,
+  FileCheck2,
 } from 'lucide-react';
 import { NLINK_OFFICIAL_PRODUCTS, NLINK_PRODUCT_CATEGORIES, NLinkSKU } from '../data/nlink-products';
 import { NLinkUser } from '../data/nlink-users-team';
-import { Customer, SalesOrder, Recovery } from '../types';
+import { Customer, SalesOrder, Recovery, Invoice, LedgerEntry, SKU } from '../types';
 import { PaymentSlipCameraUpload, ExtractedSlipData } from './PaymentSlipCameraUpload';
+import { PrintInvoiceModal } from './PrintInvoiceModal';
+import { PrintLedgerModal } from './PrintLedgerModal';
+import { exportCustomerLedgerToCsv, exportCustomerLedgerToExcel } from '../services/exportEngine';
 
 const FORM_STORAGE_KEY = 'nlink_sales_recovery_form_unified_v3';
 
@@ -162,7 +171,12 @@ export const NLinkSkuOrderRecoveryForm: React.FC<NLinkSkuOrderRecoveryFormProps>
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(initialDraft.lastSavedAt || null);
 
   // Notification / Feedback Banner
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'warning' | 'info'; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'warning' | 'info'; message: string; lastOrder?: any } | null>(null);
+
+  // Modals for Tax Invoicing and Running Ledger
+  const [isPrintLedgerOpen, setIsPrintLedgerOpen] = useState(false);
+  const [isPrintInvoiceOpen, setIsPrintInvoiceOpen] = useState(false);
+  const [selectedInvoiceForModal, setSelectedInvoiceForModal] = useState<Invoice | null>(null);
 
   // Persistence Hook: auto-save all state changes to localStorage
   useEffect(() => {
@@ -251,17 +265,22 @@ export const NLinkSkuOrderRecoveryForm: React.FC<NLinkSkuOrderRecoveryFormProps>
     return assignedCustomers.find((c) => c.id === selectedCustomerId) || assignedCustomers[0] || null;
   }, [assignedCustomers, selectedCustomerId]);
 
-  // Filtered customer list for picker
+  // Filtered customer list for picker (Sorted A-Z)
   const filteredCustomers = useMemo(() => {
-    if (!customerSearchQuery.trim()) return assignedCustomers;
+    const list = [...assignedCustomers];
+    if (!customerSearchQuery.trim()) {
+      return list.sort((a, b) => a.companyName.localeCompare(b.companyName));
+    }
     const q = customerSearchQuery.toLowerCase();
-    return assignedCustomers.filter(
-      (c) =>
-        c.companyName.toLowerCase().includes(q) ||
-        c.customerCode.toLowerCase().includes(q) ||
-        (c.city && c.city.toLowerCase().includes(q)) ||
-        (c.territory && c.territory.toLowerCase().includes(q))
-    );
+    return list
+      .filter(
+        (c) =>
+          c.companyName.toLowerCase().includes(q) ||
+          c.customerCode.toLowerCase().includes(q) ||
+          (c.city && c.city.toLowerCase().includes(q)) ||
+          (c.territory && c.territory.toLowerCase().includes(q))
+      )
+      .sort((a, b) => a.companyName.localeCompare(b.companyName));
   }, [assignedCustomers, customerSearchQuery]);
 
   // Real-time Dealers Account Statement values
@@ -291,7 +310,7 @@ export const NLinkSkuOrderRecoveryForm: React.FC<NLinkSkuOrderRecoveryFormProps>
     };
   }, [selectedCustomer, invoices, recoveries]);
 
-  // Filtered N-Link SKU list
+  // Filtered N-Link SKU list (Sorted A-Z)
   const filteredSkus = useMemo(() => {
     return NLINK_OFFICIAL_PRODUCTS.filter((sku) => {
       const matchCat = selectedCategory === 'ALL' || sku.category === selectedCategory;
@@ -301,8 +320,151 @@ export const NLinkSkuOrderRecoveryForm: React.FC<NLinkSkuOrderRecoveryFormProps>
         sku.skuCode.toLowerCase().includes(skuSearchQuery.toLowerCase()) ||
         sku.wattage.toLowerCase().includes(skuSearchQuery.toLowerCase());
       return matchCat && matchSearch;
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name));
   }, [selectedCategory, skuSearchQuery]);
+
+  // Comprehensive Real-time Customer Ledger Entries for Export & Printing
+  const customerLedgerEntries: LedgerEntry[] = useMemo(() => {
+    if (!selectedCustomer) return [];
+    const entries: LedgerEntry[] = [];
+    let running = Number(selectedCustomer.openingBalance || 0);
+
+    // 1. Opening Balance Entry
+    entries.push({
+      id: `lead_ob_${selectedCustomer.id}`,
+      customerId: selectedCustomer.id,
+      customerName: selectedCustomer.companyName,
+      entryNumber: `OB-${selectedCustomer.customerCode}`,
+      entryDate: selectedCustomer.createdAt ? selectedCustomer.createdAt.slice(0, 10) : '2026-01-01',
+      transactionType: 'OPENING_BALANCE',
+      referenceModule: 'CUSTOMER_MASTER',
+      referenceId: 'OPENING',
+      debitAmount: running,
+      creditAmount: 0,
+      runningBalance: running,
+      description: 'Opening Balance Ledger Carryforward',
+      createdAt: selectedCustomer.createdAt || '2026-01-01T00:00:00Z',
+    });
+
+    // 2. Invoices & Recoveries combined chronologically
+    const allTx: Array<{ date: string; type: 'INVOICE' | 'RECOVERY'; data: any }> = [];
+    (invoices || []).filter((i) => i.customerId === selectedCustomer.id).forEach((inv) => {
+      allTx.push({ date: inv.invoiceDate || inv.createdAt || '2026-09-01', type: 'INVOICE', data: inv });
+    });
+    (recoveries || []).filter((r) => r.customerId === selectedCustomer.id).forEach((rec) => {
+      allTx.push({ date: rec.collectionDate || rec.createdAt || '2026-09-01', type: 'RECOVERY', data: rec });
+    });
+
+    allTx.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    allTx.forEach((tx, idx) => {
+      if (tx.type === 'INVOICE') {
+        const amt = Number(tx.data.totalAmount || tx.data.amount || 0);
+        running += amt;
+        entries.push({
+          id: `lead_inv_${tx.data.id || idx}`,
+          customerId: selectedCustomer.id,
+          customerName: selectedCustomer.companyName,
+          entryNumber: tx.data.invoiceNumber || `INV-${tx.data.id || idx}`,
+          entryDate: tx.date.slice(0, 10),
+          transactionType: 'INVOICE',
+          referenceModule: 'SALES_INVOICE',
+          referenceId: tx.data.orderId || tx.data.id || '',
+          debitAmount: amt,
+          creditAmount: 0,
+          runningBalance: running,
+          description: `Sales Tax Invoice #${tx.data.invoiceNumber || tx.data.id}`,
+          createdAt: tx.date,
+        });
+      } else {
+        const amt = Number(tx.data.amount || 0);
+        running -= amt;
+        entries.push({
+          id: `lead_rec_${tx.data.id || idx}`,
+          customerId: selectedCustomer.id,
+          customerName: selectedCustomer.companyName,
+          entryNumber: tx.data.recoveryNumber || `REC-${tx.data.id || idx}`,
+          entryDate: tx.date.slice(0, 10),
+          transactionType: 'RECOVERY',
+          referenceModule: 'PAYMENT_RECOVERY',
+          referenceId: tx.data.recoveryNumber || tx.data.id || '',
+          debitAmount: 0,
+          creditAmount: amt,
+          runningBalance: running,
+          description: `Payment Receipt (${tx.data.paymentMode || 'CASH'}) - ${tx.data.remarks || 'Cleared'}`,
+          createdAt: tx.date,
+        });
+      }
+    });
+
+    return entries;
+  }, [selectedCustomer, invoices, recoveries]);
+
+  // Handler to open official Tax Invoice Modal for current customer
+  const handleOpenCurrentTaxInvoice = (specificInvoice?: any) => {
+    if (!selectedCustomer) return;
+    if (specificInvoice) {
+      setSelectedInvoiceForModal(specificInvoice);
+      setIsPrintInvoiceOpen(true);
+      return;
+    }
+
+    // Find the latest invoice for this customer or create a live preview invoice
+    const customerInvoices = (invoices || []).filter((inv) => inv.customerId === selectedCustomer.id);
+    if (customerInvoices.length > 0) {
+      const latest = customerInvoices[customerInvoices.length - 1];
+      setSelectedInvoiceForModal(latest);
+      setIsPrintInvoiceOpen(true);
+    } else {
+      // Create live formal invoice from current order or customer state
+      const liveInv: Invoice = {
+        id: `inv_live_${Date.now()}`,
+        orderId: `ord_${Date.now()}`,
+        invoiceNumber: `INV-NL-${Math.floor(1000 + Math.random() * 9000)}`,
+        customerId: selectedCustomer.id,
+        customerName: selectedCustomer.companyName,
+        customerCode: selectedCustomer.customerCode,
+        invoiceDate: new Date().toISOString(),
+        dueDate: new Date(Date.now() + (selectedCustomer.creditDays || 30) * 86400000).toISOString(),
+        totalAmount: activeOrderRows.length > 0 ? orderSummary.netGrandTotal : (selectedCustomer.currentBalance || 50000),
+        subtotal: activeOrderRows.length > 0 ? orderSummary.subtotal : (selectedCustomer.currentBalance || 50000),
+        discountAmount: activeOrderRows.length > 0 ? orderSummary.specialDiscAmount : 0,
+        taxAmount: 0,
+        previousBalance: customerStatement.openingBalance,
+        newBalance: customerStatement.netBalance,
+        status: 'POSTED',
+        paymentStatus: 'UNPAID',
+        items: activeOrderRows.length > 0 ? activeOrderRows.map((r, idx) => ({
+          id: `item_inv_${idx}`,
+          invoiceId: `inv_live_${Date.now()}`,
+          skuId: r.sku.id,
+          skuCode: r.sku.skuCode,
+          skuName: r.sku.name,
+          quantity: r.totalUnits,
+          unitPrice: r.unitPrice,
+          discountAmount: (r.unitPrice * r.totalUnits * r.discountPercent) / 100,
+          taxAmount: 0,
+          lineTotal: r.lineTotal,
+        })) : [
+          {
+            id: 'item_inv_0',
+            invoiceId: `inv_live_${Date.now()}`,
+            skuId: NLINK_OFFICIAL_PRODUCTS[0]?.id || 'sku-1',
+            skuCode: NLINK_OFFICIAL_PRODUCTS[0]?.skuCode || 'NL-LED-12W',
+            skuName: NLINK_OFFICIAL_PRODUCTS[0]?.name || 'National LED Bulb 12W (Day Light)',
+            quantity: 100,
+            unitPrice: NLINK_OFFICIAL_PRODUCTS[0]?.tradePrice || 245,
+            discountAmount: 0,
+            taxAmount: 0,
+            lineTotal: (NLINK_OFFICIAL_PRODUCTS[0]?.tradePrice || 245) * 100,
+          }
+        ],
+        createdAt: new Date().toISOString(),
+      };
+      setSelectedInvoiceForModal(liveInv);
+      setIsPrintInvoiceOpen(true);
+    }
+  };
 
   // Active Order Rows Calculation
   const activeOrderRows: OrderItemRow[] = useMemo(() => {
@@ -488,9 +650,43 @@ export const NLinkSkuOrderRecoveryForm: React.FC<NLinkSkuOrderRecoveryFormProps>
 
     onOrderSubmitted(newOrder, selectedCustomer.companyName);
 
+    // Create a corresponding formal invoice for one-click invoice generation/printing
+    const generatedInvoice: Invoice = {
+      id: `inv_${Date.now()}`,
+      orderId: newOrder.id || `ord_${Date.now()}`,
+      invoiceNumber: `INV-${orderNumber.replace('SO-', '')}`,
+      customerId: selectedCustomer.id,
+      customerName: selectedCustomer.companyName,
+      customerCode: selectedCustomer.customerCode,
+      invoiceDate: new Date().toISOString(),
+      dueDate: new Date(Date.now() + (selectedCustomer.creditDays || 30) * 86400000).toISOString(),
+      totalAmount: orderSummary.netGrandTotal,
+      subtotal: orderSummary.subtotal,
+      discountAmount: orderSummary.specialDiscAmount,
+      taxAmount: 0,
+      previousBalance: customerStatement.openingBalance,
+      newBalance: customerStatement.netBalance + orderSummary.netGrandTotal,
+      status: 'POSTED',
+      paymentStatus: 'UNPAID',
+      items: (newOrder.items || []).map((i, idx) => ({
+        id: `item_gen_${idx}`,
+        invoiceId: `inv_${Date.now()}`,
+        skuId: i.skuId,
+        skuCode: i.skuCode,
+        skuName: i.skuName,
+        quantity: i.orderedQuantity,
+        unitPrice: i.unitPrice,
+        discountAmount: (i.unitPrice * i.orderedQuantity * (i.discountPercent || 0)) / 100,
+        taxAmount: 0,
+        lineTotal: i.lineTotal,
+      })),
+      createdAt: new Date().toISOString(),
+    };
+
     setFeedback({
       type: 'success',
-      message: `Sales Order #${orderNumber} (${activeOrderRows.length} items, Rs. ${orderSummary.netGrandTotal.toLocaleString()}) submitted and synced to central ledger!`,
+      message: `Sales Order #${orderNumber} (${activeOrderRows.length} items, Rs. ${orderSummary.netGrandTotal.toLocaleString()}) submitted and posted to customer ledger!`,
+      lastOrder: generatedInvoice,
     });
 
     // Reset order items
@@ -603,32 +799,62 @@ export const NLinkSkuOrderRecoveryForm: React.FC<NLinkSkuOrderRecoveryFormProps>
         </button>
       </div>
 
-      {/* FEEDBACK SYSTEM NOTIFICATION */}
+      {/* FEEDBACK SYSTEM NOTIFICATION WITH DIRECT INVOICE / LEDGER / EXPORT ACTIONS */}
       {feedback && (
         <div
-          className={`p-4 rounded-2xl text-xs font-semibold flex items-center justify-between border shadow-sm transition-all animate-fadeIn ${
+          className={`p-4 sm:p-5 rounded-2xl text-xs font-semibold flex flex-col sm:flex-row sm:items-center justify-between gap-3 border shadow-sm transition-all animate-fadeIn ${
             feedback.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
               : feedback.type === 'warning'
-              ? 'bg-amber-50 text-amber-800 border-amber-200'
-              : 'bg-blue-50 text-blue-800 border-blue-200'
+              ? 'bg-amber-50 text-amber-900 border-amber-200'
+              : 'bg-blue-50 text-blue-900 border-blue-200'
           }`}
         >
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-start sm:items-center gap-2.5">
             {feedback.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5 sm:mt-0" />
             ) : (
-              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
             )}
-            <span>{feedback.message}</span>
+            <div>
+              <p className="font-bold text-xs sm:text-sm">{feedback.message}</p>
+              {feedback.lastOrder && (
+                <p className="text-[11px] text-emerald-700 font-normal mt-0.5">
+                  Tax invoice &amp; running balance ledger have been automatically computed for {selectedCustomer?.companyName}.
+                </p>
+              )}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            className="text-slate-400 hover:text-slate-700 text-xs px-2 py-1 font-bold"
-          >
-            Dismiss
-          </button>
+
+          <div className="flex items-center flex-wrap gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-emerald-200/60">
+            {feedback.lastOrder && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleOpenCurrentTaxInvoice(feedback.lastOrder)}
+                  className="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 touch-control"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Tax Invoice</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPrintLedgerOpen(true)}
+                  className="px-3 py-2 bg-white hover:bg-slate-50 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 touch-control"
+                >
+                  <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>View Ledger</span>
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
+              className="text-slate-400 hover:text-slate-700 text-xs px-2.5 py-1.5 font-bold rounded-lg"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
@@ -873,6 +1099,58 @@ export const NLinkSkuOrderRecoveryForm: React.FC<NLinkSkuOrderRecoveryFormProps>
                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                   <span className="text-slate-400 text-[9px] uppercase block font-medium">Credit Terms</span>
                   <span className="font-bold text-slate-800">{selectedCustomer.creditDays} Days allowed</span>
+                </div>
+              </div>
+
+              {/* Instant Invoice & Ledger Generation & Export Action Strip */}
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Official Documents &amp; Exports
+                  </span>
+                  <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-bold">
+                    {customerLedgerEntries.length} Ledger Records
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPrintLedgerOpen(true)}
+                    className="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs touch-control"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-amber-400" />
+                    <span>View Running Ledger</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCurrentTaxInvoice()}
+                    className="py-2.5 px-3 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs touch-control"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Print Tax Invoice</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => exportCustomerLedgerToExcel(selectedCustomer, customerLedgerEntries)}
+                    className="py-2 px-2.5 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 touch-control"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Export Excel (.xls)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => exportCustomerLedgerToCsv(selectedCustomer, customerLedgerEntries)}
+                    className="py-2 px-2.5 bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-800 border border-slate-200 hover:border-blue-300 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 touch-control"
+                  >
+                    <Download className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Export CSV</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1333,6 +1611,31 @@ export const NLinkSkuOrderRecoveryForm: React.FC<NLinkSkuOrderRecoveryFormProps>
             </button>
           </div>
         </div>
+      )}
+
+      {/* MODAL 1: RUNNING CUSTOMER LEDGER STATEMENT */}
+      {isPrintLedgerOpen && selectedCustomer && (
+        <PrintLedgerModal
+          isOpen={isPrintLedgerOpen}
+          onClose={() => setIsPrintLedgerOpen(false)}
+          customer={selectedCustomer}
+          ledgerEntries={customerLedgerEntries}
+        />
+      )}
+
+      {/* MODAL 2: OFFICIAL TAX INVOICE & RECEIPT */}
+      {isPrintInvoiceOpen && selectedInvoiceForModal && selectedCustomer && (
+        <PrintInvoiceModal
+          isOpen={isPrintInvoiceOpen}
+          onClose={() => {
+            setIsPrintInvoiceOpen(false);
+            setSelectedInvoiceForModal(null);
+          }}
+          invoice={selectedInvoiceForModal}
+          customer={selectedCustomer}
+          skus={NLINK_OFFICIAL_PRODUCTS as any}
+          currentUser={currentUser as any}
+        />
       )}
 
     </div>

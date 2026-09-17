@@ -182,6 +182,12 @@ export const VisitsMapView: React.FC<VisitsMapViewProps> = ({ visits }) => {
       // Fallback
     }
 
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
   }, [isLeafletReady, visits]);
 
   const selectAndFocusVisit = (vis: Visit, idx: number) => {

@@ -267,6 +267,8 @@ export const AttendanceGeofenceMap: React.FC<AttendanceGeofenceMapProps> = ({
 
     return () => {
       map.off('zoomend moveend viewreset', updateD3Overlay);
+      map.remove();
+      mapRef.current = null;
     };
 
   }, [userLat, userLng, townCenter, attendanceTown, maxRadiusKM, isWithinGeofence, distanceToCenter]);

@@ -366,6 +366,13 @@ export const DealerHeatmap: React.FC<DealerHeatmapProps> = ({
     setTimeout(() => {
       map.invalidateSize();
     }, 200);
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
   }, [townStats, activeMetric]);
 
   // Focus map on specific town

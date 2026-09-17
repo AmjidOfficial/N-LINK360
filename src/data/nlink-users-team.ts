@@ -391,3 +391,41 @@ export const NLINK_TEAM_ROSTER: NLinkUser[] = [
     avatarInitials: 'ZF',
   },
 ];
+
+/**
+ * Automatically generates unique user credentials, username and secure initial password
+ */
+export function generateAutoCredentials(fullName: string, role: UserRole, existingUsers: NLinkUser[] = NLINK_TEAM_ROSTER) {
+  const cleanName = fullName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  const prefix = role === 'TSM' ? 'TSM' : role === 'ZSM' ? 'ZSM' : role === 'RSM' ? 'RSM' : role === 'ACCOUNTS' ? 'ACC' : 'EMP';
+  
+  // Find highest index
+  const nextNum = existingUsers.length + 1;
+  const employeeCode = `${prefix}-${String(nextNum).padStart(3, '0')}`;
+  
+  // Format username email
+  const nameParts = fullName.trim().toLowerCase().split(/\s+/);
+  const userHandle = nameParts.length > 1 
+    ? `${nameParts[0]}.${nameParts[nameParts.length - 1]}`
+    : nameParts[0] || 'officer';
+  
+  const email = `${userHandle.replace(/[^a-z0-9.]/g, '')}@nationallights.com`;
+  const username = `nl.${userHandle.replace(/[^a-z0-9]/g, '')}`;
+  
+  // Generate random 4-char suffix for security
+  const chars = '23456789abcdefghjkmnpqrstuvwxyz';
+  let randSuffix = '';
+  for (let i = 0; i < 4; i++) {
+    randSuffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  const password = `NL@2026#${randSuffix}`;
+
+  return {
+    employeeCode,
+    username,
+    email,
+    password,
+  };
+}
+
+export const TEAM_USERS: NLinkUser[] = NLINK_TEAM_ROSTER;

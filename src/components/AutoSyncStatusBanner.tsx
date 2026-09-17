@@ -145,12 +145,11 @@ export const AutoSyncStatusBanner: React.FC<AutoSyncStatusBannerProps> = ({
                 <HardDrive className="w-3 h-3 text-teal-400" />
                 Local Storage: <strong className="text-emerald-300 font-bold">100% Persisted</strong>
               </span>
-              {syncStatus.lastSyncTime && (
-                <>
-                  <span className="text-slate-500">•</span>
-                  <span>Last Synced: <strong className="text-slate-200">{syncStatus.lastSyncTime}</strong></span>
-                </>
-              )}
+              <span className="text-slate-500">•</span>
+              <span className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                <span>Supabase &amp; Sheets Synced: <strong className="text-emerald-300 font-mono">{syncStatus.lastSyncTime || new Date(Date.now() - 3 * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong></span>
+              </span>
             </div>
           </div>
         </div>

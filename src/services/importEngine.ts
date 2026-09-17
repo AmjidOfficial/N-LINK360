@@ -194,7 +194,7 @@ export const IMPORT_SCHEMAS: Record<ImportEntityType, EntitySchema> = {
     sampleData: [
       {
         email: 'dispatch.incharge@nationallights.com',
-        fullName: 'Mohsin Rafiq',
+        fullName: 'Kamran Tariq',
         role: 'DISPATCH_OFFICER',
         phone: '0302-5544332',
         branchName: 'Lahore Central Warehouse',

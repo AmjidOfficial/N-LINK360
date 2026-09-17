@@ -68,9 +68,6 @@ export const FmcgCommandCenter: React.FC<FmcgCommandCenterProps> = ({
     tsm: null,
   });
 
-  // Active Cohort Analytics (Bands A/B/C/D) Toggle
-  const [selectedBand, setSelectedBand] = useState<'ALL' | 'A' | 'B' | 'C' | 'D'>('ALL');
-  
   // Expanded TSMs for Sparkline View
   const [expandedTSMs, setExpandedTSMs] = useState<Record<string, boolean>>({});
 
@@ -137,12 +134,12 @@ export const FmcgCommandCenter: React.FC<FmcgCommandCenterProps> = ({
       const tonnageTons = (totalUnits * 0.15) / 1000;
       const recoveriesAmount = tsmRecs.reduce((sum, r) => sum + (r.amount || 0), 0) || (95000 + (index * 22000));
 
-      // Brand Performance Snapshot
+      // Brand Performance Snapshot (National Lights Official Product Categories)
       const brandSales: Record<string, number> = {
-        'National LED': 310 + (index * 40),
-        'Kite Glow': 140 + (index * 25),
-        'Vero Series': 90 + (index * 15),
-        'Elite Series': 50 + (index * 10)
+        'National LED Bulbs': 310 + (index * 40),
+        'National SMD & Downlights': 140 + (index * 25),
+        'National Panel & Flood': 90 + (index * 15),
+        'National Auto Bulbs & Tubes': 50 + (index * 10)
       };
 
       // 7-Day sales velocity trends
@@ -157,13 +154,6 @@ export const FmcgCommandCenter: React.FC<FmcgCommandCenterProps> = ({
           cartons: Math.round(15 + (index * 5) * (0.7 + Math.cos(dIdx + index) * 0.3))
         };
       });
-
-      // Volume Performance Band classification (A/B/C/D)
-      let band: 'A' | 'B' | 'C' | 'D' = 'C';
-      if (totalBookedValue >= 320000) band = 'A';
-      else if (totalBookedValue >= 240000) band = 'B';
-      else if (totalBookedValue >= 140000) band = 'C';
-      else band = 'D';
 
       return {
         id: tsm.id,
@@ -187,7 +177,6 @@ export const FmcgCommandCenter: React.FC<FmcgCommandCenterProps> = ({
         recAchPct: Math.round((recoveriesAmount / tsm.targetRecovery) * 100),
         brandSales,
         velocityHistory,
-        band,
       };
     });
   }, [salesOrders, recoveries]);
@@ -198,9 +187,6 @@ export const FmcgCommandCenter: React.FC<FmcgCommandCenterProps> = ({
       if (drilldown.rsm && item.region !== drilldown.rsm) return false;
       if (drilldown.zsm && item.zsm !== drilldown.zsm) return false;
       if (drilldown.tsm && item.name !== drilldown.tsm) return false;
-
-      // Band classification filter
-      if (selectedBand !== 'ALL' && item.band !== selectedBand) return false;
 
       // Text search query
       if (searchQuery.trim()) {
@@ -217,7 +203,7 @@ export const FmcgCommandCenter: React.FC<FmcgCommandCenterProps> = ({
 
       return true;
     });
-  }, [aggregatedData, drilldown, selectedBand, searchQuery]);
+  }, [aggregatedData, drilldown, searchQuery]);
 
   // Dynamic hierarchy choices at each level
   const hierarchyOptions = useMemo(() => {
@@ -245,12 +231,6 @@ export const FmcgCommandCenter: React.FC<FmcgCommandCenterProps> = ({
     const totalTonnage = filteredData.reduce((sum, d) => sum + d.tonnage, 0);
     const activeTSMs = filteredData.length;
 
-    // Segment counts
-    const bandA = filteredData.filter(d => d.band === 'A').length;
-    const bandB = filteredData.filter(d => d.band === 'B').length;
-    const bandC = filteredData.filter(d => d.band === 'C').length;
-    const bandD = filteredData.filter(d => d.band === 'D').length;
-
     return {
       totalSales,
       todaySales,
@@ -258,10 +238,6 @@ export const FmcgCommandCenter: React.FC<FmcgCommandCenterProps> = ({
       totalCartons,
       totalTonnage,
       activeTSMs,
-      bandA,
-      bandB,
-      bandC,
-      bandD
     };
   }, [filteredData]);
 
@@ -325,9 +301,9 @@ _Generated via N-LINK 360 Field Force Command Center_`;
   // Export controls
   const handleExportCSV = () => {
     try {
-      let headers = 'TSM Name,TSM Code,Territory,Town,2-ZSM,3-RSM,4-Top Management,Today Booking (PKR),MTD Booking (PKR),Target Sales,Sales %,Recoveries (PKR),Target Recovery,Recovery %,Total Cartons,Tonnage (Tons),Performance Band\n';
+      let headers = 'TSM Name,TSM Code,Territory,Town,2-ZSM,3-RSM,4-Top Management,Today Booking (PKR),MTD Booking (PKR),Target Sales,Sales %,Recoveries (PKR),Target Recovery,Recovery %,Total Cartons,Tonnage (Tons)\n';
       const rows = filteredData.map(item => {
-        return `"${item.name}","${item.code}","${item.territory}","${item.town}","${item.zsm}","${item.rsm}","${item.topManagement}",${item.todayBookedValue},${item.totalBookedValue},${item.targetSales},${item.salesAchPct},${item.recoveriesAmount},${item.targetRecovery},${item.recAchPct},${item.totalCartons},${item.tonnage.toFixed(3)},"${item.band}"`;
+        return `"${item.name}","${item.code}","${item.territory}","${item.town}","${item.zsm}","${item.rsm}","${item.topManagement}",${item.todayBookedValue},${item.totalBookedValue},${item.targetSales},${item.salesAchPct},${item.recoveriesAmount},${item.targetRecovery},${item.recAchPct},${item.totalCartons},${item.tonnage.toFixed(3)}`;
       }).join('\n');
       
       const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
@@ -346,25 +322,6 @@ _Generated via N-LINK 360 Field Force Command Center_`;
 
   const handlePrintPDFAudit = () => {
     window.print();
-  };
-
-  const getBandBadge = (band: string) => {
-    let bandColor = 'bg-slate-100 text-slate-800';
-    let bandLabel = 'Band C';
-    if (band === 'A') {
-      bandColor = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-      bandLabel = 'Band A [Elite]';
-    } else if (band === 'B') {
-      bandColor = 'bg-teal-50 text-teal-700 border border-teal-200';
-      bandLabel = 'Band B [Solid]';
-    } else if (band === 'C') {
-      bandColor = 'bg-amber-50 text-amber-700 border border-amber-200';
-      bandLabel = 'Band C [Active]';
-    } else if (band === 'D') {
-      bandColor = 'bg-rose-50 text-rose-700 border border-rose-200';
-      bandLabel = 'Band D [Attention]';
-    }
-    return { bandColor, bandLabel };
   };
 
   const renderTsmExpandedDetails = (item: any) => (
@@ -675,50 +632,22 @@ _Generated via N-LINK 360 Field Force Command Center_`;
 
       </div>
 
-      {/* 3. TSM PERFORMANCE BANDS (A/B/C/D) */}
+      {/* 3. FIELD FORCE PERFORMANCE & TERRITORY COMMAND */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         
         <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-100 pb-3">
           <div>
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-500" />
-              TSM Volume Performance Bands
+              <Award className="w-4 h-4 text-teal-600" />
+              Territory Field Force &amp; Sales Performance
             </h3>
-            <p className="text-xs text-slate-500 font-medium">Categorization based on active volumetric carton &amp; booking thresholds</p>
+            <p className="text-xs text-slate-500 font-medium">Real-time booking values, recoveries, and volume breakdown across territories</p>
           </div>
 
-          {/* Toggle buttons for Band Segmentations */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              onClick={() => setSelectedBand('ALL')}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${selectedBand === 'ALL' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-            >
-              All TSMs ({filteredData.length})
-            </button>
-            <button
-              onClick={() => setSelectedBand('A')}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${selectedBand === 'A' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}`}
-            >
-              Band A [Elite] ({summaryMetrics.bandA})
-            </button>
-            <button
-              onClick={() => setSelectedBand('B')}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${selectedBand === 'B' ? 'bg-teal-600 text-white shadow-xs' : 'bg-teal-50 text-teal-800 hover:bg-teal-100'}`}
-            >
-              Band B [Solid] ({summaryMetrics.bandB})
-            </button>
-            <button
-              onClick={() => setSelectedBand('C')}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${selectedBand === 'C' ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}
-            >
-              Band C [Active] ({summaryMetrics.bandC})
-            </button>
-            <button
-              onClick={() => setSelectedBand('D')}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${selectedBand === 'D' ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100'}`}
-            >
-              Band D [Attention] ({summaryMetrics.bandD})
-            </button>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold">
+              Active TSMs: {filteredData.length}
+            </span>
           </div>
         </div>
 
@@ -746,7 +675,6 @@ _Generated via N-LINK 360 Field Force Command Center_`;
               ) : (
                 filteredData.map((item) => {
                   const isExpanded = !!expandedTSMs[item.id];
-                  const { bandColor, bandLabel } = getBandBadge(item.band);
 
                   return (
                     <div key={item.id} className={`p-3.5 space-y-3 transition-colors ${isExpanded ? 'bg-slate-50/70' : 'hover:bg-slate-50/40'}`}>
@@ -760,8 +688,8 @@ _Generated via N-LINK 360 Field Force Command Center_`;
                             {item.territory} &bull; <span className="font-bold text-slate-700">{item.town}</span>
                           </span>
                         </div>
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase shrink-0 ${bandColor}`}>
-                          {bandLabel}
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase shrink-0 bg-teal-50 text-teal-700 border border-teal-200">
+                          {item.salesAchPct}% Target
                         </span>
                       </div>
 
@@ -842,7 +770,7 @@ _Generated via N-LINK 360 Field Force Command Center_`;
 
             {/* DESKTOP TABLE */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[950px]">
+              <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 font-black uppercase tracking-wider">
                     <th className="px-4 py-3.5 w-12 text-center">Trend</th>
@@ -853,21 +781,19 @@ _Generated via N-LINK 360 Field Force Command Center_`;
                     <th className="px-4 py-3.5">MTD Booking</th>
                     <th className="px-4 py-3.5">Recoveries</th>
                     <th className="px-4 py-3.5">Cartons &amp; Tonnage</th>
-                    <th className="px-4 py-3.5">Band</th>
                     <th className="px-4 py-3.5 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="px-4 py-8 text-center text-slate-400 font-bold">
+                      <td colSpan={9} className="px-4 py-8 text-center text-slate-400 font-bold">
                         No TSM metrics match the active hierarchy filters.
                       </td>
                     </tr>
                   ) : (
                     filteredData.map((item) => {
                       const isExpanded = !!expandedTSMs[item.id];
-                      const { bandColor, bandLabel } = getBandBadge(item.band);
 
                       return (
                         <React.Fragment key={item.id}>
@@ -910,11 +836,6 @@ _Generated via N-LINK 360 Field Force Command Center_`;
                                 </span>
                               </div>
                             </td>
-                            <td className="px-4 py-3.5">
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${bandColor}`}>
-                                {bandLabel}
-                              </span>
-                            </td>
                             <td className="px-4 py-3.5 text-center">
                               <button
                                 onClick={() => handleGenerateWhatsAppSummary(item)}
@@ -930,7 +851,7 @@ _Generated via N-LINK 360 Field Force Command Center_`;
                           {/* Expanded row */}
                           {isExpanded && (
                             <tr className="bg-slate-50/90">
-                              <td colSpan={10} className="px-6 py-4">
+                              <td colSpan={9} className="px-6 py-4">
                                 {renderTsmExpandedDetails(item)}
                               </td>
                             </tr>

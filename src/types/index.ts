@@ -178,6 +178,28 @@ export interface EmployeeTownAssignment {
   createdAt: string;
 }
 
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'ON_LEAVE' | 'HALF_DAY' | 'FIELD_DUTY';
+
+export interface EmployeeAttendance {
+  id: string;
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  designation: string;
+  department: string;
+  date: string; // YYYY-MM-DD
+  checkInTime?: string; // HH:mm
+  checkOutTime?: string; // HH:mm
+  status: AttendanceStatus;
+  location?: string;
+  gpsCoordinates?: { lat: number; lng: number };
+  workingHours?: number;
+  remarks?: string;
+  isVerified?: boolean;
+  verifiedBy?: string;
+  createdAt: string;
+}
+
 export type TargetType = 'SALES' | 'RECOVERY';
 export type TargetPeriod = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 
@@ -684,6 +706,7 @@ export interface Recovery {
   bankName?: string;
   instrumentDate?: string;
   proofAttachmentUrl?: string;
+  receiptUrl?: string;
   status: 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
   verifiedBy?: string;
   verifiedAt?: string;

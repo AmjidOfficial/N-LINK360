@@ -432,3 +432,33 @@ export async function pushCustomerToGoogleSheet(
 
   await appendSpreadsheetRows(spreadsheetId, 'Customers_Dealers!A:M', [row], accessToken);
 }
+
+/**
+ * Append a newly provisioned employee with auto-generated ID, credentials, and hierarchy into Google Sheet
+ */
+export async function pushEmployeeToGoogleSheet(
+  spreadsheetId: string,
+  user: any,
+  accessToken: string
+): Promise<void> {
+  const row = [
+    user.employeeCode || user.id,
+    user.fullName || 'Employee Name',
+    user.role || 'TSM',
+    user.roleTitle || '',
+    user.department || 'SALES_FIELD',
+    user.email || '',
+    user.phone || '',
+    user.region || '',
+    user.area || '',
+    user.territory || '',
+    user.reportingManagerName || 'Executive Board',
+    Number(user.monthlySalesTarget || 0),
+    Number(user.monthlyRecoveryTarget || 0),
+    user.status || 'ACTIVE',
+    new Date().toLocaleString(),
+  ];
+
+  await appendSpreadsheetRows(spreadsheetId, 'Users_Team!A:O', [row], accessToken);
+}
+

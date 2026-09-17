@@ -22,7 +22,7 @@ export function triggerDownload(content: string, filename: string, mimeType: str
 }
 
 // ==============================================================================
-// 1. CUSTOMER LEDGER EXPORT
+// 1. CUSTOMER LEDGER EXPORT (CSV & EXCEL)
 // ==============================================================================
 export function exportCustomerLedgerToCsv(customer: Customer, entries: LedgerEntry[]): void {
   const headers = ['Date', 'Entry Type', 'Reference No', 'Description', 'Debit (PKR)', 'Credit (PKR)', 'Running Balance (PKR)'];
@@ -52,6 +52,63 @@ export function exportCustomerLedgerToCsv(customer: Customer, entries: LedgerEnt
   const csvString = rows.map((row) => row.map(formatCsvCell).join(',')).join('\r\n');
   const filename = `Ledger_${customer.customerCode}_${new Date().toISOString().slice(0, 10)}.csv`;
   triggerDownload(csvString, filename);
+}
+
+export function exportCustomerLedgerToExcel(customer: Customer, entries: LedgerEntry[]): void {
+  const tableHtml = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Statement</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+      <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+      <style>
+        body { font-family: Arial, sans-serif; }
+        .header-title { font-size: 16pt; font-weight: bold; color: #047857; }
+        .sub-header { font-size: 10pt; color: #374151; }
+        table { border-collapse: collapse; width: 100%; }
+        th { background-color: #065f46; color: #ffffff; font-weight: bold; border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+        td { border: 1px solid #e5e7eb; padding: 6px; font-size: 10pt; }
+        .num { text-align: right; }
+        .bold { font-weight: bold; }
+        .total-row { background-color: #f3f4f6; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header-title">NATIONAL LIGHTS (PVT) LTD - CUSTOMER LEDGER STATEMENT</div>
+      <div class="sub-header"><strong>Customer:</strong> ${customer.companyName} (${customer.customerCode}) | <strong>City:</strong> ${customer.city || 'N/A'} | <strong>Credit Limit:</strong> PKR ${(customer.creditLimit || 0).toLocaleString()}</div>
+      <div class="sub-header"><strong>Generated On:</strong> ${new Date().toLocaleString()}</div>
+      <br/>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Reference No</th>
+            <th>Description</th>
+            <th class="num">Debit (PKR)</th>
+            <th class="num">Credit (PKR)</th>
+            <th class="num">Running Balance (PKR)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${entries.map(e => `
+            <tr>
+              <td>${e.entryDate || e.createdAt?.slice(0, 10) || ''}</td>
+              <td>${e.transactionType}</td>
+              <td>${e.entryNumber || e.referenceId || ''}</td>
+              <td>${e.description}</td>
+              <td class="num">${e.debitAmount ? e.debitAmount.toFixed(2) : '0.00'}</td>
+              <td class="num">${e.creditAmount ? e.creditAmount.toFixed(2) : '0.00'}</td>
+              <td class="num bold">${e.runningBalance.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  const filename = `NationalLights_Ledger_${customer.customerCode}_${new Date().toISOString().slice(0, 10)}.xls`;
+  triggerDownload(tableHtml, filename, 'application/vnd.ms-excel;charset=utf-8;');
 }
 
 // ==============================================================================
@@ -211,7 +268,139 @@ export function exportRecoveriesToCsv(recoveries: Recovery[], customers: Custome
 }
 
 // ==============================================================================
-// 5. AUDIT LOGS EXPORT
+// 5. ORDERS EXCEL EXPORT
+// ==============================================================================
+export function exportOrdersToExcel(orders: SalesOrder[]): void {
+  const tableHtml = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>SalesOrders</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+      <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+      <style>
+        body { font-family: Arial, sans-serif; }
+        .header-title { font-size: 16pt; font-weight: bold; color: #047857; }
+        .sub-header { font-size: 10pt; color: #374151; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th { background-color: #065f46; color: #ffffff; font-weight: bold; border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+        td { border: 1px solid #e5e7eb; padding: 6px; font-size: 10pt; }
+        .num { text-align: right; }
+        .bold { font-weight: bold; }
+        .total-row { background-color: #d1fae5; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header-title">NATIONAL LIGHTS (PVT) LTD - SALES ORDERS REPORT</div>
+      <div class="sub-header"><strong>Generated On:</strong> ${new Date().toLocaleString()} | <strong>Total Orders:</strong> ${orders.length}</div>
+      <br/>
+      <table>
+        <thead>
+          <tr>
+            <th>Order #</th>
+            <th>Order Date</th>
+            <th>Customer Code</th>
+            <th>Customer Name</th>
+            <th>Booked By</th>
+            <th class="num">Items Count</th>
+            <th class="num">Order Value (PKR)</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orders.map(o => `
+            <tr>
+              <td>${o.orderNumber}</td>
+              <td>${o.orderDate ? o.orderDate.slice(0, 10) : ''}</td>
+              <td>${o.customerCode || ''}</td>
+              <td>${o.customerName || ''}</td>
+              <td>${o.salesUserName || 'Sales Officer'}</td>
+              <td class="num">${o.items?.length || 0}</td>
+              <td class="num bold">${(o.totalAmount || 0).toLocaleString()}</td>
+              <td>${o.status || 'SUBMITTED'}</td>
+            </tr>
+          `).join('')}
+          <tr class="total-row">
+            <td colspan="6" class="bold">GRAND TOTAL</td>
+            <td class="num bold">${orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0).toLocaleString()}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  triggerDownload(tableHtml, `NationalLights_SalesOrders_${new Date().toISOString().slice(0, 10)}.xls`, 'application/vnd.ms-excel');
+}
+
+// ==============================================================================
+// 6. RECOVERIES EXCEL EXPORT
+// ==============================================================================
+export function exportRecoveriesToExcel(recoveries: Recovery[]): void {
+  const tableHtml = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Recoveries</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+      <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+      <style>
+        body { font-family: Arial, sans-serif; }
+        .header-title { font-size: 16pt; font-weight: bold; color: #1e40af; }
+        .sub-header { font-size: 10pt; color: #374151; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th { background-color: #1e3a8a; color: #ffffff; font-weight: bold; border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+        td { border: 1px solid #e5e7eb; padding: 6px; font-size: 10pt; }
+        .num { text-align: right; }
+        .bold { font-weight: bold; }
+        .total-row { background-color: #dbeafe; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header-title">NATIONAL LIGHTS (PVT) LTD - PAYMENT RECOVERY REPORT</div>
+      <div class="sub-header"><strong>Generated On:</strong> ${new Date().toLocaleString()} | <strong>Total Collections:</strong> ${recoveries.length}</div>
+      <br/>
+      <table>
+        <thead>
+          <tr>
+            <th>Receipt #</th>
+            <th>Collection Date</th>
+            <th>Customer Code</th>
+            <th>Customer Name</th>
+            <th>Payment Mode</th>
+            <th>Collected By</th>
+            <th class="num">Amount (PKR)</th>
+            <th>Status</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${recoveries.map(r => `
+            <tr>
+              <td>${r.recoveryNumber}</td>
+              <td>${r.collectionDate ? r.collectionDate.slice(0, 10) : ''}</td>
+              <td>${r.customerCode || ''}</td>
+              <td>${r.customerName || ''}</td>
+              <td>${r.paymentMode || 'CASH'}</td>
+              <td>${r.salesUserName || 'Recovery Officer'}</td>
+              <td class="num bold">${(r.amount || 0).toLocaleString()}</td>
+              <td>${r.status || 'VERIFIED'}</td>
+              <td>${r.remarks || ''}</td>
+            </tr>
+          `).join('')}
+          <tr class="total-row">
+            <td colspan="6" class="bold">GRAND TOTAL RECOVERED</td>
+            <td class="num bold">${recoveries.reduce((sum, r) => sum + (r.amount || 0), 0).toLocaleString()}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  triggerDownload(tableHtml, `NationalLights_Recoveries_${new Date().toISOString().slice(0, 10)}.xls`, 'application/vnd.ms-excel');
+}
+
+// ==============================================================================
+// 7. AUDIT LOGS EXPORT
 // ==============================================================================
 export function exportAuditLogsToCsv(logs: AuditLog[]): void {
   const headers = ['Timestamp', 'User Email / ID', 'Module', 'Action', 'Record ID', 'Before Value', 'After Value'];

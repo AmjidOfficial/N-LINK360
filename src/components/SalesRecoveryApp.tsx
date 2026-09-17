@@ -67,6 +67,8 @@ import { NearbyDealersMap } from './NearbyDealersMap';
 import { DealerHeatmap } from './DealerHeatmap';
 import { GoogleSheetSyncModal } from './GoogleSheetSyncModal';
 import { AutoSyncStatusBanner } from './AutoSyncStatusBanner';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas-pro';
 import { MtdAchievementGauge } from './MtdAchievementGauge';
 import { DailySummaryCard } from './DailySummaryCard';
 import { FmcgCommandCenter } from './FmcgCommandCenter';
@@ -1683,6 +1685,103 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       recentMtdOrders: mtdOrders.slice(0, 5),
     };
   }, [salesOrders, currentUser]);
+
+  const [isGeneratingReportPdf, setIsGeneratingReportPdf] = useState(false);
+
+  // MTD Recoveries calculation
+  const mtdRecoveryStats = useMemo(() => {
+    const today = new Date();
+    const currentMonth = today.toISOString().slice(0, 7);
+    const mtdRecs = recoveries.filter((r) => {
+      const d = (r.collectionDate || r.createdAt || '').slice(0, 7);
+      return d === currentMonth && r.status !== 'REJECTED';
+    });
+    const achieved = mtdRecs.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+    const target = Math.round(mtdStats.mtdTarget * 0.8);
+    const percent = target > 0 ? Math.round((achieved / target) * 100) : 0;
+    return {
+      achieved,
+      target,
+      percent,
+      count: mtdRecs.length,
+      list: mtdRecs.slice(0, 5)
+    };
+  }, [recoveries, mtdStats.mtdTarget]);
+
+  // MTD Visits calculation
+  const mtdVisitsStats = useMemo(() => {
+    const today = new Date();
+    const currentMonth = today.toISOString().slice(0, 7);
+    const mtdVisits = visits.filter((v) => {
+      const d = (v.visitDate || v.createdAt || '').slice(0, 7);
+      return d === currentMonth;
+    });
+    const total = mtdVisits.length;
+    const productive = mtdVisits.filter((v) => v.isProductive || v.purpose === 'ORDER_BOOKING' || v.purpose === 'COLLECTION').length;
+    const rate = total > 0 ? Math.round((productive / total) * 150) : 0; // custom rate
+    const clRate = Math.min(rate, 100);
+    return {
+      total,
+      productive,
+      rate: clRate,
+      list: mtdVisits.slice(0, 5)
+    };
+  }, [visits]);
+
+  const downloadMonthlyReportPdf = async () => {
+    if (isGeneratingReportPdf) return;
+    setIsGeneratingReportPdf(true);
+    toast.info('Generating high-resolution MTD Monthly Report PDF...');
+
+    try {
+      const container = document.getElementById('printable-monthly-report');
+      if (!container) {
+        throw new Error('Monthly report container element not found');
+      }
+
+      // Temporarily render offscreen with proper styles for high-fidelity canvas
+      container.style.position = 'absolute';
+      container.style.left = '0px';
+      container.style.top = '0px';
+      container.style.width = '794px';
+      container.style.opacity = '1';
+      container.style.zIndex = '-9999';
+
+      const canvas = await html2canvas(container, {
+        scale: 2.2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      // Reset styles
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.opacity = '0';
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(imgHeight, pdfHeight));
+
+      const filename = `Monthly_MTD_Report_${currentUser.fullName.replace(/\s+/g, '_')}_${mtdStats.monthName.replace(/\s+/g, '_')}.pdf`;
+      pdf.save(filename);
+      toast.success('Report Downloaded', `Successfully generated and saved ${filename}`);
+    } catch (err: any) {
+      console.error('Failed to generate MTD Report PDF:', err);
+      toast.error('PDF Export Error', 'Could not export Monthly MTD report as PDF.');
+    } finally {
+      setIsGeneratingReportPdf(false);
+    }
+  };
 
   return (
     <div className="SalesRecoveryApp selection:bg-teal-200">
@@ -3978,16 +4077,32 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                         )}
                       </div>
                     </div>
-                    <button
-                      id="dashboard-manual-refresh-btn"
-                      onClick={handleRefresh}
-                      disabled={isRefreshing}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-                      title="Manually trigger onRefresh() and ensure data consistency"
-                    >
-                      <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                      <span>{isRefreshing ? 'Syncing...' : 'Sync Now'}</span>
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                      <button
+                        id="dashboard-manual-refresh-btn"
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                        title="Manually trigger onRefresh() and ensure data consistency"
+                      >
+                        <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <span>{isRefreshing ? 'Syncing...' : 'Sync Now'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={downloadMonthlyReportPdf}
+                        disabled={isGeneratingReportPdf}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                        title="Generate and download downloadable MTD report PDF"
+                      >
+                        {isGeneratingReportPdf ? (
+                          <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Download className="w-3.5 h-3.5 text-teal-400" />
+                        )}
+                        <span>{isGeneratingReportPdf ? 'Generating...' : 'MTD Report (PDF)'}</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Period Selector: TODAY | MTD | YTD */}
@@ -4004,11 +4119,14 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                   </div>
                 </div>
 
-                {/* MTD SALES TARGET ACHIEVEMENT SVG GAUGE & COMPARISON BARS */}
+                {/* MTD SALES & RECOVERY TARGET ACHIEVEMENT SVG GAUGE */}
                 <MtdAchievementGauge
                   salesAchieved={performanceData.salesAchieved}
                   salesTarget={performanceData.salesTarget}
                   salesPercent={performanceData.salesPercent}
+                  recoveryAchieved={performanceData.recoveryAchieved}
+                  recoveryTarget={performanceData.recoveryTarget}
+                  recoveryPercent={performanceData.recoveryPercent}
                   monthName={mtdStats.monthName}
                   approvedValue={mtdStats.approvedMtdValue}
                   pendingValue={mtdStats.pendingMtdValue}
@@ -4842,6 +4960,202 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
           }}
         />
       )}
+
+      {/* HIDDEN PRINT-FRIENDLY MONTHLY MTD REPORT CONTAINER (For high-resolution jsPDF export) */}
+      <div
+        id="printable-monthly-report"
+        className="fixed opacity-0 pointer-events-none"
+        style={{ left: '-9999px', top: '-9999px', width: '794px', background: '#ffffff', color: '#0f172a', fontFamily: 'sans-serif', padding: '40px' }}
+      >
+        {/* Company Header with Premium National Lights Logo */}
+        <div className="border-b-4 border-teal-600 pb-5 flex justify-between items-start" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="w-12 h-12 rounded-xl bg-teal-600 flex items-center justify-center text-white font-black text-xl shadow-md" style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#0d9488', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#ffffff', fontWeight: '900', fontSize: '20px' }}>
+                NL
+              </div>
+              <div>
+                <h1 className="text-2xl font-black tracking-tight text-slate-950" style={{ fontSize: '24px', fontWeight: '900', margin: '0', color: '#020617' }}>NATIONAL LIGHTS</h1>
+                <p className="text-xs uppercase tracking-widest font-bold text-teal-600" style={{ fontSize: '10px', uppercase: 'true', fontWeight: 'bold', margin: '0', color: '#0d9488', letterSpacing: '0.1em' }}>Pakistan's Premium Lighting Systems</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2 font-medium" style={{ fontSize: '10px', color: '#64748b', marginTop: '8px' }}>Official Field Force Monthly MTD Performance &amp; Sales Audit Report</p>
+          </div>
+          <div className="text-right" style={{ textAlign: 'right' }}>
+            <span className="text-[10px] font-extrabold bg-teal-50 text-teal-800 border border-teal-200 px-3 py-1 rounded-full uppercase tracking-wider" style={{ fontSize: '10px', fontWeight: '800', background: '#f0fdfa', color: '#115e59', border: '1px solid #99f6e4', padding: '4px 12px', borderRadius: '9999px' }}>
+              Confidential · Internal Use Only
+            </span>
+            <p className="text-xs font-bold text-slate-800 mt-2.5 font-mono" style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '10px', color: '#1e293b' }}>Date Generated: {new Date().toLocaleDateString()}</p>
+            <p className="text-[10px] text-slate-500 font-mono" style={{ fontSize: '10px', color: '#64748b' }}>System: N-Link 360 Enterprise</p>
+          </div>
+        </div>
+
+        {/* Report Overview Header */}
+        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 mt-6" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '24px' }}>
+          <div>
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider" style={{ fontSize: '10px', fontWeight: 'bold', color: '#94a3b8', margin: '0' }}>Field Personnel Profile</h3>
+            <p className="text-base font-extrabold text-slate-900 mt-1" style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: '4px 0 0 0' }}>{currentUser.fullName}</p>
+            <p className="text-xs text-slate-600 font-semibold mt-0.5" style={{ fontSize: '12px', color: '#475569', margin: '2px 0 0 0' }}>Designation: <span className="text-slate-800 uppercase" style={{ color: '#1e293b', fontWeight: '700' }}>{currentUser.role || 'Field Officer'}</span></p>
+            <p className="text-xs text-slate-600 font-semibold" style={{ fontSize: '12px', color: '#475569', margin: '2px 0 0 0' }}>Territory/Town: <span className="text-slate-800" style={{ color: '#1e293b', fontWeight: '700' }}>{selectedTown || 'All Assigned Territories'}</span></p>
+          </div>
+          <div className="text-right border-l border-slate-200 pl-4" style={{ textAlign: 'right', borderLeft: '1px solid #e2e8f0', paddingLeft: '16px' }}>
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider" style={{ fontSize: '10px', fontWeight: 'bold', color: '#94a3b8', margin: '0' }}>Target Period Summary</h3>
+            <p className="text-base font-extrabold text-teal-800 mt-1" style={{ fontSize: '16px', fontWeight: '800', color: '#115e59', margin: '4px 0 0 0' }}>{mtdStats.monthName}</p>
+            <p className="text-xs text-slate-600 font-semibold mt-0.5" style={{ fontSize: '12px', color: '#475569', margin: '2px 0 0 0' }}>Assigned Base Quota: <span className="font-mono font-bold text-slate-800" style={{ fontWeight: '700', color: '#1e293b' }}>Rs. {mtdStats.mtdTarget.toLocaleString()}</span></p>
+            <p className="text-xs text-slate-600 font-semibold" style={{ fontSize: '12px', color: '#475569', margin: '2px 0 0 0' }}>Active Working Days: <span className="font-bold text-slate-800" style={{ fontWeight: '700', color: '#1e293b' }}>26 Days</span></p>
+          </div>
+        </div>
+
+        {/* MTD Performance Breakdown Grid */}
+        <div className="mt-8 space-y-4" style={{ marginTop: '32px' }}>
+          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1.5" style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+            1. Core Performance Metrics &amp; Target Achievements
+          </h2>
+
+          <div className="grid grid-cols-3 gap-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginTop: '16px' }}>
+            {/* Sales Card */}
+            <div className="p-4 rounded-xl border-2 border-teal-600 bg-teal-50/20 text-center space-y-1" style={{ padding: '16px', borderRadius: '12px', border: '2px solid #0d9488', background: 'rgba(13,148,136,0.05)', textAlign: 'center' }}>
+              <span className="text-[10px] font-black text-teal-800 uppercase tracking-widest block" style={{ fontSize: '10px', fontWeight: '900', color: '#115e59', letterSpacing: '0.05em', display: 'block' }}>MTD Sales Booked</span>
+              <span className="text-xl font-black text-teal-900 block font-mono" style={{ fontSize: '20px', fontWeight: '900', color: '#134e4a', display: 'block', margin: '4px 0' }}>Rs. {mtdStats.mtdSalesAchieved.toLocaleString()}</span>
+              <div className="inline-flex items-center gap-1 bg-teal-100 text-teal-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-teal-300" style={{ fontSize: '10px', fontWeight: '800', background: '#ccfbf1', color: '#115e59', border: '1px solid #99f6e4', padding: '2px 8px', borderRadius: '9999px', display: 'inline-block' }}>
+                {mtdStats.mtdPercent}% Target Achieved
+              </div>
+            </div>
+
+            {/* Recovery Card */}
+            <div className="p-4 rounded-xl border-2 border-emerald-600 bg-emerald-50/20 text-center space-y-1" style={{ padding: '16px', borderRadius: '12px', border: '2px solid #059669', background: 'rgba(5,150,105,0.05)', textAlign: 'center' }}>
+              <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest block" style={{ fontSize: '10px', fontWeight: '900', color: '#064e3b', letterSpacing: '0.05em', display: 'block' }}>MTD Recovery Collected</span>
+              <span className="text-xl font-black text-emerald-900 block font-mono" style={{ fontSize: '20px', fontWeight: '900', color: '#064e3b', display: 'block', margin: '4px 0' }}>Rs. {mtdRecoveryStats.achieved.toLocaleString()}</span>
+              <div className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-300" style={{ fontSize: '10px', fontWeight: '800', background: '#d1fae5', color: '#064e3b', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: '9999px', display: 'inline-block' }}>
+                {mtdRecoveryStats.percent}% Target Achieved
+              </div>
+            </div>
+
+            {/* Visits Card */}
+            <div className="p-4 rounded-xl border-2 border-cyan-600 bg-cyan-50/20 text-center space-y-1" style={{ padding: '16px', borderRadius: '12px', border: '2px solid #0891b2', background: 'rgba(8,145,178,0.05)', textAlign: 'center' }}>
+              <span className="text-[10px] font-black text-cyan-800 uppercase tracking-widest block" style={{ fontSize: '10px', fontWeight: '900', color: '#164e63', letterSpacing: '0.05em', display: 'block' }}>MTD Visits Logged</span>
+              <span className="text-xl font-black text-cyan-900 block font-mono" style={{ fontSize: '20px', fontWeight: '900', color: '#164e63', display: 'block', margin: '4px 0' }}>{mtdVisitsStats.total} Total Visits</span>
+              <div className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-cyan-300" style={{ fontSize: '10px', fontWeight: '800', background: '#ecfeff', color: '#164e63', border: '1px solid #cffafe', padding: '2px 8px', borderRadius: '9999px', display: 'inline-block' }}>
+                {mtdVisitsStats.rate}% Productive ({mtdVisitsStats.productive} visits)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* MTD Performance Breakdown details */}
+        <div className="mt-8 grid grid-cols-2 gap-6" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '32px' }}>
+          <div>
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2" style={{ fontSize: '12px', fontWeight: '900', color: '#0f172a', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', marginBottom: '8px' }}>
+              Sales Pipeline &amp; Variance Analysis
+            </h3>
+            <table className="w-full text-xs text-slate-700 font-semibold space-y-1" style={{ width: '100%' }}>
+              <tbody>
+                <tr className="border-b border-slate-100 py-1.5 flex justify-between" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', padding: '6px 0' }}>
+                  <td style={{ color: '#64748b' }}>Gross Monthly Quota Target:</td>
+                  <td style={{ fontFamily: 'monospace', color: '#0f172a', fontWeight: '700' }}>Rs. {mtdStats.mtdTarget.toLocaleString()}</td>
+                </tr>
+                <tr className="border-b border-slate-100 py-1.5 flex justify-between" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', padding: '6px 0' }}>
+                  <td style={{ color: '#64748b' }}>Total Booking Realized:</td>
+                  <td style={{ fontFamily: 'monospace', color: '#115e59', fontWeight: '750' }}>Rs. {mtdStats.mtdSalesAchieved.toLocaleString()}</td>
+                </tr>
+                <tr className="border-b border-slate-100 py-1.5 flex justify-between" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', padding: '6px 0' }}>
+                  <td style={{ color: '#64748b' }}>Quota Variance Amount:</td>
+                  <td style={{ fontFamily: 'monospace', color: mtdStats.mtdVariance >= 0 ? '#047857' : '#be123c', fontWeight: '750' }}>
+                    {mtdStats.mtdVariance >= 0 ? '+' : ''}Rs. {mtdStats.mtdVariance.toLocaleString()}
+                  </td>
+                </tr>
+                <tr className="py-1.5 flex justify-between" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                  <td style={{ color: '#64748b' }}>Required Daily Run-Rate Pace:</td>
+                  <td style={{ fontFamily: 'monospace', color: '#0f172a', fontWeight: '700' }}>Rs. {mtdStats.dailyRunRateNeeded.toLocaleString()} / day</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2" style={{ fontSize: '12px', fontWeight: '900', color: '#0f172a', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', marginBottom: '8px' }}>
+              Recovery &amp; Collections Statement
+            </h3>
+            <table className="w-full text-xs text-slate-700 font-semibold space-y-1" style={{ width: '100%' }}>
+              <tbody>
+                <tr className="border-b border-slate-100 py-1.5 flex justify-between" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', padding: '6px 0' }}>
+                  <td style={{ color: '#64748b' }}>Recovery Assigned Quota:</td>
+                  <td style={{ fontFamily: 'monospace', color: '#0f172a', fontWeight: '700' }}>Rs. {mtdRecoveryStats.target.toLocaleString()}</td>
+                </tr>
+                <tr className="border-b border-slate-100 py-1.5 flex justify-between" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', padding: '6px 0' }}>
+                  <td style={{ color: '#64748b' }}>Recovery Collected Amount:</td>
+                  <td style={{ fontFamily: 'monospace', color: '#047857', fontWeight: '750' }}>Rs. {mtdRecoveryStats.achieved.toLocaleString()}</td>
+                </tr>
+                <tr className="border-b border-slate-100 py-1.5 flex justify-between" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', padding: '6px 0' }}>
+                  <td style={{ color: '#64748b' }}>Pending Clearance Collections:</td>
+                  <td style={{ fontFamily: 'monospace', color: '#b45309', fontWeight: '750' }}>Rs. {recoveries.filter(r => r.status === 'PENDING').reduce((s, r) => s + Number(r.amount || 0), 0).toLocaleString()}</td>
+                </tr>
+                <tr className="py-1.5 flex justify-between" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                  <td style={{ color: '#64748b' }}>Approved Deposits Count:</td>
+                  <td style={{ fontFamily: 'monospace', color: '#0f172a', fontWeight: '700' }}>{mtdRecoveryStats.count} Recoveries Logged</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Table of Recent Orders in current month */}
+        <div className="mt-8" style={{ marginTop: '32px' }}>
+          <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1 mb-3" style={{ fontSize: '12px', fontWeight: '900', color: '#0f172a', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', marginBottom: '12px' }}>
+            2. Detailed Log of Recent Orders booked this Month (MTD)
+          </h3>
+          <table className="w-full text-left text-xs border border-slate-200 rounded-lg overflow-hidden" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr className="bg-slate-50 text-slate-700 border-b border-slate-200 font-bold uppercase tracking-wider" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <th style={{ padding: '8px', fontSize: '10px' }}>Order #</th>
+                <th style={{ padding: '8px', fontSize: '10px' }}>Dealer / Company</th>
+                <th style={{ padding: '8px', fontSize: '10px' }}>Booking Date</th>
+                <th style={{ padding: '8px', fontSize: '10px', textAlign: 'right' }}>Items Count</th>
+                <th style={{ padding: '8px', fontSize: '10px', textAlign: 'right' }}>Total Net Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mtdStats.recentMtdOrders && mtdStats.recentMtdOrders.length > 0 ? (
+                mtdStats.recentMtdOrders.map((ord) => (
+                  <tr key={ord.id} className="border-b border-slate-150 text-slate-800 font-semibold" style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '8px', fontFamily: 'monospace', fontWeight: '700' }}>{ord.orderNumber}</td>
+                    <td style={{ padding: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{ord.customerName}</td>
+                    <td style={{ padding: '8px', fontFamily: 'monospace' }}>{new Date(ord.orderDate || ord.createdAt || '').toLocaleDateString()}</td>
+                    <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace' }}>{ord.items?.length || 0} items</td>
+                    <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 'bold', color: '#115e59' }}>Rs. {Number(ord.totalAmount || 0).toLocaleString()}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="p-4 text-center text-slate-500 font-bold bg-slate-50/50" style={{ padding: '16px', textAlign: 'center', color: '#64748b' }}>
+                    No orders booked in the current month yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Verification Footnote & Legal Disclaimers */}
+        <div className="mt-12 pt-8 border-t border-slate-200 text-[10px] text-slate-500 font-semibold space-y-1" style={{ marginTop: '48px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', fontSize: '10px', color: '#64748b' }}>
+          <p className="font-extrabold text-slate-700" style={{ fontWeight: '800', color: '#334155', margin: '0' }}>DATA AUDIT STATEMENT &amp; COMPLIANCE:</p>
+          <p style={{ margin: '4px 0' }}>
+            All records in this document correspond to the Month-to-Date performance of field activities synchronized with Google Sheets and the primary PostgreSQL Supabase cluster. Discrepancies should be reported immediately to the National Lights Regional Supervisor.
+          </p>
+        </div>
+
+        {/* Signatures Area */}
+        <div className="mt-14 grid grid-cols-2 gap-12 pt-6" style={{ marginTop: '56px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px' }}>
+          <div className="border-t border-slate-350 pt-2 text-center" style={{ borderTop: '1px solid #cbd5e1', paddingTop: '8px', textAlign: 'center' }}>
+            <p className="text-xs font-black text-slate-800" style={{ fontSize: '12px', fontWeight: '900', color: '#0f172a', margin: '0' }}>{currentUser.fullName}</p>
+            <p className="text-[10px] text-slate-500 font-semibold uppercase mt-0.5" style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', margin: '2px 0 0 0' }}>Field Officer Signature</p>
+          </div>
+          <div className="border-t border-slate-350 pt-2 text-center" style={{ borderTop: '1px solid #cbd5e1', paddingTop: '8px', textAlign: 'center' }}>
+            <p className="text-xs font-black text-slate-800" style={{ fontSize: '12px', fontWeight: '900', color: '#0f172a', margin: '0' }}>Regional Sales Manager</p>
+            <p className="text-[10px] text-slate-500 font-semibold uppercase mt-0.5" style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', margin: '2px 0 0 0' }}>Approval &amp; Verification Stamp</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

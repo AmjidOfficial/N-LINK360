@@ -25,7 +25,7 @@ export function groupSkusByBrand(skus: SKU[]): SalesPulseBrandGroup[] {
   const groups = new Map<string, SKU[]>();
 
   for (const sku of skus) {
-    const key = String((sku as any).brand || (sku as any).brandName || sku.category || 'Other').trim() || 'Other';
+    const key = String((sku as any).brand || sku.brandName || sku.categoryName || sku.productName || 'Other').trim() || 'Other';
     const current = groups.get(key) || [];
     current.push(sku);
     groups.set(key, current);

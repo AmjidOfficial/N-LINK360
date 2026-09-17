@@ -51,8 +51,9 @@ export const NewDistributorEntryTab: React.FC<NewDistributorEntryTabProps> = ({
       alert('Please enter a valid Company / Shop Name.');
       return;
     }
-    if (!phone.trim()) {
-      alert('Please enter a valid Contact Phone Number.');
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      alert('Mandatory WhatsApp Number missing or invalid: Please provide a valid 10-11 digit mobile/WhatsApp number for automated ledger and invoice transmission.');
       return;
     }
 
@@ -193,17 +194,23 @@ export const NewDistributorEntryTab: React.FC<NewDistributorEntryTabProps> = ({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-slate-700 block flex items-center gap-1">
-              <Phone className="w-3 h-3 text-slate-400" /> Phone Number*
+            <label className="text-[11px] font-bold text-slate-700 block flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Phone className="w-3 h-3 text-emerald-600" /> WhatsApp Number*
+              </span>
+              <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold uppercase">
+                Mandatory
+              </span>
             </label>
             <input
               type="text"
               required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. +92 300 1234567"
+              placeholder="e.g. 0300 1234567"
               className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
+            <span className="text-[9px] text-slate-400 block">Required for dispatching Invoices &amp; Ledgers</span>
           </div>
 
           <div className="space-y-1">
