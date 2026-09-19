@@ -83,6 +83,7 @@ import { AutoSyncStatusBanner } from './AutoSyncStatusBanner';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
 import { MtdAchievementGauge } from './MtdAchievementGauge';
+import { TargetVsAchievementSummary } from './TargetVsAchievementSummary';
 import { DailySummaryCard } from './DailySummaryCard';
 import { FmcgCommandCenter } from './FmcgCommandCenter';
 import { toast } from './ui/ToastNotification';
@@ -4574,6 +4575,13 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                     ))}
                   </div>
                 </div>
+
+                {/* TARGET VS ACHIEVEMENT MONTHLY PROGRESS SUMMARY WIDGET */}
+                <TargetVsAchievementSummary
+                  currentUser={currentUser as any}
+                  salesOrders={salesOrders}
+                  recoveries={recoveries}
+                />
 
                 {/* MTD SALES & RECOVERY TARGET ACHIEVEMENT SVG GAUGE */}
                 <MtdAchievementGauge

@@ -943,3 +943,213 @@ export async function pushProductToGoogleSheet(
   await appendSpreadsheetRows(spreadsheetId, 'Product_Management!A:L', [row], accessToken).catch(() => {});
 }
 
+/**
+ * Batch append multiple sales orders simultaneously to Google Sheet
+ */
+export async function pushOrdersBatchToGoogleSheet(
+  spreadsheetId: string,
+  orders: { order: any; customerName?: string }[],
+  accessToken: string
+): Promise<void> {
+  if (orders.length === 0) return;
+  const nowStr = new Date().toLocaleString();
+  const rows = orders.map(({ order, customerName }) => [
+    order.orderNumber || order.id,
+    order.orderDate || new Date().toISOString().slice(0, 10),
+    order.customerCode || '',
+    customerName || order.customerName || 'Dealer',
+    order.town || order.city || 'Assigned Beat',
+    order.salesUserName || 'Sales Booker',
+    (order.items || []).length,
+    Number(order.totalAmount || 0),
+    order.paymentMode || 'CREDIT',
+    order.dualApprovalStatus || 'PENDING_DUAL_APPROVAL',
+    order.zainApproval || 'PENDING',
+    order.shahzadApproval || 'PENDING',
+    order.status || 'BOOKED',
+    order.notes || '',
+    nowStr,
+  ]);
+
+  await appendSpreadsheetRows(spreadsheetId, 'Sales_Data!A:O', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Sales_Orders!A:O', rows, accessToken).catch(() => {});
+}
+
+/**
+ * Batch append multiple recoveries simultaneously to Google Sheet
+ */
+export async function pushRecoveriesBatchToGoogleSheet(
+  spreadsheetId: string,
+  recoveries: { recovery: any; customerName?: string }[],
+  accessToken: string
+): Promise<void> {
+  if (recoveries.length === 0) return;
+  const nowStr = new Date().toLocaleString();
+  const rows = recoveries.map(({ recovery, customerName }) => [
+    recovery.recoveryNumber || recovery.id,
+    recovery.customerCode || '',
+    customerName || recovery.customerName || 'Customer',
+    recovery.town || recovery.city || 'Town',
+    Number(recovery.amount || 0),
+    recovery.paymentMode || 'CASH',
+    recovery.instrumentNumber || 'N/A',
+    recovery.bankName || 'Direct Cash Collection',
+    recovery.collectionDate || new Date().toISOString().slice(0, 10),
+    recovery.collectedBy || 'Recovery Officer',
+    recovery.status || 'COLLECTED',
+    recovery.dualApprovalStatus || 'PENDING_DUAL_APPROVAL',
+    recovery.zainApproval || 'PENDING',
+    recovery.shahzadApproval || 'PENDING',
+    nowStr,
+  ]);
+
+  await appendSpreadsheetRows(spreadsheetId, 'Recoveries_Collections!A:O', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Recoveries!A:O', rows, accessToken).catch(() => {});
+}
+
+/**
+ * Batch append multiple customers simultaneously to Google Sheet
+ */
+export async function pushCustomersBatchToGoogleSheet(
+  spreadsheetId: string,
+  customers: any[],
+  accessToken: string
+): Promise<void> {
+  if (customers.length === 0) return;
+  const nowStr = new Date().toLocaleString();
+  const rows = customers.map((customer) => [
+    customer.customerCode || customer.id,
+    customer.companyName || customer.name || customer.businessName || 'New Dealer',
+    customer.customerType || customer.type || 'DEALER',
+    customer.region || 'Punjab Central',
+    customer.area || '',
+    customer.town || customer.city || '',
+    customer.territory || '',
+    customer.contactPerson || customer.ownerName || '',
+    customer.phone || customer.mobile || customer.contactNumber || '',
+    Number(customer.creditLimit || customer.proposedCreditLimit || 0),
+    Number(customer.creditDays || customer.proposedCreditDays || 30),
+    customer.approvalStatus || (customer.isActive ? 'APPROVED' : 'PENDING_APPROVAL'),
+    nowStr,
+  ]);
+
+  await appendSpreadsheetRows(spreadsheetId, 'Customers_Dealers!A:M', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Customers!A:M', rows, accessToken).catch(() => {});
+}
+
+/**
+ * Batch append multiple attendance records simultaneously to Google Sheet
+ */
+export async function pushAttendanceBatchToGoogleSheet(
+  spreadsheetId: string,
+  items: { attendance: any; userName?: string }[],
+  accessToken: string
+): Promise<void> {
+  if (items.length === 0) return;
+  const nowStr = new Date().toLocaleString();
+  const rows = items.map(({ attendance, userName }) => [
+    attendance.id || `ATT-${Date.now()}`,
+    userName || attendance.userName || 'Employee',
+    attendance.date || new Date().toISOString().slice(0, 10),
+    attendance.checkInTime || new Date().toLocaleTimeString(),
+    attendance.town || attendance.city || 'Assigned Beat',
+    attendance.latitude ? `${attendance.latitude}, ${attendance.longitude}` : 'GPS Captured',
+    attendance.gpsAccuracy ? `${attendance.gpsAccuracy}m` : 'High',
+    attendance.status || 'PRESENT',
+    nowStr,
+  ]);
+
+  await appendSpreadsheetRows(spreadsheetId, 'Attendance_Visits!A:N', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Attendance!A:I', rows, accessToken).catch(() => {});
+}
+
+/**
+ * Batch append multiple visit records simultaneously to Google Sheet
+ */
+export async function pushVisitsBatchToGoogleSheet(
+  spreadsheetId: string,
+  items: { visit: any; customerName?: string; userName?: string }[],
+  accessToken: string
+): Promise<void> {
+  if (items.length === 0) return;
+  const nowStr = new Date().toLocaleString();
+  const rows = items.map(({ visit, customerName, userName }) => [
+    visit.id || `VISIT-${Date.now()}`,
+    userName || visit.userName || 'Field Officer',
+    customerName || visit.customerName || 'Shop',
+    visit.checkinTime ? visit.checkinTime.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    visit.purpose || 'Routine Dealer Coverage',
+    visit.orderPlaced ? 'YES' : 'NO',
+    visit.recoveryCollected ? 'YES' : 'NO',
+    visit.notes || '',
+    nowStr,
+  ]);
+
+  await appendSpreadsheetRows(spreadsheetId, 'Attendance_Visits!A:N', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Visits!A:I', rows, accessToken).catch(() => {});
+}
+
+/**
+ * Batch append multiple employees simultaneously to Google Sheet
+ */
+export async function pushEmployeesBatchToGoogleSheet(
+  spreadsheetId: string,
+  users: any[],
+  accessToken: string
+): Promise<void> {
+  if (users.length === 0) return;
+  const nowStr = new Date().toLocaleString();
+  const rows = users.map((user) => [
+    user.employeeCode || user.id,
+    user.fullName || 'Employee Name',
+    user.email || '',
+    user.phone || '',
+    user.role || 'TSM',
+    user.roleTitle || user.role || 'TSM',
+    user.department || 'SALES_FIELD',
+    user.region || 'National',
+    user.area || 'National',
+    user.territory || 'National',
+    Array.isArray(user.assignedTowns) ? user.assignedTowns.join(', ') : (user.assignedTowns || 'All Assigned Beats'),
+    Number(user.monthlySalesTarget || 0),
+    Number(user.monthlyRecoveryTarget || 0),
+    user.status || 'ACTIVE',
+    nowStr,
+  ]);
+
+  await appendSpreadsheetRows(spreadsheetId, 'User_Management!A:O', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Users_Team!A:O', rows, accessToken).catch(() => {});
+}
+
+/**
+ * Batch append multiple products simultaneously to Google Sheet
+ */
+export async function pushProductsBatchToGoogleSheet(
+  spreadsheetId: string,
+  products: any[],
+  accessToken: string
+): Promise<void> {
+  if (products.length === 0) return;
+  const nowStr = new Date().toLocaleString();
+  const rows = products.map((product) => {
+    const stock = product.stockInHand || product.stockQty || 0;
+    const tp = Number(product.tradePrice || 0);
+    return [
+      product.skuCode || product.code || product.id,
+      product.name || 'National Light Product',
+      product.categoryLabel || product.category || 'LIGHTING',
+      product.specification || product.wattage || '20W',
+      product.cartonQuantity || 20,
+      stock,
+      tp,
+      Number(product.retailPrice || 0),
+      product.discountPercentage || '5% Commercial',
+      stock * tp,
+      product.isActive !== false ? 'ACTIVE IN MARKET' : 'DISCONTINUED',
+      nowStr,
+    ];
+  });
+
+  await appendSpreadsheetRows(spreadsheetId, 'Product_Management!A:L', rows, accessToken).catch(() => {});
+}
+

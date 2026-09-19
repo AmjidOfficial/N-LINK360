@@ -32,6 +32,7 @@ import {
 } from 'recharts';
 import { FmcgCommandCenter } from './FmcgCommandCenter';
 import { NLinkTargetAchievementTab } from './NLinkTargetAchievementTab';
+import { TargetVsAchievementSummary } from './TargetVsAchievementSummary';
 import { NLinkUser } from '../data/nlink-users-team';
 import { Customer, SalesOrder, Recovery } from '../types';
 import { NLINK_OFFICIAL_PRODUCTS } from '../data/nlink-products';
@@ -206,6 +207,13 @@ export const NLinkDashboardTab: React.FC<NLinkDashboardTabProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Target vs Achievement Summary */}
+      <TargetVsAchievementSummary
+        currentUser={currentUser}
+        salesOrders={salesOrders}
+        recoveries={recoveries}
+      />
 
       {/* Sub-View 1: Recharts Daily Sales vs Target Bar Chart */}
       {subTab === 'DAILY_CHART' && (

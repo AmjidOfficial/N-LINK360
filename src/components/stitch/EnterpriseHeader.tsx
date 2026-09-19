@@ -7,9 +7,32 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { NLinkUser, getStoredUsers, TEAM_USERS } from '../../data/nlink-users-team';
-import { Menu, X, RefreshCw, Tag, Settings, ShieldCheck, Moon, Sun, User as UserIcon, LogIn, LogOut, Link2, CheckCircle, Database } from 'lucide-react';
+import {
+  Menu,
+  X,
+  RefreshCw,
+  Tag,
+  Settings,
+  ShieldCheck,
+  Moon,
+  Sun,
+  User as UserIcon,
+  LogIn,
+  LogOut,
+  Link2,
+  CheckCircle,
+  Database,
+  AlertTriangle,
+  Wifi,
+  WifiOff,
+  Clock,
+  Activity,
+  ShieldAlert,
+  Info,
+} from 'lucide-react';
 import { getAccessToken, googleSignIn, initAuth, getCurrentGoogleUser } from '../../services/googleAuth';
 import { subscribeToRateLimit, getRateLimitStatus, RateLimitStatus } from '../../services/googleSheetsLiveService';
+import { subscribeToAutoSync, getAutoSyncStatus, AutoSyncStatus } from '../../services/googleSheetsTwoWaySyncService';
 
 export interface EnterpriseHeaderProps {
   activeTab: 'DASHBOARD' | 'ATTENDANCE' | 'ORDERS' | 'LEDGERS' | 'DEALERS';
@@ -66,6 +89,10 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
     lastLimitedTime: null,
   });
 
+  // Auto-Sync & Connection health state tracker
+  const [autoSync, setAutoSync] = useState<AutoSyncStatus>(() => getAutoSyncStatus());
+  const [showSyncPopover, setShowSyncPopover] = useState(false);
+
   useEffect(() => {
     // Initial load check
     setGoogleToken(getAccessToken());
@@ -86,9 +113,14 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
       setRateLimit(status);
     });
 
+    const unsubscribeAutoSync = subscribeToAutoSync((status) => {
+      setAutoSync(status);
+    });
+
     return () => {
       unsubscribeAuth();
       unsubscribeRateLimit();
+      unsubscribeAutoSync();
     };
   }, []);
 
@@ -143,130 +175,192 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
 
   return (
     <>
-      {rateLimit.isRateLimited && (
-        <div 
-          id="rate-limit-sync-toast"
-          className="fixed top-20 right-4 sm:right-6 z-50 max-w-sm w-full bg-slate-900/95 dark:bg-[#030712]/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-xl border border-rose-500/30 flex items-start gap-3 animate-fadeIn"
-        >
-          <div className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/25 text-rose-400 shrink-0 mt-0.5">
-            <span className="font-extrabold text-rose-500 shrink-0 text-sm">⚠️</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="text-xs font-black uppercase text-rose-400 tracking-wider">
-              Google Sheet API Rate Limited
-            </h4>
-            <p className="text-[10px] text-slate-300 mt-1 leading-relaxed">
-              Google Sheets quota threshold reached (403). System is self-throttling to prevent permanent blocks.
-            </p>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-              <span className="text-[10px] font-mono font-bold text-rose-300 uppercase tracking-wide">
-                Next Sync allowed in: {rateLimit.retryAfterSeconds}s
-              </span>
-            </div>
-            {/* Miniature visual progress countdown bar */}
-            <div className="w-full h-1 bg-slate-800 rounded-full mt-2 overflow-hidden">
-              <div 
-                className="h-full bg-rose-500 transition-all duration-1000"
-                style={{ width: `${(rateLimit.retryAfterSeconds / 60) * 100}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0c1420]/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800/90 shadow-xs transition-colors">
-        <div className="w-full px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
           
-          {/* Left: Prestigious Company Branding */}
+          {/* Left: Clean Company Branding */}
           <div className="flex items-center gap-3 shrink-0">
-            <a
-              href="https://nationallight.pk/"
-              target="_blank"
-              rel="noreferrer"
-              title="National Light Official Website (nationallight.pk)"
-              className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700/80 shadow-2xs flex items-center justify-center p-1 shrink-0 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all hover:scale-102"
-            >
+            <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700/80 shadow-2xs flex items-center justify-center p-1 shrink-0">
               <img
                 src="/national_light_logo.jpg"
-                alt="National Light Pakistan"
+                alt="National Light"
                 className="w-full h-full object-contain"
                 onError={(e) => {
                   (e.currentTarget.parentElement as HTMLElement).innerHTML =
                     '<div class="w-full h-full bg-[#001428] text-[#76f4e0] flex items-center justify-center font-black text-xs rounded-lg">NL</div>';
                 }}
               />
-            </a>
+            </div>
 
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-black text-sm sm:text-base tracking-tight text-slate-900 dark:text-white leading-none">
                   NATIONAL<span className="text-[#006b5f] dark:text-[#76f4e0] font-black"> LIGHT</span>
                 </span>
-                <a
-                  href="https://nationallight.pk/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hidden md:inline-flex items-center text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200/70 dark:border-emerald-800/60 hover:bg-emerald-100 transition-colors"
-                >
-                  nationallight.pk
-                </a>
-              </div>
-
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 tracking-wide uppercase">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                   N-LINK 360
                 </span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <div className="flex items-center gap-1.5" title={isOnline ? 'Cloud Synced Live' : 'Offline Mode'}>
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      isOnline ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-amber-500 animate-pulse'
-                    }`}
-                  />
-                  <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300">
-                    {isOnline ? 'Synced' : 'Offline'}
-                  </span>
-                </div>
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    isOnline ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-amber-500 animate-pulse'
+                  }`}
+                />
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                  {isOnline ? 'Connected' : 'Offline'}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Center: Current User Greeting */}
-          <div className="hidden md:flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Welcome,</span>
-            <span className="text-xs font-black text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-850 px-2.5 py-1 rounded-lg">
-              {currentUser.fullName} <span className="text-emerald-600 dark:text-[#76f4e0] text-[10px] font-mono ml-1 uppercase">({currentUser.roleTitle || currentUser.role})</span>
-            </span>
-          </div>
-
-          {/* Right: Drawer Trigger Button & 1-Click Sync Button */}
+          {/* Right: Clean Unified Sync & Menu Actions */}
           <div className="flex items-center gap-2">
-            {/* Seamless 1-Click Sync for all users */}
-            <button
-              type="button"
-              onClick={handleManualSync}
-              disabled={isSyncing}
-              className="flex items-center gap-1.5 h-10 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-[#76f4e0] border border-emerald-200 dark:border-emerald-800 shadow-2xs font-extrabold text-[11px] transition-all cursor-pointer active:scale-95 shrink-0"
-              title="1-Click Auto Sync: Instantly synchronize orders, recoveries, and database"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-emerald-600' : 'text-[#006b5f] dark:text-[#76f4e0]'}`} />
-              <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : '1-Click Sync'}</span>
-              <span className="inline sm:hidden">{isSyncing ? 'Sync...' : 'Sync'}</span>
-            </button>
+            {/* Unified Sync Status Button */}
+            <div className="relative">
+              <button
+                type="button"
+                id="enterprise-persistent-sync-status"
+                onClick={() => {
+                  if (rateLimit.isRateLimited) {
+                    setShowSyncPopover(true);
+                  } else {
+                    handleManualSync();
+                  }
+                }}
+                disabled={isSyncing}
+                className={`flex items-center gap-2 h-9 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer active:scale-95 select-none shadow-2xs ${
+                  rateLimit.isRateLimited
+                    ? 'bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                    : isSyncing || autoSync.isSyncing
+                    ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-300 dark:border-teal-700 text-[#006b5f] dark:text-[#76f4e0]'
+                    : !isOnline
+                    ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200'
+                    : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 border-slate-200/90 dark:border-slate-800 text-slate-700 dark:text-slate-200'
+                }`}
+                title={rateLimit.isRateLimited ? 'Rate limited - click for details' : 'Click to sync data'}
+              >
+                {rateLimit.isRateLimited ? (
+                  <>
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0 animate-bounce" />
+                    <span className="font-mono text-[11px] font-bold text-rose-700 dark:text-rose-300">
+                      Wait {rateLimit.retryAfterSeconds}s
+                    </span>
+                  </>
+                ) : isSyncing || autoSync.isSyncing ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 text-[#006b5f] dark:text-[#76f4e0] animate-spin shrink-0" />
+                    <span className="font-extrabold text-[#006b5f] dark:text-[#76f4e0]">
+                      Syncing...
+                    </span>
+                  </>
+                ) : !isOnline ? (
+                  <>
+                    <WifiOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span className="font-extrabold text-amber-800 dark:text-amber-300">Offline</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="font-extrabold text-slate-700 dark:text-slate-200">
+                      {autoSync.pendingUploadsCount > 0 ? `${autoSync.pendingUploadsCount} Pending` : 'Sync'}
+                    </span>
+                  </>
+                )}
+              </button>
 
+              {/* Sync Diagnostics Popover Modal */}
+              {showSyncPopover && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowSyncPopover(false)}
+                  />
+                  <div
+                    id="sync-health-diagnostic-popover"
+                    className="absolute top-11 right-0 z-50 w-76 sm:w-80 bg-white dark:bg-[#0c1420] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-4 animate-fadeIn text-slate-900 dark:text-white"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-[#006b5f] dark:text-[#76f4e0]" />
+                        <h4 className="text-xs font-black uppercase tracking-wider">
+                          Sync Status
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowSyncPopover(false)}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {rateLimit.isRateLimited && (
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-900 dark:text-rose-200 text-xs">
+                        <div className="font-bold flex items-center gap-1.5 text-rose-700 dark:text-rose-300">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                          <span>Rate limit cooldown active</span>
+                        </div>
+                        <div className="mt-1.5 font-mono text-[11px] font-bold">
+                          Retry in: {rateLimit.retryAfterSeconds}s
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-2.5 space-y-1.5 text-[11px]">
+                      <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800/60">
+                        <span className="text-slate-500 dark:text-slate-400">Network:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {isOnline ? 'Online' : 'Offline'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800/60">
+                        <span className="text-slate-500 dark:text-slate-400">Pending Queue:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {autoSync.pendingUploadsCount} items
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isSyncing || rateLimit.isRateLimited}
+                      onClick={async () => {
+                        setShowSyncPopover(false);
+                        await handleManualSync();
+                      }}
+                      className="mt-3 w-full flex items-center justify-center gap-1.5 h-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white font-bold text-xs transition-all cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                      <span>Sync Now</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Menu Trigger Button */}
             <button
               type="button"
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-2 h-10 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white transition-all cursor-pointer active:scale-95 shadow-2xs font-bold text-xs"
+              className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white transition-all cursor-pointer active:scale-95 shadow-2xs font-bold text-xs"
               title="Open Navigation Menu"
             >
-              <Menu className="w-5 h-5 text-[#006b5f] dark:text-[#76f4e0]" />
+              <Menu className="w-4 h-4 text-[#006b5f] dark:text-[#76f4e0]" />
               <span className="hidden sm:inline">Menu</span>
             </button>
           </div>
 
         </div>
+
+        {/* Clean inline alert strip when rate limited */}
+        {rateLimit.isRateLimited && (
+          <div className="bg-rose-500 text-white px-4 py-1 text-center text-[11px] font-bold flex items-center justify-center gap-2 animate-fadeIn">
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-200 shrink-0" />
+            <span>Google Sheets rate limited (403). Next sync allowed in {rateLimit.retryAfterSeconds}s.</span>
+          </div>
+        )}
       </header>
 
       {/* Side Drawer Modal Overlay */}

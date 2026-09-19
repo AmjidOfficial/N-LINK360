@@ -24,9 +24,16 @@ import {
   pushVisitToGoogleSheet,
   pushEmployeeToGoogleSheet,
   pushProductToGoogleSheet,
+  pushOrdersBatchToGoogleSheet,
+  pushRecoveriesBatchToGoogleSheet,
+  pushCustomersBatchToGoogleSheet,
+  pushAttendanceBatchToGoogleSheet,
+  pushVisitsBatchToGoogleSheet,
+  pushEmployeesBatchToGoogleSheet,
+  pushProductsBatchToGoogleSheet,
 } from './googleSheetsLiveService';
 import { executeGoogleSheetImport, ImportSummary } from './googleSheetImportService';
-import { getAccessToken } from './googleAuth';
+import { getAccessToken, ensureFreshGoogleAccessToken } from './googleAuth';
 import { SupabaseAppData } from './supabase-data';
 import type { Customer, SalesOrder, Recovery } from '../types';
 
@@ -449,7 +456,7 @@ export async function persistAndUploadProduct(
 // ============================================================================
 
 /**
- * Flushes all pending local uploads directly to Google Sheets
+ * Flushes all pending local uploads directly to Google Sheets using grouped batch requests
  */
 export async function flushPendingUploadsToSheet(
   spreadsheetId: string,
@@ -462,29 +469,145 @@ export async function flushPendingUploadsToSheet(
   let failedCount = 0;
   const remaining: PendingUploadItem[] = [];
 
-  for (const item of pending) {
+  // Group pending uploads by type to leverage high-performance batch requests
+  const orderItems = pending.filter((i) => i.type === 'ORDER');
+  const recoveryItems = pending.filter((i) => i.type === 'RECOVERY');
+  const customerItems = pending.filter((i) => i.type === 'CUSTOMER');
+  const attendanceItems = pending.filter((i) => i.type === 'ATTENDANCE');
+  const visitItems = pending.filter((i) => i.type === 'VISIT');
+  const userItems = pending.filter((i) => i.type === 'USER');
+  const productItems = pending.filter((i) => i.type === 'PRODUCT');
+
+  // 1. Batch Push Sales Orders
+  if (orderItems.length > 0) {
     try {
-      if (item.type === 'ORDER') {
-        await pushOrderToGoogleSheet(spreadsheetId, item.data, item.customerName || 'Dealer', accessToken);
-      } else if (item.type === 'RECOVERY') {
-        await pushRecoveryToGoogleSheet(spreadsheetId, item.data, item.customerName || 'Dealer', accessToken);
-      } else if (item.type === 'CUSTOMER') {
-        await pushCustomerToGoogleSheet(spreadsheetId, item.data, accessToken);
-      } else if (item.type === 'ATTENDANCE') {
-        await pushAttendanceToGoogleSheet(spreadsheetId, item.data, item.userName || 'Employee', accessToken);
-      } else if (item.type === 'VISIT') {
-        await pushVisitToGoogleSheet(spreadsheetId, item.data, item.customerName || 'Dealer', item.userName || 'Employee', accessToken);
-      } else if (item.type === 'USER') {
-        await pushEmployeeToGoogleSheet(spreadsheetId, item.data, accessToken);
-      } else if (item.type === 'PRODUCT') {
-        await pushProductToGoogleSheet(spreadsheetId, item.data, accessToken);
-      }
-      flushedCount++;
+      await pushOrdersBatchToGoogleSheet(
+        spreadsheetId,
+        orderItems.map((i) => ({ order: i.data, customerName: i.customerName })),
+        accessToken
+      );
+      flushedCount += orderItems.length;
     } catch (err: any) {
-      failedCount++;
-      item.attempts = (item.attempts || 0) + 1;
-      item.lastError = err?.message || 'Upload error';
-      remaining.push(item);
+      failedCount += orderItems.length;
+      orderItems.forEach((i) => {
+        i.attempts = (i.attempts || 0) + 1;
+        i.lastError = err?.message || 'Order batch upload error';
+        remaining.push(i);
+      });
+    }
+  }
+
+  // 2. Batch Push Recoveries
+  if (recoveryItems.length > 0) {
+    try {
+      await pushRecoveriesBatchToGoogleSheet(
+        spreadsheetId,
+        recoveryItems.map((i) => ({ recovery: i.data, customerName: i.customerName })),
+        accessToken
+      );
+      flushedCount += recoveryItems.length;
+    } catch (err: any) {
+      failedCount += recoveryItems.length;
+      recoveryItems.forEach((i) => {
+        i.attempts = (i.attempts || 0) + 1;
+        i.lastError = err?.message || 'Recovery batch upload error';
+        remaining.push(i);
+      });
+    }
+  }
+
+  // 3. Batch Push Customers
+  if (customerItems.length > 0) {
+    try {
+      await pushCustomersBatchToGoogleSheet(
+        spreadsheetId,
+        customerItems.map((i) => i.data),
+        accessToken
+      );
+      flushedCount += customerItems.length;
+    } catch (err: any) {
+      failedCount += customerItems.length;
+      customerItems.forEach((i) => {
+        i.attempts = (i.attempts || 0) + 1;
+        i.lastError = err?.message || 'Customer batch upload error';
+        remaining.push(i);
+      });
+    }
+  }
+
+  // 4. Batch Push Attendance
+  if (attendanceItems.length > 0) {
+    try {
+      await pushAttendanceBatchToGoogleSheet(
+        spreadsheetId,
+        attendanceItems.map((i) => ({ attendance: i.data, userName: i.userName })),
+        accessToken
+      );
+      flushedCount += attendanceItems.length;
+    } catch (err: any) {
+      failedCount += attendanceItems.length;
+      attendanceItems.forEach((i) => {
+        i.attempts = (i.attempts || 0) + 1;
+        i.lastError = err?.message || 'Attendance batch upload error';
+        remaining.push(i);
+      });
+    }
+  }
+
+  // 5. Batch Push Visits
+  if (visitItems.length > 0) {
+    try {
+      await pushVisitsBatchToGoogleSheet(
+        spreadsheetId,
+        visitItems.map((i) => ({ visit: i.data, customerName: i.customerName, userName: i.userName })),
+        accessToken
+      );
+      flushedCount += visitItems.length;
+    } catch (err: any) {
+      failedCount += visitItems.length;
+      visitItems.forEach((i) => {
+        i.attempts = (i.attempts || 0) + 1;
+        i.lastError = err?.message || 'Visit batch upload error';
+        remaining.push(i);
+      });
+    }
+  }
+
+  // 6. Batch Push Employees
+  if (userItems.length > 0) {
+    try {
+      await pushEmployeesBatchToGoogleSheet(
+        spreadsheetId,
+        userItems.map((i) => i.data),
+        accessToken
+      );
+      flushedCount += userItems.length;
+    } catch (err: any) {
+      failedCount += userItems.length;
+      userItems.forEach((i) => {
+        i.attempts = (i.attempts || 0) + 1;
+        i.lastError = err?.message || 'User batch upload error';
+        remaining.push(i);
+      });
+    }
+  }
+
+  // 7. Batch Push Products
+  if (productItems.length > 0) {
+    try {
+      await pushProductsBatchToGoogleSheet(
+        spreadsheetId,
+        productItems.map((i) => i.data),
+        accessToken
+      );
+      flushedCount += productItems.length;
+    } catch (err: any) {
+      failedCount += productItems.length;
+      productItems.forEach((i) => {
+        i.attempts = (i.attempts || 0) + 1;
+        i.lastError = err?.message || 'Product batch upload error';
+        remaining.push(i);
+      });
     }
   }
 
@@ -501,48 +624,51 @@ export interface TwoWaySyncResult {
 }
 
 /**
- * Executes full 2-way sync:
- * 1. Flushes pending local uploads to Google Sheets
- * 2. Pulls Users & Customers/Dealers from Google Sheets into Database
- * 3. Pushes live database tables (Customers, Orders, Recoveries, Inventory, Ledger) to Google Sheets
+ * Executes full 2-way sync with automated OAuth 2.0 token refresh and batch request optimization:
+ * 1. Checks token freshness; triggers automated OAuth refresh if expired
+ * 2. Flushes pending local uploads to Google Sheets in high-efficiency batches
+ * 3. Pulls Users & Customers/Dealers from Google Sheets into Database
+ * 4. Pushes live database tables (Customers, Orders, Recoveries, Inventory, Ledger) via batchUpdate to Google Sheets
+ * 5. Handles 401 unauthenticated errors by performing token refresh and retry
  */
 export async function executeTwoWaySync(
   appData: SupabaseAppData,
   token?: string | null
 ): Promise<TwoWaySyncResult> {
-  const effectiveToken = token || getAccessToken();
+  // Step 1: Ensure active, non-expired OAuth 2.0 access token
+  let effectiveToken = token || (await ensureFreshGoogleAccessToken());
   const spreadsheetId = getActiveSpreadsheetId() || TARGET_SPREADSHEET_ID;
 
   currentIsSyncing = true;
   currentLastError = null;
   notifyStatusChange();
 
-  try {
+  const performSyncFlow = async (authToken: string | null) => {
     let flushedCount = 0;
     let importSummary: any = undefined;
 
-    // Step 1 & 2 & 3: If Admin Master Google Token is active, perform direct Google Sheets synchronization
-    if (effectiveToken) {
-      // Flush pending local uploads
-      const flushRes = await flushPendingUploadsToSheet(spreadsheetId, effectiveToken).catch((err) => {
-        console.warn('Pending upload flush notice:', err);
+    // Direct Google Sheets Batch Synchronization
+    if (authToken) {
+      // 1. Batch flush pending local uploads
+      const flushRes = await flushPendingUploadsToSheet(spreadsheetId, authToken).catch((err) => {
+        console.warn('Pending batch upload flush notice:', err);
         return { flushedCount: 0, failedCount: 0 };
       });
       flushedCount = flushRes.flushedCount;
 
-      // Import Users & Dealers/Customers from Sheet
-      importSummary = await executeGoogleSheetImport(spreadsheetId, effectiveToken, 'ALL').catch((err) => {
+      // 2. Batch import Users & Dealers/Customers from Sheet
+      importSummary = await executeGoogleSheetImport(spreadsheetId, authToken, 'ALL').catch((err) => {
         console.warn('Sheet import notice:', err);
         return undefined;
       });
 
-      // Export All Live Tables from App Database into Google Sheet Tabs
-      await syncDatabaseToGoogleSheet(spreadsheetId, appData, effectiveToken).catch((err) => {
-        console.warn('Sync database to Google Sheet notice:', err);
+      // 3. Batch export All Live Tables into Google Sheet Tabs via batchUpdate
+      await syncDatabaseToGoogleSheet(spreadsheetId, appData, authToken).catch((err) => {
+        console.warn('Sync database batch to Google Sheet notice:', err);
       });
     }
 
-    // Step 4: Always sync local state with backend ERP API gateway
+    // Step 4: Local ERP sync gateway
     try {
       if (typeof window !== 'undefined') {
         await fetch('/api/sync', {
@@ -561,6 +687,38 @@ export async function executeTwoWaySync(
       console.warn('Backend sync gateway notice:', e);
     }
 
+    return { flushedCount, importSummary };
+  };
+
+  try {
+    let result;
+    try {
+      result = await performSyncFlow(effectiveToken);
+    } catch (syncErr: any) {
+      // Automatic OAuth 2.0 Refresh & Retry Flow on 401 / UNAUTHENTICATED
+      const isAuthError =
+        syncErr?.message?.includes('401') ||
+        syncErr?.message?.includes('Invalid Credentials') ||
+        syncErr?.message?.includes('UNAUTHENTICATED') ||
+        syncErr?.status === 401;
+
+      if (isAuthError) {
+        console.warn('[Google Sheets] OAuth token expired during sync. Initiating automatic OAuth 2.0 refresh flow...');
+        const refreshedToken = await ensureFreshGoogleAccessToken(true);
+        if (refreshedToken && refreshedToken !== effectiveToken) {
+          effectiveToken = refreshedToken;
+          console.log('[Google Sheets] OAuth token successfully renewed. Retrying batch sync...');
+          result = await performSyncFlow(effectiveToken);
+        } else {
+          throw syncErr;
+        }
+      } else {
+        throw syncErr;
+      }
+    }
+
+    const { flushedCount, importSummary } = result;
+
     // Record Timestamps
     const nowIso = new Date().toISOString();
     const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -569,7 +727,7 @@ export async function executeTwoWaySync(
 
     const importedTotal = (importSummary?.createdCount || 0) + (importSummary?.updatedCount || 0);
     const msg = effectiveToken
-      ? `2-Way Sync Complete! Uploaded ${flushedCount} items, imported ${importedTotal} records, and refreshed Google Sheets & ERP database.`
+      ? `2-Way Batch Sync Complete! Uploaded ${flushedCount} items in batch, imported ${importedTotal} records, and refreshed Google Sheets & ERP database.`
       : `ERP Database Synced! Local records & Supabase updated (Google Sheet connection active under Admin management).`;
 
     currentLastMessage = msg;

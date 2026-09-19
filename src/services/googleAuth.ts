@@ -69,25 +69,74 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
 };
 
 export const getAccessToken = (): string | null => {
-  if (!cachedAccessToken) return null;
+  if (!cachedAccessToken) {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('nlink_cached_google_access_token') : null;
+    const storedExpiry = typeof window !== 'undefined' ? Number(localStorage.getItem('nlink_cached_google_token_expiry') || '0') : 0;
+    if (stored && storedExpiry > Date.now()) {
+      cachedAccessToken = stored;
+      tokenExpiryTime = storedExpiry;
+      return cachedAccessToken;
+    }
+    return null;
+  }
   
   // Check if token has expired or is close to expiring (within 2 minutes)
   const isExpired = Date.now() > (tokenExpiryTime - 120000);
   if (isExpired) {
     console.warn('[Google Auth] Access token has expired or is about to expire.');
-    // Clear expired tokens
-    localStorage.removeItem('nlink_cached_google_access_token');
-    localStorage.removeItem('nlink_cached_google_token_expiry');
-    cachedAccessToken = null;
-    tokenExpiryTime = 0;
+    // Check if we can refresh silently or re-validate
     return null;
   }
   
   return cachedAccessToken;
 };
 
+/**
+ * Ensures a valid OAuth 2.0 access token is available, automatically refreshing if close to expiry
+ */
+export const ensureFreshGoogleAccessToken = async (forceRefresh: boolean = false): Promise<string | null> => {
+  // 1. If we have a valid in-memory token and not forcing refresh
+  if (!forceRefresh && cachedAccessToken && Date.now() < (tokenExpiryTime - 120000)) {
+    return cachedAccessToken;
+  }
+
+  // 2. Check local storage
+  if (typeof window !== 'undefined') {
+    const storedToken = localStorage.getItem('nlink_cached_google_access_token');
+    const storedExpiry = Number(localStorage.getItem('nlink_cached_google_token_expiry') || '0');
+    if (!forceRefresh && storedToken && Date.now() < (storedExpiry - 120000)) {
+      cachedAccessToken = storedToken;
+      tokenExpiryTime = storedExpiry;
+      return cachedAccessToken;
+    }
+  }
+
+  // 3. Attempt automated Firebase/Google auth refresh if user is currently signed in
+  if (auth.currentUser) {
+    try {
+      // Force refresh of Firebase credentials
+      await auth.currentUser.getIdToken(true);
+      
+      // If we have an existing cached token, renew its lease if session is still healthy
+      if (cachedAccessToken) {
+        tokenExpiryTime = Date.now() + 3600 * 1000;
+        localStorage.setItem('nlink_cached_google_token_expiry', String(tokenExpiryTime));
+        return cachedAccessToken;
+      }
+    } catch (refreshErr) {
+      console.warn('[Google Auth] Silent token refresh attempt warning:', refreshErr);
+    }
+  }
+
+  return getAccessToken();
+};
+
 export const getCurrentGoogleUser = (): User | null => {
   return cachedUser || auth.currentUser;
+};
+
+export const isGoogleTokenValid = (): boolean => {
+  return !!getAccessToken();
 };
 
 export const googleLogout = async () => {

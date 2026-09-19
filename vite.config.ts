@@ -95,6 +95,21 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      outDir: 'dist',
+      emptyOutDir: false,
+      sourcemap: true,
+      chunkSizeWarningLimit: 2500,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            reactVendor: ['react', 'react-dom'],
+            icons: ['lucide-react'],
+            charts: ['recharts', 'd3'],
+          },
+        },
+      },
+    },
     server: {
       port: 3000,
       host: '0.0.0.0',
