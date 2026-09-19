@@ -9,6 +9,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Customer, Recovery } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import { ReceiptCameraCapture } from './ReceiptCameraCapture';
+import { CreditHealthIndicator } from '../CreditHealthIndicator';
 
 export interface EnterpriseLedgersTabProps {
   currentUser: NLinkUser;
@@ -57,10 +58,44 @@ export const EnterpriseLedgersTab: React.FC<EnterpriseLedgersTabProps> = ({
 }) => {
   const collectionFormRef = useRef<HTMLDivElement>(null);
 
+  // Party Switch: Customers (Receivables) vs Suppliers (Payables) from Dukan360
+  const [ledgerParty, setLedgerParty] = useState<'CUSTOMERS' | 'SUPPLIERS'>('CUSTOMERS');
+
+  const suppliersList = useMemo(() => [
+    {
+      id: 'SUPP-001',
+      companyName: 'National Light Main Factory (Lahore)',
+      contactPerson: 'Engr. Shahzad Ullah',
+      phone: '+92 300 4567890',
+      currentBalance: 380000,
+      city: 'Lahore (Industrial Zone)',
+      type: 'Assembly & Driver Components',
+    },
+    {
+      id: 'SUPP-002',
+      companyName: 'Orient Semi-Conductor Chips Ltd',
+      contactPerson: 'Khurram Shehzad',
+      phone: '+92 321 9876543',
+      currentBalance: 115000,
+      city: 'Karachi Port',
+      type: 'SMD LED 2835 Components',
+    },
+    {
+      id: 'SUPP-003',
+      companyName: 'Khyber Freight & Cargo Express',
+      contactPerson: 'Malik Khan',
+      phone: '+92 345 1122334',
+      currentBalance: 45000,
+      city: 'Peshawar Ring Road',
+      type: 'Logistics & Inter-city Delivery',
+    },
+  ], []);
+
   // Selected Active Dealer
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
     initialSelectedCustomerId || customers[0]?.id || 'CUST-001'
   );
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('SUPP-001');
   const [filterPeriod, setFilterPeriod] = useState<'ALL' | 'MONTH' | 'PENDING'>('ALL');
 
   // Form State
@@ -82,25 +117,47 @@ export const EnterpriseLedgersTab: React.FC<EnterpriseLedgersTabProps> = ({
     return (
       customers.find((c) => c.id === selectedCustomerId) ||
       customers[0] || {
-        id: 'CUST-001',
-        customerCode: 'DL-8839',
-        companyName: 'Khyber Lights & Hardware Store',
-        contactPerson: 'Muhammad Tariq',
-        phone: '+92 300 9123456',
-        creditLimit: 350000,
-        currentBalance: 142500,
-        address: 'Shop # 14, Sheikh Yaseen Tower, Peshawar',
-        city: 'Peshawar',
+        id: '',
+        customerCode: 'N/A',
+        companyName: 'No Dealer Selected',
+        contactPerson: 'None',
+        phone: '',
+        creditLimit: 0,
+        currentBalance: 0,
+        address: 'Please add a dealer in Dealers tab or sync from Google Sheet',
+        city: 'N/A',
         creditDays: 30,
         status: 'NORMAL',
-        isActive: true,
+        isActive: false,
         approvalStatus: 'APPROVED',
-        accountNumber: 'DL-8839',
-        isDistributor: true,
-        createdDate: '2023-01-01',
+        accountNumber: 'N/A',
+        isDistributor: false,
+        createdDate: '2026-01-01',
       }
     );
   }, [customers, selectedCustomerId]);
+
+  const activeSupplier = useMemo(() => {
+    return suppliersList.find((s) => s.id === selectedSupplierId) || suppliersList[0];
+  }, [suppliersList, selectedSupplierId]);
+
+  // WhatsApp Payment Reminder Handler
+  const handleSendReminder = () => {
+    const balance = activeCustomer.currentBalance || 142500;
+    const cleanPhone = (activeCustomer.phone || '').replace(/[^0-9]/g, '');
+    let finalPhone = cleanPhone;
+    if (finalPhone.startsWith('03')) finalPhone = '92' + finalPhone.substring(1);
+
+    const text = `*National Light Pakistan - Payment Reminder*\n\n` +
+      `Assalam-o-Alaikum ${activeCustomer.contactPerson || activeCustomer.companyName},\n` +
+      `Aap ke account ka baqaya balance *Rs. ${balance.toLocaleString()}* hai.\n\n` +
+      `Baraye meherbani jald az jald adayigi farmaiye taake delivery bila rukawat jari rahe.\n` +
+      `_Bank Account: Meezan Bank Ltd (0201-0104829101)_\n\n` +
+      `Shukriya!\n*National Light Team*`;
+
+    const url = finalPhone ? `https://wa.me/${finalPhone}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
 
   // Running Ledger Transactions Data
   const ledgerEntries: LedgerEntry[] = useMemo(() => {
@@ -219,18 +276,44 @@ export const EnterpriseLedgersTab: React.FC<EnterpriseLedgersTabProps> = ({
     <div className="flex flex-col w-full gap-5 pb-12 animate-fadeIn" id="enterprise-ledgers-view">
       {/* 1. Top Action & Balance Summary */}
       <div className="flex flex-col gap-3.5">
+        {/* Customer vs Supplier Mode Toggle (From Dukan360 Video at 01:47) */}
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <button
+            onClick={() => setLedgerParty('CUSTOMERS')}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              ledgerParty === 'CUSTOMERS'
+                ? 'bg-[#006b5f] text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">group</span>
+            <span>Customers (Aap ne lena hai)</span>
+          </button>
+          <button
+            onClick={() => setLedgerParty('SUPPLIERS')}
+            className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              ledgerParty === 'SUPPLIERS'
+                ? 'bg-[#ba1a1a] text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">factory</span>
+            <span>Suppliers (Aap ne dena hai)</span>
+          </button>
+        </div>
+
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <span className="text-[11px] font-bold text-[#43474d] uppercase tracking-wider block">
-              Total Outstanding Portfolio
+            <span className="text-[11px] font-bold text-[#43474d] dark:text-slate-400 uppercase tracking-wider block">
+              {ledgerParty === 'CUSTOMERS' ? 'Total Customer Receivables' : 'Total Factory / Supplier Payables'}
             </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#191c1e] tracking-tight font-mono">
-              Rs. 1,428,500
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#191c1e] dark:text-white tracking-tight font-mono">
+              {ledgerParty === 'CUSTOMERS' ? 'Rs. 1,428,500' : 'Rs. 540,000'}
             </h2>
           </div>
           <button
             onClick={scrollToCollectionForm}
-            className="flex items-center gap-1.5 bg-[#006b5f] text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-xs hover:bg-[#005047] active:scale-95 transition-all"
+            className="flex items-center gap-1.5 bg-[#006b5f] text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-xs hover:bg-[#005047] active:scale-95 transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">add_card</span>
             <span>Record Recovery / Collection</span>
@@ -239,101 +322,180 @@ export const EnterpriseLedgersTab: React.FC<EnterpriseLedgersTabProps> = ({
 
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white p-4 rounded-2xl shadow-xs border border-[#e0e3e5] flex flex-col gap-1">
-            <div className="flex items-center justify-between text-[#43474d]">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800 flex flex-col gap-1">
+            <div className="flex items-center justify-between text-[#43474d] dark:text-slate-400">
               <span className="text-xs font-bold">Collected Today</span>
               <span className="material-symbols-outlined text-[18px] text-[#006b5f]">
                 trending_up
               </span>
             </div>
-            <span className="text-xl font-bold text-[#191c1e] font-mono">Rs. 85,000</span>
-            <span className="text-[11px] text-[#43474d]">4 verified recoveries</span>
+            <span className="text-xl font-bold text-[#191c1e] dark:text-white font-mono">Rs. 85,000</span>
+            <span className="text-[11px] text-[#43474d] dark:text-slate-400">4 verified recoveries</span>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl shadow-xs border border-[#e0e3e5] flex flex-col gap-1">
-            <div className="flex items-center justify-between text-[#43474d]">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800 flex flex-col gap-1">
+            <div className="flex items-center justify-between text-[#43474d] dark:text-slate-400">
               <span className="text-xs font-bold">Overdue / Aging</span>
               <span className="material-symbols-outlined text-[18px] text-[#ba1a1a]">
                 warning
               </span>
             </div>
-            <span className="text-xl font-bold text-[#191c1e] font-mono">Rs. 240,000</span>
-            <span className="text-[11px] text-[#43474d]">3 accounts over 30 days</span>
+            <span className="text-xl font-bold text-[#191c1e] dark:text-white font-mono">Rs. 240,000</span>
+            <span className="text-[11px] text-[#43474d] dark:text-slate-400">3 accounts over 30 days</span>
           </div>
         </div>
       </div>
 
-      {/* 2. Dealer Selector & Ledger Filter Card */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-[#e0e3e5] flex flex-col gap-3.5">
+      {/* 2. Dealer / Supplier Selector & Actions Card */}
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800 flex flex-col gap-3.5">
         <div className="flex items-center justify-between">
-          <h3 className="text-base sm:text-lg font-bold text-[#191c1e] tracking-tight flex items-center gap-2">
-            <span>Official Dealer Statement</span>
-            <span className="text-xs font-normal text-slate-500 font-mono">({activeCustomer.city || 'Pakistan'})</span>
+          <h3 className="text-base sm:text-lg font-bold text-[#191c1e] dark:text-white tracking-tight flex items-center gap-2">
+            <span>{ledgerParty === 'CUSTOMERS' ? 'Official Dealer Statement' : 'Supplier / Factory Ledger'}</span>
+            <span className="text-xs font-normal text-slate-500 font-mono">
+              ({ledgerParty === 'CUSTOMERS' ? activeCustomer.city || 'Pakistan' : activeSupplier.city})
+            </span>
           </h3>
           <button
             onClick={handleShareLedger}
-            className="flex items-center gap-1 text-xs font-bold text-[#006b5f] hover:underline bg-[#76f4e0]/20 px-2.5 py-1 rounded-lg"
+            className="flex items-center gap-1 text-xs font-bold text-[#006b5f] hover:underline bg-[#76f4e0]/20 px-2.5 py-1 rounded-lg cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">share</span>
             <span>WhatsApp / Share</span>
           </button>
         </div>
 
-        {/* Dealer Dropdown */}
-        <div className="relative">
-          <label className="text-xs font-bold text-[#43474d] block mb-1 uppercase tracking-wider">
-            Select Active Dealer / Distributor
-          </label>
-          <select
-            value={selectedCustomerId}
-            onChange={(e) => setSelectedCustomerId(e.target.value)}
-            className="w-full bg-[#f2f4f6] text-[#191c1e] px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[#006b5f] transition-all text-xs sm:text-sm font-semibold appearance-none border border-transparent"
+        {/* Dropdown Selector */}
+        {ledgerParty === 'CUSTOMERS' ? (
+          <div className="relative">
+            <label className="text-xs font-bold text-[#43474d] dark:text-slate-300 block mb-1 uppercase tracking-wider">
+              Select Active Dealer / Distributor
+            </label>
+            <select
+              value={selectedCustomerId}
+              onChange={(e) => setSelectedCustomerId(e.target.value)}
+              className="w-full bg-[#f2f4f6] dark:bg-slate-800 text-[#191c1e] dark:text-white px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[#006b5f] transition-all text-xs sm:text-sm font-semibold appearance-none border border-transparent"
+            >
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.companyName} — {c.city || 'KPK'} ({c.customerCode || 'DL-8839'}) • Bal: Rs. {(c.currentBalance || 0).toLocaleString()}
+                </option>
+              ))}
+            </select>
+            <span className="material-symbols-outlined absolute right-3 top-8 text-[#74777e] pointer-events-none text-[20px]">
+              expand_more
+            </span>
+          </div>
+        ) : (
+          <div className="relative">
+            <label className="text-xs font-bold text-[#43474d] dark:text-slate-300 block mb-1 uppercase tracking-wider">
+              Select Factory / Supplier Account
+            </label>
+            <select
+              value={selectedSupplierId}
+              onChange={(e) => setSelectedSupplierId(e.target.value)}
+              className="w-full bg-[#f2f4f6] dark:bg-slate-800 text-[#191c1e] dark:text-white px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-[#006b5f] transition-all text-xs sm:text-sm font-semibold appearance-none border border-transparent"
+            >
+              {suppliersList.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.companyName} — {s.city} • Payable: Rs. {s.currentBalance.toLocaleString()}
+                </option>
+              ))}
+            </select>
+            <span className="material-symbols-outlined absolute right-3 top-8 text-[#74777e] pointer-events-none text-[20px]">
+              expand_more
+            </span>
+          </div>
+        )}
+
+        {/* Dukan360 Direct Action Buttons on Selected Account */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+          {/* 1. MAINE LIYE (Collection In) */}
+          <button
+            onClick={() => {
+              setFormCustomerId(selectedCustomerId);
+              scrollToCollectionForm();
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold py-2.5 px-3 rounded-xl shadow-xs text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
           >
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.companyName} — {c.city || 'KPK'} ({c.customerCode || 'DL-8839'}) • Bal: Rs. {(c.currentBalance || 0).toLocaleString()}
-              </option>
-            ))}
-          </select>
-          <span className="material-symbols-outlined absolute right-3 top-8 text-[#74777e] pointer-events-none text-[20px]">
-            expand_more
-          </span>
+            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            <span>+ MAINE LIYE</span>
+          </button>
+
+          {/* 2. MAINE DIYE (Debit Out) */}
+          <button
+            onClick={() => {
+              setFormCustomerId(selectedCustomerId);
+              setNotes('Debit / Order dispatched on credit');
+              scrollToCollectionForm();
+            }}
+            className="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold py-2.5 px-3 rounded-xl shadow-xs text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+          >
+            <span className="material-symbols-outlined text-[18px]">remove_circle</span>
+            <span>- MAINE DIYE</span>
+          </button>
+
+          {/* 3. WhatsApp Payment Reminder */}
+          <button
+            onClick={handleSendReminder}
+            className="bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+            title="Send polite WhatsApp payment reminder"
+          >
+            <span className="material-symbols-outlined text-[18px]">notification_important</span>
+            <span>Reminder</span>
+          </button>
+
+          {/* 4. Call Customer Directly */}
+          <a
+            href={`tel:${activeCustomer.phone || '+923009123456'}`}
+            className="bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800 font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+          >
+            <span className="material-symbols-outlined text-[18px]">call</span>
+            <span>Call Dealer</span>
+          </a>
         </div>
 
         {/* Date / Status Filter Chips */}
-        <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
+        <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar pt-1">
           <button
             onClick={() => setFilterPeriod('ALL')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer ${
               filterPeriod === 'ALL'
                 ? 'bg-[#76f4e0] text-[#006f63]'
-                : 'bg-[#f2f4f6] text-[#43474d] hover:bg-[#eceef0]'
+                : 'bg-[#f2f4f6] dark:bg-slate-800 text-[#43474d] dark:text-slate-300 hover:bg-[#eceef0]'
             }`}
           >
             All Ledger Records
           </button>
           <button
             onClick={() => setFilterPeriod('MONTH')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer ${
               filterPeriod === 'MONTH'
                 ? 'bg-[#76f4e0] text-[#006f63]'
-                : 'bg-[#f2f4f6] text-[#43474d] hover:bg-[#eceef0]'
+                : 'bg-[#f2f4f6] dark:bg-slate-800 text-[#43474d] dark:text-slate-300 hover:bg-[#eceef0]'
             }`}
           >
             This Month
           </button>
           <button
             onClick={() => setFilterPeriod('PENDING')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer ${
               filterPeriod === 'PENDING'
                 ? 'bg-[#76f4e0] text-[#006f63]'
-                : 'bg-[#f2f4f6] text-[#43474d] hover:bg-[#eceef0]'
+                : 'bg-[#f2f4f6] dark:bg-slate-800 text-[#43474d] dark:text-slate-300 hover:bg-[#eceef0]'
             }`}
           >
             Overdue Invoices
           </button>
         </div>
       </div>
+
+      {/* Credit Health & Payment Delay Intelligence */}
+      <CreditHealthIndicator
+        customer={activeCustomer}
+        recoveries={recoveries}
+        variant="full"
+        showSimulator={true}
+      />
 
       {/* 3. Running Ledger Statement Table */}
       <div className="bg-white rounded-2xl shadow-xs border border-[#e0e3e5] overflow-hidden flex flex-col">

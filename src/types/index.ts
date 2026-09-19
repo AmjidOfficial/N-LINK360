@@ -562,6 +562,8 @@ export interface SalesOrderItem {
   lineTotal: number;
 }
 
+export type DualApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
 export interface SalesOrder {
   id: string;
   orderNumber: string;
@@ -583,6 +585,14 @@ export interface SalesOrder {
   approvedBy?: string;
   approvedAt?: string;
   rejectionReason?: string;
+  dualApprovalStatus?: 'PENDING_DUAL_APPROVAL' | 'DUAL_APPROVED' | 'PARTIALLY_APPROVED' | 'REJECTED';
+  syncStatus?: 'SYNCED' | 'PENDING' | 'OFFLINE';
+  zainApproval?: DualApprovalStatus;
+  zainApprovedAt?: string;
+  zainRejectionReason?: string;
+  shahzadApproval?: DualApprovalStatus;
+  shahzadApprovedAt?: string;
+  shahzadRejectionReason?: string;
   createdAt: string;
 }
 
@@ -711,6 +721,14 @@ export interface Recovery {
   verifiedBy?: string;
   verifiedAt?: string;
   rejectionReason?: string;
+  dualApprovalStatus?: 'PENDING_DUAL_APPROVAL' | 'DUAL_APPROVED' | 'PARTIALLY_APPROVED' | 'REJECTED';
+  syncStatus?: 'SYNCED' | 'PENDING' | 'OFFLINE';
+  zainApproval?: DualApprovalStatus;
+  zainApprovedAt?: string;
+  zainRejectionReason?: string;
+  shahzadApproval?: DualApprovalStatus;
+  shahzadApprovedAt?: string;
+  shahzadRejectionReason?: string;
   remarks?: string;
   createdAt: string;
 }

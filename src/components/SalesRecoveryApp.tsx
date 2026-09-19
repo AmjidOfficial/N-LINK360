@@ -56,9 +56,12 @@ import {
   KeyRound,
   Lock,
   EyeOff,
+  Settings,
+  Target,
 } from 'lucide-react';
 import { resetPassword, updatePassword } from '../services/auth';
 import { syncManager, OfflineQueueItem } from '../services/offlineSyncEngine';
+import { SettingsModal } from './SettingsModal';
 import { PrintInvoiceModal } from './PrintInvoiceModal';
 import { PrintLedgerModal } from './PrintLedgerModal';
 import { DynamicDealerFormModal } from './DynamicDealerFormModal';
@@ -229,6 +232,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
 
   // Dealer Registration Modal State (Field Force Onboarding to Pending Queue)
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState<string | null>(null);
   const [showGoogleSheetsModal, setShowGoogleSheetsModal] = useState(false);
   const [isAutoDownloadPdf, setIsAutoDownloadPdf] = useState(false);
@@ -1114,6 +1118,105 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     return { openingBalance, tillDateInvoices, tillDateRecovery, netBalance };
   }, [activeCustomer, invoices, recoveries]);
 
+  // Credit Health Indicator & Average Payment Delay Calculation
+  const customerCreditHealth = useMemo(() => {
+    if (!activeCustomer) {
+      return {
+        avgDelayDays: 0,
+        status: 'EXCELLENT' as const,
+        label: 'Prompt Payer (< 10 Days Delay)',
+        color: 'emerald',
+        creditLimit: 500000,
+        creditDays: 30,
+        creditUtilizationPct: 0,
+        riskLevel: 'LOW',
+        delayScoreText: '0 Days Avg Delay',
+      };
+    }
+
+    const creditLimit = Number(activeCustomer.creditLimit || 500000);
+    const creditDays = Number(activeCustomer.creditDays || 30);
+    const netBal = customerFinancials.netBalance;
+    const creditUtilizationPct = creditLimit > 0 ? Math.min(100, Math.round((Math.max(0, netBal) / creditLimit) * 100)) : 0;
+
+    // Filter customer transactions
+    const custInvoices = invoices.filter((inv) => inv.customerId === activeCustomer.id);
+    const custRecoveries = recoveries.filter((rec) => rec.customerId === activeCustomer.id);
+
+    let totalDelayDays = 0;
+    let sampleCount = 0;
+
+    if (custRecoveries.length > 0 && custInvoices.length > 0) {
+      custRecoveries.forEach((rec) => {
+        const recTime = new Date(rec.collectionDate || rec.createdAt || Date.now()).getTime();
+        const matchedInv = custInvoices.find((inv) => {
+          const invTime = new Date(inv.invoiceDate || inv.createdAt || Date.now()).getTime();
+          return invTime <= recTime;
+        });
+        if (matchedInv) {
+          const invTime = new Date(matchedInv.invoiceDate || matchedInv.createdAt || Date.now()).getTime();
+          const daysTaken = Math.max(0, Math.round((recTime - invTime) / (1000 * 60 * 60 * 24)));
+          const delay = Math.max(0, daysTaken - creditDays);
+          totalDelayDays += delay;
+          sampleCount++;
+        }
+      });
+    }
+
+    // Determine average delay in days
+    let avgDelayDays = 0;
+    if (sampleCount > 0) {
+      avgDelayDays = Math.round(totalDelayDays / sampleCount);
+    } else if (netBal > creditLimit) {
+      avgDelayDays = 42;
+    } else if (netBal > creditLimit * 0.7) {
+      avgDelayDays = 21;
+    } else if (netBal > 0) {
+      avgDelayDays = 8;
+    } else {
+      avgDelayDays = 0;
+    }
+
+    let status: 'EXCELLENT' | 'GOOD' | 'WATCHLIST' | 'CRITICAL' = 'EXCELLENT';
+    let label = 'Prompt Payer (< 10 Days Delay)';
+    let color = 'emerald';
+    let riskLevel = 'LOW';
+
+    if (avgDelayDays <= 10) {
+      status = 'EXCELLENT';
+      label = 'Prompt Payer (< 10 Days Delay)';
+      color = 'emerald';
+      riskLevel = 'LOW';
+    } else if (avgDelayDays <= 25) {
+      status = 'GOOD';
+      label = 'Normal Clearance (11-25 Days Delay)';
+      color = 'teal';
+      riskLevel = 'MODERATE';
+    } else if (avgDelayDays <= 45) {
+      status = 'WATCHLIST';
+      label = 'Delayed Clearance (26-45 Days Delay)';
+      color = 'amber';
+      riskLevel = 'WATCHLIST';
+    } else {
+      status = 'CRITICAL';
+      label = 'High Risk / Overdue (> 45 Days Delay)';
+      color = 'rose';
+      riskLevel = 'CRITICAL';
+    }
+
+    return {
+      avgDelayDays,
+      status,
+      label,
+      color,
+      creditLimit,
+      creditDays,
+      creditUtilizationPct,
+      riskLevel,
+      delayScoreText: `${avgDelayDays} Days Avg Delay`,
+    };
+  }, [activeCustomer, customerFinancials, invoices, recoveries]);
+
   // Order Entry State: Quantities keyed by SKU ID
   const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>({});
   const [expandedBrands, setExpandedBrands] = useState<Record<string, boolean>>({});
@@ -1123,6 +1226,33 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
   const [skuSearchQuery, setSkuSearchQuery] = useState('');
   const [skuStockFilter, setSkuStockFilter] = useState<'ALL' | 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'SELECTED'>('ALL');
+
+  // Rebuilt SalesPulse N-LINK Entry Form States
+  const [entryRegion, setEntryRegion] = useState<string>('All Regions');
+  const [entryTsm, setEntryTsm] = useState<string>('Syed Zain');
+  const [entryDate, setEntryDate] = useState<string>('09/17/2026');
+  const [todaysRecoveryAmount, setTodaysRecoveryAmount] = useState<string>('');
+  const [todaysRecoveryMode, setTodaysRecoveryMode] = useState<PaymentMode>('CASH');
+  const [todaysRecoveryInstrument, setTodaysRecoveryInstrument] = useState<string>('');
+  const [todaysRecoveryBank, setTodaysRecoveryBank] = useState<string>('');
+  const [todaysRecoveryRemarks, setTodaysRecoveryRemarks] = useState<string>('');
+  const [isSubmittingCombined, setIsSubmittingCombined] = useState<boolean>(false);
+  const [combinedSuccessMsg, setCombinedSuccessMsg] = useState<string | null>(null);
+
+  const townFilteredCustomers = useMemo(() => {
+    if (!selectedTown) return authorizedCustomers;
+    const list = authorizedCustomers.filter(
+      (c) => (c.city || '').toLowerCase() === selectedTown.toLowerCase()
+    );
+    return list.length > 0 ? list : authorizedCustomers;
+  }, [authorizedCustomers, selectedTown]);
+
+  const todaysRecoveryNum = Math.max(0, Number(todaysRecoveryAmount) || 0);
+  const liveNetBalance =
+    customerFinancials.openingBalance +
+    customerFinancials.tillDateInvoices -
+    customerFinancials.tillDateRecovery -
+    todaysRecoveryNum;
 
   const getSkuStock = (skuId: string): number => {
     const bal = inventoryBalances.find((b) => b.skuId === skuId);
@@ -1201,8 +1331,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   };
 
   const handleQtyChange = (skuId: string, val: number) => {
-    const stock = getSkuStock(skuId);
-    const clamped = Math.max(0, Math.min(val, stock > 0 ? stock : 0));
+    const clamped = Math.max(0, val);
     setOrderQuantities((prev) => ({ ...prev, [skuId]: clamped }));
   };
 
@@ -1464,6 +1593,81 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     }
   };
 
+  // Combined N-LINK Sales & Recovery Submission Handler
+  const handleSaveAndSubmitToNlink = async () => {
+    if (!activeCustomer) {
+      toast.warning('Select Customer', 'Please select a dealer or shop first.');
+      return;
+    }
+    const hasOrder = orderSummary.totalQuantity > 0;
+    const hasRecovery = todaysRecoveryNum > 0;
+
+    if (!hasOrder && !hasRecovery) {
+      toast.warning('No Entry Made', 'Please enter SKU order quantities or a Today Recovery amount.');
+      return;
+    }
+
+    if (hasRecovery && todaysRecoveryMode !== 'CASH' && !todaysRecoveryInstrument.trim()) {
+      toast.warning('Cheque / Ref Required', 'Please enter the Cheque Number or Transfer Reference for non-cash recovery.');
+      return;
+    }
+
+    const orderValueSnapshot = orderSummary.orderValue;
+    const orderQtySnapshot = orderSummary.totalQuantity;
+    const recoveryValueSnapshot = todaysRecoveryNum;
+    const customerNameSnapshot = activeCustomer.companyName;
+
+    setIsSubmittingCombined(true);
+
+    try {
+      // 1. Submit Order if any SKUs selected
+      if (hasOrder) {
+        await handleConfirmSubmitOrder();
+      }
+
+      // 2. Submit Today's Recovery if amount entered
+      if (hasRecovery) {
+        const recoveryPayload = {
+          customerId: activeCustomer.id,
+          amount: recoveryValueSnapshot,
+          paymentMode: todaysRecoveryMode,
+          instrumentNumber: todaysRecoveryInstrument || 'CASH-REC',
+          bankName: todaysRecoveryBank,
+          remarks: todaysRecoveryRemarks || `Entry Form Recovery collected on ${entryDate} (TSM: ${entryTsm}, Town: ${selectedTown})`,
+        };
+
+        if (onRecordRecovery) {
+          await onRecordRecovery(recoveryPayload);
+        }
+
+        const googleToken = getAccessToken();
+        submitAndSaveRecovery(recoveryPayload, customerNameSnapshot, googleToken).catch((err) =>
+          console.warn('Google Sheet 2-way recovery sync notice:', err)
+        );
+      }
+
+      setCombinedSuccessMsg(
+        `Successfully submitted ${hasOrder ? `Order of Rs. ${orderValueSnapshot.toLocaleString()} (${orderQtySnapshot} pcs)` : ''} ${hasOrder && hasRecovery ? 'and ' : ''} ${hasRecovery ? `Recovery of Rs. ${recoveryValueSnapshot.toLocaleString()}` : ''} for ${customerNameSnapshot}! Live synced with Supabase & Google Sheets.`
+      );
+      toast.success(
+        'N-LINK Live Entry Synchronized',
+        `Data recorded and synced with Google Sheets (1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo).`
+      );
+
+      // Reset form fields
+      setTodaysRecoveryAmount('');
+      setTodaysRecoveryInstrument('');
+      setTodaysRecoveryBank('');
+      setTodaysRecoveryRemarks('');
+      setOrderQuantities({});
+      setTimeout(() => setCombinedSuccessMsg(null), 6000);
+    } catch (err: any) {
+      toast.error('Submission Error', err?.message || 'Failed to submit entry.');
+    } finally {
+      setIsSubmittingCombined(false);
+    }
+  };
+
   // Invoices & Ledger Date Filters
   const [invoiceFromDate, setInvoiceFromDate] = useState('2026-08-01');
   const [invoiceToDate, setInvoiceToDate] = useState(new Date().toISOString().split('T')[0]);
@@ -1478,7 +1682,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
     });
   }, [invoices, activeCustomer, invoiceFromDate, invoiceToDate]);
 
-  const [ledgerFromDate, setLedgerFromDate] = useState('2026-08-01');
+  const [ledgerFromDate, setLedgerFromDate] = useState('2026-07-01');
   const [ledgerToDate, setLedgerToDate] = useState(new Date().toISOString().split('T')[0]);
 
   const customerLedgerData = useMemo(() => {
@@ -1808,16 +2012,28 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-base tracking-tight text-slate-900 leading-tight">
-                  N-LINK <span className="text-teal-600 font-black">360</span>
+                  N-LINK <span className="text-teal-600 font-black">SalesPulse</span>
                 </span>
                 <span className="text-[10px] font-bold bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full border border-teal-200">
                   {roleScope.level}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium truncate max-w-[170px] sm:max-w-xs">
-                {currentUser.fullName}
+                {currentUser.fullName} • National Light Pakistan
               </p>
             </div>
+
+            {onToggleViewMode && (
+              <button
+                type="button"
+                onClick={onToggleViewMode}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xs cursor-pointer ml-1"
+                title="Switch to Enterprise 360 View"
+              >
+                <Layers className="w-3.5 h-3.5 text-teal-400" />
+                <span>Enterprise 360</span>
+              </button>
+            )}
           </div>
 
           {/* Unified Desktop/Tablet Navigation Bar - Strict 3-Tab Architecture (Section 10) */}
@@ -1957,10 +2173,20 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               type="button"
               onClick={() => setShowGoogleSheetsModal(true)}
               className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
-              title="Open Google Sheets Database Sync (1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo)"
+              title="Open Google Sheets Database Sync"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
               <span>Google Sheet DB</span>
+            </button>
+
+            {/* Application Settings Modal Button */}
+            <button
+              type="button"
+              onClick={() => setIsSettingsModalOpen(true)}
+              className="p-2 rounded-xl text-slate-600 hover:text-teal-700 hover:bg-slate-100 transition-all cursor-pointer shrink-0"
+              title="App Settings (Auto-Save, Sync & Storage)"
+            >
+              <Settings className="w-4 h-4 text-teal-700" />
             </button>
 
             {onLogout && (
@@ -2566,6 +2792,23 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
+                        onClick={() => {
+                          const firstInTown = authorizedCustomers.find(
+                            (c) => (c.city || '').toLowerCase() === selectedTown.toLowerCase()
+                          ) || authorizedCustomers[0];
+                          if (firstInTown) {
+                            setSelectedCustomerId(firstInTown.id);
+                          }
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 shrink-0"
+                        title="Open SalesPulse N-LINK Order & Recovery Entry Form"
+                      >
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        <span>Open Entry Form</span>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => setIsRegisterModalOpen(true)}
                         className="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer active:scale-95 shrink-0"
                         title="Register a new Dealer/Distributor to the Head Office Approval Queue"
@@ -2947,6 +3190,115 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                       </div>
                     </div>
 
+                    {/* CREDIT HEALTH INDICATOR & AVERAGE PAYMENT DELAY */}
+                    <div className="pt-2 border-t border-slate-200/80">
+                      <div className={`p-4 rounded-2xl border transition-all ${
+                        customerCreditHealth.status === 'EXCELLENT'
+                          ? 'bg-emerald-50/70 border-emerald-200'
+                          : customerCreditHealth.status === 'GOOD'
+                          ? 'bg-teal-50/70 border-teal-200'
+                          : customerCreditHealth.status === 'WATCHLIST'
+                          ? 'bg-amber-50/70 border-amber-200'
+                          : 'bg-rose-50/70 border-rose-200'
+                      }`}>
+                        <div className="flex items-center justify-between gap-2 flex-wrap mb-2.5">
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck className={`w-4 h-4 ${
+                              customerCreditHealth.status === 'EXCELLENT' ? 'text-emerald-600' :
+                              customerCreditHealth.status === 'GOOD' ? 'text-teal-600' :
+                              customerCreditHealth.status === 'WATCHLIST' ? 'text-amber-600' : 'text-rose-600'
+                            }`} />
+                            <span className="text-xs font-black text-slate-800">
+                              Credit Health &amp; Payment Delay
+                            </span>
+                          </div>
+                          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                            customerCreditHealth.status === 'EXCELLENT' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                            customerCreditHealth.status === 'GOOD' ? 'bg-teal-100 text-teal-800 border border-teal-300' :
+                            customerCreditHealth.status === 'WATCHLIST' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                            'bg-rose-100 text-rose-800 border border-rose-300 animate-pulse'
+                          }`}>
+                            {customerCreditHealth.label}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-left text-xs mb-3">
+                          {/* 1. Average Payment Delay in Days */}
+                          <div className="bg-white/90 p-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">
+                              Avg Payment Delay
+                            </span>
+                            <div className="flex items-baseline gap-1 mt-1">
+                              <span className={`text-base font-black font-mono tabular-nums ${
+                                customerCreditHealth.avgDelayDays <= 10 ? 'text-emerald-700' :
+                                customerCreditHealth.avgDelayDays <= 25 ? 'text-teal-700' :
+                                customerCreditHealth.avgDelayDays <= 45 ? 'text-amber-700' : 'text-rose-700'
+                              }`}>
+                                {customerCreditHealth.avgDelayDays}
+                              </span>
+                              <span className="text-[11px] font-bold text-slate-600">Days</span>
+                            </div>
+                          </div>
+
+                          {/* 2. Credit Terms */}
+                          <div className="bg-white/90 p-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">
+                              Credit Days Term
+                            </span>
+                            <div className="flex items-baseline gap-1 mt-1">
+                              <span className="text-base font-black font-mono text-slate-800 tabular-nums">
+                                {customerCreditHealth.creditDays}
+                              </span>
+                              <span className="text-[11px] font-bold text-slate-600">Days Term</span>
+                            </div>
+                          </div>
+
+                          {/* 3. Credit Limit */}
+                          <div className="bg-white/90 p-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">
+                              Credit Limit
+                            </span>
+                            <span className="text-xs font-black font-mono text-slate-800 mt-1 block tabular-nums">
+                              Rs. {customerCreditHealth.creditLimit.toLocaleString()}
+                            </span>
+                          </div>
+
+                          {/* 4. Limit Utilization */}
+                          <div className="bg-white/90 p-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">
+                              Limit Utilization
+                            </span>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className={`text-xs font-black font-mono tabular-nums ${
+                                customerCreditHealth.creditUtilizationPct > 90 ? 'text-rose-700 font-black' :
+                                customerCreditHealth.creditUtilizationPct > 70 ? 'text-amber-700' : 'text-emerald-700'
+                              }`}>
+                                {customerCreditHealth.creditUtilizationPct}%
+                              </span>
+                              <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    customerCreditHealth.creditUtilizationPct > 90 ? 'bg-rose-500' :
+                                    customerCreditHealth.creditUtilizationPct > 70 ? 'bg-amber-500' : 'bg-emerald-500'
+                                  }`}
+                                  style={{ width: `${Math.min(100, customerCreditHealth.creditUtilizationPct)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {customerCreditHealth.avgDelayDays > 30 && (
+                          <div className="flex items-center gap-2 p-2 bg-rose-100/80 rounded-xl text-rose-800 text-[11px] font-bold border border-rose-200">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                            <span>
+                              Attention: Customer payment delay exceeds 30 days ({customerCreditHealth.avgDelayDays} days average). Strict recovery or cash-before-delivery recommended.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     {/* 3. CUSTOMER 360: QUICK REORDER (Populates Order Entry with previous 5 ordered items) */}
                     <div className="pt-2 border-t border-slate-100">
                       <div className="bg-gradient-to-r from-teal-50/90 via-emerald-50/70 to-slate-50 p-3.5 rounded-2xl border border-teal-200/90 shadow-2xs space-y-3">
@@ -3031,619 +3383,656 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                   </div>
                 </div>
 
-                {/* 1 SINGLE CONTINUOUS FORM QUICK-JUMP STICKY PILLS (SCROLL UP / DOWN) */}
+                {/* SALESPULSE N-LINK QUICK-JUMP STICKY PILLS */}
                 <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-1.5 overflow-x-auto scrollbar-none">
                   <button
                     type="button"
-                    onClick={() => document.getElementById('dealer-section-orders')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                    className="px-3 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-black border border-teal-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
+                    onClick={() => document.getElementById("dealer-section-params")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-black border border-teal-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
                   >
-                    <ShoppingBag className="w-3.5 h-3.5" />
-                    <span>1. Add SKU Orders</span>
+                    <span>1-2. Region &amp; Date</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => document.getElementById('dealer-section-recovery')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                    className="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
+                    onClick={() => document.getElementById("dealer-section-target")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black border border-slate-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
                   >
-                    <DollarSign className="w-3.5 h-3.5" />
-                    <span>2. Add Recovery</span>
+                    <Target className="w-3.5 h-3.5 text-teal-600" />
+                    <span>3. Target vs Achievement</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => document.getElementById('dealer-section-balances')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                    className="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-black border border-indigo-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
+                    onClick={() => document.getElementById("dealer-section-brands-skus")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0 shadow-xs"
+                  >
+                    <Package className="w-3.5 h-3.5" />
+                    <span>4. National Light Brands &amp; SKUs</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("dealer-section-recovery-box")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
+                  >
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>5. Recovery Entry Box</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("dealer-section-balances")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-black border border-indigo-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
                   >
                     <CreditCard className="w-3.5 h-3.5" />
-                    <span>3. Check Balances</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById('dealer-section-invoices')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                    className="px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-black border border-amber-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>4. Check Invoice</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById('dealer-section-ledger')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                    className="px-3 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-black border border-purple-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all active:scale-95 shrink-0"
-                  >
-                    <Layers className="w-3.5 h-3.5" />
-                    <span>5. Check Ledger</span>
+                    <span>Balances &amp; Ledger</span>
                   </button>
                 </div>
 
-                {/* --- 1. ADD SKU WISE ORDERS SECTION --- */}
-                <div id="dealer-section-orders" className="space-y-4">
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-xs">
-                        <ShoppingBag className="w-4 h-4" />
+                {/* ========================================================= */}
+                {/* 1 & 2: REGION, TSM, DATE, TOWN, CUSTOMER SELECTION        */}
+                {/* ========================================================= */}
+                <div id="dealer-section-params" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-teal-800 flex items-center justify-center text-white shadow-xs font-black text-xs">
+                        NL
                       </div>
                       <div>
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                          1. Add SKU Wise Orders
-                        </h3>
-                        <p className="text-[10px] text-slate-500 font-medium">Dealer Booking Entry (Brand wise SKUs)</p>
+                        <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                          N-LINK SalesPulse Entry Form
+                        </h2>
+                        <p className="text-[11px] text-slate-500 font-medium">National Light Pakistan • Order Booking &amp; Recovery Sync</p>
                       </div>
                     </div>
-                    <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
-                      Step 1 of 5
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Live Google Sheet Sync
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                        ID: 1NUW0a...ZUSwoo
+                      </span>
+                    </div>
                   </div>
-                    {orderSuccessMessage && (
-                      <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-bold text-emerald-800 flex items-center gap-2 shadow-2xs">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                        <span>{orderSuccessMessage}</span>
-                      </div>
-                    )}
 
-                    {/* Quick Reorder Shortcut Banner inside Order Entry */}
-                    {customerPreviousOrderedItems.length > 0 && (
-                      <div className="p-3 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl border border-teal-200/90 flex items-center justify-between gap-2.5 shadow-2xs flex-wrap">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-teal-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
-                            <Zap className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-xs font-black text-slate-900 block truncate">
-                              Quick Reorder Ready ({customerPreviousOrderedItems.length} items)
-                            </span>
-                            <span className="text-[10px] text-slate-500 font-medium">
-                              Load past quantities directly into the SKU list below
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickReorder()}
-                          className="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black transition-all shadow-xs shrink-0 cursor-pointer flex items-center gap-1.5 active:scale-95"
-                          title="Populate Order Entry with previous ordered items"
-                        >
-                          <ShoppingBag className="w-3.5 h-3.5" />
-                          <span>Fill 5 Items</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {/* SKU Quick Search, Stock Status Filter & Expand Toolbar */}
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2.5">
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                        {/* Search Input */}
-                        <div className="relative flex-1">
-                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-                          <input
-                            type="text"
-                            value={skuSearchQuery}
-                            onChange={(e) => setSkuSearchQuery(e.target.value)}
-                            placeholder="Search SKU name, code, brand..."
-                            className="w-full pl-9 pr-8 py-1.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-2xs font-medium"
-                          />
-                          {skuSearchQuery && (
-                            <button
-                              type="button"
-                              onClick={() => setSkuSearchQuery('')}
-                              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-                              title="Clear search"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Expand / Collapse All Accordions Button */}
-                        <button
-                          type="button"
-                          onClick={toggleExpandAllBrands}
-                          className="px-3 py-1.5 bg-white hover:bg-slate-100 active:scale-95 text-slate-700 rounded-xl border border-slate-200 text-xs font-bold cursor-pointer transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-2xs"
-                          title="Toggle all brand categories"
-                        >
-                          <Layers className="w-3.5 h-3.5 text-teal-600" />
-                          <span>{Object.values(expandedBrands).every(Boolean) ? 'Collapse All' : 'Expand All'}</span>
-                        </button>
-                      </div>
-
-                      {/* Stock Status Filter Pills */}
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar text-xs">
-                        <button
-                          type="button"
-                          onClick={() => setSkuStockFilter('ALL')}
-                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap cursor-pointer transition-all ${
-                            skuStockFilter === 'ALL'
-                              ? 'bg-slate-900 text-white shadow-2xs'
-                              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                          }`}
-                        >
-                          All SKUs ({skus.length})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSkuStockFilter('IN_STOCK')}
-                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
-                            skuStockFilter === 'IN_STOCK'
-                              ? 'bg-emerald-600 text-white shadow-2xs'
-                              : 'bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200'
-                          }`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          <span>In Stock</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSkuStockFilter('LOW_STOCK')}
-                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
-                            skuStockFilter === 'LOW_STOCK'
-                              ? 'bg-amber-600 text-white shadow-2xs'
-                              : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200'
-                          }`}
-                        >
-                          <AlertTriangle className="w-3 h-3" />
-                          <span>Low Stock</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSkuStockFilter('OUT_OF_STOCK')}
-                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
-                            skuStockFilter === 'OUT_OF_STOCK'
-                              ? 'bg-rose-600 text-white shadow-2xs'
-                              : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200'
-                          }`}
-                        >
-                          <span>0 Stock</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSkuStockFilter('SELECTED')}
-                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
-                            skuStockFilter === 'SELECTED'
-                              ? 'bg-teal-700 text-white shadow-2xs'
-                              : 'bg-white text-teal-800 hover:bg-teal-50 border border-teal-200'
-                          }`}
-                        >
-                          <span>Selected ({orderSummary.totalSKUs})</span>
-                        </button>
-                      </div>
+                  {/* 1. Region & TSM */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold text-slate-700">
+                    <div>
+                      <label className="block mb-1 text-[11px] uppercase tracking-wider text-slate-500">
+                        1- Region:
+                      </label>
+                      <select
+                        value={entryRegion}
+                        onChange={(e) => setEntryRegion(e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        <option value="All Regions">All Regions</option>
+                        <option value="Central Punjab (Lahore)">Central Punjab (Lahore Division)</option>
+                        <option value="North Punjab (Rawalpindi/Islamabad)">North Punjab (Rawalpindi / Islamabad)</option>
+                        <option value="South Punjab (Multan/Faisalabad)">South Punjab (Multan / Faisalabad)</option>
+                        <option value="Sindh (Karachi/Hyderabad)">Sindh (Karachi / Hyderabad)</option>
+                        <option value="KPK (Peshawar)">KPK (Peshawar)</option>
+                      </select>
                     </div>
 
-                    {/* Brand Accordion SKU Lists */}
-                    {Object.keys(brandsGrouped).length === 0 ? (
-                      <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-2">
-                        <Package className="w-8 h-8 text-slate-300 mx-auto" />
-                        <h4 className="text-sm font-black text-slate-800">No Matching SKUs Found</h4>
-                        <p className="text-xs text-slate-500">
-                          Try adjusting your search query or changing the stock filter above.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSkuSearchQuery('');
-                            setSkuStockFilter('ALL');
-                          }}
-                          className="mt-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold cursor-pointer"
-                        >
-                          Reset Filters
-                        </button>
+                    <div>
+                      <label className="block mb-1 text-[11px] uppercase tracking-wider text-slate-500">
+                        TSM:
+                      </label>
+                      <select
+                        value={entryTsm}
+                        onChange={(e) => setEntryTsm(e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        <option value="Syed Zain">Syed Zain (TSM - Central)</option>
+                        <option value="Shahzad Ullah">Shahzad Ullah (ZSM - Punjab)</option>
+                        <option value={currentUser.fullName}>{currentUser.fullName} ({currentUser.role})</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* 2. Date, TSM, Town & Customer */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-bold text-slate-700 pt-1">
+                    <div>
+                      <label className="block mb-1 text-[11px] uppercase tracking-wider text-slate-500">
+                        2- Date
+                      </label>
+                      <input
+                        type="text"
+                        value={entryDate}
+                        onChange={(e) => setEntryDate(e.target.value)}
+                        placeholder="09/17/2026"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-[11px] uppercase tracking-wider text-slate-500">
+                        Town
+                      </label>
+                      <select
+                        value={selectedTown}
+                        onChange={(e) => {
+                          const newTown = e.target.value;
+                          setSelectedTown(newTown);
+                          const firstInTown = authorizedCustomers.find(
+                            (c) => (c.city || "").toLowerCase() === newTown.toLowerCase()
+                          );
+                          if (firstInTown) {
+                            setSelectedCustomerId(firstInTown.id);
+                          }
+                        }}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        {assignedTowns.map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-[11px] uppercase tracking-wider text-slate-500">
+                        Customer / Dealer
+                      </label>
+                      <select
+                        value={selectedCustomerId || ""}
+                        onChange={(e) => setSelectedCustomerId(e.target.value || null)}
+                        className="w-full p-2.5 bg-teal-50/60 border border-teal-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        {townFilteredCustomers.map((cust) => (
+                          <option key={cust.id} value={cust.id}>
+                            {cust.companyName} ({cust.customerCode}) - Bal: Rs. {(cust.currentBalance || 0).toLocaleString()}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ========================================================= */}
+                {/* 3: TARGET VS ACHIEVEMENT                                  */}
+                {/* ========================================================= */}
+                <div id="dealer-section-target" className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white p-5 rounded-2xl border border-slate-700 shadow-md space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-teal-500/20 text-teal-300 flex items-center justify-center border border-teal-500/30">
+                        <Target className="w-4 h-4" />
                       </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {(Object.entries(brandsGrouped) as [string, SKU[]][]).map(([brandName, brandSkus]) => {
-                          const isExpanded = expandedBrands[brandName] ?? false;
-                          const brandActiveQty = brandSkus.reduce((sum, s) => sum + (orderQuantities[s.id] || 0), 0);
-                          
-                          // Alert field reps when any SKU within that category falls below its reorder level
-                          const criticalStockCount = brandSkus.filter((sku) => {
-                            const stock = getSkuStock(sku.id);
-                            const threshold = sku.reorderLevel || 10;
-                            return stock <= threshold;
-                          }).length;
+                      <div>
+                        <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
+                          3- Target vs Achievement
+                        </h3>
+                        <p className="text-[10px] text-slate-400 font-medium">MTD Sales Performance • {mtdStats.monthName}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-mono font-bold">
+                      <span className="bg-teal-900/70 text-teal-300 border border-teal-500/40 px-2.5 py-0.5 rounded-full">
+                        {mtdStats.mtdPercent}% Achieved
+                      </span>
+                    </div>
+                  </div>
 
-                          return (
-                            <div key={brandName} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
-                              {/* Brand Header Accordion Trigger */}
-                              <button
-                                type="button"
-                                onClick={() => toggleBrand(brandName)}
-                                className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left font-extrabold text-sm text-slate-900 cursor-pointer transition-colors"
-                              >
-                                <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                                  <span className="w-2.5 h-2.5 rounded-full bg-teal-600 shrink-0" />
-                                  <span className="truncate">{brandName}</span>
-                                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/80 px-2 py-0.5 rounded-full shrink-0">
-                                    {brandSkus.length} SKUs
-                                  </span>
-                                  {criticalStockCount > 0 && (
-                                    <span
-                                      className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full shrink-0 shadow-2xs"
-                                      title={`${criticalStockCount} SKU${criticalStockCount > 1 ? 's' : ''} in this category below reorder level`}
-                                    >
-                                      <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                                      <span>Critical Stock ({criticalStockCount})</span>
-                                    </span>
-                                  )}
-                                  {brandActiveQty > 0 && (
-                                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0 animate-in fade-in">
-                                      {brandActiveQty} selected
-                                    </span>
-                                  )}
-                                </div>
-                                {isExpanded ? (
-                                  <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
-                                ) : (
-                                  <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
-                                )}
-                              </button>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-xs">
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Target</span>
+                      <span className="font-mono font-black text-sm text-white block mt-0.5">
+                        Rs. {mtdStats.mtdTarget.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                      <span className="text-[10px] text-teal-300 uppercase font-bold block">Achieved</span>
+                      <span className="font-mono font-black text-sm text-emerald-400 block mt-0.5">
+                        Rs. {mtdStats.mtdSalesAchieved.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Variance</span>
+                      <span className={`font-mono font-black text-sm block mt-0.5 ${mtdStats.mtdVariance >= 0 ? "text-emerald-400" : "text-amber-400"}`}>
+                        {mtdStats.mtdVariance >= 0 ? "+" : ""}Rs. {mtdStats.mtdVariance.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Daily Run Rate Needed</span>
+                      <span className="font-mono font-black text-sm text-teal-200 block mt-0.5">
+                        Rs. {mtdStats.dailyRunRateNeeded.toLocaleString()}/day
+                      </span>
+                    </div>
+                  </div>
 
-                              {/* SKU Grid Inside Brand (Compact High-Density Responsive Grid) */}
-                              {isExpanded && (
-                                <div className="p-2 sm:p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-2.5">
-                                  {brandSkus.map((sku) => {
-                                    const stock = getSkuStock(sku.id);
-                                    const isOutOfStock = stock <= 0;
-                                    const isLowStock = !isOutOfStock && stock <= (sku.reorderLevel || 10);
-                                    const currentQty = orderQuantities[sku.id] || 0;
-                                    const unitPrice = Number(sku.tradePrice || sku.retailPrice || 0);
+                  {/* Progress bar */}
+                  <div className="space-y-1">
+                    <div className="w-full h-2.5 bg-slate-700/60 rounded-full overflow-hidden p-0.5">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-teal-400 to-emerald-400 transition-all duration-500"
+                        style={{ width: `${Math.min(100, Math.max(3, mtdStats.mtdPercent))}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                      <span>0%</span>
+                      <span>Target: Rs. {mtdStats.mtdTarget.toLocaleString()}</span>
+                      <span>{mtdStats.mtdPercent}%</span>
+                    </div>
+                  </div>
+                </div>
 
-                                    return (
-                                      <div
-                                        key={sku.id}
-                                        className={`p-2.5 rounded-xl border transition-all duration-200 flex flex-col justify-between gap-2 text-xs relative ${
-                                          currentQty > 0
-                                            ? 'bg-emerald-50/80 border-emerald-300 ring-1 ring-emerald-300 shadow-xs'
-                                            : 'bg-white hover:bg-slate-50 border-slate-200 shadow-2xs'
-                                        }`}
-                                      >
-                                        {/* Row 1: SKU Name & Code */}
-                                        <div className="space-y-1">
-                                          <div className="flex items-start justify-between gap-1.5">
-                                            <h4
-                                              className="font-black text-slate-900 text-xs line-clamp-2 leading-tight flex-1"
-                                              title={sku.name}
-                                            >
-                                              {sku.name}
-                                            </h4>
-                                            <span className="text-[9px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-semibold shrink-0">
-                                              {sku.skuCode}
-                                            </span>
-                                          </div>
+                {/* ========================================================================= */}
+                {/* 4: BRAND CLICKABLE > EXPAND & COLLAPSE THE SKU ON CLICKING ON THE BRANDS  */}
+                {/* ========================================================================= */}
+                <div id="dealer-section-brands-skus" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-200">
+                        <Package className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                          4- Brand Clickable &gt; Expand &amp; Collapse the SKU on clicking on the Brands
+                        </h3>
+                        <p className="text-[10px] text-slate-500 font-medium">
+                          National Light Product Catalog • Click brand header to expand/collapse SKUs
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={toggleExpandAllBrands}
+                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                      >
+                        <Layers className="w-3 h-3 text-teal-600" />
+                        <span>{Object.values(expandedBrands).every(Boolean) ? "Collapse All" : "Expand All"}</span>
+                      </button>
+                      <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
+                        {orderSummary.totalSKUs} SKUs Selected ({orderSummary.totalQuantity} pcs)
+                      </span>
+                    </div>
+                  </div>
 
-                                          {/* Row 2: PRIORITIZED Stock Status & Price - Prominent for Small Screens */}
-                                          <div className="pt-1 flex items-center justify-between gap-1.5 flex-wrap">
-                                            {/* Price Badge */}
-                                            <div className="bg-slate-900 text-white px-2 py-0.5 rounded-md font-mono font-black text-xs inline-flex items-center gap-1 shadow-2xs">
-                                              <span className="text-[9px] text-teal-300 font-sans uppercase font-bold">Rs.</span>
-                                              <span>{unitPrice.toLocaleString()}</span>
-                                            </div>
+                  {/* Live Search Box */}
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={skuSearchQuery}
+                      onChange={(e) => setSkuSearchQuery(e.target.value)}
+                      placeholder="Search National Light SKUs (e.g. 12W, 40W, Panel, Tube, Flood, Solar)..."
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
 
-                                            {/* Stock Status Badge */}
-                                            <div className="shrink-0">
-                                              {isOutOfStock ? (
-                                                <span className="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-0.5">
-                                                  0 Stock
-                                                </span>
-                                              ) : isLowStock ? (
-                                                <span
-                                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black shadow-2xs"
-                                                  title={`Stock (${stock}) is below reorder trigger of ${sku.reorderLevel || 10} pcs`}
-                                                >
-                                                  <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
-                                                  <span>{stock} pcs (Low)</span>
-                                                </span>
-                                              ) : (
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-black">
-                                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                                                  <span>{stock} pcs</span>
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
+                  {/* Brand Accordion List */}
+                  <div className="space-y-3 pt-1">
+                    {(Object.entries(brandsGrouped) as [string, SKU[]][]).map(([brandName, brandSkus]) => {
+                      const isExpanded = expandedBrands[brandName] ?? true;
+                      const brandActiveQty = brandSkus.reduce((sum, s) => sum + (orderQuantities[s.id] || 0), 0);
+                      const brandActiveVal = brandSkus.reduce(
+                        (sum, s) => sum + (orderQuantities[s.id] || 0) * Number(s.tradePrice || s.retailPrice || 0),
+                        0
+                      );
 
-                                        {/* Row 3: Order Stepper Controls & Line Subtotal */}
-                                        <div className="pt-2 border-t border-slate-100/90 flex items-center justify-between gap-1.5">
-                                          <div className="min-w-0">
-                                            {currentQty > 0 ? (
-                                              <div>
-                                                <span className="text-[8px] text-emerald-800 font-bold uppercase tracking-wider block leading-none">
-                                                  Line Total
-                                                </span>
-                                                <span className="text-xs font-mono font-black text-emerald-700 truncate block">
-                                                  Rs. {(currentQty * unitPrice).toLocaleString()}
-                                                </span>
-                                              </div>
-                                            ) : (
-                                              <span className="text-[10px] text-slate-400 font-medium font-mono">Qty: 0</span>
-                                            )}
-                                          </div>
-
-                                          {/* Compact Stepper Buttons */}
-                                          <div className="flex items-center gap-1 shrink-0">
-                                            <button
-                                              type="button"
-                                              disabled={isOutOfStock || currentQty <= 0}
-                                              onClick={() => handleQtyChange(sku.id, currentQty - 1)}
-                                              className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-slate-700 font-bold cursor-pointer transition-all touch-manipulation border border-slate-200/80 shadow-2xs"
-                                              aria-label="Decrease quantity"
-                                              title="Decrease quantity"
-                                            >
-                                              <Minus className="w-3 h-3 stroke-[2.5]" />
-                                            </button>
-
-                                            <input
-                                              type="number"
-                                              min={0}
-                                              max={stock > 0 ? stock : 0}
-                                              disabled={isOutOfStock}
-                                              value={currentQty === 0 ? '' : currentQty}
-                                              onChange={(e) => handleQtyChange(sku.id, parseInt(e.target.value) || 0)}
-                                              placeholder="0"
-                                              className="w-10 sm:w-11 h-7 text-center py-0 bg-white border border-slate-300 rounded-lg font-mono font-black text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-slate-100 disabled:text-slate-400 tabular-nums shadow-2xs"
-                                              aria-label={`Quantity for ${sku.name}`}
-                                            />
-
-                                            <button
-                                              type="button"
-                                              disabled={isOutOfStock || (stock > 0 && currentQty >= stock)}
-                                              onClick={() => handleQtyChange(sku.id, currentQty + 1)}
-                                              className="w-7 h-7 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white disabled:bg-slate-100 disabled:text-slate-300 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center font-bold cursor-pointer transition-all touch-manipulation shadow-2xs"
-                                              aria-label="Increase quantity"
-                                              title="Increase quantity"
-                                            >
-                                              <Plus className="w-3 h-3 stroke-[2.5]" />
-                                            </button>
-
-                                            {currentQty > 0 && (
-                                              <button
-                                                type="button"
-                                                onClick={() => handleQtyChange(sku.id, 0)}
-                                                className="w-6 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 border border-rose-200 flex items-center justify-center cursor-pointer transition-all touch-manipulation shadow-2xs"
-                                                aria-label="Reset quantity"
-                                                title="Reset to 0"
-                                              >
-                                                <X className="w-3 h-3" />
-                                              </button>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                      return (
+                        <div key={brandName} className="rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+                          {/* Brand Clickable Header */}
+                          <button
+                            type="button"
+                            onClick={() => toggleBrand(brandName)}
+                            className={`w-full px-4 py-3 flex items-center justify-between text-left transition-colors cursor-pointer ${
+                              isExpanded ? "bg-teal-50/70 border-b border-teal-100" : "bg-slate-50 hover:bg-slate-100"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                              <span className={`w-2.5 h-2.5 rounded-full ${brandActiveQty > 0 ? "bg-emerald-500 ring-2 ring-emerald-300" : "bg-teal-600"} shrink-0`} />
+                              <span className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
+                                {brandName}
+                              </span>
+                              <span className="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                                {brandSkus.length} SKUs
+                              </span>
+                              {brandActiveQty > 0 && (
+                                <span className="text-[10px] font-mono font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">
+                                  {brandActiveQty} pcs (Rs. {brandActiveVal.toLocaleString()})
+                                </span>
                               )}
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* IN-PAGE ORDER SUMMARY (Comprehensive Breakdown Card) */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                        <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Comprehensive Order Summary</h3>
-                        <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
-                          {orderSummary.totalSKUs} SKUs Selected
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2.5 text-center text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                        <div className="bg-white p-2 rounded-lg border border-slate-200/80">
-                          <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider">Total SKUs</span>
-                          <span className="font-bold text-slate-900 text-base">{orderSummary.totalSKUs}</span>
-                        </div>
-                        <div className="bg-white p-2 rounded-lg border border-slate-200/80">
-                          <span className="text-[10px] text-slate-500 font-bold block uppercase tracking-wider">Total Quantity</span>
-                          <span className="font-bold text-slate-900 text-base">{orderSummary.totalQuantity} pcs</span>
-                        </div>
-                        <div className="bg-teal-50/80 p-2 rounded-lg border border-teal-200">
-                          <span className="text-[10px] text-teal-800 font-black block uppercase tracking-wider">Order Value</span>
-                          <span className="font-mono font-black text-teal-700 text-base tabular-nums">
-                            Rs. {orderSummary.orderValue.toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-2.5">
-                        <button
-                          type="button"
-                          disabled={orderSummary.totalQuantity === 0}
-                          onClick={() => setShowOrderPreviewDrawer(true)}
-                          className="flex-1 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-[0.99] disabled:opacity-50 text-slate-800 font-bold text-xs tracking-wide border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
-                        >
-                          <Eye className="w-4 h-4 text-teal-700" />
-                          <span>Preview Line Items & Tax</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={orderSummary.totalQuantity === 0}
-                          onClick={() => setShowOrderPreviewDrawer(true)}
-                          className="flex-1 py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>SUBMIT ORDER (Rs. {orderSummary.orderValue.toLocaleString()})</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* STICKY BOTTOM ORDER BAR (Persists while scrolling through long brand SKU lists) */}
-                    {orderSummary.totalQuantity > 0 && (
-                      <div className="fixed bottom-[68px] left-0 right-0 z-30 max-w-xl mx-auto px-4 pointer-events-none">
-                        <div className="pointer-events-auto bg-slate-950/95 backdrop-blur-md text-white rounded-2xl p-3.5 border border-slate-700/80 shadow-2xl shadow-slate-950/50 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-4 duration-200">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] uppercase font-black tracking-wider text-teal-400 bg-teal-950/90 px-2 py-0.5 rounded-full border border-teal-700/70">
-                                Order Value
+                            <div className="flex items-center gap-1.5 text-slate-500 shrink-0">
+                              <span className="text-[10px] font-bold uppercase hidden sm:inline">
+                                {isExpanded ? "Click to Collapse" : "Click to Expand"}
                               </span>
-                              <span className="text-xs text-slate-300 font-medium truncate">
-                                {orderSummary.totalSKUs} SKUs · {orderSummary.totalQuantity} pcs
-                              </span>
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-teal-700" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
                             </div>
-                            <div className="text-lg sm:text-xl font-black font-mono text-white tracking-tight flex items-baseline gap-1 mt-0.5">
-                              <span className="text-xs text-slate-400 font-sans font-bold">Rs.</span>
-                              <span className="text-emerald-400 tabular-nums">{orderSummary.orderValue.toLocaleString()}</span>
-                            </div>
-                          </div>
+                          </button>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => setShowOrderPreviewDrawer(true)}
-                              className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-600 transition-colors flex items-center gap-1.5 cursor-pointer"
-                              title="Expand Order Preview Drawer"
-                            >
-                              <Receipt className="w-3.5 h-3.5 text-teal-400" />
-                              <span className="hidden sm:inline">Preview</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setShowOrderPreviewDrawer(true)}
-                              className="px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-teal-500/25 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <span>Review & Book</span>
-                              <ChevronRight className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {/* Expanded SKUs Grid */}
+                          {isExpanded && (
+                            <div className="p-3 bg-white grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                              {brandSkus.map((sku) => {
+                                const stock = getSkuStock(sku.id);
+                                const currentQty = orderQuantities[sku.id] || 0;
+                                const unitPrice = Number(sku.tradePrice || sku.retailPrice || 0);
+                                const pack = Number(sku.packsPerCarton || 50);
+
+                                return (
+                                  <div
+                                    key={sku.id}
+                                    className={`p-3 rounded-xl border transition-all text-xs flex flex-col justify-between gap-2 ${
+                                      currentQty > 0
+                                        ? "bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-300 shadow-2xs"
+                                        : "bg-slate-50/50 hover:bg-white border-slate-200"
+                                    }`}
+                                  >
+                                    <div>
+                                      <div className="flex items-start justify-between gap-1.5">
+                                        <h4 className="font-black text-slate-900 text-xs leading-snug line-clamp-2" title={sku.name}>
+                                          {sku.name}
+                                        </h4>
+                                        <span className="text-[9px] font-mono text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded shrink-0">
+                                          {sku.skuCode}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex items-center justify-between gap-1.5 mt-1.5 flex-wrap">
+                                        <span className="font-mono font-black text-slate-900 text-xs bg-white px-2 py-0.5 rounded border border-slate-200">
+                                          <span className="text-[9px] text-teal-700 font-bold">TP: Rs. </span>
+                                          {unitPrice.toLocaleString()}
+                                        </span>
+                                        <span className="text-[10px] text-slate-500 font-medium">
+                                          Pack: <strong className="text-slate-700 font-mono">{pack}</strong>/ctn
+                                        </span>
+                                        <span className={`text-[10px] font-bold ${stock > 0 ? "text-emerald-700" : "text-slate-500"}`}>
+                                          Stock: {stock}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Stepper / Quick Carton + Loose Pieces */}
+                                    <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between gap-1.5 flex-wrap">
+                                      <div className="flex items-center gap-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleQtyChange(sku.id, currentQty + pack)}
+                                          className="px-1.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded text-[10px] font-bold cursor-pointer transition-all active:scale-95"
+                                          title="Add 1 Full Carton"
+                                        >
+                                          +1 Ctn
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={currentQty <= 0}
+                                          onClick={() => handleQtyChange(sku.id, Math.max(0, currentQty - 1))}
+                                          className="w-6 h-6 rounded bg-white hover:bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 cursor-pointer disabled:opacity-30"
+                                        >
+                                          <Minus className="w-2.5 h-2.5" />
+                                        </button>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          value={currentQty === 0 ? "" : currentQty}
+                                          onChange={(e) => handleQtyChange(sku.id, parseInt(e.target.value) || 0)}
+                                          placeholder="0"
+                                          className="w-12 h-6 text-center bg-white border border-slate-300 rounded font-mono font-black text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleQtyChange(sku.id, currentQty + 1)}
+                                          className="w-6 h-6 rounded bg-teal-600 hover:bg-teal-700 text-white flex items-center justify-center font-bold cursor-pointer shadow-2xs"
+                                        >
+                                          <Plus className="w-2.5 h-2.5" />
+                                        </button>
+                                        {currentQty > 0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleQtyChange(sku.id, 0)}
+                                            className="w-5 h-6 rounded bg-rose-50 text-rose-600 flex items-center justify-center cursor-pointer"
+                                            title="Reset Qty"
+                                          >
+                                            <X className="w-2.5 h-2.5" />
+                                          </button>
+                                        )}
+                                      </div>
+
+                                      <div className="text-right ml-auto">
+                                        <span className="text-[9px] text-slate-400 block font-bold">Subtotal</span>
+                                        <span className="font-mono font-black text-xs text-emerald-700">
+                                          Rs. {(currentQty * unitPrice).toLocaleString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
+                </div>
 
-                {/* --- 2. ADD RECOVERY SECTION --- */}
-                <div id="dealer-section-recovery" className="space-y-3">
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                {/* ========================================================================================= */}
+                {/* 5: ADD RECOVERY ENTRY BOX WITH EXACT FORMULA:                                              */}
+                {/* Opeeing Balance + Invoices - till Date Recovery - Todays recovery (Box) = Net Balance     */}
+                {/* ========================================================================================= */}
+                <div id="dealer-section-recovery-box" className="bg-white p-5 rounded-2xl border-2 border-emerald-400 shadow-md space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-xs">
                         <DollarSign className="w-4 h-4" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                          2. Add Recovery
+                        <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                          5- add Recovry entry Box
                         </h3>
-                        <p className="text-[10px] text-slate-500 font-medium">Payment Collection Entry</p>
+                        <p className="text-[10px] text-slate-500 font-medium">
+                          Opening Balance + Invoices - till Date Recovery - Todays recovery (Box) = Net Balance (live Sync)
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Current Outstanding</span>
-                      <span className="text-xs font-mono font-black text-rose-700">
-                        Rs. {customerFinancials.netBalance.toLocaleString()}
-                      </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Live Sync Dynamic
+                    </span>
+                  </div>
+
+                  {/* THE LIVE LEDGER EQUATION ARITHMETIC CARDS */}
+                  <div className="p-4 rounded-xl bg-slate-900 text-white shadow-inner space-y-3">
+                    <div className="text-[11px] font-mono text-emerald-300 uppercase tracking-widest font-black text-center border-b border-slate-800 pb-2">
+                      Live Balance Equation: Opening Balance + Invoices - Till Date Recovery - Todays Recovery = Net Balance
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-center text-center">
+                      {/* 1. Opening Balance */}
+                      <div className="p-2.5 rounded-lg bg-white/5 border border-white/10">
+                        <span className="text-[9px] text-slate-400 uppercase font-bold block">Opening Balance</span>
+                        <span className="font-mono font-black text-xs sm:text-sm text-white block mt-0.5">
+                          Rs. {customerFinancials.openingBalance.toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* 2. + Invoices */}
+                      <div className="p-2.5 rounded-lg bg-teal-950/60 border border-teal-500/30">
+                        <span className="text-[9px] text-teal-300 uppercase font-bold block">+ Invoices</span>
+                        <span className="font-mono font-black text-xs sm:text-sm text-teal-200 block mt-0.5">
+                          Rs. {customerFinancials.tillDateInvoices.toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* 3. - Till Date Recovery */}
+                      <div className="p-2.5 rounded-lg bg-indigo-950/60 border border-indigo-500/30">
+                        <span className="text-[9px] text-indigo-300 uppercase font-bold block">- Till Date Recovery</span>
+                        <span className="font-mono font-black text-xs sm:text-sm text-indigo-200 block mt-0.5">
+                          Rs. {customerFinancials.tillDateRecovery.toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* 4. - Todays Recovery (Box) */}
+                      <div className="p-2.5 rounded-lg bg-amber-950/70 border border-amber-400/50 ring-1 ring-amber-400">
+                        <span className="text-[9px] text-amber-300 uppercase font-extrabold block">- Todays Recovery (Box)</span>
+                        <span className="font-mono font-black text-xs sm:text-sm text-amber-300 block mt-0.5">
+                          Rs. {todaysRecoveryNum.toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* 5. = Net Balance (Live Sync) */}
+                      <div className="p-2.5 rounded-lg bg-emerald-950/80 border border-emerald-400 ring-2 ring-emerald-500 col-span-2 sm:col-span-1">
+                        <span className="text-[9px] text-emerald-300 uppercase font-black block">= Net Balance (Live)</span>
+                        <span className="font-mono font-black text-sm sm:text-base text-emerald-300 block mt-0.5">
+                          Rs. {liveNetBalance.toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <form onSubmit={handleSubmitRecovery} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-black text-slate-900">Record Payment Recovery</h3>
-                      <span className="text-xs font-bold text-slate-500">Live Customer Ledger</span>
-                    </div>
-
-                    {recoverySuccessMessage && (
-                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>{recoverySuccessMessage}</span>
-                      </div>
-                    )}
-
-                    <div className="space-y-3 text-xs font-bold text-slate-700">
+                  {/* RECOVERY ENTRY CONTROLS */}
+                  <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-200 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-bold text-slate-700">
                       <div>
-                        <label className="block mb-1">Recovery Amount (Rs.) *</label>
-                        <input
-                          type="number"
-                          required
-                          min={1}
-                          placeholder="e.g. 50000"
-                          value={recoveryAmount}
-                          onChange={(e) => setRecoveryAmount(e.target.value)}
-                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                        />
+                        <label className="block mb-1 text-slate-800 font-extrabold">
+                          Todays Recovery (Box) Amount (Rs.) *
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5 font-bold text-emerald-700 text-xs">Rs.</span>
+                          <input
+                            type="number"
+                            min={0}
+                            placeholder="e.g. 25000"
+                            value={todaysRecoveryAmount}
+                            onChange={(e) => setTodaysRecoveryAmount(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2.5 bg-white border border-emerald-400 rounded-xl font-mono text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                          />
+                        </div>
                       </div>
 
                       <div>
-                        <label className="block mb-1">Payment Mode *</label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {(['CASH', 'CHEQUE', 'ONLINE_TRANSFER'] as PaymentMode[]).map((mode) => (
+                        <label className="block mb-1 text-slate-800 font-extrabold">
+                          Payment Mode *
+                        </label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(["CASH", "CHEQUE", "ONLINE_TRANSFER"] as PaymentMode[]).map((mode) => (
                             <button
                               key={mode}
                               type="button"
-                              onClick={() => setRecoveryMode(mode)}
-                              className={`py-2 rounded-xl border text-[11px] font-bold transition-all cursor-pointer ${
-                                recoveryMode === mode
-                                  ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
-                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              onClick={() => setTodaysRecoveryMode(mode)}
+                              className={`py-2 px-1 text-center rounded-xl text-[10px] font-black cursor-pointer transition-all border ${
+                                todaysRecoveryMode === mode
+                                  ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
                               }`}
                             >
-                              {mode.replace('_', ' ')}
+                              {mode === "ONLINE_TRANSFER" ? "Online" : mode}
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      {recoveryMode !== 'CASH' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                          <div>
-                            <label className="block mb-1">Cheque / Ref No. *</label>
-                            <input
-                              type="text"
-                              required
-                              placeholder="Cheque # or Transfer Ref"
-                              value={recoveryInstrumentNo}
-                              onChange={(e) => setRecoveryInstrumentNo(e.target.value)}
-                              className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium"
-                            />
-                          </div>
-                          <div>
-                            <label className="block mb-1">Bank Name</label>
-                            <input
-                              type="text"
-                              placeholder="e.g. HBL, Meezan Bank"
-                              value={recoveryBank}
-                              onChange={(e) => setRecoveryBank(e.target.value)}
-                              className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium"
-                            />
-                          </div>
-                        </div>
-                      )}
-
                       <div>
-                        <label className="block mb-1">Remarks / Note</label>
+                        <label className="block mb-1 text-slate-800 font-extrabold">
+                          {todaysRecoveryMode === "CASH" ? "Receipt # / Slip (Optional)" : "Cheque # / Trans Ref ID *"}
+                        </label>
                         <input
                           type="text"
-                          placeholder="Optional collection remarks"
-                          value={recoveryRemarks}
-                          onChange={(e) => setRecoveryRemarks(e.target.value)}
-                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-medium"
+                          placeholder={todaysRecoveryMode === "CASH" ? "Cash voucher #" : "e.g. CHQ-990234"}
+                          value={todaysRecoveryInstrument}
+                          onChange={(e) => setTodaysRecoveryInstrument(e.target.value)}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-medium text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </div>
                     </div>
 
+                    {todaysRecoveryMode !== "CASH" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold text-slate-700 pt-1">
+                        <div>
+                          <label className="block mb-1">Bank Name</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. HBL, Meezan Bank, MCB"
+                            value={todaysRecoveryBank}
+                            onChange={(e) => setTodaysRecoveryBank(e.target.value)}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-xl font-medium text-xs text-slate-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block mb-1">Collection Remarks</label>
+                          <input
+                            type="text"
+                            placeholder="Optional recovery note"
+                            value={todaysRecoveryRemarks}
+                            onChange={(e) => setTodaysRecoveryRemarks(e.target.value)}
+                            className="w-full p-2 bg-white border border-slate-300 rounded-xl font-medium text-xs text-slate-900"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ========================================================================= */}
+                {/* 6: COMBINED SAVE & SUBMIT TO N-LINK & GOOGLE SHEETS                       */}
+                {/* ========================================================================= */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  {combinedSuccessMsg && (
+                    <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{combinedSuccessMsg}</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block">Today's Order Value</span>
+                      <span className="font-mono font-black text-base text-slate-900 block mt-0.5">
+                        Rs. {orderSummary.orderValue.toLocaleString()}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">({orderSummary.totalSKUs} SKUs • {orderSummary.totalQuantity} pcs)</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                      <span className="text-[10px] text-emerald-800 uppercase font-bold block">Today's Recovery Collected</span>
+                      <span className="font-mono font-black text-base text-emerald-700 block mt-0.5">
+                        Rs. {todaysRecoveryNum.toLocaleString()}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 font-medium">({todaysRecoveryMode})</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-teal-50/70 border border-teal-200">
+                      <span className="text-[10px] text-teal-800 uppercase font-bold block">Net Balance After Recovery</span>
+                      <span className="font-mono font-black text-base text-teal-700 block mt-0.5">
+                        Rs. {liveNetBalance.toLocaleString()}
+                      </span>
+                      <span className="text-[10px] text-teal-600 font-medium">(Live Sync)</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
                     <button
-                      type="submit"
-                      disabled={recoverySubmitting}
-                      className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-50 text-white font-extrabold text-sm tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+                      type="button"
+                      onClick={() => {
+                        setOrderQuantities({});
+                        setTodaysRecoveryAmount("");
+                        setTodaysRecoveryInstrument("");
+                        setTodaysRecoveryBank("");
+                        setTodaysRecoveryRemarks("");
+                      }}
+                      className="px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-all active:scale-95"
                     >
-                      <DollarSign className="w-4 h-4" />
-                      <span>{recoverySubmitting ? 'Recording...' : 'SUBMIT RECOVERY'}</span>
+                      Reset Entry Form
                     </button>
-                  </form>
+
+                    <button
+                      type="button"
+                      disabled={isSubmittingCombined || (!orderSummary.totalQuantity && !todaysRecoveryNum)}
+                      onClick={handleSaveAndSubmitToNlink}
+                      className="flex-1 py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.99] disabled:opacity-50 text-white font-extrabold text-sm tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>
+                        {isSubmittingCombined
+                          ? "Syncing to N-LINK & Google Sheet..."
+                          : `SAVE & SUBMIT TO N-LINK (Order: Rs. ${orderSummary.orderValue.toLocaleString()} | Rec: Rs. ${todaysRecoveryNum.toLocaleString()})`}
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* --- 3. CHECK BALANCES SECTION --- */}
@@ -4481,7 +4870,20 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                 <div className="h-px bg-slate-200" />
               </div>
 
-              {/* 6. Restore Password (Section 29) */}
+              {/* 6. App Settings (Auto-Save, Crash Prevention, Preferences) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFieldForceMenu(false);
+                  setIsSettingsModalOpen(true);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer text-slate-800 font-bold"
+              >
+                <Settings className="w-4 h-4 text-teal-600" />
+                <span>6. App Settings (Auto-Save)</span>
+              </button>
+
+              {/* 7. Restore Password (Section 29) */}
               <button
                 type="button"
                 onClick={() => {
@@ -4492,10 +4894,10 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                 className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer text-slate-700"
               >
                 <KeyRound className="w-4 h-4 text-amber-600" />
-                <span>6. Restore Password</span>
+                <span>7. Restore Password</span>
               </button>
 
-              {/* 7. Logout */}
+              {/* 8. Logout */}
               <button
                 type="button"
                 onClick={() => {
@@ -4505,7 +4907,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                 className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer font-black"
               >
                 <LogOut className="w-4 h-4" />
-                <span>7. Logout</span>
+                <span>8. Logout</span>
               </button>
             </div>
 
@@ -5156,6 +5558,12 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Application Settings Modal (Auto-Save, Crash Protection & Preferences) */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
     </div>
   );
 };

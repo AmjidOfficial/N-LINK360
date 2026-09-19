@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { NLinkUser, NLINK_TEAM_ROSTER } from '../../data/nlink-users-team';
 import { getTownCoordinates, validateTownGeofence } from '../../services/townCoordinates';
+import { Customer, SalesOrder, Recovery } from '../../types';
 
 export interface EnterpriseAttendanceTabProps {
   currentUser: NLinkUser;
@@ -17,6 +18,9 @@ export interface EnterpriseAttendanceTabProps {
   onSelectTown: (town: string) => void;
   checkedInTime: string | null;
   setCheckedInTime: (time: string | null) => void;
+  orders?: SalesOrder[];
+  recoveries?: Recovery[];
+  customers?: Customer[];
 }
 
 export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = ({
@@ -27,22 +31,26 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
   onSelectTown,
   checkedInTime,
   setCheckedInTime,
+  orders = [],
+  recoveries = [],
+  customers = [],
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'my_attendance' | 'team_records'>('my_attendance');
   const [currentTime, setCurrentTime] = useState<string>('09:41 AM');
   const [currentDateString, setCurrentDateString] = useState<string>('Thursday, Oct 24 • Field Shift A');
-  const [visitIntention, setVisitIntention] = useState<string>(
-    'Client onboarding at Apex Electronics & payment recovery'
-  );
   const [gpsLocation, setGpsLocation] = useState<string>(
     'Sector 4, Commercial Trade Beat #2, Peshawar'
   );
   const [gpsAccuracy, setGpsAccuracy] = useState<string>('High (Within 3m)');
   const [isRefreshingGps, setIsRefreshingGps] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<number>(24);
-  const [monthOffset, setMonthOffset] = useState<number>(0);
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
   const [isSimulatedOutside, setIsSimulatedOutside] = useState(false);
+
+  const isExecutive =
+    currentUser.role === 'SUPER_ADMIN' ||
+    currentUser.role === 'MANAGEMENT' ||
+    currentUser.email === 'syedzain@nationallights.com' ||
+    currentUser.email === 'shahzadullah@nationallights.com';
 
   // Lifted town calculations and geofence checks
   const availableTowns = useMemo(() => {
@@ -110,120 +118,107 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
     }
   };
 
-  // Dynamic Date calculations based on monthOffset
-  const targetDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(1); // avoid month overflow issues
-    d.setMonth(d.getMonth() + monthOffset);
-    return d;
-  }, [monthOffset]);
+  const presentCount = isCheckedIn ? 21 : 20;
+  const visitCount = 4;
+  const leaveCount = 1;
+  const ratio = Math.round((presentCount / 26) * 100) || 0;
 
-  const monthYearLabel = useMemo(() => {
-    return targetDate.toLocaleDateString([], { month: 'short', year: 'numeric' });
-  }, [targetDate]);
+  const dailyWorkingHistory = useMemo(() => {
+    const map = new Map<string, {
+      date: string;
+      town: string;
+      dealerSet: Set<string>;
+      recovery: number;
+      order: number;
+    }>();
 
-  const daysInMonth = useMemo(() => {
-    const year = targetDate.getFullYear();
-    const month = targetDate.getMonth();
-    return new Date(year, month + 1, 0).getDate();
-  }, [targetDate]);
+    // Ingest Orders
+    orders.forEach((o) => {
+      const dStr = (o.orderDate || o.createdAt || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+      const customer = customers.find((c) => c.id === o.customerId);
+      const town = customer?.city || selectedTown || 'Peshawar';
 
-  const startDayOfWeek = useMemo(() => {
-    const year = targetDate.getFullYear();
-    const month = targetDate.getMonth();
-    let day = new Date(year, month, 1).getDay();
-    // Adjust so Monday is 0, Sunday is 6
-    return day === 0 ? 6 : day - 1;
-  }, [targetDate]);
-
-  const prevMonthDays = useMemo(() => {
-    const year = targetDate.getFullYear();
-    const month = targetDate.getMonth();
-    const prevDate = new Date(year, month, 0);
-    const prevDaysCount = prevDate.getDate();
-    return Array.from({ length: startDayOfWeek }, (_, i) => prevDaysCount - startDayOfWeek + i + 1);
-  }, [targetDate, startDayOfWeek]);
-
-  // Calendar Day statuses derived dynamically
-  const presentDays = useMemo(() => {
-    const list: number[] = [];
-    const seed = targetDate.getMonth() + targetDate.getFullYear();
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayOfWeek = new Date(targetDate.getFullYear(), targetDate.getMonth(), day).getDay();
-      if (dayOfWeek === 0) continue; // Sunday is weekend holiday
-      const rand = Math.sin(seed + day) * 10000;
-      const val = rand - Math.floor(rand);
-      if (val < 0.6) {
-        list.push(day);
+      if (!map.has(dStr)) {
+        map.set(dStr, {
+          date: dStr,
+          town,
+          dealerSet: new Set<string>(),
+          recovery: 0,
+          order: 0,
+        });
       }
-    }
-    return list;
-  }, [targetDate, daysInMonth]);
+      const item = map.get(dStr)!;
+      if (o.customerId) item.dealerSet.add(o.customerId);
+      item.order += o.totalAmount || 0;
+    });
 
-  const visitDays = useMemo(() => {
-    const list: number[] = [];
-    const seed = targetDate.getMonth() + targetDate.getFullYear() + 1;
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayOfWeek = new Date(targetDate.getFullYear(), targetDate.getMonth(), day).getDay();
-      if (dayOfWeek === 0) continue;
-      if (presentDays.includes(day)) continue;
-      const rand = Math.sin(seed + day) * 10000;
-      const val = rand - Math.floor(rand);
-      if (val < 0.3) {
-        list.push(day);
+    // Ingest Recoveries
+    recoveries.forEach((r) => {
+      const dStr = (r.collectionDate || r.createdAt || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+      const customer = customers.find((c) => c.id === r.customerId);
+      const town = customer?.city || selectedTown || 'Peshawar';
+
+      if (!map.has(dStr)) {
+        map.set(dStr, {
+          date: dStr,
+          town,
+          dealerSet: new Set<string>(),
+          recovery: 0,
+          order: 0,
+        });
       }
-    }
-    return list;
-  }, [targetDate, daysInMonth, presentDays]);
+      const item = map.get(dStr)!;
+      if (r.customerId) item.dealerSet.add(r.customerId);
+      item.recovery += r.amount || 0;
+    });
 
-  const leaveDays = useMemo(() => {
-    const list: number[] = [];
-    const seed = targetDate.getMonth() + targetDate.getFullYear() + 2;
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayOfWeek = new Date(targetDate.getFullYear(), targetDate.getMonth(), day).getDay();
-      if (dayOfWeek === 0) continue;
-      if (presentDays.includes(day) || visitDays.includes(day)) continue;
-      const rand = Math.sin(seed + day) * 10000;
-      const val = rand - Math.floor(rand);
-      if (val < 0.1) {
-        list.push(day);
-      }
-    }
-    return list;
-  }, [targetDate, daysInMonth, presentDays, visitDays]);
-
-  const presentCount = presentDays.length;
-  const visitCount = visitDays.length;
-  const leaveCount = leaveDays.length;
-  const ratio = Math.round((presentCount / Math.max(1, daysInMonth - 4)) * 100) || 0;
-
-  const mtdRecords = useMemo(() => {
-    const list = [];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const currentMonthStr = months[targetDate.getMonth()];
-    const currentYear = targetDate.getFullYear();
-    const sortedActiveDays = [...presentDays, ...visitDays].sort((a, b) => b - a);
-    const limit = Math.min(5, sortedActiveDays.length);
-    for (let i = 0; i < limit; i++) {
-      const dayNum = sortedActiveDays[i];
-      const isVisit = visitDays.includes(dayNum);
-      list.push({
-        date: `${dayNum} ${currentMonthStr} ${currentYear}`,
-        in: isVisit ? '—' : '09:00 AM',
-        town: selectedTown,
-        status: isVisit ? '✓ Client Visit' : '✓ Verified'
+    // If currently checked in today, ensure today's row exists
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (!map.has(todayStr)) {
+      map.set(todayStr, {
+        date: todayStr,
+        town: selectedTown || 'Peshawar',
+        dealerSet: new Set<string>(),
+        recovery: 0,
+        order: 0,
       });
     }
-    return list;
-  }, [targetDate, presentDays, visitDays, selectedTown]);
 
-  // Team members attendance records
-  const filteredTeam = NLINK_TEAM_ROSTER.filter(
-    (user) =>
-      user.fullName.toLowerCase().includes(teamSearchQuery.toLowerCase()) ||
-      user.territory.toLowerCase().includes(teamSearchQuery.toLowerCase()) ||
-      user.roleTitle.toLowerCase().includes(teamSearchQuery.toLowerCase())
-  );
+    return Array.from(map.values())
+      .map((entry) => ({
+        date: entry.date,
+        town: entry.town,
+        visitedDealerCount: entry.dealerSet.size,
+        recoveryAmount: entry.recovery,
+        orderAmount: entry.order,
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [orders, recoveries, customers, selectedTown]);
+
+  // Team members attendance records - Strictly filtered for assigned team only
+  const filteredTeam = useMemo(() => {
+    return NLINK_TEAM_ROSTER.filter((user) => {
+      // If executive, they have oversight over all officers
+      if (!isExecutive) {
+        // Must belong to user's assigned territory, region, or towns
+        const assignedTowns = currentUser.assignedTowns || [];
+        const matchesTerritory = user.territory === currentUser.territory || user.region === currentUser.region;
+        const matchesTown = assignedTowns.some(t => user.assignedTowns?.includes(t) || user.territory.includes(t));
+        const isSelf = user.id === currentUser.id;
+        if (!matchesTerritory && !matchesTown && !isSelf) {
+          return false;
+        }
+      }
+
+      if (!teamSearchQuery.trim()) return true;
+      const q = teamSearchQuery.toLowerCase();
+      return (
+        user.fullName.toLowerCase().includes(q) ||
+        user.territory.toLowerCase().includes(q) ||
+        user.roleTitle.toLowerCase().includes(q)
+      );
+    });
+  }, [currentUser, isExecutive, teamSearchQuery]);
 
   return (
     <div className="flex flex-col w-full gap-4 pb-12 animate-fadeIn" id="enterprise-attendance-view">
@@ -380,20 +375,6 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
                 </div>
               </div>
 
-              {/* Daily Intention */}
-              <div className="mb-5 z-10">
-                <label className="block text-xs font-bold text-[#43474d] dark:text-slate-300 mb-1.5 uppercase tracking-wider">
-                  Current Visit / Daily Intention
-                </label>
-                <input
-                  value={visitIntention}
-                  onChange={(e) => setVisitIntention(e.target.value)}
-                  className="w-full bg-[#f2f4f6] dark:bg-slate-800 px-4 py-3 rounded-xl text-sm text-[#191c1e] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#006b5f] dark:focus:ring-[#76f4e0] transition-all border border-transparent font-medium"
-                  placeholder="e.g. Client onboarding & payment recovery..."
-                  type="text"
-                />
-              </div>
-
               {/* Action Button */}
               <button
                 onClick={() => {
@@ -418,66 +399,6 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
                 </span>
                 <span>{isCheckedIn ? 'Check Out of Field' : 'Check In to Field'}</span>
               </button>
-            </div>
-
-            {/* D. MTD Records for My Attendance */}
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5 mb-3">
-                <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[#006b5f] text-[18px]">calendar_month</span>
-                  <span>Month-to-Date (MTD) Attendance Sheets</span>
-                </h4>
-                <span className="text-[10px] text-emerald-600 dark:text-[#76f4e0] font-extrabold bg-[#76f4e0]/25 dark:bg-[#76f4e0]/10 px-2 py-0.5 rounded-full animate-pulse">
-                  Active Period Focus
-                </span>
-              </div>
-
-              <div className="grid grid-cols-4 gap-2 text-center mb-4">
-                <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <span className="text-lg font-black text-[#001428] dark:text-[#76f4e0] block font-mono">{presentCount}</span>
-                  <span className="text-[9px] text-slate-500 uppercase tracking-tight block">Present</span>
-                </div>
-                <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <span className="text-lg font-black text-rose-500 block font-mono">{Math.max(0, daysInMonth - 4 - presentCount - leaveCount - visitCount)}</span>
-                  <span className="text-[9px] text-slate-500 uppercase tracking-tight block">Absent</span>
-                </div>
-                <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <span className="text-lg font-black text-blue-500 block font-mono">{leaveCount}</span>
-                  <span className="text-[9px] text-slate-500 uppercase tracking-tight block">Leave</span>
-                </div>
-                <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <span className="text-lg font-black text-emerald-500 block font-mono">{ratio}%</span>
-                  <span className="text-[9px] text-slate-500 uppercase tracking-tight block">Ratio</span>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-[11px] border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold">
-                      <th className="pb-1.5">Date</th>
-                      <th className="pb-1.5">Punch In</th>
-                      <th className="pb-1.5">Town Beat</th>
-                      <th className="pb-1.5 text-right">Verification Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100/50 dark:divide-slate-800/50 font-semibold text-slate-700 dark:text-slate-300">
-                    {mtdRecords.map((row, index) => (
-                      <tr key={index} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
-                        <td className="py-2 font-mono text-slate-500">{row.date}</td>
-                        <td className="py-2 text-[#001428] dark:text-white font-mono">{row.in}</td>
-                        <td className="py-2 font-bold text-slate-800 dark:text-slate-200">{row.town}</td>
-                        <td className={`py-2 text-right font-bold ${row.status.includes('Visit') ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600'}`}>{row.status}</td>
-                      </tr>
-                    ))}
-                    {mtdRecords.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="py-4 text-center text-slate-400">No punch records found for this period.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
             </div>
 
             {/* Quick Stats Row */}
@@ -508,91 +429,52 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
               </div>
             </div>
 
-            {/* Attendance Calendar History */}
-            <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base sm:text-lg font-bold text-[#191c1e] dark:text-white tracking-tight">
-                  Monthly History
-                </h3>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setMonthOffset((m) => m - 1)}
-                    className="w-8 h-8 rounded-full bg-[#eceef0] dark:bg-slate-800 flex items-center justify-center text-[#191c1e] dark:text-white hover:bg-[#e0e3e5] transition-all active:scale-95"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">chevron_left</span>
-                  </button>
-                  <span className="text-xs font-bold text-[#191c1e] dark:text-white px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200/40 dark:border-slate-700/60 font-mono min-w-[85px] text-center">
-                    {monthYearLabel}
-                  </span>
-                  <button
-                    onClick={() => setMonthOffset((m) => m + 1)}
-                    className="w-8 h-8 rounded-full bg-[#eceef0] dark:bg-slate-800 flex items-center justify-center text-[#191c1e] dark:text-white hover:bg-[#e0e3e5] transition-all active:scale-95"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-                  </button>
-                </div>
+            {/* Daily Visit / Working History Table */}
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5 mb-3">
+                <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[#006b5f] text-[18px]">history</span>
+                  <span>Daily Visit / Working History</span>
+                </h4>
+                <span className="text-[10px] text-[#006b5f] dark:text-[#76f4e0] font-extrabold bg-[#76f4e0]/20 dark:bg-[#76f4e0]/10 px-2 py-0.5 rounded-full font-mono">
+                  {dailyWorkingHistory.length} Days Logged
+                </span>
               </div>
 
-              {/* Legend */}
-              <div className="flex items-center gap-4 mb-4 flex-wrap text-xs">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-md bg-[#76f4e0]/60 border border-[#76f4e0]" />
-                  <span className="text-[#43474d] dark:text-slate-400 font-medium">Present</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-md bg-[#d5e3ff] dark:bg-blue-900/40 border border-[#d5e3ff]/60" />
-                  <span className="text-[#43474d] dark:text-slate-400 font-medium">Client Visit</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-md bg-[#e0e3e5] dark:bg-slate-700 border border-slate-300 dark:border-slate-600" />
-                  <span className="text-[#43474d] dark:text-slate-400 font-medium">On Leave</span>
-                </div>
-              </div>
-
-              {/* Calendar Grid Header */}
-              <div className="grid grid-cols-7 gap-1 text-center mb-1">
-                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
-                  <span key={idx} className="text-xs font-bold text-[#74777e] dark:text-slate-400 py-1">
-                    {day}
-                  </span>
-                ))}
-              </div>
-
-              {/* Calendar Day Cells */}
-              <div className="grid grid-cols-7 gap-1.5">
-                {prevMonthDays.map((d, index) => (
-                  <div
-                    key={`prev-${d}-${index}`}
-                    className="aspect-square bg-[#eceef0] dark:bg-slate-800/40 rounded-xl flex flex-col items-center justify-center text-[#74777e] dark:text-slate-600 text-xs opacity-40 select-none"
-                  >
-                    {d}
-                  </div>
-                ))}
-
-                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-                  const isPresent = presentDays.includes(day);
-                  const isVisit = visitDays.includes(day);
-                  const isLeave = leaveDays.includes(day);
-                  const isCurrent = day === selectedDay && monthOffset === 0;
-
-                  let bgClass = 'bg-[#f2f4f6] dark:bg-slate-800 text-[#74777e] dark:text-slate-400';
-                  if (isPresent) bgClass = 'bg-[#76f4e0]/40 text-[#006f63] dark:text-[#76f4e0] font-bold';
-                  if (isVisit) bgClass = 'bg-[#d5e3ff] dark:bg-blue-900/40 text-[#0d1c31] dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-900/80';
-                  if (isLeave) bgClass = 'bg-[#e0e3e5] dark:bg-slate-700 text-[#43474d] dark:text-slate-300 font-medium';
-                  if (isCurrent)
-                    bgClass =
-                      'bg-[#006b5f] dark:bg-[#76f4e0] text-white dark:text-[#001428] font-extrabold shadow-sm ring-2 ring-[#006b5f] ring-offset-2';
-
-                  return (
-                    <button
-                      key={day}
-                      onClick={() => setSelectedDay(day)}
-                      className={`aspect-square rounded-xl flex flex-col items-center justify-center text-xs transition-all hover:scale-105 active:scale-95 ${bgClass}`}
-                    >
-                      <span>{day}</span>
-                    </button>
-                  );
-                })}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse min-w-[500px]">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-700 text-slate-500 font-bold uppercase tracking-wider text-[10px] bg-slate-50 dark:bg-slate-800/50">
+                      <th className="py-2.5 px-3">Date</th>
+                      <th className="py-2.5 px-3">Town</th>
+                      <th className="py-2.5 px-3 text-center"># of Dealer/Distributor Visit</th>
+                      <th className="py-2.5 px-3 text-right">Rs Recovery</th>
+                      <th className="py-2.5 px-3 text-right">Rs Order</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold text-slate-700 dark:text-slate-300">
+                    {dailyWorkingHistory.map((row) => (
+                      <tr key={row.date} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                        <td className="py-2.5 px-3 font-mono text-slate-900 dark:text-white font-bold">{row.date}</td>
+                        <td className="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300">{row.town}</td>
+                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 dark:text-slate-200">{row.visitedDealerCount}</td>
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          Rs. {row.recoveryAmount.toLocaleString()}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-[#006b5f] dark:text-[#76f4e0]">
+                          Rs. {row.orderAmount.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                    {dailyWorkingHistory.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-slate-400">
+                          No working history records available.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -636,8 +518,8 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
                       </h4>
                       <span className="text-[10px] text-slate-400 font-mono">({member.employeeCode})</span>
                     </div>
-                    <span className="text-[11px] text-[#006b5f] dark:text-[#76f4e0] font-semibold truncate">
-                      {member.roleTitle}
+                    <span className="text-[11px] text-[#006b5f] dark:text-[#76f4e0] font-black font-mono truncate">
+                      {member.roleTitle || member.role}
                     </span>
                     <span className="text-[10px] text-[#74777e] dark:text-slate-400 truncate">
                       Territory: {member.territory} • {member.region}

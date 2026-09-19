@@ -46,7 +46,10 @@ export default function FieldAttendanceDashboard() {
       setToday((attendanceResult.data || []).find((r: any) => r.attendance_date === end) || null);
 
       const next: Activity[] = [];
-      for (const r of visitsResult.data || []) next.push({ id: `visit-${r.id}`, date: String(r.visit_at).slice(0, 10), time: r.visit_at, label: 'Customer visit', detail: r.customers?.company_name || 'Market visit' });
+      for (const r of (visitsResult.data || []) as any[]) {
+        const custName = Array.isArray(r.customers) ? r.customers[0]?.company_name : r.customers?.company_name;
+        next.push({ id: `visit-${r.id}`, date: String(r.visit_at).slice(0, 10), time: r.visit_at, label: 'Customer visit', detail: custName || 'Market visit' });
+      }
       for (const r of ordersResult.data || []) next.push({ id: `order-${r.id}`, date: String(r.order_date).slice(0, 10), time: null, label: 'Sales order', detail: `${r.order_number || r.id}${r.total_amount != null ? ` • Rs. ${Number(r.total_amount).toLocaleString()}` : ''}` });
       for (const r of recoveriesResult.data || []) next.push({ id: `recovery-${r.id}`, date: String(r.collection_date).slice(0, 10), time: null, label: 'Recovery', detail: `${r.recovery_number || r.id} • Rs. ${Number(r.amount || 0).toLocaleString()}` });
       next.sort((a, b) => `${b.date}${b.time || ''}`.localeCompare(`${a.date}${a.time || ''}`));

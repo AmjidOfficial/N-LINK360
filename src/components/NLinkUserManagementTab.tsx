@@ -36,8 +36,11 @@ import {
   LogOut,
   LogIn,
   Layers,
+  Globe,
+  Trash2,
 } from 'lucide-react';
-import { NLinkUser, generateAutoCredentials } from '../data/nlink-users-team';
+import { NLinkUser, generateAutoCredentials, getStoredUsers, saveStoredUsers, NLINK_TEAM_ROSTER } from '../data/nlink-users-team';
+import { persistAndUploadUser } from '../services/googleSheetsTwoWaySyncService';
 import { UserRole, EmployeeAttendance, AttendanceStatus } from '../types';
 
 interface NLinkUserManagementTabProps {
@@ -53,10 +56,18 @@ export const NLinkUserManagementTab: React.FC<NLinkUserManagementTabProps> = ({
   onSelectUserToImpersonate,
   onAddUser,
 }) => {
-  const [usersList, setUsersList] = useState<NLinkUser[]>(initialUsers);
+  const [usersList, setUsersList] = useState<NLinkUser[]>(() => {
+    const stored = getStoredUsers();
+    return stored.length > 0 ? stored : initialUsers;
+  });
 
   useEffect(() => {
-    setUsersList(initialUsers);
+    const stored = getStoredUsers();
+    if (stored.length > 0) {
+      setUsersList(stored);
+    } else if (initialUsers && initialUsers.length > 0) {
+      setUsersList(initialUsers);
+    }
   }, [initialUsers]);
 
   // Main active view within tab
@@ -412,8 +423,15 @@ export const NLinkUserManagementTab: React.FC<NLinkUserManagementTabProps> = ({
       avatarInitials: initials || 'NL',
     };
 
-    // Update users list state
-    setUsersList((prev) => [createdUser, ...prev]);
+    // Update users list state and persist
+    const updatedUsers = [createdUser, ...usersList];
+    setUsersList(updatedUsers);
+    saveStoredUsers(updatedUsers);
+
+    // Push to Google Sheets User_Management tab asynchronously
+    persistAndUploadUser(createdUser).catch((err) => {
+      console.warn('Auto upload of new user to Google Sheets notice:', err);
+    });
 
     // Parent callback if provided
     if (onAddUser) {
@@ -439,12 +457,34 @@ export const NLinkUserManagementTab: React.FC<NLinkUserManagementTabProps> = ({
     setAttendanceRecords((prev) => [newAtt, ...prev]);
 
     setNewEmpSuccessBanner(
-      `Employee Added Successfully! ID: ${createdUser.employeeCode} | Username: ${generatedCredentials.email} | Password: ${generatedCredentials.password} (Synced with Google Sheets Roster)`
+      `Employee Added Successfully! ID: ${createdUser.employeeCode} | Registered Email: ${generatedCredentials.email} | Initial Password: ${generatedCredentials.password} (Auto-synced with Google Sheets User_Management)`
     );
 
     // Reset form
     setNewEmpFullName('');
     setNewEmpPhone('');
+  };
+
+  const handleCleanDummyUsers = () => {
+    if (window.confirm('Delete all dummy users and retain only Syed Zain and Shahzad Ullah in the system and Google Sheet sync?')) {
+      const cleanRoster = NLINK_TEAM_ROSTER;
+      setUsersList(cleanRoster);
+      saveStoredUsers(cleanRoster);
+      setNewEmpSuccessBanner('Cleaned all dummy users! Active users retained: Shahzad Ullah (MD) & Syed Zain (ED).');
+    }
+  };
+
+  const handleDeleteUser = (userId: string, userName: string) => {
+    const lower = userName.toLowerCase();
+    if (lower.includes('shahzad') || lower.includes('zain')) {
+      alert('Principal Directors (Syed Zain & Shahzad Ullah) cannot be deleted.');
+      return;
+    }
+    if (window.confirm(`Delete user "${userName}" from system roster?`)) {
+      const filtered = usersList.filter((u) => u.id !== userId);
+      setUsersList(filtered);
+      saveStoredUsers(filtered);
+    }
   };
 
   const handleCopyCredentials = () => {
@@ -524,19 +564,36 @@ export const NLinkUserManagementTab: React.FC<NLinkUserManagementTabProps> = ({
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
                 <Users className="w-3 h-3 mr-1 text-emerald-600" /> National Lights HR &amp; Field Force Command
               </span>
+              <a
+                href="https://nationallight.pk/"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 transition-colors"
+              >
+                <Globe className="w-3 h-3 mr-1 text-blue-600" /> nationallight.pk
+              </a>
               <span className="text-xs text-slate-400 font-medium">Google Sheets Live 2-Way Synced</span>
             </div>
             <h2 className="text-xl font-bold text-slate-900 mt-1">Field Force, Employee Attendance &amp; Credential Directory</h2>
             <p className="text-xs text-slate-500">
-              4-Tier Reporting Hierarchy (1- TSM &gt; 2- ZSM &gt; 3- RSM &gt; 4- Top Management), Daily Attendance Register, &amp; Auto-Provisioning.
+              Auto-generates official <span className="font-semibold text-emerald-700">@nationallight.pk</span> corporate login credentials. Synced with Google Sheets User_Management tab.
             </p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={handleCleanDummyUsers}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-all shadow-sm"
+              title="Delete all dummy users and retain only Syed Zain and Shahzad Ullah"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              Retain Syed Zain &amp; Shahzad Ullah Only
+            </button>
             <button
               type="button"
               onClick={() => setActiveSubView('ADD_EMPLOYEE')}
@@ -547,7 +604,7 @@ export const NLinkUserManagementTab: React.FC<NLinkUserManagementTabProps> = ({
               }`}
             >
               <UserPlus className="w-3.5 h-3.5" />
-              Add Employee (Auto-ID &amp; Password)
+              Add Employee (@nationallight.pk)
             </button>
           </div>
         </div>
@@ -1254,11 +1311,23 @@ export const NLinkUserManagementTab: React.FC<NLinkUserManagementTabProps> = ({
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {user.status}
-                      </span>
-                      <span className="block font-mono text-[10px] text-slate-400 mt-1 font-semibold">{user.employeeCode}</span>
+                    <div className="text-right flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {user.status}
+                        </span>
+                        {!user.fullName.toLowerCase().includes('shahzad') && !user.fullName.toLowerCase().includes('zain') && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(user.id, user.fullName)}
+                            className="text-slate-400 hover:text-rose-600 p-0.5 rounded transition-colors"
+                            title={`Delete user ${user.fullName}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <span className="block font-mono text-[10px] text-slate-400 font-semibold">{user.employeeCode}</span>
                     </div>
                   </div>
 

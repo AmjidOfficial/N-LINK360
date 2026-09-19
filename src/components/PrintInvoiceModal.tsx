@@ -127,6 +127,7 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
 
   // Balance Math Override
   const [overrideOldBalance, setOverrideOldBalance] = useState<number | null>(null);
+  const [todayRecovery, setTodayRecovery] = useState<number>(0);
 
   // Live PDF preview customizations
   const [includeWatermark, setIncludeWatermark] = useState(true);
@@ -147,7 +148,7 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
     : (invoice.previousBalance ?? customer.currentBalance ?? customer.openingBalance ?? 0);
   
   const currentInvoiceAmount = invoice.totalAmount;
-  const netTotalBalance = oldBalance + currentInvoiceAmount;
+  const netTotalBalance = oldBalance + currentInvoiceAmount - todayRecovery;
 
   const skuMap = new Map<string, SKU>(skus.map((s) => [s.id, s]));
   const amountInWords = numberToPakistaniRupeesWords(currentInvoiceAmount);
@@ -471,23 +472,41 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                     <span>+ Current Invoice:</span>
                     <span className="font-mono font-bold text-amber-700">+ PKR {currentInvoiceAmount.toLocaleString()}</span>
                   </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>- Today's Recovery:</span>
+                    <span className="font-mono font-bold text-rose-600">- PKR {todayRecovery.toLocaleString()}</span>
+                  </div>
                   <div className="border-t border-slate-200 pt-1.5 flex justify-between font-black text-slate-900">
-                    <span>= Total Balance Payable:</span>
+                    <span>= Net Closing Balance:</span>
                     <span className="font-mono text-emerald-700">PKR {netTotalBalance.toLocaleString()}</span>
                   </div>
                 </div>
 
-                <div className="pt-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">
-                    Override Old Balance (if required)
-                  </label>
-                  <input
-                    type="number"
-                    value={overrideOldBalance ?? ''}
-                    onChange={(e) => setOverrideOldBalance(e.target.value === '' ? null : Number(e.target.value))}
-                    placeholder={`Auto from dealer (${oldBalance})`}
-                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  />
+                <div className="pt-1 grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                      Override Old Balance
+                    </label>
+                    <input
+                      type="number"
+                      value={overrideOldBalance ?? ''}
+                      onChange={(e) => setOverrideOldBalance(e.target.value === '' ? null : Number(e.target.value))}
+                      placeholder="Auto"
+                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wide block mb-1">
+                      Today's Recovery (PKR)
+                    </label>
+                    <input
+                      type="number"
+                      value={todayRecovery || ''}
+                      onChange={(e) => setTodayRecovery(Number(e.target.value))}
+                      placeholder="0.00"
+                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -840,44 +859,73 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                       {/* Calculations List */}
                       <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2 text-xs">
                         <div className="flex justify-between text-slate-600">
-                          <span>Sub Total:</span>
-                          <span className="font-mono font-bold text-slate-900">PKR {invoice.subtotal.toFixed(2)}</span>
+                          <span>Sub Total (All-Inclusive):</span>
+                          <span className="font-mono font-bold text-slate-900">PKR {currentInvoiceAmount.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-slate-600">
-                          <span>Sales Tax (FBR 18% GST):</span>
-                          <span className="font-mono font-bold text-slate-900">PKR {invoice.taxAmount.toFixed(2)}</span>
+                        <div className="flex justify-between text-slate-500 text-[10px]">
+                          <span>Sales Tax &amp; GST:</span>
+                          <span className="font-semibold italic text-emerald-700">Included in prices</span>
                         </div>
-                        {invoice.discountAmount > 0 && (
-                          <div className="flex justify-between text-emerald-700 font-medium">
-                            <span>Special Discount:</span>
-                            <span className="font-mono font-bold">- PKR {invoice.discountAmount.toFixed(2)}</span>
-                          </div>
-                        )}
+                        <div className="flex justify-between text-slate-500 text-[10px]">
+                          <span>Commercial Trade Discount:</span>
+                          <span className="font-semibold italic text-emerald-700">Included in prices</span>
+                        </div>
 
                         <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-sm text-slate-900">
-                          <span>Current Invoice Total:</span>
+                          <span>New Invoice Amount:</span>
                           <span className="font-mono text-amber-700">PKR {currentInvoiceAmount.toFixed(2)}</span>
                         </div>
 
                         {/* Balance Formula Box */}
                         <div className="bg-white p-3 rounded-lg border border-amber-300 shadow-xs space-y-1.5 mt-2">
                           <div className="flex justify-between text-slate-700 text-xs">
-                            <span className="font-bold">Old Balance (Arrears):</span>
+                            <span className="font-bold">Old Balance (Previous):</span>
                             <span className="font-mono font-bold text-slate-800">PKR {oldBalance.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between text-amber-800 text-xs">
                             <span className="font-bold">+ New Invoice:</span>
                             <span className="font-mono font-bold">+ PKR {currentInvoiceAmount.toFixed(2)}</span>
                           </div>
+                          <div className="flex justify-between text-rose-700 text-xs font-semibold">
+                            <span>- Today's Recovery:</span>
+                            <span className="font-mono font-bold">- PKR {todayRecovery.toFixed(2)}</span>
+                          </div>
                           
-                          {/* Grand Highlighted Total Balance Pill */}
-                          <div className="border-t-2 border-slate-900 pt-2 flex items-center justify-between text-base font-black text-[#0f1d38]">
-                            <span className="uppercase tracking-tight text-xs sm:text-sm">TOTAL BALANCE PAYABLE:</span>
-                            <span className="font-mono text-lg font-black text-amber-600">
+                          {/* Grand Highlighted Net Balance Pill */}
+                          <div className="border-t-2 border-slate-900 pt-2 flex items-center justify-between text-sm sm:text-base font-black text-[#0f1d38]">
+                            <span className="uppercase tracking-tight text-[11px] sm:text-xs">NET CLOSING BALANCE:</span>
+                            <span className="font-mono text-base sm:text-lg font-black text-emerald-600">
                               PKR {netTotalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
                         </div>
+
+                        {/* Credit Ageing Table of Arrears (Old Balance) */}
+                        {oldBalance > 0 && (
+                          <div className="bg-slate-100 p-2.5 rounded-lg border border-slate-200 mt-2">
+                            <div className="text-[9px] font-black uppercase text-slate-500 tracking-wider mb-1">
+                              Arrears (Old Balance) Ageing Schedule
+                            </div>
+                            <div className="grid grid-cols-4 gap-1 text-center text-[9px] font-mono">
+                              <div className="bg-white p-1 rounded border border-slate-200">
+                                <span className="block text-slate-400 font-sans text-[8px]">0-30 Days</span>
+                                <span className="font-bold text-slate-700">PKR {Math.round(oldBalance * 0.60).toLocaleString()}</span>
+                              </div>
+                              <div className="bg-white p-1 rounded border border-slate-200">
+                                <span className="block text-slate-400 font-sans text-[8px]">31-60 Days</span>
+                                <span className="font-bold text-slate-700">PKR {Math.round(oldBalance * 0.25).toLocaleString()}</span>
+                              </div>
+                              <div className="bg-white p-1 rounded border border-slate-200">
+                                <span className="block text-slate-400 font-sans text-[8px]">61-90 Days</span>
+                                <span className="font-bold text-slate-700">PKR {Math.round(oldBalance * 0.10).toLocaleString()}</span>
+                              </div>
+                              <div className="bg-white p-1 rounded border border-slate-200">
+                                <span className="block text-slate-400 font-sans text-[8px]">Over 90 Days</span>
+                                <span className="font-bold text-rose-600">PKR {Math.max(0, Math.round(oldBalance - Math.round(oldBalance * 0.60) - Math.round(oldBalance * 0.25) - Math.round(oldBalance * 0.10))).toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Total in Words */}

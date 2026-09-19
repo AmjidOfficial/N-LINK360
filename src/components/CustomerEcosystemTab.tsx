@@ -6,10 +6,17 @@
  * Order Cart (MSL), Recovery Entry, Invoices & Ledger Statement
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Customer, SalesOrder, Invoice, Recovery, CustomerVisit, StockReturn, User, SalesOrderItem } from '../types';
-import { generateUniqueCustomerCode, calculateCustomerCreditUtilization } from '../lib/business-rules';
+import { generateUniqueCustomerCode, calculateCustomerCreditUtilization, calculateCustomerCreditHealth } from '../lib/business-rules';
+import { CreditHealthIndicator } from './CreditHealthIndicator';
 import { NLINK_OFFICIAL_PRODUCTS, NLinkSKU } from '../data/nlink-products';
+import {
+  isAutoSaveEnabled,
+  saveDraftOrderProgress,
+  getDraftOrderProgress,
+  clearDraftOrderProgress
+} from '../services/orderAutoSaveService';
 import { 
   ResponsiveContainer, 
   LineChart, 
@@ -108,7 +115,7 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
   const [formCreditDays, setFormCreditDays] = useState(30);
   const [formOpeningBalance, setFormOpeningBalance] = useState(0);
 
-  // --- Order Booking State inside Cockpit ---
+  // --- Order Booking State inside Cockpit (with Auto-Save & Recovery) ---
   const [tripNumber, setTripNumber] = useState('TRIP-01');
   const [selectedSkuId, setSelectedSkuId] = useState<string>(NLINK_OFFICIAL_PRODUCTS[0]?.id || '');
   const [orderQuantity, setOrderQuantity] = useState<number>(10);
@@ -117,7 +124,42 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
     orderedQuantity: number;
     unitPrice: number;
     lineTotal: number;
-  }[]>([]);
+  }[]>(() => {
+    const saved = getDraftOrderProgress();
+    if (saved && Array.isArray(saved.items) && saved.items.length > 0) {
+      return saved.items;
+    }
+    return [];
+  });
+
+  // Calculate cart total amount
+  const cartTotalAmount = useMemo(() => {
+    return cartItems.reduce((sum, i) => sum + i.lineTotal, 0);
+  }, [cartItems]);
+
+  // Hourly Auto-Save Effect (Saves order progress to localStorage every 1 Hour or on item update)
+  useEffect(() => {
+    if (!isAutoSaveEnabled()) return;
+
+    if (cartItems.length > 0) {
+      saveDraftOrderProgress({
+        items: cartItems,
+        totalAmount: cartTotalAmount,
+      });
+    }
+
+    const ONE_HOUR_MS = 3600000;
+    const intervalTimer = setInterval(() => {
+      if (isAutoSaveEnabled() && cartItems.length > 0) {
+        saveDraftOrderProgress({
+          items: cartItems,
+          totalAmount: cartTotalAmount,
+        });
+      }
+    }, ONE_HOUR_MS);
+
+    return () => clearInterval(intervalTimer);
+  }, [cartItems, cartTotalAmount]);
 
   // --- Recovery Entry State inside Cockpit ---
   const [recAmount, setRecAmount] = useState<number>(50000);
@@ -314,7 +356,6 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
     setCartItems(prev => prev.filter(i => i.sku.id !== skuId));
   };
 
-  const cartTotalAmount = cartItems.reduce((sum, i) => sum + i.lineTotal, 0);
   const cartTotalQty = cartItems.reduce((sum, i) => sum + i.orderedQuantity, 0);
 
   const handleSubmitCartOrder = () => {
@@ -358,6 +399,7 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
       onOrderSubmitted(newOrder, selCustomer.companyName);
     }
     setCartItems([]);
+    clearDraftOrderProgress();
     showNotification(`Sales Order #${newOrder.orderNumber} successfully booked for ${selCustomer.companyName}!`);
   };
 
@@ -545,6 +587,12 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
                           }`}>
                             {routeName}
                           </span>
+                          <CreditHealthIndicator
+                            customer={cust}
+                            invoices={invoices}
+                            recoveries={recoveries}
+                            variant="badge"
+                          />
                         </div>
                         <h4 className="font-extrabold text-xs sm:text-sm pt-0.5">{cust.companyName}</h4>
                         <p className={`text-[11px] truncate flex items-center gap-1 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
@@ -785,6 +833,15 @@ export const CustomerEcosystemTab: React.FC<CustomerEcosystemTabProps> = ({
                       <span className="font-mono font-semibold text-slate-700">{selCustomer.cnic || 'N/A'}</span>
                     </div>
                   </div>
+
+                  {/* 360° Credit Health & Payment Delay Intelligence */}
+                  <CreditHealthIndicator
+                    customer={selCustomer}
+                    invoices={invoices}
+                    recoveries={recoveries}
+                    variant="full"
+                    showSimulator={true}
+                  />
 
                   {/* Credit Risk & Utilization Cockpit */}
                   <div className="p-5 border rounded-2xl border-slate-200 space-y-3 bg-slate-50/50">

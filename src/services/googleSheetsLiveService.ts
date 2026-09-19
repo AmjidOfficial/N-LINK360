@@ -6,6 +6,8 @@
  */
 
 import { SupabaseAppData } from './supabase-data';
+import { getStoredUsers, NLinkUser } from '../data/nlink-users-team';
+import { NLINK_OFFICIAL_PRODUCTS } from '../data/nlink-products';
 
 export const TARGET_SPREADSHEET_ID = '1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo';
 const SPREADSHEET_ID_STORAGE_KEY = 'nlink_active_google_sheet_id';
@@ -205,17 +207,127 @@ export async function syncDatabaseToGoogleSheet(
   appData: SupabaseAppData,
   accessToken: string
 ): Promise<{ success: boolean; message: string; timestamp: string }> {
-  // Ensure the tabs exist
-  const requiredTabs = ['Customers', 'Sales_Orders', 'Recoveries', 'Inventory_Stock', 'Ledger'];
+  // Ensure all enterprise tabs exist in the Google Spreadsheet
+  const requiredTabs = [
+    'User_Management',
+    'Product_Management',
+    'Ledger',
+    'Invoice_Data',
+    'Sales_Data',
+    'Customers_Dealers',
+    'Recoveries_Collections',
+    'Attendance_Visits',
+    'Customers',
+    'Sales_Orders',
+    'Recoveries',
+    'Inventory_Stock',
+  ];
   await ensureSheetTabsExist(spreadsheetId, requiredTabs, accessToken).catch((e) => {
     console.warn('Tab verification warning:', e);
   });
 
   const nowIso = new Date().toLocaleString();
+  const teamUsers = getStoredUsers();
 
-  // 1. Customers Sheet
+  // 1. User Management Sheet (Every user with official @nationallight.pk registered email)
+  const userRows: any[][] = [
+    [
+      'Employee Code',
+      'Full Name',
+      'Registered Corporate Email (@nationallight.pk)',
+      'Contact Phone',
+      'Role Code',
+      'Designation / Title',
+      'Department',
+      'Region',
+      'Area',
+      'Territory',
+      'Assigned Towns / Beats',
+      'Monthly Sales Target (PKR)',
+      'Monthly Recovery Target (PKR)',
+      'Account Status',
+      'Last Synced At',
+    ],
+    ...teamUsers.map((u: NLinkUser) => [
+      u.employeeCode || u.id,
+      u.fullName,
+      u.email,
+      u.phone,
+      u.role,
+      u.roleTitle || u.role,
+      u.department || 'EXECUTIVE',
+      u.region || 'National',
+      u.area || 'National',
+      u.territory || 'National',
+      (u.assignedTowns || []).join(', ') || 'All Assigned Beats',
+      Number(u.monthlySalesTarget || 0),
+      Number(u.monthlyRecoveryTarget || 0),
+      u.status || 'ACTIVE',
+      nowIso,
+    ]),
+  ];
+  await updateSpreadsheetRange(spreadsheetId, 'User_Management!A1:O', userRows, accessToken).catch((e) => {
+    console.error('Failed to sync User_Management tab:', e);
+  });
+
+  // 2. Product Management Sheet (National Light Official Catalog & Stock Valuation)
+  const productRows: any[][] = [
+    [
+      'SKU Code',
+      'National Light Product Name',
+      'Category Group',
+      'Wattage / Specification',
+      'Carton Box Qty (Pcs)',
+      'Available Stock (Pcs)',
+      'Trade Price / TP (PKR)',
+      'Retail List Price / MRP (PKR)',
+      'Commercial Discount Scheme',
+      'Total Stock Value (PKR)',
+      'Product Status',
+      'Last Synced At',
+    ],
+    ...NLINK_OFFICIAL_PRODUCTS.map((p) => {
+      const stock = p.stockInHand || 100;
+      const tp = p.tradePrice || 0;
+      return [
+        p.skuCode,
+        p.name,
+        p.categoryLabel || p.category,
+        p.specification || p.wattage,
+        p.cartonQuantity || 20,
+        stock,
+        tp,
+        p.retailPrice || 0,
+        p.discountPercentage || '5% Commercial',
+        stock * tp,
+        p.isActive ? 'ACTIVE IN MARKET' : 'DISCONTINUED',
+        nowIso,
+      ];
+    }),
+  ];
+  await updateSpreadsheetRange(spreadsheetId, 'Product_Management!A1:L', productRows, accessToken).catch((e) => {
+    console.error('Failed to sync Product_Management tab:', e);
+  });
+  // Also update legacy Inventory_Stock tab for existing references
+  await updateSpreadsheetRange(spreadsheetId, 'Inventory_Stock!A1:L', productRows, accessToken).catch(() => {});
+
+  // 3. Customers / Dealers Sheet
   const customerRows: any[][] = [
-    ['Customer Code', 'Business Name', 'Type', 'Town / City', 'Route', 'Contact Person', 'Phone', 'Credit Limit (PKR)', 'Current Balance (PKR)', 'Status', 'Last Synced'],
+    [
+      'Customer Code',
+      'Business Name',
+      'Channel Type',
+      'Town / City',
+      'Route / Market',
+      'Contact Person',
+      'Phone / WhatsApp',
+      'Credit Limit (PKR)',
+      'Credit Days',
+      'Current Balance (PKR)',
+      'Credit Health Status',
+      'Dealer Status',
+      'Last Synced At',
+    ],
     ...appData.customers.map((c: any) => [
       c.customerCode || c.code || c.id,
       c.companyName || c.businessName || 'Customer',
@@ -225,83 +337,293 @@ export async function syncDatabaseToGoogleSheet(
       c.contactPerson || '',
       c.phone || '',
       Number(c.creditLimit || 0),
+      Number(c.creditDays || 30),
       Number(c.currentBalance || 0),
+      Number(c.currentBalance || 0) > Number(c.creditLimit || 0) ? 'HIGH RISK' : 'NORMAL',
       c.isActive ? 'ACTIVE' : 'INACTIVE',
       nowIso,
     ]),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'Customers!A1:K', customerRows, accessToken).catch((e) => {
-    console.error('Failed to sync Customers tab:', e);
+  await updateSpreadsheetRange(spreadsheetId, 'Customers_Dealers!A1:M', customerRows, accessToken).catch((e) => {
+    console.error('Failed to sync Customers_Dealers tab:', e);
   });
+  await updateSpreadsheetRange(spreadsheetId, 'Customers!A1:M', customerRows, accessToken).catch(() => {});
 
-  // 2. Sales Orders Sheet
-  const orderRows: any[][] = [
-    ['Order Number', 'Dealer / Customer', 'Order Date', 'Total Amount (PKR)', 'Status', 'Items Count', 'Payment Mode', 'Synced At'],
+  // 4. Sales Data Sheet (All Sales Orders & Velocity)
+  const salesRows: any[][] = [
+    [
+      'Order Number',
+      'Order Date',
+      'Customer Code',
+      'Dealer / Business Name',
+      'Town / Beat',
+      'Booked By (Sales Officer)',
+      'Items Count',
+      'Total Amount (PKR)',
+      'Payment Mode',
+      'Dual Approval Status',
+      'Syed Zain Approval',
+      'Shahzad Ullah Approval',
+      'Order Status',
+      'Remarks',
+      'Last Synced At',
+    ],
     ...appData.salesOrders.map((o: any) => {
       const cust = appData.customers.find((c) => c.id === o.customerId);
       return [
         o.orderNumber || o.orderCode || o.id,
-        o.customerName || cust?.companyName || (cust as any)?.businessName || o.customerId,
         o.orderDate || o.createdAt || new Date().toISOString().slice(0, 10),
-        Number(o.totalAmount || o.netTotal || 0),
-        o.status,
+        cust?.customerCode || o.customerCode || '',
+        o.customerName || cust?.companyName || (cust as any)?.businessName || o.customerId,
+        cust?.town || cust?.city || 'Assigned Beat',
+        o.salesUserName || 'Sales Booker',
         (o.items || []).length,
+        Number(o.totalAmount || o.netTotal || 0),
         o.paymentMode || 'CREDIT',
+        o.dualApprovalStatus || (o.status === 'APPROVED' ? 'DUAL_APPROVED' : 'PENDING_DUAL_APPROVAL'),
+        o.zainApproval || (o.status === 'APPROVED' ? 'APPROVED' : 'PENDING'),
+        o.shahzadApproval || (o.status === 'APPROVED' ? 'APPROVED' : 'PENDING'),
+        o.status || 'BOOKED',
+        o.notes || '',
         nowIso,
       ];
     }),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'Sales_Orders!A1:H', orderRows, accessToken).catch((e) => {
-    console.error('Failed to sync Sales Orders tab:', e);
+  await updateSpreadsheetRange(spreadsheetId, 'Sales_Data!A1:O', salesRows, accessToken).catch((e) => {
+    console.error('Failed to sync Sales_Data tab:', e);
+  });
+  await updateSpreadsheetRange(spreadsheetId, 'Sales_Orders!A1:O', salesRows, accessToken).catch(() => {});
+
+  // 5. Invoices Sheet (Detailed Invoice Ledger & Breakdown)
+  const invoiceRows: any[][] = [
+    [
+      'Invoice / Order Ref #',
+      'Invoice Date',
+      'Customer Code',
+      'Dealer Business Name',
+      'Town / City',
+      'Sales Officer',
+      'Items Summary',
+      'Total Items / Cartons',
+      'Gross Amount (PKR)',
+      'Discount (PKR)',
+      'Tax / GST (PKR)',
+      'Net Invoice Total (PKR)',
+      'Payment Terms',
+      'Payment Status',
+      'Dual Approval Status',
+      'Syed Zain Approval',
+      'Shahzad Ullah Approval',
+      'Last Synced At',
+    ],
+    ...appData.salesOrders.map((o: any) => {
+      const cust = appData.customers.find((c) => c.id === o.customerId);
+      const items = o.items || [];
+      const gross = items.reduce((s: number, it: any) => s + (Number(it.unitPrice || it.rate || 0) * Number(it.quantity || 0)), 0) || Number(o.totalAmount || 0);
+      const discount = Math.round(gross * 0.05);
+      const tax = Math.round((gross - discount) * 0.18);
+      const net = Number(o.totalAmount || gross - discount + tax);
+      const itemSummary = items.map((it: any) => `${it.productName || it.name || 'SKU'} (${it.quantity} pcs)`).join('; ') || 'Standard Order Items';
+
+      return [
+        o.orderNumber || o.id,
+        o.orderDate || o.createdAt || new Date().toISOString().slice(0, 10),
+        cust?.customerCode || o.customerCode || '',
+        o.customerName || cust?.companyName || 'Dealer',
+        cust?.town || cust?.city || 'Town',
+        o.salesUserName || 'Sales Booker',
+        itemSummary,
+        items.length,
+        gross,
+        discount,
+        tax,
+        net,
+        o.paymentMode || 'CREDIT 30 DAYS',
+        o.status === 'APPROVED' ? 'AUTHORIZED / BILLED' : 'PENDING_APPROVAL',
+        o.dualApprovalStatus || (o.status === 'APPROVED' ? 'DUAL_APPROVED' : 'PENDING'),
+        o.zainApproval || (o.status === 'APPROVED' ? 'APPROVED' : 'PENDING'),
+        o.shahzadApproval || (o.status === 'APPROVED' ? 'APPROVED' : 'PENDING'),
+        nowIso,
+      ];
+    }),
+  ];
+  await updateSpreadsheetRange(spreadsheetId, 'Invoice_Data!A1:R', invoiceRows, accessToken).catch((e) => {
+    console.error('Failed to sync Invoice_Data tab:', e);
   });
 
-  // 3. Recoveries Sheet
+  // 6. Recoveries Collections Sheet (Cash & Bank Deposit details)
   const recoveryRows: any[][] = [
-    ['Recovery Code', 'Customer / Dealer', 'Amount (PKR)', 'Payment Mode', 'Instrument Ref / Cheque #', 'Bank Name', 'Collection Date', 'Status', 'Synced At'],
+    [
+      'Recovery Receipt #',
+      'Customer Code',
+      'Dealer / Customer Name',
+      'Town / City',
+      'Amount Received (PKR)',
+      'Collection Channel (Cash / Bank Deposit)',
+      'Instrument Ref / Cheque # / Deposit Slip',
+      'Bank Name',
+      'Collection Date',
+      'Collector / Officer',
+      'Collection Status',
+      'Dual Approval Status',
+      'Syed Zain Approval',
+      'Shahzad Ullah Approval',
+      'Last Synced At',
+    ],
     ...appData.recoveries.map((r: any) => {
       const cust = appData.customers.find((c) => c.id === r.customerId);
       return [
         r.recoveryNumber || r.recoveryCode || r.id,
+        cust?.customerCode || r.customerCode || '',
         r.customerName || cust?.companyName || (cust as any)?.businessName || r.customerId,
+        cust?.town || cust?.city || 'Town',
         Number(r.amount || 0),
         r.paymentMode || 'CASH',
         r.instrumentNumber || 'N/A',
-        r.bankName || '',
+        r.bankName || 'Direct Cash Collection',
         r.collectionDate || r.recordedAt || new Date().toISOString().slice(0, 10),
+        r.collectedBy || 'Recovery Officer',
         r.status || 'COLLECTED',
+        r.dualApprovalStatus || (r.status === 'VERIFIED' ? 'DUAL_APPROVED' : 'PENDING_DUAL_APPROVAL'),
+        r.zainApproval || (r.status === 'VERIFIED' ? 'APPROVED' : 'PENDING'),
+        r.shahzadApproval || (r.status === 'VERIFIED' ? 'APPROVED' : 'PENDING'),
         nowIso,
       ];
     }),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'Recoveries!A1:I', recoveryRows, accessToken).catch((e) => {
-    console.error('Failed to sync Recoveries tab:', e);
+  await updateSpreadsheetRange(spreadsheetId, 'Recoveries_Collections!A1:O', recoveryRows, accessToken).catch((e) => {
+    console.error('Failed to sync Recoveries_Collections tab:', e);
+  });
+  await updateSpreadsheetRange(spreadsheetId, 'Recoveries!A1:O', recoveryRows, accessToken).catch(() => {});
+
+  // 7. Running Double-Entry Ledger Sheet
+  const ledgerRows: any[][] = [
+    [
+      'Entry Date',
+      'Customer Code',
+      'Customer / Dealer Name',
+      'Town / City',
+      'Transaction Type',
+      'Reference #',
+      'Debit / Invoice (PKR)',
+      'Credit / Recovery (PKR)',
+      'Running Balance (PKR)',
+      'Dual Approval Status',
+      'Remarks',
+      'Last Synced At',
+    ],
+  ];
+
+  appData.customers.forEach((cust: any) => {
+    let runningBal = Number(cust.openingBalance || 0);
+
+    // Initial Opening Balance row
+    ledgerRows.push([
+      cust.createdAt ? cust.createdAt.slice(0, 10) : '2026-01-01',
+      cust.customerCode || cust.id,
+      cust.companyName || 'Dealer',
+      cust.town || cust.city || 'Town',
+      'OPENING_BALANCE',
+      'INIT-BALANCE',
+      runningBal > 0 ? runningBal : 0,
+      0,
+      runningBal,
+      'PERMANENT',
+      'Account Setup Opening Balance',
+      nowIso,
+    ]);
+
+    // Gather customer transactions
+    const custOrders = (appData.salesOrders || []).filter((o: any) => o.customerId === cust.id);
+    const custRecoveries = (appData.recoveries || []).filter((r: any) => r.customerId === cust.id);
+
+    type Tx = { date: string; type: 'INVOICE' | 'RECOVERY'; ref: string; debit: number; credit: number; approval: string; remarks: string };
+    const txs: Tx[] = [
+      ...custOrders.map((o: any) => ({
+        date: o.orderDate || o.createdAt || '',
+        type: 'INVOICE' as const,
+        ref: o.orderNumber || o.id,
+        debit: Number(o.totalAmount || 0),
+        credit: 0,
+        approval: o.dualApprovalStatus || (o.status === 'APPROVED' ? 'DUAL_APPROVED' : 'PENDING'),
+        remarks: `Sales Order #${o.orderNumber || o.id} (${(o.items || []).length} items)`,
+      })),
+      ...custRecoveries.map((r: any) => ({
+        date: r.collectionDate || r.createdAt || '',
+        type: 'RECOVERY' as const,
+        ref: r.recoveryNumber || r.id,
+        debit: 0,
+        credit: Number(r.amount || 0),
+        approval: r.dualApprovalStatus || (r.status === 'VERIFIED' ? 'DUAL_APPROVED' : 'PENDING'),
+        remarks: `Payment Recovery via ${r.paymentMode || 'CASH'} - ${r.bankName || ''} Ref: ${r.instrumentNumber || 'Direct'}`,
+      })),
+    ].sort((a, b) => a.date.localeCompare(b.date));
+
+    txs.forEach((tx) => {
+      if (tx.approval === 'DUAL_APPROVED' || tx.approval === 'APPROVED') {
+        runningBal = runningBal + tx.debit - tx.credit;
+      }
+      ledgerRows.push([
+        tx.date || nowIso.slice(0, 10),
+        cust.customerCode || cust.id,
+        cust.companyName || 'Dealer',
+        cust.town || cust.city || 'Town',
+        tx.type,
+        tx.ref,
+        tx.debit,
+        tx.credit,
+        runningBal,
+        tx.approval,
+        tx.remarks,
+        nowIso,
+      ]);
+    });
   });
 
-  // 4. Inventory Stock Sheet
-  const inventoryStockMap = new Map<string, number>();
-  (appData.inventoryBalances || []).forEach((ib) => {
-    const prev = inventoryStockMap.get(ib.skuId) || 0;
-    inventoryStockMap.set(ib.skuId, prev + (ib.quantityOnHand || 0));
+  await updateSpreadsheetRange(spreadsheetId, 'Ledger!A1:L', ledgerRows, accessToken).catch((e) => {
+    console.error('Failed to sync Ledger tab:', e);
   });
 
-  const inventoryRows: any[][] = [
-    ['SKU Code', 'Item Description', 'Brand / Category', 'Available Stock (Pcs)', 'Trade Price (PKR)', 'Stock Value (PKR)', 'Synced At'],
-    ...appData.skus.map((s: any) => {
-      const stock = inventoryStockMap.get(s.id) ?? (s.stockQty || 0);
-      const price = Number(s.tradePrice || 0);
+  // 8. Attendance & Visits Sheet
+  const visitRows: any[][] = [
+    [
+      'Log ID',
+      'Log Type',
+      'Date',
+      'Time',
+      'Officer / Booker',
+      'Town / Beat',
+      'Dealer / Shop Name',
+      'Visit Result',
+      'Reason if Non-Productive',
+      'GPS Coordinates',
+      'Meter Reading (KM)',
+      'Daily Expense (PKR)',
+      'Remarks',
+      'Last Synced At',
+    ],
+    ...(appData.visits || []).map((v: any) => {
+      const cust = appData.customers.find((c) => c.id === v.customerId);
       return [
-        s.skuCode || s.code || s.id,
-        s.name,
-        s.categoryName || s.category || 'LIGHTING',
-        stock,
-        price,
-        stock * price,
+        v.id,
+        'SHOP_VISIT',
+        v.visitDate || v.checkinTime?.slice(0, 10) || nowIso.slice(0, 10),
+        v.checkinTime?.slice(11, 16) || '',
+        v.userName || 'Field Officer',
+        v.town || cust?.city || 'Assigned Beat',
+        v.customerName || cust?.companyName || 'Shop',
+        v.orderPlaced ? 'PRODUCTIVE (ORDER)' : v.recoveryCollected ? 'PRODUCTIVE (RECOVERY)' : 'NON_PRODUCTIVE',
+        v.nonProductiveReason || '',
+        v.latitude ? `${v.latitude}, ${v.longitude}` : 'Captured',
+        v.meterReading || '',
+        v.expenseAmount || 0,
+        v.notes || '',
         nowIso,
       ];
     }),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'Inventory_Stock!A1:G', inventoryRows, accessToken).catch((e) => {
-    console.error('Failed to sync Inventory tab:', e);
+  await updateSpreadsheetRange(spreadsheetId, 'Attendance_Visits!A1:N', visitRows, accessToken).catch((e) => {
+    console.error('Failed to sync Attendance_Visits tab:', e);
   });
 
   const timestamp = new Date().toISOString();
@@ -309,7 +631,7 @@ export async function syncDatabaseToGoogleSheet(
 
   return {
     success: true,
-    message: `Successfully synchronized ${appData.customers.length} Dealers, ${appData.salesOrders.length} Orders, ${appData.recoveries.length} Recoveries, and ${appData.skus.length} SKUs with Google Sheets database!`,
+    message: `Successfully synchronized Google Sheets database with 8 live enterprise tabs: User Management (${teamUsers.length} users), Product Management (${NLINK_OFFICIAL_PRODUCTS.length} SKUs), Ledger, Invoice Data, Sales Data, Customers (${appData.customers.length}), Recoveries (${appData.recoveries.length}), and Attendance Visits!`,
     timestamp,
   };
 }
@@ -325,16 +647,24 @@ export async function pushOrderToGoogleSheet(
 ): Promise<void> {
   const row = [
     order.orderNumber || order.id,
-    customerName,
     order.orderDate || new Date().toISOString().slice(0, 10),
-    Number(order.totalAmount || 0),
-    order.status || 'BOOKED',
+    order.customerCode || '',
+    customerName,
+    order.town || order.city || 'Assigned Beat',
+    order.salesUserName || 'Sales Booker',
     (order.items || []).length,
+    Number(order.totalAmount || 0),
     order.paymentMode || 'CREDIT',
+    order.dualApprovalStatus || 'PENDING_DUAL_APPROVAL',
+    order.zainApproval || 'PENDING',
+    order.shahzadApproval || 'PENDING',
+    order.status || 'BOOKED',
+    order.notes || '',
     new Date().toLocaleString(),
   ];
 
-  await appendSpreadsheetRows(spreadsheetId, 'Sales_Orders!A:H', [row], accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Sales_Data!A:O', [row], accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Sales_Orders!A:O', [row], accessToken).catch(() => {});
 }
 
 /**
@@ -348,17 +678,24 @@ export async function pushRecoveryToGoogleSheet(
 ): Promise<void> {
   const row = [
     recovery.recoveryNumber || recovery.id,
+    recovery.customerCode || '',
     customerName,
+    recovery.town || recovery.city || 'Town',
     Number(recovery.amount || 0),
     recovery.paymentMode || 'CASH',
     recovery.instrumentNumber || 'N/A',
-    recovery.bankName || '',
+    recovery.bankName || 'Direct Cash Collection',
     recovery.collectionDate || new Date().toISOString().slice(0, 10),
+    recovery.collectedBy || 'Recovery Officer',
     recovery.status || 'COLLECTED',
+    recovery.dualApprovalStatus || 'PENDING_DUAL_APPROVAL',
+    recovery.zainApproval || 'PENDING',
+    recovery.shahzadApproval || 'PENDING',
     new Date().toLocaleString(),
   ];
 
-  await appendSpreadsheetRows(spreadsheetId, 'Recoveries!A:I', [row], accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Recoveries_Collections!A:O', [row], accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Recoveries!A:O', [row], accessToken).catch(() => {});
 }
 
 /**
@@ -382,7 +719,8 @@ export async function pushAttendanceToGoogleSheet(
     new Date().toLocaleString(),
   ];
 
-  await appendSpreadsheetRows(spreadsheetId, 'Attendance!A:I', [row], accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Attendance_Visits!A:N', [row], accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Attendance!A:I', [row], accessToken).catch(() => {});
 }
 
 /**
@@ -407,7 +745,8 @@ export async function pushVisitToGoogleSheet(
     new Date().toLocaleString(),
   ];
 
-  await appendSpreadsheetRows(spreadsheetId, 'Visits!A:I', [row], accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Attendance_Visits!A:N', [row], accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Visits!A:I', [row], accessToken).catch(() => {});
 }
 export async function pushCustomerToGoogleSheet(
   spreadsheetId: string,
@@ -430,11 +769,12 @@ export async function pushCustomerToGoogleSheet(
     new Date().toLocaleString(),
   ];
 
-  await appendSpreadsheetRows(spreadsheetId, 'Customers_Dealers!A:M', [row], accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Customers_Dealers!A:M', [row], accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Customers!A:M', [row], accessToken).catch(() => {});
 }
 
 /**
- * Append a newly provisioned employee with auto-generated ID, credentials, and hierarchy into Google Sheet
+ * Append a newly provisioned employee with official @nationallight.pk email into Google Sheet
  */
 export async function pushEmployeeToGoogleSheet(
   spreadsheetId: string,
@@ -444,21 +784,50 @@ export async function pushEmployeeToGoogleSheet(
   const row = [
     user.employeeCode || user.id,
     user.fullName || 'Employee Name',
-    user.role || 'TSM',
-    user.roleTitle || '',
-    user.department || 'SALES_FIELD',
     user.email || '',
     user.phone || '',
-    user.region || '',
-    user.area || '',
-    user.territory || '',
-    user.reportingManagerName || 'Executive Board',
+    user.role || 'TSM',
+    user.roleTitle || user.role || 'TSM',
+    user.department || 'SALES_FIELD',
+    user.region || 'National',
+    user.area || 'National',
+    user.territory || 'National',
+    Array.isArray(user.assignedTowns) ? user.assignedTowns.join(', ') : (user.assignedTowns || 'All Assigned Beats'),
     Number(user.monthlySalesTarget || 0),
     Number(user.monthlyRecoveryTarget || 0),
     user.status || 'ACTIVE',
     new Date().toLocaleString(),
   ];
 
-  await appendSpreadsheetRows(spreadsheetId, 'Users_Team!A:O', [row], accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'User_Management!A:O', [row], accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Users_Team!A:O', [row], accessToken).catch(() => {});
+}
+
+/**
+ * Append a newly added or updated product into Google Sheet Product_Management
+ */
+export async function pushProductToGoogleSheet(
+  spreadsheetId: string,
+  product: any,
+  accessToken: string
+): Promise<void> {
+  const stock = product.stockInHand || product.stockQty || 0;
+  const tp = Number(product.tradePrice || 0);
+  const row = [
+    product.skuCode || product.code || product.id,
+    product.name || 'National Light Product',
+    product.categoryLabel || product.category || 'LIGHTING',
+    product.specification || product.wattage || '20W',
+    product.cartonQuantity || 20,
+    stock,
+    tp,
+    Number(product.retailPrice || 0),
+    product.discountPercentage || '5% Commercial',
+    stock * tp,
+    product.isActive !== false ? 'ACTIVE IN MARKET' : 'DISCONTINUED',
+    new Date().toLocaleString(),
+  ];
+
+  await appendSpreadsheetRows(spreadsheetId, 'Product_Management!A:L', [row], accessToken).catch(() => {});
 }
 

@@ -33,20 +33,21 @@ export const DailyPerformancePDFModal: React.FC<DailyPerformancePDFModalProps> =
     day: 'numeric',
   });
 
-  // Calculate metrics
-  const totalOrdersCount = orders.length || 3;
-  const totalSalesVal = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0) || 345000;
-  const totalRecoveryVal = 280000; // Rs. 2.80 Lacs
-  const visitedDealersCount = Math.min(8, customers.length);
-  const targetSales = 600000; // 6.0 Lacs
-  const salesAchievementRate = Math.round((totalSalesVal / targetSales) * 100);
+  // Calculate metrics dynamically
+  const totalOrdersCount = orders.length;
+  const totalSalesVal = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const totalRecoveryVal = 0;
+  const visitedDealersCount = customers.length;
+  const targetSales = 500000; // 5.0 Lacs target baseline
+  const salesAchievementRate = targetSales > 0 ? Math.round((totalSalesVal / targetSales) * 100) : 0;
 
-  const mockVisits = [
-    { dealer: customers[0]?.companyName || 'Khyber Lights & Hardware', city: customers[0]?.city || 'Peshawar', time: '09:45 AM', outcome: 'Order Booked (Rs. 84,500)', status: 'VERIFIED' },
-    { dealer: customers[1]?.companyName || 'Swat Electric Store', city: customers[1]?.city || 'Mingora', time: '11:15 AM', outcome: 'Payment Recovered (Rs. 120,000)', status: 'VERIFIED' },
-    { dealer: customers[2]?.companyName || 'Mardan Lighting Hub', city: customers[2]?.city || 'Mardan', time: '01:30 PM', outcome: 'Stock Inquiry / Quotation', status: 'VERIFIED' },
-    { dealer: customers[3]?.companyName || 'Peshawar Light Palace', city: customers[3]?.city || 'Peshawar', time: '03:10 PM', outcome: 'Order Booked (Rs. 145,000)', status: 'VERIFIED' },
-  ];
+  const mockVisits = customers.slice(0, 4).map((c, i) => ({
+    dealer: c.companyName,
+    city: c.city || 'KPK',
+    time: `10:0${i} AM`,
+    outcome: `Dealer Visit Logged`,
+    status: 'RECORDED',
+  }));
 
   const handlePrintPDF = () => {
     window.print();

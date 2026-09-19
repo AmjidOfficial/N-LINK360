@@ -49,18 +49,38 @@ export interface GoogleSheetsSyncPayload {
   salesOrders: Array<{
     orderId: string;
     customerName: string;
+    salesUserName: string;
     orderDate: string;
     totalAmount: number;
     status: string;
+    dualApprovalStatus: string;
+    zainApproval: string;
+    shahzadApproval: string;
     itemsCount: number;
   }>;
   recoveries: Array<{
     id: string;
     customerName: string;
+    salesUserName: string;
     amount: number;
     paymentMode: string;
     instrumentNumber: string;
+    bankName: string;
+    dualApprovalStatus: string;
+    zainApproval: string;
+    shahzadApproval: string;
     recordedAt: string;
+  }>;
+  ledgers: Array<{
+    customerCode: string;
+    customerName: string;
+    date: string;
+    type: string;
+    referenceNumber: string;
+    debit: number;
+    credit: number;
+    runningBalance: number;
+    dualApprovalStatus: string;
   }>;
   visits: Array<{
     date: string;
@@ -121,26 +141,129 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
     })),
     salesOrders: appData.salesOrders.map((o: any) => {
       const cust = appData.customers.find((c) => c.id === o.customerId);
+      const isApproved = o.status === 'APPROVED' || o.dualApprovalStatus === 'DUAL_APPROVED';
       return {
         orderId: o.orderNumber || o.orderCode || o.id,
         customerName: o.customerName || cust?.companyName || (cust as any)?.businessName || o.customerId,
+        salesUserName: o.salesUserName || 'Shahid Khan',
         orderDate: o.orderDate || o.createdAt || new Date().toISOString().slice(0, 10),
         totalAmount: o.totalAmount || o.netTotal || 0,
         status: o.status,
+        dualApprovalStatus: o.dualApprovalStatus || (isApproved ? 'DUAL_APPROVED' : 'PENDING_DUAL_APPROVAL'),
+        zainApproval: o.zainApproval || (isApproved ? 'APPROVED' : 'PENDING'),
+        shahzadApproval: o.shahzadApproval || (isApproved ? 'APPROVED' : 'PENDING'),
         itemsCount: (o.items || []).length,
       };
     }),
     recoveries: appData.recoveries.map((r: any) => {
       const cust = appData.customers.find((c) => c.id === r.customerId);
+      const isApproved = r.status === 'VERIFIED' || r.dualApprovalStatus === 'DUAL_APPROVED';
       return {
         id: r.recoveryNumber || r.recoveryCode || r.id,
         customerName: r.customerName || cust?.companyName || (cust as any)?.businessName || r.customerId,
+        salesUserName: r.salesUserName || 'Shahid Khan',
         amount: r.amount || 0,
         paymentMode: r.paymentMode || 'CASH',
         instrumentNumber: r.instrumentNumber || 'N/A',
+        bankName: r.bankName || 'Direct Deposit',
+        dualApprovalStatus: r.dualApprovalStatus || (isApproved ? 'DUAL_APPROVED' : 'PENDING_DUAL_APPROVAL'),
+        zainApproval: r.zainApproval || (isApproved ? 'APPROVED' : 'PENDING'),
+        shahzadApproval: r.shahzadApproval || (isApproved ? 'APPROVED' : 'PENDING'),
         recordedAt: r.collectionDate || r.recordedAt || r.createdAt || new Date().toISOString(),
       };
     }),
+    ledgers: (() => {
+      const entries: Array<{
+        customerCode: string;
+        customerName: string;
+        date: string;
+        type: string;
+        referenceNumber: string;
+        debit: number;
+        credit: number;
+        runningBalance: number;
+        dualApprovalStatus: string;
+      }> = [];
+
+      (appData.customers || []).forEach((c: any) => {
+        let runningBal = Number(c.openingBalance || 0);
+        const cCode = c.customerCode || c.code || c.id;
+        const cName = c.companyName || c.businessName || 'Customer';
+
+        // Opening Balance Row
+        if (runningBal > 0) {
+          entries.push({
+            customerCode: cCode,
+            customerName: cName,
+            date: (c.createdAt || '2026-01-01').slice(0, 10),
+            type: 'OPENING_BALANCE',
+            referenceNumber: `OP-${cCode}`,
+            debit: runningBal,
+            credit: 0,
+            runningBalance: runningBal,
+            dualApprovalStatus: 'DUAL_APPROVED',
+          });
+        }
+
+        // Transactions: Invoices & Recoveries
+        const custInvoices = (appData.invoices || []).filter((inv: any) => inv.customerId === c.id);
+        const custRecoveries = (appData.recoveries || []).filter((rec: any) => rec.customerId === c.id);
+
+        const txs: Array<{
+          date: string;
+          type: 'INVOICE' | 'RECOVERY';
+          ref: string;
+          amount: number;
+          dualApproved: boolean;
+        }> = [];
+
+        custInvoices.forEach((inv: any) => {
+          const isDual = inv.status === 'POSTED' || inv.status === 'PAID';
+          txs.push({
+            date: inv.invoiceDate || inv.createdAt || '2026-01-01',
+            type: 'INVOICE',
+            ref: inv.invoiceNumber || inv.invoiceCode || inv.id,
+            amount: Number(inv.totalAmount || 0),
+            dualApproved: isDual,
+          });
+        });
+
+        custRecoveries.forEach((rec: any) => {
+          const isDual = rec.dualApprovalStatus === 'DUAL_APPROVED' || rec.status === 'VERIFIED';
+          txs.push({
+            date: rec.collectionDate || rec.recordedAt || rec.createdAt || '2026-01-01',
+            type: 'RECOVERY',
+            ref: rec.recoveryNumber || rec.recoveryCode || rec.id,
+            amount: Number(rec.amount || 0),
+            dualApproved: isDual,
+          });
+        });
+
+        // Sort chronologically
+        txs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        txs.forEach((tx) => {
+          if (tx.dualApproved) {
+            if (tx.type === 'INVOICE') runningBal += tx.amount;
+            if (tx.type === 'RECOVERY') runningBal -= tx.amount;
+          }
+
+          entries.push({
+            customerCode: cCode,
+            customerName: cName,
+            date: tx.date.slice(0, 10),
+            type: tx.type,
+            referenceNumber: tx.ref,
+            debit: tx.type === 'INVOICE' ? tx.amount : 0,
+            credit: tx.type === 'RECOVERY' ? tx.amount : 0,
+            runningBalance: runningBal,
+            dualApprovalStatus: tx.dualApproved ? 'DUAL_APPROVED' : 'PENDING_DUAL_APPROVAL',
+          });
+        });
+      });
+
+      return entries;
+    })(),
     visits: appData.visits.map((v: any) => {
       const cust = appData.customers.find((c) => c.id === v.customerId);
       return {
@@ -228,16 +351,22 @@ export function exportGoogleSheetsCsv(appData: SupabaseAppData): void {
     csvContent += `"${c.code}","${c.name}","${c.type}","${c.town}","${c.route}","${c.contactPerson}","${c.phone}",${c.creditLimit},${c.currentBalance},"${c.status}","${payload.timestamp}"\n`;
   });
 
-  csvContent += '\n=== SALES ORDERS ===\n';
-  csvContent += 'Order ID,Customer Name,Order Date,Total Amount (PKR),Status,Items Count\n';
+  csvContent += '\n=== SALES ORDERS (WITH DUAL APPROVAL) ===\n';
+  csvContent += 'Order ID,Customer Name,Sales Officer,Order Date,Total Amount (PKR),Status,Dual Approval,Syed Zain,Shahzad Ullah,Items Count\n';
   payload.salesOrders.forEach((o) => {
-    csvContent += `"${o.orderId}","${o.customerName}","${o.orderDate}",${o.totalAmount},"${o.status}",${o.itemsCount}\n`;
+    csvContent += `"${o.orderId}","${o.customerName}","${o.salesUserName}","${o.orderDate}",${o.totalAmount},"${o.status}","${o.dualApprovalStatus}","${o.zainApproval}","${o.shahzadApproval}",${o.itemsCount}\n`;
   });
 
-  csvContent += '\n=== PAYMENT RECOVERIES ===\n';
-  csvContent += 'Recovery Code,Customer Name,Amount (PKR),Payment Mode,Instrument Ref,Date\n';
+  csvContent += '\n=== PAYMENT RECOVERIES (WITH DUAL APPROVAL) ===\n';
+  csvContent += 'Recovery Code,Customer Name,Sales Officer,Amount (PKR),Payment Mode,Instrument Ref,Bank,Dual Approval,Syed Zain,Shahzad Ullah,Date\n';
   payload.recoveries.forEach((r) => {
-    csvContent += `"${r.id}","${r.customerName}",${r.amount},"${r.paymentMode}","${r.instrumentNumber}","${r.recordedAt}"\n`;
+    csvContent += `"${r.id}","${r.customerName}","${r.salesUserName}",${r.amount},"${r.paymentMode}","${r.instrumentNumber}","${r.bankName}","${r.dualApprovalStatus}","${r.zainApproval}","${r.shahzadApproval}","${r.recordedAt}"\n`;
+  });
+
+  csvContent += '\n=== RUNNING LEDGER TRANSACTIONS (DUAL-APPROVED ARCHITECTURE) ===\n';
+  csvContent += 'Customer Code,Customer Name,Date,Type,Reference #,Debit (PKR),Credit (PKR),Running Balance (PKR),Approval Status\n';
+  payload.ledgers.forEach((l) => {
+    csvContent += `"${l.customerCode}","${l.customerName}","${l.date}","${l.type}","${l.referenceNumber}",${l.debit},${l.credit},${l.runningBalance},"${l.dualApprovalStatus}"\n`;
   });
 
   csvContent += '\n=== INVENTORY & FINISHED GOODS ===\n';
@@ -275,7 +404,6 @@ function doPost(e) {
       custSheet.appendRow(["Customer Code", "Business Name", "Type", "Town / City", "Route", "Contact Person", "Phone", "Credit Limit (PKR)", "Current Balance (PKR)", "Status", "Last Synced"]);
     }
     if (payload.customers && payload.customers.length > 0) {
-      // Clear previous data rows (keep header)
       if (custSheet.getLastRow() > 1) {
         custSheet.getRange(2, 1, custSheet.getLastRow() - 1, 11).clearContent();
       }
@@ -285,37 +413,52 @@ function doPost(e) {
       custSheet.getRange(2, 1, custRows.length, 11).setValues(custRows);
     }
 
-    // 2. Sync Sales Orders Sheet
+    // 2. Sync Sales Orders Sheet (With Syed Zain & Shahzad Ullah Dual Approval Columns)
     var orderSheet = sheet.getSheetByName("Sales_Orders") || sheet.insertSheet("Sales_Orders");
     if (orderSheet.getLastRow() === 0) {
-      orderSheet.appendRow(["Order ID", "Customer Name", "Order Date", "Total Amount (PKR)", "Status", "Items Count", "Last Synced"]);
+      orderSheet.appendRow(["Order ID", "Customer Name", "Sales Officer", "Order Date", "Total Amount (PKR)", "Status", "Dual Approval Status", "Syed Zain", "Shahzad Ullah", "Items Count", "Last Synced"]);
     }
     if (payload.salesOrders && payload.salesOrders.length > 0) {
       if (orderSheet.getLastRow() > 1) {
-        orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, 7).clearContent();
+        orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, 11).clearContent();
       }
       var orderRows = payload.salesOrders.map(function(o) {
-        return [o.orderId, o.customerName, o.orderDate, o.totalAmount, o.status, o.itemsCount, payload.timestamp];
+        return [o.orderId, o.customerName, o.salesUserName, o.orderDate, o.totalAmount, o.status, o.dualApprovalStatus, o.zainApproval, o.shahzadApproval, o.itemsCount, payload.timestamp];
       });
-      orderSheet.getRange(2, 1, orderRows.length, 7).setValues(orderRows);
+      orderSheet.getRange(2, 1, orderRows.length, 11).setValues(orderRows);
     }
 
-    // 3. Sync Recoveries Sheet
+    // 3. Sync Recoveries Sheet (With Syed Zain & Shahzad Ullah Dual Approval Columns)
     var recSheet = sheet.getSheetByName("Recoveries") || sheet.insertSheet("Recoveries");
     if (recSheet.getLastRow() === 0) {
-      recSheet.appendRow(["Recovery Code", "Customer Name", "Amount (PKR)", "Mode", "Instrument Ref", "Date Recorded", "Last Synced"]);
+      recSheet.appendRow(["Recovery Code", "Customer Name", "Sales Officer", "Amount (PKR)", "Mode", "Instrument Ref", "Bank", "Dual Approval Status", "Syed Zain", "Shahzad Ullah", "Date Recorded", "Last Synced"]);
     }
     if (payload.recoveries && payload.recoveries.length > 0) {
       if (recSheet.getLastRow() > 1) {
-        recSheet.getRange(2, 1, recSheet.getLastRow() - 1, 7).clearContent();
+        recSheet.getRange(2, 1, recSheet.getLastRow() - 1, 12).clearContent();
       }
       var recRows = payload.recoveries.map(function(r) {
-        return [r.id, r.customerName, r.amount, r.paymentMode, r.instrumentNumber, r.recordedAt, payload.timestamp];
+        return [r.id, r.customerName, r.salesUserName, r.amount, r.paymentMode, r.instrumentNumber, r.bankName, r.dualApprovalStatus, r.zainApproval, r.shahzadApproval, r.recordedAt, payload.timestamp];
       });
-      recSheet.getRange(2, 1, recRows.length, 7).setValues(recRows);
+      recSheet.getRange(2, 1, recRows.length, 12).setValues(recRows);
     }
 
-    // 4. Sync Inventory Sheet
+    // 4. Sync Ledgers Sheet (Permanent Running Balance from Transaction History)
+    var ledgerSheet = sheet.getSheetByName("Ledgers") || sheet.insertSheet("Ledgers");
+    if (ledgerSheet.getLastRow() === 0) {
+      ledgerSheet.appendRow(["Customer Code", "Customer Name", "Date", "Transaction Type", "Reference #", "Debit / Invoice (PKR)", "Credit / Recovery (PKR)", "Running Balance (PKR)", "Dual Approval Status", "Last Synced"]);
+    }
+    if (payload.ledgers && payload.ledgers.length > 0) {
+      if (ledgerSheet.getLastRow() > 1) {
+        ledgerSheet.getRange(2, 1, ledgerSheet.getLastRow() - 1, 10).clearContent();
+      }
+      var ledgerRows = payload.ledgers.map(function(l) {
+        return [l.customerCode, l.customerName, l.date, l.type, l.referenceNumber, l.debit, l.credit, l.runningBalance, l.dualApprovalStatus, payload.timestamp];
+      });
+      ledgerSheet.getRange(2, 1, ledgerRows.length, 10).setValues(ledgerRows);
+    }
+
+    // 5. Sync Inventory Sheet
     var invSheet = sheet.getSheetByName("Inventory_Stock") || sheet.insertSheet("Inventory_Stock");
     if (invSheet.getLastRow() === 0) {
       invSheet.appendRow(["SKU Code", "SKU Name", "Category", "Available Stock (Pcs)", "Trade Price (PKR)", "Valuation (PKR)", "Last Synced"]);

@@ -9,7 +9,8 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview --port=3000 --host=0.0.0.0",
     "lint": "tsc --noEmit",
-    "test": "tsx tests/business-rules.test.ts"
+    "test": "tsx tests/business-rules.test.ts",
+    "purge-mock-data": "tsx scripts/purge-mock-data.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

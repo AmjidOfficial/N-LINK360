@@ -1,16 +1,23 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * N-LINK 360 - Enterprise Field Intelligence: Orders Tab
+ * N-LINK 360 - Enterprise Field Intelligence: Orders & Ledgers
  * Unified Dealer/Distributor-Based Booking, Recovery, Invoices, and Running Ledger Flow
- * Based on SalesPulse design conventions & National Light official rates catalog (PKR)
+ * Based on National Light Pakistan official rates catalog (PKR)
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { NATIONAL_LIGHT_OFFICIAL_CATALOG, NationalLightItem, NATIONAL_LIGHT_OFFICE_INFO } from '../../data/national-light-rate-card';
 import { Customer, SalesOrder, Recovery } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import { NationalLightLogo } from '../NationalLightLogo';
+import { downloadCustomerLedgerPdf } from '../../utils/exportLedgerPdf';
+import {
+  isAutoSaveEnabled,
+  saveDraftOrderProgress,
+  getDraftOrderProgress,
+  clearDraftOrderProgress
+} from '../../services/orderAutoSaveService';
 
 export interface EnterpriseOrdersTabProps {
   currentUser: NLinkUser;
@@ -22,6 +29,10 @@ export interface EnterpriseOrdersTabProps {
   onOpenRateCard: () => void;
   initialSelectedCustomerId?: string;
   selectedAttendanceTown?: string;
+  isCheckedIn?: boolean;
+  onNavigateToAttendance?: () => void;
+  lockModeTo?: 'ENTRY' | 'LEDGERS';
+  initialMode?: 'order' | 'recovery' | 'invoices' | 'ledger';
 }
 
 interface CartItem {
@@ -56,34 +67,71 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
   onOpenRateCard,
   initialSelectedCustomerId,
   selectedAttendanceTown,
+  isCheckedIn = true,
+  onNavigateToAttendance,
+  lockModeTo,
+  initialMode,
 }) => {
-  // Filter customers based on Selected Attendance Town
+  // Strict Enterprise Filtering:
+  // Flow: Assigned User -> Assigned Town -> Active Attendance Town -> Dealers/Distributors in that town
   const filteredCustomers = useMemo(() => {
-    if (!selectedAttendanceTown) return customers;
-    
-    const normSelected = selectedAttendanceTown.toLowerCase().trim();
-    const filtered = customers.filter((customer) => {
-      const custTown = (customer.town || '').toLowerCase();
-      const custCity = (customer.city || '').toLowerCase();
-      const custTerritory = (customer.territory || '').toLowerCase();
-      
-      return (
-        custTown.includes(normSelected) ||
-        normSelected.includes(custTown) ||
-        custCity.includes(normSelected) ||
-        normSelected.includes(custCity) ||
-        custTerritory.includes(normSelected) ||
-        normSelected.includes(custTerritory)
-      );
-    });
+    const isExecutive = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MANAGEMENT';
 
-    return filtered.length > 0 ? filtered : customers;
-  }, [customers, selectedAttendanceTown]);
+    // 1. If an active attendance town is selected (or user checked in)
+    if (selectedAttendanceTown) {
+      const normSelected = selectedAttendanceTown.toLowerCase().trim();
+      return customers.filter((customer) => {
+        const custTown = (customer.town || '').toLowerCase();
+        const custCity = (customer.city || '').toLowerCase();
+        const custTerritory = (customer.territory || '').toLowerCase();
+
+        const townMatches =
+          custTown.includes(normSelected) ||
+          normSelected.includes(custTown) ||
+          custCity.includes(normSelected) ||
+          normSelected.includes(custCity) ||
+          custTerritory.includes(normSelected) ||
+          normSelected.includes(custTerritory);
+
+        if (!townMatches) return false;
+
+        // If field agent, verify customer is in their assigned towns
+        if (!isExecutive && currentUser.assignedTowns && currentUser.assignedTowns.length > 0) {
+          const userTowns = currentUser.assignedTowns.map((t) => t.toLowerCase());
+          return userTowns.some(
+            (t) => custTown.includes(t) || custCity.includes(t) || t.includes(custTown) || t.includes(custCity)
+          );
+        }
+
+        return true;
+      });
+    }
+
+    // 2. If no attendance town checked-in yet, filter strictly by user's assigned towns
+    if (!isExecutive && currentUser.assignedTowns && currentUser.assignedTowns.length > 0) {
+      const userTowns = currentUser.assignedTowns.map((t) => t.toLowerCase());
+      return customers.filter((customer) => {
+        const custTown = (customer.town || '').toLowerCase();
+        const custCity = (customer.city || '').toLowerCase();
+        return userTowns.some((t) => custTown.includes(t) || custCity.includes(t) || t.includes(custTown));
+      });
+    }
+
+    // Executive fallback
+    return customers;
+  }, [customers, selectedAttendanceTown, currentUser]);
 
   // 1. Primary Selected Dealer State
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
-    initialSelectedCustomerId || filteredCustomers[0]?.id || customers[0]?.id || 'CUST-001'
+    initialSelectedCustomerId || filteredCustomers[0]?.id || customers[0]?.id || ''
   );
+
+  // Sync when initialSelectedCustomerId prop changes from parent navigation
+  useEffect(() => {
+    if (initialSelectedCustomerId) {
+      setSelectedCustomerId(initialSelectedCustomerId);
+    }
+  }, [initialSelectedCustomerId]);
 
   // Sync selectedCustomerId when town filters change the available list
   React.useEffect(() => {
@@ -93,46 +141,103 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
         setSelectedCustomerId(filteredCustomers[0].id);
         setOrderCart([]);
       }
+    } else {
+      setSelectedCustomerId('');
     }
   }, [filteredCustomers, selectedCustomerId]);
 
   // Get active dealer details
   const activeDealer = useMemo(() => {
     return (
+      filteredCustomers.find((c) => c.id === selectedCustomerId) ||
       customers.find((c) => c.id === selectedCustomerId) ||
+      filteredCustomers[0] ||
       customers[0] || {
-        id: 'CUST-001',
-        customerCode: 'DL-8839',
-        companyName: 'Apex Industrial Supply',
-        contactPerson: 'Marcus Vance',
-        phone: '+92 300 4123456',
-        address: 'Shop #42, North District Commercial Beat',
-        city: 'Peshawar',
-        creditLimit: 350000,
-        currentBalance: 142500,
+        id: '',
+        customerCode: 'N/A',
+        companyName: 'No Dealer Selected',
+        contactPerson: 'None',
+        phone: 'N/A',
+        address: 'Please add a dealer from the Dealers tab or sync from Google Sheet',
+        city: 'N/A',
+        creditLimit: 0,
+        currentBalance: 0,
         status: 'NORMAL',
-        isActive: true,
+        isActive: false,
       }
     );
-  }, [customers, selectedCustomerId]);
+  }, [filteredCustomers, customers, selectedCustomerId]);
 
   // Unified Section Tab Pages
-  const [activeMode, setActiveMode] = useState<'order' | 'recovery' | 'invoices' | 'ledger'>('order');
+  const defaultMode = lockModeTo === 'LEDGERS' ? 'invoices' : 'order';
+  const [activeMode, setActiveMode] = useState<'order' | 'recovery' | 'invoices' | 'ledger'>(
+    initialMode || defaultMode
+  );
+
+  // Keep mode in sync if lockModeTo changes
+  useEffect(() => {
+    if (lockModeTo === 'LEDGERS' && (activeMode === 'order' || activeMode === 'recovery')) {
+      setActiveMode('invoices');
+    } else if (lockModeTo === 'ENTRY' && (activeMode === 'invoices' || activeMode === 'ledger')) {
+      setActiveMode('order');
+    }
+  }, [lockModeTo]);
+
+  // Submission loading states to prevent duplicate submissions
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [isSubmittingRecovery, setIsSubmittingRecovery] = useState(false);
 
   // ================= ORDER BOOKING MODE STATE =================
   const [catalogSearch, setCatalogSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [orderCart, setOrderCart] = useState<CartItem[]>([]);
+  const [orderCart, setOrderCart] = useState<CartItem[]>(() => {
+    const saved = getDraftOrderProgress();
+    if (saved && Array.isArray(saved.items) && saved.items.length > 0) {
+      // If items match CartItem format or can be restored
+      if (saved.items[0]?.product) {
+        return saved.items;
+      }
+    }
+    return [];
+  });
   const [showOrderConfirmModal, setShowOrderConfirmModal] = useState(false);
   const [orderRemarks, setOrderRemarks] = useState('');
   const [cartQuantities, setCartQuantities] = useState<Record<string, { cartons: number; packs: number }>>({});
 
-  // Searchable SKU Quick-Select States
-  const [skuQuickSearchQuery, setSkuQuickSearchQuery] = useState('');
-  const [skuQuickSelectOpen, setSkuQuickSelectOpen] = useState(false);
-  const [selectedQuickProduct, setSelectedQuickProduct] = useState<NationalLightItem | null>(null);
-  const [quickCartons, setQuickCartons] = useState<string>('');
-  const [quickPacks, setQuickPacks] = useState<string>('');
+  // Order Cart Calculations
+  const cartSubtotal = orderCart.reduce((sum, item) => sum + item.product.listPrice * item.quantity, 0);
+  const cartDiscount = Math.round(cartSubtotal * 0.05); // 5% commercial discount
+  const cartTax = Math.round((cartSubtotal - cartDiscount) * 0.18); // 18% General Sales Tax (GST)
+  const cartFreight = orderCart.length > 0 ? 350 : 0; // Flat trade delivery charges
+  const cartTotal = Math.max(0, cartSubtotal - cartDiscount + cartTax + cartFreight);
+
+  // Hourly Auto-Save Effect (Saves order progress to localStorage every 1 Hour to prevent mobile browser crash data loss)
+  useEffect(() => {
+    if (!isAutoSaveEnabled()) return;
+
+    if (orderCart.length > 0) {
+      saveDraftOrderProgress({
+        items: orderCart,
+        customerId: activeDealer?.id,
+        customerName: activeDealer?.companyName,
+        totalAmount: cartTotal,
+      });
+    }
+
+    const ONE_HOUR_MS = 3600000; // 1 Hour in milliseconds
+    const timer = setInterval(() => {
+      if (isAutoSaveEnabled() && orderCart.length > 0) {
+        saveDraftOrderProgress({
+          items: orderCart,
+          customerId: activeDealer?.id,
+          customerName: activeDealer?.companyName,
+          totalAmount: cartTotal,
+        });
+      }
+    }, ONE_HOUR_MS);
+
+    return () => clearInterval(timer);
+  }, [orderCart, activeDealer?.id, activeDealer?.companyName, cartTotal]);
 
   // ================= RECOVERY ENTRY MODE STATE =================
   const [recoveryAmount, setRecoveryAmount] = useState('');
@@ -145,9 +250,24 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
   // ================= LEDGER & INVOICES FILTERS STATE =================
   const [invoiceSelectedMonths, setInvoiceSelectedMonths] = useState<string[]>(['All Months']);
   const [ledgerSelectedMonths, setLedgerSelectedMonths] = useState<string[]>(['All Months']);
-  const [ledgerStartDate, setLedgerStartDate] = useState('2026-08-01');
+  const [ledgerStartDate, setLedgerStartDate] = useState('2026-07-01');
   const [ledgerEndDate, setLedgerEndDate] = useState('2026-09-30');
   const [selectedInvoiceModal, setSelectedInvoiceModal] = useState<any | null>(null);
+
+  // Party-wise View Isolation & Directory Navigation States
+  const [invoiceViewMode, setInvoiceViewMode] = useState<'SINGLE_PARTY' | 'ALL_PARTIES_DIRECTORY'>('SINGLE_PARTY');
+  const [ledgerViewMode, setLedgerViewMode] = useState<'SINGLE_PARTY' | 'ALL_PARTIES_DIRECTORY'>('SINGLE_PARTY');
+  const [partyDirectorySearch, setPartyDirectorySearch] = useState('');
+  const [partyLedgerSearch, setPartyLedgerSearch] = useState('');
+  const [showRecentOrdersInOrdersTab, setShowRecentOrdersInOrdersTab] = useState(false);
+
+  // Last 5 Recent Orders for the currently active Customer/Dealer
+  const activeDealerRecentOrders = useMemo(() => {
+    return orders
+      .filter((o) => o.customerId === selectedCustomerId)
+      .sort((a, b) => new Date(b.orderDate || b.createdAt || '').getTime() - new Date(a.orderDate || a.createdAt || '').getTime())
+      .slice(0, 5);
+  }, [orders, selectedCustomerId]);
 
   // Toast Notification States
   const [toastMessage, setToastMessage] = useState('');
@@ -186,29 +306,6 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
     });
   }, [catalogSearch, selectedCategory]);
 
-  // Searchable SKU Quick-Select Dropdown list
-  const quickSelectFilteredProducts = useMemo(() => {
-    if (!skuQuickSearchQuery.trim()) {
-      // If empty but open, show a couple of featured/popular items from the catalog
-      return NATIONAL_LIGHT_OFFICIAL_CATALOG.slice(0, 5);
-    }
-    const q = skuQuickSearchQuery.toLowerCase();
-    return NATIONAL_LIGHT_OFFICIAL_CATALOG.filter((item) => {
-      return (
-        item.sku.toLowerCase().includes(q) ||
-        item.name.toLowerCase().includes(q) ||
-        item.specification.toLowerCase().includes(q)
-      );
-    }).slice(0, 8);
-  }, [skuQuickSearchQuery]);
-
-  // Order Cart Calculations
-  const cartSubtotal = orderCart.reduce((sum, item) => sum + item.product.listPrice * item.quantity, 0);
-  const cartDiscount = Math.round(cartSubtotal * 0.05); // 5% commercial discount
-  const cartTax = Math.round((cartSubtotal - cartDiscount) * 0.18); // 18% General Sales Tax (GST)
-  const cartFreight = orderCart.length > 0 ? 350 : 0; // Flat trade delivery charges
-  const cartTotal = Math.max(0, cartSubtotal - cartDiscount + cartTax + cartFreight);
-
   // Credit check status
   const projectedBalance = (activeDealer.currentBalance || 0) + cartTotal;
   const isCreditExceeded = projectedBalance > (activeDealer.creditLimit || 350000);
@@ -216,6 +313,76 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
     100,
     Math.round(((activeDealer.currentBalance || 0) / (activeDealer.creditLimit || 350000)) * 100)
   );
+
+  // Staged SKU items from the spreadsheet table for 1-click bulk submission
+  const stagedItems = useMemo(() => {
+    const items: {
+      product: NationalLightItem;
+      cartons: number;
+      packs: number;
+      totalPieces: number;
+      amount: number;
+    }[] = [];
+
+    Object.entries(cartQuantities).forEach(([prodId, qty]) => {
+      const q = qty as { cartons?: number; packs?: number } | undefined;
+      const cartons = q?.cartons || 0;
+      const packs = q?.packs || 0;
+      if (cartons > 0 || packs > 0) {
+        const prod = NATIONAL_LIGHT_OFFICIAL_CATALOG.find((p) => p.id === prodId);
+        if (prod) {
+          const quantityBox = prod.quantityBox || 100;
+          const totalPieces = (cartons * quantityBox) + packs;
+          if (totalPieces > 0) {
+            items.push({
+              product: prod,
+              cartons,
+              packs,
+              totalPieces,
+              amount: totalPieces * prod.listPrice,
+            });
+          }
+        }
+      }
+    });
+
+    return items;
+  }, [cartQuantities]);
+
+  const stagedCount = stagedItems.length;
+  const stagedTotalPieces = stagedItems.reduce((acc, i) => acc + i.totalPieces, 0);
+  const stagedTotalAmount = stagedItems.reduce((acc, i) => acc + i.amount, 0);
+
+  // Single Submit Button Handler: Adds ALL staged SKUs to cart in 1 click
+  const handleSubmitAllStagedToCart = () => {
+    if (stagedItems.length === 0) {
+      triggerToast('Please enter carton or pack quantities for at least one SKU in the table below first.');
+      return;
+    }
+
+    setOrderCart((prev) => {
+      const nextCart = [...prev];
+      stagedItems.forEach((staged) => {
+        const existingIdx = nextCart.findIndex((i) => i.product.id === staged.product.id);
+        if (existingIdx >= 0) {
+          nextCart[existingIdx] = {
+            ...nextCart[existingIdx],
+            quantity: nextCart[existingIdx].quantity + staged.totalPieces,
+          };
+        } else {
+          nextCart.push({
+            product: staged.product,
+            quantity: staged.totalPieces,
+          });
+        }
+      });
+      return nextCart;
+    });
+
+    // Reset table quantity inputs in 1 go
+    setCartQuantities({});
+    triggerToast(`✓ Added ${stagedItems.length} SKU${stagedItems.length > 1 ? 's' : ''} (${stagedTotalPieces.toLocaleString()} pcs • Rs. ${stagedTotalAmount.toLocaleString()}) to Booking Cart!`);
+  };
 
   // Cart actions
   const addToCart = (product: NationalLightItem, pcs: number = 1) => {
@@ -246,191 +413,234 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
   };
 
   const handleOrderSubmitClick = () => {
+    if (!activeDealer.id) {
+      triggerToast('Please register or select a dealer from the Dealers tab before booking orders.');
+      return;
+    }
+
     if (orderCart.length === 0) {
       triggerToast('Cannot submit empty order cart!');
       return;
     }
+
+    const creditLimit = activeDealer.creditLimit || 250000;
+    const currentBalance = activeDealer.currentBalance || 0;
+    const projectedExposure = currentBalance + cartTotal;
+    const isOverLimit = projectedExposure > creditLimit;
+    const isHighExposure = cartTotal > (creditLimit * 0.75);
+
+    // Browser Confirmation Dialog triggered if total value exceeds customer credit policy threshold
+    if (isOverLimit || isHighExposure) {
+      const warningReason = isOverLimit
+        ? `⚠️ CREDIT LIMIT BREACH: This order will exceed the dealer's credit limit by Rs. ${(projectedExposure - creditLimit).toLocaleString()} PKR.`
+        : `⚠️ CREDIT POLICY THRESHOLD: This single order utilizes over 75% of the dealer's total credit policy limit.`;
+
+      const confirmMessage = 
+        `========================================\n` +
+        `N-LINK 360: CREDIT POLICY THRESHOLD NOTICE\n` +
+        `========================================\n\n` +
+        `Customer / Dealer: ${activeDealer.companyName} (${activeDealer.customerCode})\n` +
+        `Authorized Credit Limit: Rs. ${creditLimit.toLocaleString()} PKR\n` +
+        `Current Ledger Balance: Rs. ${currentBalance.toLocaleString()} PKR\n` +
+        `New Order Amount: Rs. ${cartTotal.toLocaleString()} PKR\n` +
+        `Projected Total Exposure: Rs. ${projectedExposure.toLocaleString()} PKR\n\n` +
+        `${warningReason}\n\n` +
+        `Submitting this entry will flag the order for Mandatory Dual Executive Approval (Syed Zain & Shahzad Ullah).\n\n` +
+        `Do you want to confirm and proceed with this order entry?`;
+
+      const isConfirmed = window.confirm(confirmMessage);
+      if (!isConfirmed) {
+        triggerToast('Order submission cancelled by officer.');
+        return;
+      }
+    }
+
     setShowOrderConfirmModal(true);
   };
 
   const executeOrderSubmit = () => {
-    if (orderCart.length === 0) return;
+    if (orderCart.length === 0 || isSubmittingOrder) return;
 
-    // Submit Order Payload
-    const newOrder: SalesOrder = {
-      id: `ORD-${Date.now().toString().slice(-6)}`,
-      orderNumber: `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      customerId: activeDealer.id,
-      customerName: activeDealer.companyName,
-      customerCode: activeDealer.customerCode,
-      salesUserId: currentUser.id,
-      salesUserName: currentUser.fullName,
-      orderDate: new Date().toISOString().split('T')[0],
-      subtotal: cartSubtotal,
-      discountAmount: cartDiscount,
-      taxAmount: cartTax,
-      totalAmount: cartTotal,
-      status: 'SUBMITTED',
-      creditCheckStatus: isCreditExceeded ? 'RED' : 'GREEN',
-      notes: orderRemarks || 'Field Order Booked',
-      items: orderCart.map((item, index) => ({
-        id: `item-${index}`,
-        orderId: `ORD-${Date.now()}`,
-        skuId: item.product.sku,
-        skuCode: item.product.sku,
-        skuName: item.product.name,
-        orderedQuantity: item.quantity,
-        approvedQuantity: item.quantity,
-        unitPrice: item.product.listPrice,
-        discountPercent: parseFloat(item.product.discountPercentage) || 15,
-        lineTotal: item.product.listPrice * item.quantity,
-      })),
-      createdAt: new Date().toISOString(),
-    };
+    // Safety Credit Check Threshold Verification
+    const creditLimit = activeDealer.creditLimit || 250000;
+    const currentBalance = activeDealer.currentBalance || 0;
+    const projectedExposure = currentBalance + cartTotal;
+    const isOverLimit = projectedExposure > creditLimit;
 
-    onPlaceOrder(newOrder);
-    setOrderCart([]);
-    setOrderRemarks('');
-    setShowOrderConfirmModal(false);
-    triggerLiveSyncNotification();
-    setActiveMode('invoices');
+    setIsSubmittingOrder(true);
+
+    try {
+      // Submit Order Payload
+      const newOrder: SalesOrder = {
+        id: `ORD-${Date.now().toString().slice(-6)}`,
+        orderNumber: `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        customerId: activeDealer.id,
+        customerName: activeDealer.companyName,
+        customerCode: activeDealer.customerCode,
+        salesUserId: currentUser.id,
+        salesUserName: currentUser.fullName,
+        orderDate: new Date().toISOString().split('T')[0],
+        subtotal: cartSubtotal,
+        discountAmount: cartDiscount,
+        taxAmount: cartTax,
+        totalAmount: cartTotal,
+        status: 'SUBMITTED',
+        creditCheckStatus: (isOverLimit || isCreditExceeded) ? 'RED' : 'GREEN',
+        dualApprovalStatus: 'PENDING_DUAL_APPROVAL',
+        zainApproval: 'PENDING',
+        shahzadApproval: 'PENDING',
+        syncStatus: 'SYNCED',
+        notes: orderRemarks || (isOverLimit ? 'Credit threshold flagged: Pending executive sign-off' : 'Field Order Booked'),
+        items: orderCart.map((item, index) => ({
+          id: `item-${index}`,
+          orderId: `ORD-${Date.now()}`,
+          skuId: item.product.sku,
+          skuCode: item.product.sku,
+          skuName: item.product.name,
+          orderedQuantity: item.quantity,
+          approvedQuantity: item.quantity,
+          unitPrice: item.product.listPrice,
+          discountPercent: parseFloat(item.product.discountPercentage) || 15,
+          lineTotal: item.product.listPrice * item.quantity,
+        })),
+        createdAt: new Date().toISOString(),
+      };
+
+      onPlaceOrder(newOrder);
+      setOrderCart([]);
+      clearDraftOrderProgress();
+      setOrderRemarks('');
+      setShowOrderConfirmModal(false);
+      triggerLiveSyncNotification();
+      triggerToast('Order submitted! Awaiting dual executive approval (Syed Zain & Shahzad Ullah).');
+      if (lockModeTo !== 'ENTRY') {
+        setActiveMode('invoices');
+      }
+    } finally {
+      setIsSubmittingOrder(false);
+    }
   };
 
   // Recovery Submit
   const handleRecoverySubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRecovery) return;
+
+    if (!activeDealer.id) {
+      triggerToast('Please register or select a dealer from the Dealers tab before recording recovery.');
+      return;
+    }
+
     const amt = parseFloat(recoveryAmount);
     if (isNaN(amt) || amt <= 0) {
       triggerToast('Please enter a valid recovery amount!');
       return;
     }
 
-    const newRecovery: Recovery = {
-      id: `REC-${Date.now().toString().slice(-6)}`,
-      recoveryNumber: `RC-${Math.floor(1000 + Math.random() * 9000)}`,
-      customerId: activeDealer.id,
-      customerName: activeDealer.companyName,
-      customerCode: activeDealer.customerCode,
-      salesUserId: currentUser.id,
-      salesUserName: currentUser.fullName,
-      collectionDate: new Date().toISOString().split('T')[0],
-      amount: amt,
-      paymentMode: paymentMode,
-      instrumentNumber: referenceNumber || (paymentMode === 'CASH' ? 'CASH-REC' : 'TRX-AUTO'),
-      bankName: paymentMode !== 'CASH' ? bankName : undefined,
-      status: 'PENDING_VERIFICATION',
-      remarks: recoveryRemarks || (receiptSimulated ? 'Payment slip attachment uploaded.' : 'Standard payment recovery logged.'),
-      createdAt: new Date().toISOString(),
-    };
+    const currentBal = activeDealer.currentBalance || 0;
+    const isRecoveryExceedingBalance = currentBal > 0 && amt > currentBal;
+    const isHighValueRecovery = amt >= 200000;
 
-    onRecordRecovery(newRecovery);
-    setRecoveryAmount('');
-    setReferenceNumber('');
-    setReceiptSimulated(false);
-    setRecoveryRemarks('');
-    triggerLiveSyncNotification();
-    setActiveMode('ledger');
+    // Browser Confirmation Dialog triggered if recovery value exceeds threshold or outstanding ledger balance
+    if (isRecoveryExceedingBalance || isHighValueRecovery) {
+      const note = isRecoveryExceedingBalance
+        ? `⚠️ The recovery amount (Rs. ${amt.toLocaleString()} PKR) exceeds the dealer's current outstanding balance (Rs. ${currentBal.toLocaleString()} PKR).`
+        : `⚠️ High-Value Collection Entry (Rs. ${amt.toLocaleString()} PKR).`;
+
+      const confirmMessage =
+        `========================================\n` +
+        `N-LINK 360: RECOVERY VERIFICATION NOTICE\n` +
+        `========================================\n\n` +
+        `Customer / Dealer: ${activeDealer.companyName} (${activeDealer.customerCode})\n` +
+        `Recovery Amount: Rs. ${amt.toLocaleString()} PKR\n` +
+        `Payment Mode: ${paymentMode}\n` +
+        `Reference / Instrument: ${referenceNumber || (paymentMode === 'CASH' ? 'Cash Handover' : 'Bank Slip')}\n` +
+        `Current Outstanding Balance: Rs. ${currentBal.toLocaleString()} PKR\n\n` +
+        `${note}\n\n` +
+        `Please verify that the payment slip/instrument has been inspected.\n\n` +
+        `Do you confirm and record this recovery entry?`;
+
+      const isConfirmed = window.confirm(confirmMessage);
+      if (!isConfirmed) {
+        triggerToast('Recovery recording cancelled by officer.');
+        return;
+      }
+    }
+
+    setIsSubmittingRecovery(true);
+
+    try {
+      const newRecovery: Recovery = {
+        id: `REC-${Date.now().toString().slice(-6)}`,
+        recoveryNumber: `RC-${Math.floor(1000 + Math.random() * 9000)}`,
+        customerId: activeDealer.id,
+        customerName: activeDealer.companyName,
+        customerCode: activeDealer.customerCode,
+        salesUserId: currentUser.id,
+        salesUserName: currentUser.fullName,
+        collectionDate: new Date().toISOString().split('T')[0],
+        amount: amt,
+        paymentMode: paymentMode,
+        instrumentNumber: referenceNumber || (paymentMode === 'CASH' ? 'CASH-REC' : 'TRX-AUTO'),
+        bankName: paymentMode !== 'CASH' ? bankName : undefined,
+        status: 'PENDING_VERIFICATION',
+        dualApprovalStatus: 'PENDING_DUAL_APPROVAL',
+        zainApproval: 'PENDING',
+        shahzadApproval: 'PENDING',
+        syncStatus: 'SYNCED',
+        remarks: recoveryRemarks || (receiptSimulated ? 'Payment slip attachment uploaded.' : 'Standard payment recovery logged.'),
+        createdAt: new Date().toISOString(),
+      };
+
+      onRecordRecovery(newRecovery);
+      setRecoveryAmount('');
+      setReferenceNumber('');
+      setReceiptSimulated(false);
+      setRecoveryRemarks('');
+      triggerLiveSyncNotification();
+      triggerToast('Recovery logged! Awaiting dual executive sign-off (Syed Zain & Shahzad Ullah).');
+      if (lockModeTo !== 'ENTRY') {
+        setActiveMode('ledger');
+      }
+    } finally {
+      setIsSubmittingRecovery(false);
+    }
   };
 
-  // Dealer Invoices List
+  // Dealer Invoices List - Strictly Party-Wise
   const dealerInvoices = useMemo(() => {
-    const historicalInvoices = [
-      {
-        id: 'inv-prev-1',
-        invoiceNo: 'INV-2026-1044',
-        date: '2026-09-10',
-        amount: 85200,
-        subtotal: 72000,
-        discountAmount: 3600,
-        taxAmount: 12312,
-        freightAmount: 350,
-        itemsCount: 2,
-        status: 'Delivered',
-        badgeColor: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400',
-        items: [
-          {
-            id: 'hi-1-1',
-            skuCode: 'NL-BULB-12W-E27',
-            skuName: 'NL 12W Premium LED Bulbs (E27)',
-            orderedQuantity: 300,
-            unitPrice: 210,
-            lineTotal: 63000,
-          },
-          {
-            id: 'hi-1-2',
-            skuCode: 'NL-SMD-7W-RND',
-            skuName: 'NL 7W Concealed SMD Slim',
-            orderedQuantity: 40,
-            unitPrice: 225,
-            lineTotal: 9000,
-          }
-        ],
-      },
-      {
-        id: 'inv-prev-2',
-        invoiceNo: 'INV-2026-0988',
-        date: '2026-08-24',
-        amount: 142500,
-        subtotal: 121000,
-        discountAmount: 6050,
-        taxAmount: 20691,
-        freightAmount: 350,
-        itemsCount: 2,
-        status: 'Paid',
-        badgeColor: 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400',
-        items: [
-          {
-            id: 'hi-2-1',
-            skuCode: 'NL-PAN-24W-RND',
-            skuName: 'NL 24W Slim Round SMD Panel Light',
-            orderedQuantity: 120,
-            unitPrice: 812.5,
-            lineTotal: 97500,
-          },
-          {
-            id: 'hi-2-2',
-            skuCode: 'NL-T8-4FT-20W',
-            skuName: 'NL 4FT 20W Premium LED Tube Light',
-            orderedQuantity: 50,
-            unitPrice: 470,
-            lineTotal: 23500,
-          }
-        ],
-      },
-    ];
+    // Filter orders belonging exclusively to the selected customer/party
+    const partyOrders = orders.filter((o) => o.customerId === selectedCustomerId);
 
-    const currentBooked = orders
-      .filter((o) => o.customerId === selectedCustomerId)
-      .map((o) => ({
-        id: o.id,
-        invoiceNo: o.orderNumber,
-        date: o.orderDate,
-        amount: o.totalAmount,
-        subtotal: o.subtotal,
-        discountAmount: o.discountAmount,
-        taxAmount: o.taxAmount,
-        freightAmount: 350,
-        itemsCount: o.items?.length || 0,
-        status: o.status === 'APPROVED' ? 'Approved & Dispatched' : 'Awaiting Dispatch',
-        badgeColor: o.status === 'APPROVED' ? 'bg-[#76f4e0]/20 text-[#006f63] dark:text-[#76f4e0]' : 'bg-[#1a283e] text-[#818fa9] dark:text-slate-400',
-        items: o.items.map(item => ({
-          id: item.id,
-          skuCode: item.skuCode,
-          skuName: item.skuName,
-          orderedQuantity: item.orderedQuantity,
-          unitPrice: item.unitPrice,
-          lineTotal: item.lineTotal,
-        })),
-      }));
-
-    return [...currentBooked, ...historicalInvoices];
+    return partyOrders.map((o) => ({
+      id: o.id,
+      invoiceNo: o.orderNumber,
+      date: o.orderDate,
+      amount: o.totalAmount,
+      subtotal: o.subtotal,
+      discountAmount: o.discountAmount,
+      taxAmount: o.taxAmount,
+      freightAmount: 350,
+      itemsCount: o.items?.length || 0,
+      status: o.status === 'APPROVED' ? 'Approved & Dispatched' : o.status === 'REJECTED' ? 'Rejected' : 'Awaiting Approval',
+      badgeColor: o.status === 'APPROVED'
+        ? 'bg-[#76f4e0]/20 text-[#006f63] dark:text-[#76f4e0]'
+        : o.status === 'REJECTED'
+        ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400'
+        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400',
+      items: (o.items || []).map((item) => ({
+        id: item.id,
+        skuCode: item.skuCode,
+        skuName: item.skuName,
+        orderedQuantity: item.orderedQuantity,
+        unitPrice: item.unitPrice,
+        lineTotal: item.lineTotal,
+      })),
+    }));
   }, [orders, selectedCustomerId]);
 
   // Dynamic Print Type Toggle State
   const [activePrintType, setActivePrintType] = useState<'NONE' | 'SINGLE_INVOICE' | 'STATEMENT' | 'LEDGER'>('NONE');
-  
-  // Collapsed status for searchable SKU Quick-Select component
-  const [skuQuickSelectCollapsed, setSkuQuickSelectCollapsed] = useState(false);
 
   // Filtered invoices used in UI registry map and reconciliation statements
   const filteredInvoicesForStatement = useMemo(() => {
@@ -612,118 +822,142 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
     triggerToast('Filtered invoices reconciliation statement exported to Word successfully!');
   };
 
-  // PDF / Print Exporter
-  const handleExportPDF = () => {
-    setActivePrintType('STATEMENT');
-    setTimeout(() => {
-      window.print();
-    }, 150);
-  };
-
-  // Quick Add function from searchable SKU dropdown
-  const handleQuickAddProduct = () => {
-    if (!selectedQuickProduct) return;
-    const cartonsVal = Math.max(0, parseInt(quickCartons) || 0);
-    const packsVal = Math.max(0, parseInt(quickPacks) || 0);
-    const boxSize = selectedQuickProduct.quantityBox || 100;
-    const totalPieces = (cartonsVal * boxSize) + packsVal;
-
-    if (totalPieces <= 0) {
-      triggerToast('Please enter a valid carton or pack quantity first.');
+  // Dedicated jsPDF Statement Exporter for Customer Ledger
+  const handleDownloadLedgerPdfStatement = async () => {
+    if (!activeDealer?.id) {
+      triggerToast('Please select an active dealer first.');
       return;
     }
+    try {
+      triggerToast('Generating official PDF statement via jsPDF...');
+      
+      const allEntriesComputed = [...ledgerEntries].reverse();
+      let openingBalance = 0;
+      const entriesInRange: typeof ledgerEntries = [];
+      
+      allEntriesComputed.forEach((entry) => {
+        const matchesMonthFilter = () => {
+          if (ledgerSelectedMonths.includes('All Months')) return true;
+          const dateObj = new Date(entry.date);
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const entMonthYear = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+          return ledgerSelectedMonths.includes(entMonthYear);
+        };
 
-    // Add to order cart
-    addToCart(selectedQuickProduct, totalPieces);
-    
-    // Also update cartQuantities to show it in the grid
-    setCartQuantities((prev) => ({
-      ...prev,
-      [selectedQuickProduct.id]: { cartons: cartonsVal, packs: packsVal },
-    }));
+        const isBeforeStart = new Date(entry.date).getTime() < new Date(ledgerStartDate).getTime();
+        const isAfterEnd = new Date(entry.date).getTime() > new Date(ledgerEndDate).getTime();
 
-    // Reset selection states
-    setSelectedQuickProduct(null);
-    setQuickCartons('');
-    setQuickPacks('');
-    setSkuQuickSearchQuery('');
-    setSkuQuickSelectOpen(false);
-    triggerToast(`Successfully added ${totalPieces} pcs of ${selectedQuickProduct.name} to Booking Cart!`);
+        if (isBeforeStart) {
+          if (entry.debit) openingBalance += entry.debit;
+          if (entry.credit) openingBalance -= entry.credit;
+        } else if (!isAfterEnd && matchesMonthFilter()) {
+          entriesInRange.push(entry);
+        }
+      });
+
+      let currentRunning = openingBalance;
+      const finalRenderableEntries = entriesInRange.map((entry) => {
+        if (entry.debit) currentRunning += entry.debit;
+        if (entry.credit) currentRunning -= entry.credit;
+        return {
+          ...entry,
+          balance: currentRunning,
+        };
+      });
+
+      const totalDebits = entriesInRange.reduce((sum, e) => sum + (e.debit || 0), 0);
+      const totalCredits = entriesInRange.reduce((sum, e) => sum + (e.credit || 0), 0);
+      const closingBalance = currentRunning;
+
+      const result = await downloadCustomerLedgerPdf({
+        customer: activeDealer,
+        entries: finalRenderableEntries,
+        openingBalance,
+        totalDebits,
+        totalCredits,
+        closingBalance,
+        startDate: ledgerStartDate,
+        endDate: ledgerEndDate,
+        selectedMonths: ledgerSelectedMonths,
+        preparedByName: `${currentUser.fullName || currentUser.name} (${currentUser.roleTitle || currentUser.role})`,
+      });
+
+      if (result.success) {
+        triggerToast(`Statement downloaded: ${result.filename}`);
+      }
+    } catch (err) {
+      console.error('jsPDF Statement Generation Error:', err);
+      triggerToast('Error generating PDF statement. Falling back to print view.');
+      setActivePrintType('STATEMENT');
+      setTimeout(() => {
+        window.print();
+      }, 150);
+    }
   };
 
-  // Running Ledger calculations specific to the selected customer
+  // PDF / Print Exporter (uses jsPDF Statement)
+  const handleExportPDF = () => {
+    handleDownloadLedgerPdfStatement();
+  };
+
+  // Running Ledger calculations strictly party-wise for the active customer
   const ledgerEntries = useMemo(() => {
-    const baseEntries = [
-      {
-        id: 'ledge-0',
-        date: '2026-08-15',
-        reference: 'OP-BAL-01',
-        particulars: 'Opening Outstanding balance forward',
-        debit: 142500,
-        credit: null,
-        balance: 142500,
-      },
-      {
-        id: 'ledge-1',
-        date: '2026-08-24',
-        reference: 'INV-2026-0988',
-        particulars: 'Invoice for 12W LED Bulbs & Panel Lights',
-        debit: 142500,
-        credit: null,
-        balance: 285000,
-      },
-      {
-        id: 'ledge-2',
-        date: '2026-08-25',
-        reference: 'RC-2026-0988',
-        particulars: 'Bank Online Receipt - Meezan bank transfer',
-        debit: null,
-        credit: 142500,
-        balance: 142500,
-      },
-      {
-        id: 'ledge-3',
-        date: '2026-09-10',
-        reference: 'INV-2026-1044',
-        particulars: 'Invoice for 30W T-Bulbs & Floodlights delivery',
-        debit: 85200,
-        credit: null,
-        balance: 227700,
-      },
-    ];
+    const entries: {
+      id: string;
+      date: string;
+      reference: string;
+      particulars: string;
+      debit: number | null;
+      credit: number | null;
+      balance: number;
+    }[] = [];
 
-    // Combine current user booked orders & recorded recoveries dynamically
-    let currentBal = 227700;
+    // 1. Party Authentic Opening Balance (if any recorded on dealer file)
+    const opBal = activeDealer.openingBalance || 0;
+    if (opBal > 0) {
+      entries.push({
+        id: `op-bal-${activeDealer.id}`,
+        date: activeDealer.createdAt ? activeDealer.createdAt.split('T')[0] : '2026-01-01',
+        reference: `OP-BAL-${activeDealer.customerCode}`,
+        particulars: `Opening Balance Brought Forward (${activeDealer.companyName})`,
+        debit: opBal,
+        credit: null,
+        balance: opBal,
+      });
+    }
 
-    const dynamicInvoices = orders
-      .filter((o) => o.customerId === selectedCustomerId)
+    // 2. Party Approved Sales Orders (Debits)
+    const partyOrders = orders
+      .filter((o) => o.customerId === selectedCustomerId && o.status === 'APPROVED')
       .map((o) => ({
         id: `dyn-inv-${o.id}`,
         date: o.orderDate,
         reference: o.orderNumber,
-        particulars: `Sales Order Booking - Net Trade Total`,
+        particulars: `Sales Order Invoice (${o.items?.length || 0} SKUs) - Auth: ${o.approvedBy || 'Executive'}`,
         debit: o.totalAmount,
         credit: null,
         balance: 0,
       }));
 
-    const dynamicCollections = recoveries
-      .filter((r) => r.customerId === selectedCustomerId)
+    // 3. Party Verified Recoveries (Credits)
+    const partyRecoveries = recoveries
+      .filter((r) => r.customerId === selectedCustomerId && r.status === 'VERIFIED')
       .map((r) => ({
         id: `dyn-rec-${r.id}`,
         date: r.collectionDate,
         reference: r.recoveryNumber,
-        particulars: `${r.paymentMode} Collection logged on beat visit`,
+        particulars: `${r.paymentMode} Collection Verified (${r.instrumentNumber || 'Direct'}) - Sign-off: ${r.verifiedBy || 'Executive'}`,
         debit: null,
         credit: r.amount,
         balance: 0,
       }));
 
-    // Sort chronologically & recompute balances
-    const allEntries = [...baseEntries, ...dynamicInvoices, ...dynamicCollections].sort(
+    // Sort all party transactions chronologically
+    const allEntries = [...entries, ...partyOrders, ...partyRecoveries].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
+    // Compute mathematically verified running balance
     let running = 0;
     return allEntries.map((entry) => {
       if (entry.debit) running += entry.debit;
@@ -733,7 +967,7 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
         balance: running,
       };
     }).reverse(); // Latest on top for high-readability
-  }, [orders, recoveries, selectedCustomerId]);
+  }, [orders, recoveries, selectedCustomerId, activeDealer]);
 
   const handleShareStatement = () => {
     const text = `National Light Pakistan • Statement of Accounts\nDealer: ${activeDealer.companyName} (${activeDealer.customerCode})\nCity: ${activeDealer.city}\nOutstanding Ledger Balance: Rs. ${(activeDealer.currentBalance || 0).toLocaleString()}\nCredit Limit: Rs. ${(activeDealer.creditLimit || 350000).toLocaleString()}\n\nContact Head Office Peshawar for reconciliation.`;
@@ -763,11 +997,15 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
             }}
             className="w-full bg-[#f2f4f6] dark:bg-slate-800 text-[#191c1e] dark:text-white px-4 py-3.5 rounded-xl outline-none focus:ring-2 focus:ring-[#006b5f] transition-all text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-700 appearance-none"
           >
-            {filteredCustomers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.companyName} ({c.city || 'KPK'}) — Bal: Rs. {(c.currentBalance || 0).toLocaleString()}
-              </option>
-            ))}
+            {filteredCustomers.length === 0 ? (
+              <option value="">No Registered Dealers Found (Add in Dealers Tab or Sync Sheet)</option>
+            ) : (
+              filteredCustomers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.companyName} ({c.city || 'KPK'}) — Bal: Rs. {(c.currentBalance || 0).toLocaleString()}
+                </option>
+              ))
+            )}
           </select>
           <span className="material-symbols-outlined absolute right-4 top-3.5 text-slate-400 pointer-events-none">
             expand_more
@@ -826,64 +1064,226 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
           </div>
           <div className="flex items-center justify-between text-[10px] text-slate-400">
             <span>Credit Term: {activeDealer.creditDays || 30} Days</span>
-            <span className={`font-bold ${isCreditExceeded ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {isCreditExceeded ? '⚠️ Credit Limit Exceeded' : '✓ Credit Limit Safe'}
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowRecentOrdersInOrdersTab(!showRecentOrdersInOrdersTab)}
+                className="text-[10px] font-bold text-[#76f4e0] bg-white/10 hover:bg-white/20 px-2.5 py-0.5 rounded-md transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[12px]">receipt_long</span>
+                <span>Recent Orders ({activeDealerRecentOrders.length})</span>
+                <span className="material-symbols-outlined text-[12px]">
+                  {showRecentOrdersInOrdersTab ? 'expand_less' : 'expand_more'}
+                </span>
+              </button>
+              <span className={`font-bold ${isCreditExceeded ? 'text-rose-400' : 'text-emerald-400'}`}>
+                {isCreditExceeded ? '⚠️ Credit Limit Exceeded' : '✓ Credit Limit Safe'}
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Expandable Recent Orders Preview for Active Customer */}
+        {showRecentOrdersInOrdersTab && (
+          <div className="mt-2 pt-3 border-t border-slate-700/60 animate-form-section">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-slate-200 uppercase tracking-wider">
+                Recent Orders for {activeDealer.companyName} (Last 5)
+              </span>
+              <span className="text-[10px] text-slate-400">
+                {activeDealerRecentOrders.length} Booked Orders
+              </span>
+            </div>
+            {activeDealerRecentOrders.length > 0 ? (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {activeDealerRecentOrders.map((ord) => {
+                  const statusBg =
+                    ord.status === 'APPROVED'
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : ord.status === 'REJECTED'
+                      ? 'bg-rose-500/20 text-rose-300'
+                      : 'bg-amber-500/20 text-amber-300';
+                  return (
+                    <div
+                      key={ord.id}
+                      className="p-2 bg-slate-900/80 rounded-xl border border-slate-700/60 flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-[#76f4e0]">{ord.orderNumber}</span>
+                        <span className="text-[10px] text-slate-400">📅 {ord.orderDate}</span>
+                        <span className="text-[10px] text-slate-400">({ord.items?.length || 0} items)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${statusBg}`}>
+                          {ord.status}
+                        </span>
+                        <span className="font-mono font-black text-white">
+                          Rs. {Number(ord.totalAmount || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-center text-xs text-slate-400 py-3 bg-slate-900/50 rounded-xl">
+                No previous orders found for this party.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* 3. Sub-segment Navigation Tabs (Orders / Recovery / Old Invoices / Ledger) */}
-      <div className="flex bg-[#eceef0] dark:bg-slate-900 p-1.5 rounded-2xl gap-1.5 shadow-2xs">
-        <button
-          onClick={() => setActiveMode('order')}
-          className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
-            activeMode === 'order'
-              ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
-              : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
-          <span>Order Entry</span>
-        </button>
+      {/* 3. Sub-segment Navigation Tabs */}
+      {lockModeTo === 'ENTRY' ? (
+        <div className="grid grid-cols-2 bg-[#eceef0] dark:bg-slate-900 p-1.5 rounded-2xl gap-2 shadow-2xs">
+          <button
+            onClick={() => setActiveMode('order')}
+            className={`py-3.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+              activeMode === 'order'
+                ? 'bg-[#006b5f] text-white shadow-sm'
+                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e] dark:hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
+            <span>ORDERING</span>
+          </button>
+          <button
+            onClick={() => setActiveMode('recovery')}
+            className={`py-3.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+              activeMode === 'recovery'
+                ? 'bg-[#006b5f] text-white shadow-sm'
+                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e] dark:hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">add_card</span>
+            <span>RECOVERY</span>
+          </button>
+        </div>
+      ) : lockModeTo === 'LEDGERS' ? (
+        <div className="grid grid-cols-2 bg-[#eceef0] dark:bg-slate-900 p-1.5 rounded-2xl gap-2 shadow-2xs">
+          <button
+            onClick={() => setActiveMode('invoices')}
+            className={`py-3.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+              activeMode === 'invoices'
+                ? 'bg-[#006b5f] text-white shadow-sm'
+                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e] dark:hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">receipt_long</span>
+            <span>INVOICES & BILLING</span>
+          </button>
+          <button
+            onClick={() => setActiveMode('ledger')}
+            className={`py-3.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+              activeMode === 'ledger'
+                ? 'bg-[#006b5f] text-white shadow-sm'
+                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e] dark:hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">account_balance</span>
+            <span>ACCOUNT LEDGER</span>
+          </button>
+        </div>
+      ) : (
+        <div className="flex bg-[#eceef0] dark:bg-slate-900 p-1.5 rounded-2xl gap-1.5 shadow-2xs">
+          <button
+            onClick={() => setActiveMode('order')}
+            className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+              activeMode === 'order'
+                ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
+                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
+            <span>Order Entry</span>
+          </button>
 
-        <button
-          onClick={() => setActiveMode('recovery')}
-          className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
-            activeMode === 'recovery'
-              ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
-              : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">add_card</span>
-          <span>Recovery Entry</span>
-        </button>
+          <button
+            onClick={() => setActiveMode('recovery')}
+            className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+              activeMode === 'recovery'
+                ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
+                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">add_card</span>
+            <span>Recovery Entry</span>
+          </button>
 
-        <button
-          onClick={() => setActiveMode('invoices')}
-          className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
-            activeMode === 'invoices'
-              ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
-              : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">receipt_long</span>
-          <span>Old Invoices</span>
-        </button>
+          <button
+            onClick={() => setActiveMode('invoices')}
+            className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+              activeMode === 'invoices'
+                ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
+                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">receipt_long</span>
+            <span>Old Invoices</span>
+          </button>
 
-        <button
-          onClick={() => setActiveMode('ledger')}
-          className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
-            activeMode === 'ledger'
-              ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
-              : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">account_balance</span>
-          <span>Running Ledger</span>
-        </button>
-      </div>
+          <button
+            onClick={() => setActiveMode('ledger')}
+            className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+              activeMode === 'ledger'
+                ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
+                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">account_balance</span>
+            <span>Running Ledger</span>
+          </button>
+        </div>
+      )}
 
+      {/* Attendance Gate Check for Ordering & Recovery */}
+      {!isCheckedIn && (activeMode === 'order' || activeMode === 'recovery') && (
+        <div className="bg-amber-50 dark:bg-amber-950/40 border-2 border-dashed border-amber-300 dark:border-amber-700/60 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-xs animate-fadeIn">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 dark:bg-amber-400/20 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center border border-amber-300 dark:border-amber-700">
+            <span className="material-symbols-outlined text-[34px]">location_off</span>
+          </div>
+          <div className="max-w-md mx-auto space-y-1.5">
+            <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">
+              Active Town Attendance Required
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+              In accordance with N-LINK 360 enterprise operational rules, you must check into your assigned beat town before recording new sales orders or collecting payment recoveries.
+            </p>
+          </div>
+          {onNavigateToAttendance && (
+            <button
+              onClick={onNavigateToAttendance}
+              className="px-6 py-3 bg-[#006b5f] hover:bg-[#00544a] text-white font-black text-xs rounded-2xl shadow-md inline-flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">event_available</span>
+              <span>Select Assigned Town &amp; Check In</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Active Beat Town Confirmation Banner */}
+      {isCheckedIn && selectedAttendanceTown && (activeMode === 'order' || activeMode === 'recovery') && (
+        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-3 px-4 flex items-center justify-between text-xs animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-bold text-emerald-900 dark:text-emerald-200">
+              Active Beat Town: <span className="font-black underline">{selectedAttendanceTown}</span>
+            </span>
+            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md font-mono font-bold">
+              GPS Verified
+            </span>
+          </div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
+            {filteredCustomers.length} Assigned Dealer{filteredCustomers.length === 1 ? '' : 's'}
+          </span>
+        </div>
+      )}
+
+      {/* When Attendance is verified (or viewing Invoices/Ledgers), render Mode content */}
+      {(isCheckedIn || (activeMode !== 'order' && activeMode !== 'recovery')) && (
+        <>
       {/* =======================================================================
           MODE 1: ORDER ENTRY CATALOG & BOOKING CART
           ======================================================================= */}
@@ -933,320 +1333,207 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
             ))}
           </div>
 
-          {/* Searchable SKU Quick-Select Dropdown Component */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-3xs flex flex-col gap-3 animate-fadeIn">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-[#006b5f] dark:text-[#76f4e0] uppercase tracking-wider flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[18px]">flash_on</span>
-                <span>Searchable SKU Quick-Select Dropdown</span>
-              </span>
+          {/* Tabular Spreadsheet SKU Entry Form with 1 Unified Submit Button */}
+          <div className="flex flex-col gap-2.5">
+            {/* 1 Unified Submit Button Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <div>
+                <h4 className="text-xs font-black uppercase text-slate-800 dark:text-white tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[#006b5f]">table_view</span>
+                  <span>SKU Order Entry Spreadsheet</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Enter carton and pack quantities for any items below, then tap the single submit button to add all items to your cart.
+                </p>
+              </div>
+
               <button
                 type="button"
-                onClick={() => setSkuQuickSelectCollapsed(!skuQuickSelectCollapsed)}
-                className="w-7 h-7 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500"
+                id="primary-bulk-add-cart-btn"
+                disabled={stagedCount === 0}
+                onClick={handleSubmitAllStagedToCart}
+                className={`py-3 px-5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer shrink-0 ${
+                  stagedCount > 0
+                    ? 'bg-[#006b5f] hover:bg-[#005249] text-white ring-2 ring-[#006b5f]/20'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                }`}
               >
-                <span className="material-symbols-outlined transition-transform duration-300">
-                  {skuQuickSelectCollapsed ? 'expand_more' : 'expand_less'}
+                <span className="material-symbols-outlined text-[18px]">
+                  {stagedCount > 0 ? 'shopping_cart_checkout' : 'add_shopping_cart'}
+                </span>
+                <span>
+                  {stagedCount > 0
+                    ? `Submit & Add All ${stagedCount} SKU${stagedCount > 1 ? 's' : ''} (${stagedTotalPieces.toLocaleString()} pcs • Rs. ${stagedTotalAmount.toLocaleString()})`
+                    : 'Add Items to Cart (1 Submit Button)'}
                 </span>
               </button>
             </div>
 
-            {!skuQuickSelectCollapsed && (
-              <div className="flex flex-col gap-3">
-                <p className="text-[10px] text-slate-400 font-medium">
-                  Type any SKU code, name, or bulb wattage to quickly view its real-time warehouse inventory, trade pricing, and book quantities directly without scrolling the sheet.
-                </p>
+            <div className="overflow-x-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <table className="w-full text-left border-collapse min-w-[550px]">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-[10px] font-black tracking-wider text-slate-500 dark:text-slate-400 uppercase">
+                    <th className="p-3.5">SKU Product</th>
+                    <th className="p-3.5 w-24 text-center">Qty Ctns</th>
+                    <th className="p-3.5 w-24 text-center">QTY Pcks</th>
+                    <th className="p-3.5 w-28 text-center">Total Qty Ctns</th>
+                    <th className="p-3.5 w-28 text-right">Value (PKR)</th>
+                    <th className="p-3.5 w-24 text-center">Staged Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredProducts.map((product) => {
+                    const qtyState = cartQuantities[product.id] || { cartons: 0, packs: 0 };
+                    const quantityBox = product.quantityBox || 100;
+                    
+                    // Live math calculations
+                    const totalCartonsCalculated = qtyState.cartons + (qtyState.packs / quantityBox);
+                    const totalPieces = (qtyState.cartons * quantityBox) + qtyState.packs;
+                    const rowAmount = totalPieces * product.listPrice;
 
-                {/* Dropdown Search Box */}
-                <div className="relative">
-                  <div className="flex items-center bg-slate-50 dark:bg-slate-950 rounded-xl px-3.5 py-2.5 border border-slate-200 dark:border-slate-800">
-                    <span className="material-symbols-outlined text-slate-400 mr-2">search</span>
-                    <input
-                      type="text"
-                      value={skuQuickSearchQuery}
-                      onChange={(e) => {
-                        setSkuQuickSearchQuery(e.target.value);
-                        setSkuQuickSelectOpen(true);
-                      }}
-                      onFocus={() => setSkuQuickSelectOpen(true)}
-                      placeholder="Type SKU name/code (e.g., 12W BULB, NL-HW-30W)..."
-                      className="bg-transparent w-full outline-none text-xs sm:text-sm text-[#191c1e] dark:text-white placeholder:text-slate-400 font-bold"
-                    />
-                    {skuQuickSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSkuQuickSearchQuery('');
-                          setSkuQuickSelectOpen(false);
-                        }}
-                        className="text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    return (
+                      <tr
+                        key={product.id}
+                        className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-all text-xs font-semibold ${
+                          totalPieces > 0 ? 'bg-teal-50/30 dark:bg-teal-950/20' : ''
+                        }`}
                       >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Dropdown Results Box */}
-                  {skuQuickSelectOpen && (
-                    <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-[280px] overflow-y-auto z-40 divide-y divide-slate-100 dark:divide-slate-900 animate-slideUp">
-                      {quickSelectFilteredProducts.map((product) => {
-                        // Product avatar gradient depending on categories
-                        const avatarGrad = product.categoryGroup === 'LED_BULB' 
-                          ? 'from-emerald-400 to-green-600' 
-                          : product.categoryGroup === 'HIGH_WATTAGE' 
-                          ? 'from-amber-400 to-orange-600' 
-                          : 'from-blue-400 to-indigo-600';
-
-                        return (
-                          <button
-                            key={product.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedQuickProduct(product);
-                              setSkuQuickSelectOpen(false);
-                            }}
-                            className="w-full text-left p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-900 transition-all text-xs font-semibold"
-                          >
-                            <div className="flex items-center gap-3">
-                              {/* Product Image / Avatar Container */}
-                              <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${avatarGrad} flex items-center justify-center text-white shrink-0 shadow-3xs`}>
-                                <span className="material-symbols-outlined text-[18px]">
-                                  {product.iconName || 'lightbulb'}
-                                </span>
-                              </div>
-                              <div>
-                                <h5 className="font-bold text-slate-800 dark:text-white">{product.name}</h5>
-                                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{product.sku} • {product.specification}</p>
-                              </div>
-                            </div>
-
-                            <div className="text-right flex flex-col gap-1 items-end">
-                              <span className="font-bold text-[#006b5f] dark:text-[#76f4e0] font-mono">
-                                Trade Price: Rs. {product.tradePrice}
-                              </span>
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                                product.stockCount > 1000 
-                                  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' 
-                                  : 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
-                              }`}>
-                                {product.stockCount.toLocaleString()} In Stock
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-
-                      {quickSelectFilteredProducts.length === 0 && (
-                        <div className="p-4 text-center text-slate-400">
-                          No matching SKU found for "{skuQuickSearchQuery}"
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Selected SKU Form Panel */}
-                {selectedQuickProduct && (
-                  <div className="bg-slate-50 dark:bg-slate-950/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3.5 animate-fadeIn">
-                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/60 dark:border-slate-800/60">
-                      <div className="flex items-center gap-2.5">
-                        <span className="material-symbols-outlined text-[#006b5f] text-[20px]">shopping_basket</span>
-                        <div>
-                          <h4 className="font-black text-xs text-slate-800 dark:text-white">
-                            Selected Product: <span className="text-[#006b5f] dark:text-[#76f4e0]">{selectedQuickProduct.name}</span>
-                          </h4>
-                          <p className="text-[10px] text-slate-400 font-mono mt-0.5">{selectedQuickProduct.sku} • Box Size: {selectedQuickProduct.quantityBox || 100} pcs</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedQuickProduct(null)}
-                        className="text-xs font-bold text-slate-400 hover:text-rose-500"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-
-                    {/* Quantity parameters inputs */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Quantity Cartons</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={quickCartons}
-                          onChange={(e) => setQuickCartons(e.target.value)}
-                          placeholder="e.g. 5"
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Quantity Packs / Pcs</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={quickPacks}
-                          onChange={(e) => setQuickPacks(e.target.value)}
-                          placeholder="e.g. 20"
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Real-time Math calculation block */}
-                    {(() => {
-                      const cVal = Math.max(0, parseInt(quickCartons) || 0);
-                      const pVal = Math.max(0, parseInt(quickPacks) || 0);
-                      const boxSize = selectedQuickProduct.quantityBox || 100;
-                      const totalPieces = (cVal * boxSize) + pVal;
-                      const netVal = totalPieces * selectedQuickProduct.listPrice;
-
-                      return (
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[#76f4e0]/5 p-2.5 rounded-xl border border-[#76f4e0]/10 text-xs font-bold mt-1 text-[#006b5f] dark:text-[#76f4e0]">
+                        <td className="p-3">
                           <div className="flex flex-col gap-0.5">
-                            <span>Total Booking Pieces: {totalPieces.toLocaleString()} pcs</span>
-                            <span className="text-[10px] text-slate-400">Equivalent: {(totalPieces / boxSize).toFixed(2)} Cartons</span>
+                            <span className="font-bold text-[#191c1e] dark:text-white truncate max-w-[200px]">
+                              {product.name}
+                            </span>
+                            <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
+                              <span>{product.sku}</span>
+                              <span>•</span>
+                              <span>Box: {quantityBox} pcs</span>
+                              <span>•</span>
+                              <span className="text-[#006b5f] dark:text-[#76f4e0]">Rs. {product.listPrice}</span>
+                            </div>
                           </div>
-                          <span className="text-sm font-black mt-1.5 sm:mt-0 font-mono">
-                            Net Value: Rs. {netVal.toLocaleString()}
-                          </span>
-                        </div>
-                      );
-                    })()}
+                        </td>
+                        <td className="p-3 text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            value={qtyState.cartons || ''}
+                            onChange={(e) => {
+                              const val = Math.max(0, parseInt(e.target.value) || 0);
+                              setCartQuantities((prev) => ({
+                                ...prev,
+                                [product.id]: { ...qtyState, cartons: val },
+                              }));
+                            }}
+                            className="w-16 text-center bg-[#f2f4f6] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1.5 rounded-lg text-xs font-bold text-slate-900 dark:text-white focus:ring-1 focus:ring-[#006b5f]"
+                          />
+                        </td>
+                        <td className="p-3 text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            value={qtyState.packs || ''}
+                            onChange={(e) => {
+                              const val = Math.max(0, parseInt(e.target.value) || 0);
+                              setCartQuantities((prev) => ({
+                                ...prev,
+                                [product.id]: { ...qtyState, packs: val },
+                              }));
+                            }}
+                            className="w-16 text-center bg-[#f2f4f6] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1.5 rounded-lg text-xs font-bold text-slate-900 dark:text-white focus:ring-1 focus:ring-[#006b5f]"
+                          />
+                        </td>
+                        <td className="p-3 text-center font-mono text-slate-600 dark:text-slate-300 font-bold">
+                          {totalCartonsCalculated > 0 ? (
+                            <span>{totalCartonsCalculated.toFixed(2)}</span>
+                          ) : (
+                            <span className="text-slate-300 dark:text-slate-600">—</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right font-mono font-bold text-[#006b5f] dark:text-[#76f4e0]">
+                          {rowAmount > 0 ? (
+                            <span>Rs. {rowAmount.toLocaleString()}</span>
+                          ) : (
+                            <span className="text-slate-300 dark:text-slate-600">—</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          {totalPieces > 0 ? (
+                            <div className="flex items-center justify-center">
+                              <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold rounded-lg text-[10px] whitespace-nowrap shadow-2xs border border-emerald-200 dark:border-emerald-800">
+                                ✓ {totalPieces} pcs staged
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-300 dark:text-slate-600 font-mono text-xs">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                    {/* Add to Order button row */}
-                    <button
-                      type="button"
-                      onClick={handleQuickAddProduct}
-                      className="w-full bg-[#006b5f] hover:bg-[#005047] text-white py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-md"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">add_shopping_cart</span>
-                      <span>Add directly to Order Cart &amp; Table</span>
-                    </button>
-                  </div>
-                )}
+            {/* Bottom 1 Unified Submit Button */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-emerald-50/60 dark:bg-emerald-950/20 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/40">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#006b5f] text-[22px]">inventory_2</span>
+                <div>
+                  <span className="text-xs font-black text-slate-900 dark:text-white block">
+                    {stagedCount > 0 ? `${stagedCount} SKU Product(s) Selected & Ready to Submit` : 'No SKU Quantities Entered Yet'}
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    {stagedCount > 0 ? `Total Value: Rs. ${stagedTotalAmount.toLocaleString()} (${stagedTotalPieces.toLocaleString()} pieces)` : 'Enter carton or pack numbers in the table above'}
+                  </span>
+                </div>
               </div>
-            )}
+
+              <button
+                type="button"
+                id="bottom-bulk-add-cart-btn"
+                disabled={stagedCount === 0}
+                onClick={handleSubmitAllStagedToCart}
+                className={`w-full sm:w-auto py-2.5 px-5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer ${
+                  stagedCount > 0
+                    ? 'bg-[#006b5f] hover:bg-[#005249] text-white ring-2 ring-[#006b5f]/20'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">shopping_cart_checkout</span>
+                <span>Submit &amp; Add All to Cart ({stagedCount} SKUs)</span>
+              </button>
+            </div>
           </div>
 
-          {/* B. Tabular Spreadsheet SKU Entry Form */}
-          <div className="overflow-x-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
-            <table className="w-full text-left border-collapse min-w-[550px]">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-[10px] font-black tracking-wider text-slate-500 dark:text-slate-400 uppercase">
-                  <th className="p-3.5">SKU Product</th>
-                  <th className="p-3.5 w-24 text-center">Qty Ctns</th>
-                  <th className="p-3.5 w-24 text-center">QTY Pcks</th>
-                  <th className="p-3.5 w-28 text-center">Total Qty Ctns</th>
-                  <th className="p-3.5 w-28 text-right">Value (PKR)</th>
-                  <th className="p-3.5 w-16 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredProducts.map((product) => {
-                  const qtyState = cartQuantities[product.id] || { cartons: 0, packs: 0 };
-                  const quantityBox = product.quantityBox || 100;
-                  
-                  // Live math calculations
-                  const totalCartonsCalculated = qtyState.cartons + (qtyState.packs / quantityBox);
-                  const totalPieces = (qtyState.cartons * quantityBox) + qtyState.packs;
-                  const rowAmount = totalPieces * product.listPrice;
+          {/* Floating Sticky Quick-Submit Pill when User has Staged Items */}
+          {stagedCount > 0 && (
+            <div className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-8 sm:max-w-md z-40 bg-[#006b5f] text-white p-3 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border border-teal-400/30">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-black text-xs">
+                  {stagedCount}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-black leading-tight">
+                    {stagedCount} SKU{stagedCount > 1 ? 's' : ''} Staged ({stagedTotalPieces.toLocaleString()} pcs)
+                  </span>
+                  <span className="text-[11px] font-mono text-[#76f4e0] font-bold">
+                    Rs. {stagedTotalAmount.toLocaleString()}
+                  </span>
+                </div>
+              </div>
 
-                  const cartItem = orderCart.find((i) => i.product.id === product.id);
-
-                  return (
-                    <tr
-                      key={product.id}
-                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-all text-xs font-semibold"
-                    >
-                      <td className="p-3">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-bold text-[#191c1e] dark:text-white truncate max-w-[200px]">
-                            {product.name}
-                          </span>
-                          <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
-                            <span>{product.sku}</span>
-                            <span>•</span>
-                            <span>Box: {quantityBox} pcs</span>
-                            <span>•</span>
-                            <span className="text-[#006b5f] dark:text-[#76f4e0]">Rs. {product.listPrice}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-3 text-center">
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={qtyState.cartons || ''}
-                          onChange={(e) => {
-                            const val = Math.max(0, parseInt(e.target.value) || 0);
-                            setCartQuantities((prev) => ({
-                              ...prev,
-                              [product.id]: { ...qtyState, cartons: val },
-                            }));
-                          }}
-                          className="w-16 text-center bg-[#f2f4f6] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1.5 rounded-lg text-xs font-bold text-slate-900 dark:text-white"
-                        />
-                      </td>
-                      <td className="p-3 text-center">
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={qtyState.packs || ''}
-                          onChange={(e) => {
-                            const val = Math.max(0, parseInt(e.target.value) || 0);
-                            setCartQuantities((prev) => ({
-                              ...prev,
-                              [product.id]: { ...qtyState, packs: val },
-                            }));
-                          }}
-                          className="w-16 text-center bg-[#f2f4f6] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1.5 rounded-lg text-xs font-bold text-slate-900 dark:text-white"
-                        />
-                      </td>
-                      <td className="p-3 text-center font-mono text-slate-600 dark:text-slate-300 font-bold">
-                        {totalCartonsCalculated > 0 ? (
-                          <span>{totalCartonsCalculated.toFixed(2)}</span>
-                        ) : (
-                          <span className="text-slate-300 dark:text-slate-600">—</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-right font-mono font-bold text-[#006b5f] dark:text-[#76f4e0]">
-                        {rowAmount > 0 ? (
-                          <span>Rs. {rowAmount.toLocaleString()}</span>
-                        ) : (
-                          <span className="text-slate-300 dark:text-slate-600">—</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        <button
-                          type="button"
-                          disabled={totalPieces === 0}
-                          onClick={() => {
-                            addToCart(product, totalPieces);
-                            // Reset inputs for this row
-                            setCartQuantities((prev) => ({
-                              ...prev,
-                              [product.id]: { cartons: 0, packs: 0 },
-                            }));
-                          }}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center text-white transition-all ${
-                            totalPieces > 0
-                              ? 'bg-[#006b5f] hover:bg-[#005047] active:scale-90'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-700 cursor-not-allowed'
-                          }`}
-                          title="Add items to cart"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">add_shopping_cart</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+              <button
+                type="button"
+                onClick={handleSubmitAllStagedToCart}
+                className="px-4 py-2 bg-white text-[#006b5f] hover:bg-teal-50 font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Submit to Cart</span>
+                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              </button>
+            </div>
+          )}
 
           {/* Checkout Booking Cart Summary Box */}
           {orderCart.length > 0 ? (
@@ -1347,11 +1634,14 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
                   rows={2}
                 />
                 <button
+                  type="button"
+                  id="open-booking-drawer-btn"
                   onClick={handleOrderSubmitClick}
-                  className="w-full bg-[#006b5f] hover:bg-[#005047] text-white py-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-98 transition-all"
+                  className="w-full bg-[#006b5f] hover:bg-[#005047] text-white py-3.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-md active:scale-98 transition-all cursor-pointer min-h-[44px]"
+                  title="Proceed to Order Booking Drawer to submit all cart items as 1 single transaction"
                 >
-                  <span className="material-symbols-outlined text-[18px]">verified</span>
-                  <span>Clear Credit &amp; Book Order</span>
+                  <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+                  <span>Proceed to Order Booking Drawer ({orderCart.length} SKUs • Rs. {cartTotal.toLocaleString()})</span>
                 </button>
               </div>
             </div>
@@ -1530,197 +1820,431 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
 
           <button
             type="submit"
-            className="w-full bg-[#001428] dark:bg-slate-800 hover:bg-[#002850] dark:hover:bg-slate-700 text-white dark:text-[#76f4e0] py-3.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-md mt-1 border border-transparent dark:border-slate-700"
+            disabled={isSubmittingRecovery}
+            className="w-full bg-[#001428] dark:bg-slate-800 hover:bg-[#002850] dark:hover:bg-slate-700 disabled:opacity-50 text-white dark:text-[#76f4e0] py-3.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-md mt-1 border border-transparent dark:border-slate-700"
           >
-            <span className="material-symbols-outlined text-[18px]">add_card</span>
-            <span>Record Recovery &amp; Recalculate Balance</span>
+            {isSubmittingRecovery ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white dark:border-[#76f4e0] border-t-transparent rounded-full animate-spin" />
+                <span>Recording Recovery...</span>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[18px]">add_card</span>
+                <span>Record Recovery &amp; Recalculate Balance</span>
+              </>
+            )}
           </button>
         </form>
       )}
 
       {/* =======================================================================
-          MODE 3: DEALER INVOICE DIRECTORY (WITH MULTI-SELECT MONTHS & MODAL)
+          MODE 3: PARTY-WISE INVOICE REGISTRY & PARTY DIRECTORY
           ======================================================================= */}
       {activeMode === 'invoices' && (
-        <div className="flex flex-col gap-3.5 animate-fadeIn" id="invoice-registry-view">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-            <h3 className="text-sm font-black text-[#191c1e] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[#006b5f]">receipt_long</span>
-              <span>Invoice Registry ({dealerInvoices.length})</span>
-            </h3>
-            <span className="text-[10px] text-slate-400 font-mono">Issued to: {activeDealer.companyName}</span>
+        <div className="flex flex-col gap-4 animate-fadeIn" id="invoice-registry-view">
+          {/* 1. Party-Wise View Navigation Switcher */}
+          <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-2.5">
+            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setInvoiceViewMode('SINGLE_PARTY')}
+                className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  invoiceViewMode === 'SINGLE_PARTY'
+                    ? 'bg-[#006b5f] text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">storefront</span>
+                <span className="truncate max-w-[180px]">
+                  {activeDealer.companyName}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setInvoiceViewMode('ALL_PARTIES_DIRECTORY')}
+                className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  invoiceViewMode === 'ALL_PARTIES_DIRECTORY'
+                    ? 'bg-[#006b5f] text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">folder_shared</span>
+                <span>All Parties Directory ({filteredCustomers.length})</span>
+              </button>
+            </div>
+
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden sm:inline">
+              Party-Wise Isolation Mode
+            </span>
           </div>
 
-          {/* Multi-Select Month Filter Pills */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Filter Months (Multi-Select)</span>
-            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-              {['All Months', 'Oct 2026', 'Sep 2026', 'Aug 2026'].map((m) => {
-                const isActive = invoiceSelectedMonths.includes(m);
-                return (
+          {/* VIEW A: ALL PARTIES DIRECTORY */}
+          {invoiceViewMode === 'ALL_PARTIES_DIRECTORY' ? (
+            <div className="flex flex-col gap-3">
+              {/* Directory Search */}
+              <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-slate-400 text-[20px]">search</span>
+                <input
+                  type="text"
+                  placeholder="Search party by dealer name, code, or city..."
+                  value={partyDirectorySearch}
+                  onChange={(e) => setPartyDirectorySearch(e.target.value)}
+                  className="w-full bg-transparent text-xs font-bold text-slate-800 dark:text-white outline-none placeholder:text-slate-400"
+                />
+                {partyDirectorySearch && (
                   <button
-                    key={m}
                     type="button"
-                    onClick={() => {
-                      if (m === 'All Months') {
-                        setInvoiceSelectedMonths(['All Months']);
-                      } else {
-                        let filtered = invoiceSelectedMonths.filter(x => x !== 'All Months');
-                        if (filtered.includes(m)) {
-                          filtered = filtered.filter(x => x !== m);
-                        } else {
-                          filtered.push(m);
-                        }
-                        if (filtered.length === 0) filtered = ['All Months'];
-                        setInvoiceSelectedMonths(filtered);
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
-                      isActive
-                        ? 'bg-[#006b5f] border-[#006b5f] text-white shadow-2xs'
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'
-                    }`}
+                    onClick={() => setPartyDirectorySearch('')}
+                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white"
                   >
-                    {m}
+                    ✕
                   </button>
-                );
-              })}
+                )}
+              </div>
+
+              {/* Parties Grid / Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {filteredCustomers
+                  .filter((c) => {
+                    if (!partyDirectorySearch) return true;
+                    const q = partyDirectorySearch.toLowerCase();
+                    return (
+                      c.companyName.toLowerCase().includes(q) ||
+                      c.customerCode.toLowerCase().includes(q) ||
+                      (c.city && c.city.toLowerCase().includes(q))
+                    );
+                  })
+                  .map((dealer) => {
+                    const partyOrderCount = orders.filter((o) => o.customerId === dealer.id).length;
+                    const isCurrent = dealer.id === selectedCustomerId;
+
+                    return (
+                      <div
+                        key={dealer.id}
+                        className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 shadow-2xs ${
+                          isCurrent
+                            ? 'border-[#006b5f] dark:border-[#76f4e0] ring-1 ring-[#006b5f]/30'
+                            : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-black text-slate-900 dark:text-white">
+                              {dealer.companyName}
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
+                              <span className="font-bold text-slate-600 dark:text-slate-300">{dealer.customerCode}</span>
+                              <span>•</span>
+                              <span>{dealer.city || 'Khyber Pakhtunkhwa'}</span>
+                            </div>
+                          </div>
+
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                            {partyOrderCount} Invoice{partyOrderCount !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                          <div>
+                            <span className="text-[9px] text-slate-400 block uppercase font-bold">Ledger Balance</span>
+                            <span className="text-xs font-black font-mono text-[#006b5f] dark:text-[#76f4e0]">
+                              Rs. {(dealer.currentBalance || 0).toLocaleString()}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomerId(dealer.id);
+                              setInvoiceViewMode('SINGLE_PARTY');
+                              triggerToast(`Switched to party: ${dealer.companyName}`);
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                              isCurrent
+                                ? 'bg-[#006b5f] text-white'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-[#006b5f] hover:text-white'
+                            }`}
+                          >
+                            <span>Open Invoices</span>
+                            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
-          </div>
-
-          {/* Dealer Reconciliation Document Export Panel */}
-          <div className="bg-emerald-50/60 dark:bg-emerald-950/20 p-3.5 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 flex flex-col gap-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black text-[#006b5f] dark:text-[#76f4e0] uppercase tracking-wider flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px]">download</span>
-                <span>Dealer Reconciliation Document Export</span>
-              </span>
-              <span className="text-[8px] text-emerald-800 dark:text-emerald-400 font-bold bg-emerald-100/60 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Full Statement Reports
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <button
-                type="button"
-                onClick={handleExportCSV}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[#43474d] dark:text-slate-300 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300"
-              >
-                <span className="material-symbols-outlined text-teal-600 text-[18px]">csv</span>
-                <span>Export CSV</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportExcel}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[#43474d] dark:text-slate-300 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300"
-              >
-                <span className="material-symbols-outlined text-emerald-600 text-[18px]">table_chart</span>
-                <span>Excel (XLS)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportWord}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[#43474d] dark:text-slate-300 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300"
-              >
-                <span className="material-symbols-outlined text-blue-600 text-[18px]">article</span>
-                <span>Word (DOC)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportPDF}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-2xs"
-              >
-                <span className="material-symbols-outlined text-white text-[18px]">picture_as_pdf</span>
-                <span>Save PDF</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {dealerInvoices
-              .filter((inv) => {
-                if (invoiceSelectedMonths.includes('All Months')) return true;
-                // Match invoice date to selected months: e.g. "2026-09-10" matches "Sep 2026"
-                const dateObj = new Date(inv.date);
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const invMonthYear = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-                return invoiceSelectedMonths.includes(invMonthYear);
-              })
-              .map((inv) => (
-                <div
-                  key={inv.id}
-                  className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3 hover:border-slate-300 dark:hover:border-[#76f4e0]/30 transition-all shadow-2xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[#006b5f] text-[20px]">description</span>
-                      <span className="text-sm sm:text-base font-bold text-[#191c1e] dark:text-white font-mono">
-                        {inv.invoiceNo}
-                      </span>
+          ) : (
+            /* VIEW B: STRICTLY ISOLATED SINGLE-PARTY INVOICE ARCHIVE */
+            <div className="flex flex-col gap-3.5">
+              {/* Active Party Profile Header with Quick Switcher */}
+              <div className="bg-[#001428] dark:bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 shadow-md flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#76f4e0]/10 text-[#76f4e0] flex items-center justify-center font-black">
+                      <span className="material-symbols-outlined text-[20px]">verified</span>
                     </div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${inv.badgeColor}`}>
-                      {inv.status}
-                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-black text-white">{activeDealer.companyName}</h4>
+                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-md uppercase font-mono">
+                          {activeDealer.customerCode}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300">
+                        {activeDealer.contactPerson} • {activeDealer.phone} • {activeDealer.city}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex justify-between items-center text-xs sm:text-sm text-slate-500">
-                    <span>Issued Date: {inv.date}</span>
-                    <span className="text-sm font-bold text-[#001428] dark:text-[#76f4e0] font-mono">
-                      Rs. {inv.amount.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <p className="text-[10px] text-slate-400">Items Booked: {inv.itemsCount} SKUs from National Light Rate list</p>
-
-                  <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedInvoiceModal(inv)}
-                      className="bg-[#f2f4f6] dark:bg-slate-800 text-[#191c1e] dark:text-slate-200 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">visibility</span>
-                      <span>Inspect Mobile</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const text = `National Light Pakistan • Official Invoice ${inv.invoiceNo}\nDealer: ${activeDealer.companyName} (${activeDealer.customerCode})\nTotal Amount: Rs. ${inv.amount.toLocaleString()}\nStatus: Verified & Signed\n\nContact Head Office Peshawar for any questions.`;
-                        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] text-slate-400 font-bold uppercase whitespace-nowrap">
+                      Party Switcher:
+                    </label>
+                    <select
+                      value={selectedCustomerId}
+                      onChange={(e) => {
+                        setSelectedCustomerId(e.target.value);
+                        triggerToast('Switched party view');
                       }}
-                      className="bg-[#006b5f] text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#005047]"
+                      className="bg-slate-800 border border-slate-700 text-white text-xs font-bold rounded-xl px-2.5 py-1.5 outline-none cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px]">share</span>
-                      <span>Share invoice</span>
-                    </button>
+                      {filteredCustomers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.companyName} ({c.customerCode})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              ))}
 
-            {dealerInvoices.length === 0 && (
-              <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center">
-                <span className="material-symbols-outlined text-slate-300 text-[40px] mb-2">article</span>
-                <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs">No Invoice Record Exist</h4>
-                <p className="text-[10px] text-slate-400">This account has no booked invoice records logged yet.</p>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/80 text-center">
+                  <div className="bg-white/5 p-2 rounded-xl">
+                    <span className="text-[9px] text-slate-400 uppercase font-bold block">Credit Limit</span>
+                    <span className="text-xs font-black font-mono text-white mt-0.5 block">
+                      Rs. {(activeDealer.creditLimit || 350000).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl">
+                    <span className="text-[9px] text-slate-400 uppercase font-bold block">Current Balance</span>
+                    <span className="text-xs font-black font-mono text-[#76f4e0] mt-0.5 block">
+                      Rs. {(activeDealer.currentBalance || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl">
+                    <span className="text-[9px] text-slate-400 uppercase font-bold block">Party Invoices</span>
+                    <span className="text-xs font-black font-mono text-white mt-0.5 block">
+                      {dealerInvoices.length} Total
+                    </span>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* Multi-Select Month Filter Pills */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                  Filter Party Invoices by Month
+                </span>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {['All Months', 'Oct 2026', 'Sep 2026', 'Aug 2026'].map((m) => {
+                    const isActive = invoiceSelectedMonths.includes(m);
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                          if (m === 'All Months') {
+                            setInvoiceSelectedMonths(['All Months']);
+                          } else {
+                            let filtered = invoiceSelectedMonths.filter((x) => x !== 'All Months');
+                            if (filtered.includes(m)) {
+                              filtered = filtered.filter((x) => x !== m);
+                            } else {
+                              filtered.push(m);
+                            }
+                            if (filtered.length === 0) filtered = ['All Months'];
+                            setInvoiceSelectedMonths(filtered);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
+                          isActive
+                            ? 'bg-[#006b5f] border-[#006b5f] text-white shadow-2xs'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Dealer Reconciliation Document Export Panel */}
+              <div className="bg-emerald-50/60 dark:bg-emerald-950/20 p-3.5 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 flex flex-col gap-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-[#006b5f] dark:text-[#76f4e0] uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <span>Party Reconciliation Export ({activeDealer.companyName})</span>
+                  </span>
+                  <span className="text-[8px] text-emerald-800 dark:text-emerald-400 font-bold bg-emerald-100/60 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    Official Invoices
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleExportCSV}
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[#43474d] dark:text-slate-300 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300"
+                  >
+                    <span className="material-symbols-outlined text-teal-600 text-[18px]">csv</span>
+                    <span>Export CSV</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExportExcel}
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[#43474d] dark:text-slate-300 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300"
+                  >
+                    <span className="material-symbols-outlined text-emerald-600 text-[18px]">table_chart</span>
+                    <span>Excel (XLS)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExportWord}
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[#43474d] dark:text-slate-300 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300"
+                  >
+                    <span className="material-symbols-outlined text-blue-600 text-[18px]">article</span>
+                    <span>Word (DOC)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExportPDF}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-2xs"
+                  >
+                    <span className="material-symbols-outlined text-white text-[18px]">picture_as_pdf</span>
+                    <span>Save PDF</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Invoices for this specific party */}
+              <div className="flex flex-col gap-3">
+                {dealerInvoices
+                  .filter((inv) => {
+                    if (invoiceSelectedMonths.includes('All Months')) return true;
+                    const dateObj = new Date(inv.date);
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const invMonthYear = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+                    return invoiceSelectedMonths.includes(invMonthYear);
+                  })
+                  .map((inv) => (
+                    <div
+                      key={inv.id}
+                      className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3 hover:border-slate-300 dark:hover:border-[#76f4e0]/30 transition-all shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[#006b5f] text-[20px]">description</span>
+                          <span className="text-sm sm:text-base font-bold text-[#191c1e] dark:text-white font-mono">
+                            {inv.invoiceNo}
+                          </span>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${inv.badgeColor}`}>
+                          {inv.status}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs sm:text-sm text-slate-500">
+                        <span>Issued Date: {inv.date}</span>
+                        <span className="text-sm font-bold text-[#001428] dark:text-[#76f4e0] font-mono">
+                          Rs. {inv.amount.toLocaleString()}
+                        </span>
+                      </div>
+
+                      <p className="text-[10px] text-slate-400">
+                        Items Booked: {inv.itemsCount} SKUs from National Light Rate list • Party: {activeDealer.companyName}
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedInvoiceModal(inv)}
+                          className="bg-[#f2f4f6] dark:bg-slate-800 text-[#191c1e] dark:text-slate-200 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">visibility</span>
+                          <span>Inspect Invoice</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const text = `National Light Pakistan • Official Invoice ${inv.invoiceNo}\nDealer: ${activeDealer.companyName} (${activeDealer.customerCode})\nTotal Amount: Rs. ${inv.amount.toLocaleString()}\nStatus: Verified & Signed\n\nContact Head Office Peshawar for any questions.`;
+                            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                          }}
+                          className="bg-[#006b5f] text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#005047]"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">share</span>
+                          <span>Share Invoice</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                {dealerInvoices.length === 0 && (
+                  <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center">
+                    <span className="material-symbols-outlined text-slate-300 text-[40px] mb-2">article</span>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs">No Invoices for {activeDealer.companyName}</h4>
+                    <p className="text-[10px] text-slate-400">This specific party currently has no invoice records logged.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* =======================================================================
-          MODE 4: RUNNING DOUBLE-ENTRY LEDGER SHEET WITH DATE RANGE FILTERING
+          MODE 4: PARTY-WISE RUNNING DOUBLE-ENTRY LEDGER SHEET & DIRECTORY
           ======================================================================= */}
       {activeMode === 'ledger' && (
-        <div className="flex flex-col gap-3.5 animate-fadeIn" id="ledger-book-view">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-            <h3 className="text-sm font-black text-[#191c1e] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[#006b5f]">account_balance_wallet</span>
-              <span>Account Ledger Book</span>
-            </h3>
-            <div className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-4 animate-fadeIn" id="ledger-book-view">
+          {/* 1. Party-Wise View Navigation Switcher */}
+          <div className="bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-2.5">
+            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setLedgerViewMode('SINGLE_PARTY')}
+                className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  ledgerViewMode === 'SINGLE_PARTY'
+                    ? 'bg-[#006b5f] text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
+                <span className="truncate max-w-[180px]">
+                  {activeDealer.companyName}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLedgerViewMode('ALL_PARTIES_DIRECTORY')}
+                className={`flex-1 sm:flex-initial px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  ledgerViewMode === 'ALL_PARTIES_DIRECTORY'
+                    ? 'bg-[#006b5f] text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">menu_book</span>
+                <span>All Parties Ledger Directory ({filteredCustomers.length})</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -1729,15 +2253,15 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
                     window.print();
                   }, 150);
                 }}
-                className="text-[11px] font-black text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all"
+                className="text-[11px] font-black text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-xs"
               >
                 <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
-                <span>Print Ledger (PDF)</span>
+                <span>Print Ledger</span>
               </button>
               <button
                 type="button"
                 onClick={handleShareStatement}
-                className="text-[11px] font-bold text-[#006b5f] dark:text-[#76f4e0] hover:underline flex items-center gap-1 bg-[#76f4e0]/20 dark:bg-[#76f4e0]/10 px-2.5 py-1.5 rounded-xl"
+                className="text-[11px] font-bold text-[#006b5f] dark:text-[#76f4e0] flex items-center gap-1 bg-[#76f4e0]/20 dark:bg-[#76f4e0]/10 px-2.5 py-1.5 rounded-xl cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[14px]">share</span>
                 <span>Share</span>
@@ -1745,189 +2269,435 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
             </div>
           </div>
 
-          {/* Date range selection */}
-          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col gap-3">
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-wide block">Ledger Date &amp; Month Range</span>
-            
-            {/* Multi-Select Month Filter Pills for Ledger */}
-            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-              {['All Months', 'Oct 2026', 'Sep 2026', 'Aug 2026'].map((m) => {
-                const isActive = ledgerSelectedMonths.includes(m);
-                return (
+          {/* VIEW A: ALL PARTIES LEDGER DIRECTORY */}
+          {ledgerViewMode === 'ALL_PARTIES_DIRECTORY' ? (
+            <div className="flex flex-col gap-3">
+              {/* Directory Search */}
+              <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-slate-400 text-[20px]">search</span>
+                <input
+                  type="text"
+                  placeholder="Search party ledger by dealer name, code, or city..."
+                  value={partyLedgerSearch}
+                  onChange={(e) => setPartyLedgerSearch(e.target.value)}
+                  className="w-full bg-transparent text-xs font-bold text-slate-800 dark:text-white outline-none placeholder:text-slate-400"
+                />
+                {partyLedgerSearch && (
                   <button
-                    key={m}
                     type="button"
-                    onClick={() => {
-                      if (m === 'All Months') {
-                        setLedgerSelectedMonths(['All Months']);
-                      } else {
-                        let filtered = ledgerSelectedMonths.filter(x => x !== 'All Months');
-                        if (filtered.includes(m)) {
-                          filtered = filtered.filter(x => x !== m);
-                        } else {
-                          filtered.push(m);
-                        }
-                        if (filtered.length === 0) filtered = ['All Months'];
-                        setLedgerSelectedMonths(filtered);
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
-                      isActive
-                        ? 'bg-[#006b5f] border-[#006b5f] text-white shadow-2xs'
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'
-                    }`}
+                    onClick={() => setPartyLedgerSearch('')}
+                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white"
                   >
-                    {m}
+                    ✕
                   </button>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-bold text-slate-400 uppercase">From Date</span>
-                <input
-                  type="date"
-                  value={ledgerStartDate}
-                  onChange={(e) => setLedgerStartDate(e.target.value)}
-                  className="bg-[#f2f4f6] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-white px-3 py-2 rounded-xl outline-none font-bold font-mono"
-                />
+                )}
               </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-bold text-slate-400 uppercase">To Date</span>
-                <input
-                  type="date"
-                  value={ledgerEndDate}
-                  onChange={(e) => setLedgerEndDate(e.target.value)}
-                  className="bg-[#f2f4f6] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-white px-3 py-2 rounded-xl outline-none font-bold font-mono"
-                />
-              </div>
-            </div>
-          </div>
 
-          {/* Detailed Ledger Calculations Card */}
-          {(() => {
-            // Divide base entries and dynamic entries
-            const allEntriesComputed = [...ledgerEntries].reverse(); // Sort chronologically ascending
-            
-            // 1. Calculate Opening Balance prior to ledgerStartDate
-            let openingBalance = 0;
-            const entriesInRange: typeof ledgerEntries = [];
-            
-            allEntriesComputed.forEach((entry) => {
-              const matchesMonthFilter = () => {
-                if (ledgerSelectedMonths.includes('All Months')) return true;
-                const dateObj = new Date(entry.date);
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const entMonthYear = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-                return ledgerSelectedMonths.includes(entMonthYear);
-              };
-
-              const isBeforeStart = new Date(entry.date).getTime() < new Date(ledgerStartDate).getTime();
-              const isAfterEnd = new Date(entry.date).getTime() > new Date(ledgerEndDate).getTime();
-
-              if (isBeforeStart) {
-                // Accumulate to opening balance
-                if (entry.debit) openingBalance += entry.debit;
-                if (entry.credit) openingBalance -= entry.credit;
-              } else if (!isAfterEnd && matchesMonthFilter()) {
-                entriesInRange.push(entry);
-              }
-            });
-
-            // Re-map running balance in range starting from Opening Balance
-            let currentRunning = openingBalance;
-            const finalRenderableEntries = entriesInRange.map((entry) => {
-              if (entry.debit) currentRunning += entry.debit;
-              if (entry.credit) currentRunning -= entry.credit;
-              return {
-                ...entry,
-                balance: currentRunning,
-              };
-            }).reverse(); // Latest on top for high readability
-
-            const totalDebits = entriesInRange.reduce((sum, e) => sum + (e.debit || 0), 0);
-            const totalCredits = entriesInRange.reduce((sum, e) => sum + (e.credit || 0), 0);
-
-            return (
-              <div className="flex flex-col gap-3">
-                {/* Mathematical Opening Balance Card */}
-                <div className="grid grid-cols-4 gap-2 bg-[#0f2942] dark:bg-slate-950 p-3 rounded-2xl text-white border border-[#1a3b5c] text-center">
-                  <div className="border-r border-slate-700/60 p-1">
-                    <span className="text-[8px] text-slate-400 block uppercase font-bold">Opening Bal</span>
-                    <span className="text-[11px] sm:text-xs font-black font-mono block text-[#76f4e0] mt-0.5">
-                      Rs. {openingBalance.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="border-r border-slate-700/60 p-1">
-                    <span className="text-[8px] text-slate-400 block uppercase font-bold">Range Debit</span>
-                    <span className="text-[11px] sm:text-xs font-black font-mono block text-rose-400 mt-0.5">
-                      +Rs. {totalDebits.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="border-r border-slate-700/60 p-1">
-                    <span className="text-[8px] text-slate-400 block uppercase font-bold">Range Credit</span>
-                    <span className="text-[11px] sm:text-xs font-black font-mono block text-emerald-400 mt-0.5">
-                      -Rs. {totalCredits.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="p-1">
-                    <span className="text-[8px] text-slate-400 block uppercase font-bold">Closing Bal</span>
-                    <span className="text-[11px] sm:text-xs font-black font-mono block text-amber-300 mt-0.5">
-                      Rs. {currentRunning.toLocaleString()}
-                    </span>
-                  </div>
+              {/* Outstanding Portfolio Summary Card */}
+              <div className="grid grid-cols-3 gap-2 bg-[#001428] text-white p-3.5 rounded-2xl border border-slate-800 text-center">
+                <div>
+                  <span className="text-[9px] text-slate-400 uppercase font-bold block">Assigned Parties</span>
+                  <span className="text-sm font-black font-mono text-white mt-0.5 block">
+                    {filteredCustomers.length} Accounts
+                  </span>
                 </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 uppercase font-bold block">Total Outstanding</span>
+                  <span className="text-sm font-black font-mono text-[#76f4e0] mt-0.5 block">
+                    Rs. {filteredCustomers.reduce((acc, c) => acc + (c.currentBalance || 0), 0).toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 uppercase font-bold block">Credit Lines</span>
+                  <span className="text-sm font-black font-mono text-emerald-300 mt-0.5 block">
+                    Rs. {filteredCustomers.reduce((acc, c) => acc + (c.creditLimit || 0), 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
 
-                {/* Ledger Sheet Table */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs min-w-[550px]">
-                      <thead>
-                        <tr className="bg-[#f2f4f6] dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 font-bold uppercase tracking-wider text-[10px]">
-                          <th className="py-3 px-3.5">Date</th>
-                          <th className="py-3 px-3.5">Reference No</th>
-                          <th className="py-3 px-3.5">Particulars Description</th>
-                          <th className="py-3 px-3.5 text-right">Debit (INV+)</th>
-                          <th className="py-3 px-3.5 text-right">Credit (REC-)</th>
-                          <th className="py-3 px-3.5 text-right">Balance</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold text-slate-700 dark:text-slate-300">
-                        {finalRenderableEntries.map((entry) => (
-                          <tr
-                            key={entry.id}
-                            className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all font-sans"
+              {/* Parties Ledger Cards List */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {filteredCustomers
+                  .filter((c) => {
+                    if (!partyLedgerSearch) return true;
+                    const q = partyLedgerSearch.toLowerCase();
+                    return (
+                      c.companyName.toLowerCase().includes(q) ||
+                      c.customerCode.toLowerCase().includes(q) ||
+                      (c.city && c.city.toLowerCase().includes(q))
+                    );
+                  })
+                  .map((dealer) => {
+                    const isCurrent = dealer.id === selectedCustomerId;
+                    const bal = dealer.currentBalance || 0;
+                    const lim = dealer.creditLimit || 350000;
+                    const usagePct = Math.min(100, Math.round((bal / lim) * 100));
+
+                    return (
+                      <div
+                        key={dealer.id}
+                        className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 shadow-2xs ${
+                          isCurrent
+                            ? 'border-[#006b5f] dark:border-[#76f4e0] ring-1 ring-[#006b5f]/30'
+                            : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-black text-slate-900 dark:text-white">
+                              {dealer.companyName}
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
+                              <span className="font-bold text-slate-600 dark:text-slate-300">{dealer.customerCode}</span>
+                              <span>•</span>
+                              <span>{dealer.city || 'Khyber Pakhtunkhwa'}</span>
+                            </div>
+                          </div>
+
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            bal > 0 ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300' : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
+                          }`}>
+                            {bal > 0 ? 'Balance Due' : 'Settled'}
+                          </span>
+                        </div>
+
+                        {/* Credit Bar */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                            <span>Balance: Rs. {bal.toLocaleString()}</span>
+                            <span>Limit: Rs. {lim.toLocaleString()}</span>
+                          </div>
+                          <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${usagePct > 90 ? 'bg-rose-500' : usagePct > 70 ? 'bg-amber-500' : 'bg-[#006b5f]'}`}
+                              style={{ width: `${usagePct}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                          <span className="text-[10px] text-slate-400">
+                            {usagePct}% Credit Utilized
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomerId(dealer.id);
+                              setLedgerViewMode('SINGLE_PARTY');
+                              triggerToast(`Opened ledger for party: ${dealer.companyName}`);
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                              isCurrent
+                                ? 'bg-[#006b5f] text-white'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-[#006b5f] hover:text-white'
+                            }`}
                           >
-                            <td className="py-3 px-3.5 whitespace-nowrap text-slate-400">{entry.date}</td>
-                            <td className="py-3 px-3.5 font-mono text-slate-800 dark:text-slate-100 font-bold">{entry.reference}</td>
-                            <td className="py-3 px-3.5 text-[11px] leading-relaxed max-w-[180px] truncate">{entry.particulars}</td>
-                            <td className="py-3 px-3.5 text-right font-mono font-bold text-rose-500">
-                              {entry.debit ? `+Rs. ${entry.debit.toLocaleString()}` : '—'}
-                            </td>
-                            <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-500">
-                              {entry.credit ? `-Rs. ${entry.credit.toLocaleString()}` : '—'}
-                            </td>
-                            <td className="py-3 px-3.5 text-right font-mono font-bold text-[#001428] dark:text-[#76f4e0]">
-                              Rs. {entry.balance.toLocaleString()}
-                            </td>
-                          </tr>
-                        ))}
+                            <span>Open Party Ledger</span>
+                            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          ) : (
+            /* VIEW B: STRICTLY ISOLATED SINGLE-PARTY LEDGER SHEET */
+            <div className="flex flex-col gap-3.5">
+              {/* Active Party Profile Header with Quick Switcher */}
+              <div className="bg-[#001428] dark:bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 shadow-md flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#76f4e0]/10 text-[#76f4e0] flex items-center justify-center font-black">
+                      <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-black text-white">{activeDealer.companyName}</h4>
+                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold rounded-md uppercase font-mono">
+                          {activeDealer.customerCode}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300">
+                        {activeDealer.contactPerson} • {activeDealer.phone} • {activeDealer.city}
+                      </p>
+                    </div>
+                  </div>
 
-                        {finalRenderableEntries.length === 0 && (
-                          <tr>
-                            <td colSpan={6} className="text-center py-8 text-slate-400 font-medium">
-                              No transaction ledger records within date range.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] text-slate-400 font-bold uppercase whitespace-nowrap">
+                      Party Switcher:
+                    </label>
+                    <select
+                      value={selectedCustomerId}
+                      onChange={(e) => {
+                        setSelectedCustomerId(e.target.value);
+                        triggerToast('Switched party ledger');
+                      }}
+                      className="bg-slate-800 border border-slate-700 text-white text-xs font-bold rounded-xl px-2.5 py-1.5 outline-none cursor-pointer"
+                    >
+                      {filteredCustomers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.companyName} ({c.customerCode})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/80 text-center">
+                  <div className="bg-white/5 p-2 rounded-xl">
+                    <span className="text-[9px] text-slate-400 uppercase font-bold block">Credit Limit</span>
+                    <span className="text-xs font-black font-mono text-white mt-0.5 block">
+                      Rs. {(activeDealer.creditLimit || 350000).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl">
+                    <span className="text-[9px] text-slate-400 uppercase font-bold block">Current Balance</span>
+                    <span className="text-xs font-black font-mono text-[#76f4e0] mt-0.5 block">
+                      Rs. {(activeDealer.currentBalance || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl">
+                    <span className="text-[9px] text-slate-400 uppercase font-bold block">Opening Balance</span>
+                    <span className="text-xs font-black font-mono text-amber-300 mt-0.5 block">
+                      Rs. {(activeDealer.openingBalance || 0).toLocaleString()}
+                    </span>
                   </div>
                 </div>
               </div>
-            );
-          })()}
+
+              {/* Date & Month range selection */}
+              <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col gap-3">
+                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wide block">
+                  Party Ledger Date &amp; Month Range
+                </span>
+                
+                {/* Multi-Select Month Filter Pills for Ledger */}
+                <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {['All Months', 'Oct 2026', 'Sep 2026', 'Aug 2026'].map((m) => {
+                    const isActive = ledgerSelectedMonths.includes(m);
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                          if (m === 'All Months') {
+                            setLedgerSelectedMonths(['All Months']);
+                          } else {
+                            let filtered = ledgerSelectedMonths.filter((x) => x !== 'All Months');
+                            if (filtered.includes(m)) {
+                              filtered = filtered.filter((x) => x !== m);
+                            } else {
+                              filtered.push(m);
+                            }
+                            if (filtered.length === 0) filtered = ['All Months'];
+                            setLedgerSelectedMonths(filtered);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
+                          isActive
+                            ? 'bg-[#006b5f] border-[#006b5f] text-white shadow-2xs'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">From Date</span>
+                    <input
+                      type="date"
+                      value={ledgerStartDate}
+                      onChange={(e) => setLedgerStartDate(e.target.value)}
+                      className="bg-[#f2f4f6] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-white px-3 py-2 rounded-xl outline-none font-bold font-mono"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">To Date</span>
+                    <input
+                      type="date"
+                      value={ledgerEndDate}
+                      onChange={(e) => setLedgerEndDate(e.target.value)}
+                      className="bg-[#f2f4f6] dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-white px-3 py-2 rounded-xl outline-none font-bold font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed Ledger Calculations Card */}
+              {(() => {
+                const allEntriesComputed = [...ledgerEntries].reverse(); // Sort chronologically ascending
+                
+                // 1. Calculate Opening Balance prior to ledgerStartDate
+                let openingBalance = 0;
+                const entriesInRange: typeof ledgerEntries = [];
+                
+                allEntriesComputed.forEach((entry) => {
+                  const matchesMonthFilter = () => {
+                    if (ledgerSelectedMonths.includes('All Months')) return true;
+                    const dateObj = new Date(entry.date);
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const entMonthYear = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+                    return ledgerSelectedMonths.includes(entMonthYear);
+                  };
+
+                  const isBeforeStart = new Date(entry.date).getTime() < new Date(ledgerStartDate).getTime();
+                  const isAfterEnd = new Date(entry.date).getTime() > new Date(ledgerEndDate).getTime();
+
+                  if (isBeforeStart) {
+                    if (entry.debit) openingBalance += entry.debit;
+                    if (entry.credit) openingBalance -= entry.credit;
+                  } else if (!isAfterEnd && matchesMonthFilter()) {
+                    entriesInRange.push(entry);
+                  }
+                });
+
+                // Re-map running balance in range starting from Opening Balance
+                let currentRunning = openingBalance;
+                const finalRenderableEntries = entriesInRange.map((entry) => {
+                  if (entry.debit) currentRunning += entry.debit;
+                  if (entry.credit) currentRunning -= entry.credit;
+                  return {
+                    ...entry,
+                    balance: currentRunning,
+                  };
+                }).reverse(); // Latest on top for high readability
+
+                const totalDebits = entriesInRange.reduce((sum, e) => sum + (e.debit || 0), 0);
+                const totalCredits = entriesInRange.reduce((sum, e) => sum + (e.credit || 0), 0);
+
+                return (
+                  <div className="flex flex-col gap-3">
+                    {/* Mathematical Opening Balance Card */}
+                    <div className="grid grid-cols-4 gap-2 bg-[#0f2942] dark:bg-slate-950 p-3 rounded-2xl text-white border border-[#1a3b5c] text-center">
+                      <div className="border-r border-slate-700/60 p-1">
+                        <span className="text-[8px] text-slate-400 block uppercase font-bold">Opening Bal</span>
+                        <span className="text-[11px] sm:text-xs font-black font-mono block text-[#76f4e0] mt-0.5">
+                          Rs. {openingBalance.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="border-r border-slate-700/60 p-1">
+                        <span className="text-[8px] text-slate-400 block uppercase font-bold">Range Debit</span>
+                        <span className="text-[11px] sm:text-xs font-black font-mono block text-rose-400 mt-0.5">
+                          +Rs. {totalDebits.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="border-r border-slate-700/60 p-1">
+                        <span className="text-[8px] text-slate-400 block uppercase font-bold">Range Credit</span>
+                        <span className="text-[11px] sm:text-xs font-black font-mono block text-emerald-400 mt-0.5">
+                          -Rs. {totalCredits.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="p-1">
+                        <span className="text-[8px] text-slate-400 block uppercase font-bold">Closing Bal</span>
+                        <span className="text-[11px] sm:text-xs font-black font-mono block text-amber-300 mt-0.5">
+                          Rs. {currentRunning.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Customer Ledger Statement Action & Download Bar */}
+                    <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-3.5 sm:p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                          <span className="material-symbols-outlined text-[22px]">picture_as_pdf</span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs sm:text-sm font-extrabold text-emerald-950 dark:text-emerald-200">
+                              Customer Ledger Statement
+                            </h4>
+                            <span className="text-[9px] bg-emerald-200/60 dark:bg-emerald-800/60 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-md uppercase font-mono">
+                              Audit Verified
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 mt-0.5">
+                            {activeDealer.companyName} • {finalRenderableEntries.length} transaction records ({ledgerSelectedMonths.join(', ')})
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={handleShareStatement}
+                          className="flex-1 sm:flex-initial min-h-[44px] px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-100/50 transition-all cursor-pointer active:scale-95"
+                          title="Share statement summary on WhatsApp"
+                        >
+                          <span className="material-symbols-outlined text-[18px] text-emerald-600">chat</span>
+                          <span>WhatsApp</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          id="download-ledger-pdf-statement-btn"
+                          onClick={handleDownloadLedgerPdfStatement}
+                          className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2.5 rounded-xl bg-[#006b5f] hover:bg-[#00544a] text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer active:scale-95"
+                          title="Download professional vector PDF statement generated by jsPDF"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">download</span>
+                          <span>Download PDF Statement</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Ledger Sheet Table */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs min-w-[550px]">
+                          <thead>
+                            <tr className="bg-[#f2f4f6] dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 font-bold uppercase tracking-wider text-[10px]">
+                              <th className="py-3 px-3.5">Date</th>
+                              <th className="py-3 px-3.5">Reference No</th>
+                              <th className="py-3 px-3.5">Particulars Description</th>
+                              <th className="py-3 px-3.5 text-right">Debit (INV+)</th>
+                              <th className="py-3 px-3.5 text-right">Credit (REC-)</th>
+                              <th className="py-3 px-3.5 text-right">Balance</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold text-slate-700 dark:text-slate-300">
+                            {finalRenderableEntries.map((entry) => (
+                              <tr
+                                key={entry.id}
+                                className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all font-sans"
+                              >
+                                <td className="py-3 px-3.5 whitespace-nowrap text-slate-400">{entry.date}</td>
+                                <td className="py-3 px-3.5 font-mono text-slate-800 dark:text-slate-100 font-bold">{entry.reference}</td>
+                                <td className="py-3 px-3.5 text-[11px] leading-relaxed max-w-[180px] truncate">{entry.particulars}</td>
+                                <td className="py-3 px-3.5 text-right font-mono font-bold text-rose-500">
+                                  {entry.debit ? `+Rs. ${entry.debit.toLocaleString()}` : '—'}
+                                </td>
+                                <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-500">
+                                  {entry.credit ? `-Rs. ${entry.credit.toLocaleString()}` : '—'}
+                                </td>
+                                <td className="py-3 px-3.5 text-right font-mono font-bold text-[#001428] dark:text-[#76f4e0]">
+                                  Rs. {entry.balance.toLocaleString()}
+                                </td>
+                              </tr>
+                            ))}
+
+                            {finalRenderableEntries.length === 0 && (
+                              <tr>
+                                <td colSpan={6} className="text-center py-8 text-slate-400 font-medium">
+                                  No transaction ledger records within date range.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       )}
 
@@ -2114,6 +2884,8 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
           </div>
         </div>
       )}
+      </>
+      )}
 
       {/* =======================================================================
           CONFIRM ORDER SUBMISSION MODAL
@@ -2273,11 +3045,23 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
               </button>
               <button
                 type="button"
+                id="submit-order-transaction-btn"
+                disabled={isSubmittingOrder}
                 onClick={executeOrderSubmit}
-                className="bg-[#006b5f] hover:bg-[#005047] text-white py-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98"
+                className="bg-[#006b5f] hover:bg-[#005047] disabled:opacity-50 text-white py-3 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 cursor-pointer min-h-[44px]"
+                title="Process all items currently in cart as 1 transaction"
               >
-                <span className="material-symbols-outlined text-[16px]">verified_user</span>
-                <span>Confirm &amp; Book Order</span>
+                {isSubmittingOrder ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Submitting All {orderCart.length} SKUs...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[18px]">send</span>
+                    <span>Submit Order ({orderCart.length} Items • 1 Transaction)</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
