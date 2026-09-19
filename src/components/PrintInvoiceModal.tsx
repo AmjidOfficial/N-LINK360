@@ -134,6 +134,7 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
   const [watermarkText, setWatermarkText] = useState('OFFICIAL TAX INVOICE');
   const [includeStamp, setIncludeStamp] = useState(true);
   const [includeQR, setIncludeQR] = useState(true);
+  const [compactItems, setCompactItems] = useState(false);
   const [termsText, setTermsText] = useState(
     '1. Goods once sold are not returnable without official Return Authorization Slip.\n2. In transit breakage/shortage must be reported within 48 hours of GRN.\n3. Overdue invoices beyond credit terms are subject to account hold.\n4. Cheques/Online transfers must be drawn in favour of "National Lights (Pvt) Ltd".'
   );
@@ -153,6 +154,10 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
   const skuMap = new Map<string, SKU>(skus.map((s) => [s.id, s]));
   const amountInWords = numberToPakistaniRupeesWords(currentInvoiceAmount);
   const totalBalanceInWords = numberToPakistaniRupeesWords(netTotalBalance);
+
+  // Dynamic payment verification URL & QR Code generator
+  const verificationUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://nationallights.pk'}/api/verify-invoice?id=${encodeURIComponent(invoice.invoiceNumber || '')}&amt=${encodeURIComponent(currentInvoiceAmount)}&cust=${encodeURIComponent(customer.customerCode || '')}&date=${encodeURIComponent(invoice.invoiceDate || '')}`;
+  const dynamicQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(verificationUrl)}`;
 
   // Automatic download if requested
   useEffect(() => {
@@ -571,6 +576,16 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                     className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
                   />
                 </label>
+
+                <label className="flex items-center justify-between py-1 cursor-pointer">
+                  <span className="text-xs text-slate-600 font-medium">Compact Items List</span>
+                  <input
+                    type="checkbox"
+                    checked={compactItems}
+                    onChange={(e) => setCompactItems(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                  />
+                </label>
               </div>
 
               {/* Editable Terms & Conditions */}
@@ -720,13 +735,13 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="bg-[#0f1d38] text-white font-bold text-[11px] uppercase tracking-wider">
-                          <th className="py-2.5 px-3 w-8 text-center">SL</th>
-                          <th className="py-2.5 px-3">Item Description / SKU</th>
-                          <th className="py-2.5 px-3 w-20 text-right">Price (PKR)</th>
-                          <th className="py-2.5 px-3 w-16 text-right">Qty (Pcs)</th>
-                          <th className="py-2.5 px-3 w-16 text-right">Cartons</th>
-                          <th className="py-2.5 px-3 w-16 text-right">Disc %</th>
-                          <th className="py-2.5 px-3 w-28 text-right">Total (PKR)</th>
+                          <th className={`${compactItems ? 'py-1.5 px-2' : 'py-2.5 px-3'} w-8 text-center`}>SL</th>
+                          <th className={`${compactItems ? 'py-1.5 px-2' : 'py-2.5 px-3'}`}>Item Description / SKU</th>
+                          <th className={`${compactItems ? 'py-1.5 px-2' : 'py-2.5 px-3'} w-20 text-right`}>Price (PKR)</th>
+                          <th className={`${compactItems ? 'py-1.5 px-2' : 'py-2.5 px-3'} w-16 text-right`}>Qty (Pcs)</th>
+                          <th className={`${compactItems ? 'py-1.5 px-2' : 'py-2.5 px-3'} w-16 text-right`}>Cartons</th>
+                          <th className={`${compactItems ? 'py-1.5 px-2' : 'py-2.5 px-3'} w-16 text-right`}>Disc %</th>
+                          <th className={`${compactItems ? 'py-1.5 px-2' : 'py-2.5 px-3'} w-28 text-right`}>Total (PKR)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
@@ -738,18 +753,20 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                           
                           return (
                             <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                              <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[10px]">{idx + 1}</td>
-                              <td className="py-2.5 px-3">
-                                <div className="font-bold text-slate-900">{sku?.name || item.skuName || 'National LED Item'}</div>
-                                <div className="text-[10px] text-slate-500 font-mono">
+                              <td className={`${compactItems ? 'py-1 px-2' : 'py-2.5 px-3'} text-center text-slate-400 font-mono text-[10px]`}>{idx + 1}</td>
+                              <td className={`${compactItems ? 'py-1 px-2' : 'py-2.5 px-3'}`}>
+                                <div className={`font-bold text-slate-900 ${compactItems ? 'text-[11px]' : 'text-xs'}`}>
+                                  {sku?.name || item.skuName || 'National LED Item'}
+                                </div>
+                                <div className="text-[9px] text-slate-500 font-mono">
                                   Code: {sku?.skuCode || item.skuCode || item.skuId} • {sku?.wattage || ''} {sku?.colorTemperature || ''}
                                 </div>
                               </td>
-                              <td className="py-2.5 px-3 text-right font-mono text-slate-700">{item.unitPrice.toFixed(2)}</td>
-                              <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">{item.quantity}</td>
-                              <td className="py-2.5 px-3 text-right font-mono text-slate-500">{cartonQty}</td>
-                              <td className="py-2.5 px-3 text-right font-mono text-slate-500">{disc}%</td>
-                              <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">{net.toFixed(2)}</td>
+                              <td className={`${compactItems ? 'py-1 px-2' : 'py-2.5 px-3'} text-right font-mono text-slate-700`}>{item.unitPrice.toFixed(2)}</td>
+                              <td className={`${compactItems ? 'py-1 px-2' : 'py-2.5 px-3'} text-right font-mono font-bold text-slate-900`}>{item.quantity}</td>
+                              <td className={`${compactItems ? 'py-1 px-2' : 'py-2.5 px-3'} text-right font-mono text-slate-500`}>{cartonQty}</td>
+                              <td className={`${compactItems ? 'py-1 px-2' : 'py-2.5 px-3'} text-right font-mono text-slate-500`}>{disc}%</td>
+                              <td className={`${compactItems ? 'py-1 px-2' : 'py-2.5 px-3'} text-right font-mono font-bold text-slate-900`}>{net.toFixed(2)}</td>
                             </tr>
                           );
                         })}
@@ -933,14 +950,29 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                         <strong>Total Closing Balance:</strong> {totalBalanceInWords}
                       </div>
 
-                      {/* Digital QR Compliance */}
+                      {/* Digital QR Compliance & Retailer Verification Endpoint */}
                       {includeQR && (
-                        <div className="bg-white p-2.5 border border-slate-200 rounded-xl flex items-center gap-3">
-                          <QrCode className="w-12 h-12 text-slate-900 shrink-0" />
-                          <div className="text-[10px] text-slate-600 leading-tight">
-                            <div className="font-bold text-slate-900">SCAN TO VERIFY & PAY</div>
-                            <div>FBR STRN: {companyInfo.strn}</div>
-                            <div className="text-[9px] font-mono text-slate-400">Doc ID: NL-INV-{invoice.invoiceNumber}</div>
+                        <div className="bg-white p-3 border border-slate-200 rounded-xl flex items-center gap-3 shadow-2xs">
+                          <div className="p-1 bg-slate-50 border border-slate-200 rounded-lg shrink-0">
+                            <img
+                              src={dynamicQrUrl}
+                              alt="Scan to verify invoice"
+                              className="w-16 h-16 object-contain"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                          <div className="text-[10px] text-slate-600 leading-tight space-y-0.5">
+                            <div className="font-extrabold text-slate-950 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              <span>SCAN TO VERIFY & PAY</span>
+                            </div>
+                            <div className="text-slate-500">Retailer Verification Endpoint</div>
+                            <div className="text-[9px] font-mono text-slate-500 font-semibold">
+                              Doc: NL-INV-{invoice.invoiceNumber} • STRN: {companyInfo.strn}
+                            </div>
+                            <div className="text-[8px] text-[#006b5f] font-mono truncate max-w-[200px]">
+                              {verificationUrl}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -1474,25 +1506,32 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
             {templateStyle === 'THERMAL_80MM' && (
               <div className="invoice-print-container mx-auto w-[80mm] sm:w-[148mm] bg-white p-4 shadow-xl border border-slate-300 font-mono text-[11px] text-slate-900 print-area print:shadow-none print:border-none print:w-[148mm] print:p-0">
                 <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-400">
-                  <div className="text-base font-black tracking-tight">NATIONAL LIGHTS (PVT) LTD</div>
-                  <div className="text-[10px]">Head Office: Brandreth Rd, Lahore</div>
+                  <div className="text-base font-black tracking-tight text-slate-950">NATIONAL LIGHTS (PVT) LTD</div>
+                  <div className="text-[9px] uppercase tracking-wide text-slate-600">Illuminating Innovation — Premium LED Solutions</div>
+                  <div className="text-[10px]">Head Office: 18-Brandreth Road, Lahore</div>
                   <div className="text-[10px]">NTN: {companyInfo.ntn} | UAN: {companyInfo.uan}</div>
-                  <div className="font-bold text-xs mt-1">*** OFFICIAL TAX INVOICE ***</div>
+                  <div className="font-bold text-xs mt-1 text-slate-950">*** TAX INVOICE RECEIPT ***</div>
                 </div>
 
                 <div className="py-2 space-y-0.5 border-b border-dashed border-slate-400 text-[10px]">
-                  <div>Inv #: <span className="font-bold">{invoice.invoiceNumber}</span></div>
-                  <div>Date: {invoice.invoiceDate} | Due: {invoice.dueDate || 'Immediate'}</div>
-                  <div>Party: <span className="font-bold">{customer.companyName}</span> ({customer.customerCode})</div>
-                  <div>Phone: {customer.phone}</div>
-                  <div>Credit Days: {customer.creditDays || 30} Days</div>
+                  <div className="flex justify-between">
+                    <span>Invoice #: <span className="font-bold">{invoice.invoiceNumber}</span></span>
+                    <span>Status: <span className="font-bold">{invoice.status}</span></span>
+                  </div>
+                  <div>Date: {invoice.invoiceDate}</div>
+                  <div>Due Date: {invoice.dueDate || 'Immediate'}</div>
+                  <div className="border-t border-dotted border-slate-300 my-1"></div>
+                  <div>Party: <span className="font-bold">{customer.companyName}</span></div>
+                  <div>Code: {customer.customerCode} | City: {customer.city || 'Lahore'}</div>
+                  <div>Phone: {customer.phone || '—'}</div>
+                  <div>Officer: {customer.salesUserName || 'Zain'}</div>
                 </div>
 
                 <div className="py-2 border-b border-dashed border-slate-400">
                   <table className="w-full text-left text-[10px]">
                     <thead>
-                      <tr className="border-b border-slate-300 font-bold">
-                        <th className="py-1">Item</th>
+                      <tr className="border-b border-dashed border-slate-300 font-bold">
+                        <th className="py-1">Item Description</th>
                         <th className="py-1 text-right">Qty</th>
                         <th className="py-1 text-right">Rate</th>
                         <th className="py-1 text-right">Total</th>
@@ -1501,15 +1540,21 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                     <tbody className="divide-y divide-slate-100">
                       {invoice.items.map((item, idx) => {
                         const sku = skuMap.get(item.skuId);
+                        const cleanName = (sku?.name || item.skuName || 'LED Bulb').substring(0, 22);
                         return (
-                          <tr key={idx}>
-                            <td className="py-1 pr-1 truncate max-w-[32mm]">{sku?.name || item.skuName || 'LED Item'}</td>
+                          <tr key={idx} className="align-top">
+                            <td className="py-1 pr-1 truncate max-w-[32mm]">{cleanName}</td>
                             <td className="py-1 text-right">{item.quantity}</td>
-                            <td className="py-1 text-right">{item.unitPrice}</td>
+                            <td className="py-1 text-right">{item.unitPrice.toFixed(0)}</td>
                             <td className="py-1 text-right font-bold">{((item.lineTotal || item.quantity * item.unitPrice)).toFixed(0)}</td>
                           </tr>
                         );
                       })}
+                      {invoice.items.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="py-2 text-center text-slate-500">No items specified in invoice</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1520,33 +1565,64 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                     <span>PKR {invoice.subtotal.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Sales Tax (18%):</span>
-                    <span>PKR {invoice.taxAmount.toFixed(0)}</span>
+                    <span>Discount (Trade):</span>
+                    <span>PKR {(invoice.discountAmount || 0).toFixed(0)}</span>
                   </div>
-                  <div className="flex justify-between font-bold border-t border-slate-300 pt-0.5">
-                    <span>New Bill:</span>
+                  <div className="flex justify-between">
+                    <span>Sales Tax (0% Inc):</span>
+                    <span>PKR 0</span>
+                  </div>
+                  <div className="flex justify-between font-bold border-t border-dotted border-slate-300 pt-1 text-slate-900">
+                    <span>Current Invoice:</span>
                     <span>PKR {currentInvoiceAmount.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
-                    <span>Old Balance:</span>
+                    <span>Previous Arrears:</span>
                     <span>PKR {oldBalance.toFixed(0)}</span>
                   </div>
-                  <div className="flex justify-between font-black text-xs border-t-2 border-slate-900 pt-1">
-                    <span>TOTAL PAYABLE:</span>
+                  {todayRecovery > 0 && (
+                    <div className="flex justify-between text-emerald-700 font-bold">
+                      <span>Today Recovery Collected:</span>
+                      <span>- PKR {todayRecovery.toFixed(0)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-black text-xs border-t-2 border-dashed border-slate-900 pt-1.5 text-slate-950">
+                    <span>TOTAL PAYABLE BAL:</span>
                     <span>PKR {netTotalBalance.toFixed(0)}</span>
+                  </div>
+                </div>
+
+                {/* POS QR Payment Verification */}
+                <div className="flex flex-col items-center justify-center py-3 border-b border-dashed border-slate-400 space-y-1 bg-slate-50/50 rounded-xl my-1.5">
+                  <div className="text-[9px] font-bold text-slate-800 tracking-wide">SCAN QR TO VERIFY &amp; PAY</div>
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&color=0-107-95&margin=5&data=${encodeURIComponent(`https://nationallights.com.pk/pay?invoice=${invoice.invoiceNumber}&amount=${netTotalBalance}&dealer=${customer.customerCode}`)}`}
+                    alt="POS Payment Verification QR"
+                    className="w-24 h-24 border border-teal-600/20 p-1 bg-white mix-blend-multiply"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="text-[8px] text-slate-500 font-mono text-center">
+                    Invoice #{invoice.invoiceNumber} • PKR {netTotalBalance.toLocaleString()}
                   </div>
                 </div>
 
                 {/* Bank Accounts on Slip */}
                 <div className="py-2 border-b border-dashed border-slate-400 text-[9px] text-slate-700 space-y-0.5">
-                  <div className="font-bold text-slate-900">BANK PAYMENT ACCOUNTS:</div>
-                  <div>Meezan: {bankDetails.bank1Account} (Title: NL Pvt Ltd)</div>
-                  <div>EasyPaisa / JazzCash: {bankDetails.easyPaisaNumber}</div>
+                  <div className="font-bold text-slate-900 uppercase">Bank Payment Accounts:</div>
+                  <div className="flex justify-between">
+                    <span>Meezan Bank Ltd:</span>
+                    <span className="font-mono">{bankDetails.bank1Account}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>EasyPaisa EasyTransfer:</span>
+                    <span className="font-mono">{bankDetails.easyPaisaNumber.split(' ')[0]}</span>
+                  </div>
                 </div>
 
                 <div className="text-center pt-3 space-y-1 text-[9px] text-slate-500">
-                  <div>Thank You For Choosing National Lights!</div>
-                  <div>System Generated Verification Slip</div>
+                  <div className="font-bold">THANK YOU FOR CHOOSING NATIONAL LIGHTS!</div>
+                  <div>For queries, contact support at {companyInfo.uan}</div>
+                  <div className="text-[8px] text-slate-400">System Generated POS Thermal Verification Slip</div>
                 </div>
               </div>
             )}

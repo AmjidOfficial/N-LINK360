@@ -5,9 +5,11 @@
  * Pixel-perfect, professional, clean & clear executive design with Side Drawer
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { NLinkUser, getStoredUsers, TEAM_USERS } from '../../data/nlink-users-team';
-import { Menu, X, RefreshCw, Tag, Settings, ShieldCheck, Moon, Sun, User as UserIcon } from 'lucide-react';
+import { Menu, X, RefreshCw, Tag, Settings, ShieldCheck, Moon, Sun, User as UserIcon, LogIn, LogOut, Link2, CheckCircle, Database } from 'lucide-react';
+import { getAccessToken, googleSignIn, initAuth, getCurrentGoogleUser } from '../../services/googleAuth';
+import { subscribeToRateLimit, getRateLimitStatus, RateLimitStatus } from '../../services/googleSheetsLiveService';
 
 export interface EnterpriseHeaderProps {
   activeTab: 'DASHBOARD' | 'ATTENDANCE' | 'ORDERS' | 'LEDGERS' | 'DEALERS';
@@ -21,6 +23,7 @@ export interface EnterpriseHeaderProps {
   onToggleDarkMode?: () => void;
   isOnline?: boolean;
   onTriggerManualSync?: () => Promise<void>;
+  onSignOut?: () => void;
 }
 
 const TAB_CONFIG: Record<
@@ -46,9 +49,60 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
   onToggleDarkMode,
   isOnline = true,
   onTriggerManualSync,
+  onSignOut,
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Google OAuth connection states
+  const [googleUser, setGoogleUser] = useState<any>(null);
+  const [googleToken, setGoogleToken] = useState<string | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
+  // Rate Limiting reactive state tracker
+  const [rateLimit, setRateLimit] = useState<RateLimitStatus>({
+    isRateLimited: false,
+    retryAfterSeconds: 0,
+    lastLimitedTime: null,
+  });
+
+  useEffect(() => {
+    // Initial load check
+    setGoogleToken(getAccessToken());
+    setGoogleUser(getCurrentGoogleUser());
+
+    const unsubscribeAuth = initAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        setGoogleToken(token);
+      },
+      () => {
+        setGoogleUser(null);
+        setGoogleToken(null);
+      }
+    );
+
+    const unsubscribeRateLimit = subscribeToRateLimit((status) => {
+      setRateLimit(status);
+    });
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeRateLimit();
+    };
+  }, []);
+
+  // Set up second-by-second countdown poller when rate-limiting is active
+  useEffect(() => {
+    if (!rateLimit.isRateLimited) return;
+
+    const interval = setInterval(() => {
+      const currentStatus = getRateLimitStatus();
+      setRateLimit({ ...currentStatus });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [rateLimit.isRateLimited]);
 
   // Dynamic stored users (Shahzad Ullah & Syed Zain + corporate employees)
   const availableUsers = useMemo(() => {
@@ -72,6 +126,10 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
   const activeTabMeta = TAB_CONFIG[activeTab] || { label: activeTab, icon: 'grid_view' };
 
   const handleManualSync = async () => {
+    if (rateLimit.isRateLimited) {
+      alert(`⚠️ Google Sheets API Rate Limit Exceeded (403). Cooldown active. Next attempt allowed in ${rateLimit.retryAfterSeconds} seconds.`);
+      return;
+    }
     if (!onTriggerManualSync) return;
     setIsSyncing(true);
     try {
@@ -85,6 +143,38 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
 
   return (
     <>
+      {rateLimit.isRateLimited && (
+        <div 
+          id="rate-limit-sync-toast"
+          className="fixed top-20 right-4 sm:right-6 z-50 max-w-sm w-full bg-slate-900/95 dark:bg-[#030712]/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-xl border border-rose-500/30 flex items-start gap-3 animate-fadeIn"
+        >
+          <div className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/25 text-rose-400 shrink-0 mt-0.5">
+            <span className="font-extrabold text-rose-500 shrink-0 text-sm">⚠️</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-xs font-black uppercase text-rose-400 tracking-wider">
+              Google Sheet API Rate Limited
+            </h4>
+            <p className="text-[10px] text-slate-300 mt-1 leading-relaxed">
+              Google Sheets quota threshold reached (403). System is self-throttling to prevent permanent blocks.
+            </p>
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+              <span className="text-[10px] font-mono font-bold text-rose-300 uppercase tracking-wide">
+                Next Sync allowed in: {rateLimit.retryAfterSeconds}s
+              </span>
+            </div>
+            {/* Miniature visual progress countdown bar */}
+            <div className="w-full h-1 bg-slate-800 rounded-full mt-2 overflow-hidden">
+              <div 
+                className="h-full bg-rose-500 transition-all duration-1000"
+                style={{ width: `${(rateLimit.retryAfterSeconds / 60) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0c1420]/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800/90 shadow-xs transition-colors">
         <div className="w-full px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
           
@@ -150,8 +240,21 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
             </span>
           </div>
 
-          {/* Right: Drawer Trigger Button */}
+          {/* Right: Drawer Trigger Button & 1-Click Sync Button */}
           <div className="flex items-center gap-2">
+            {/* Seamless 1-Click Sync for all users */}
+            <button
+              type="button"
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 h-10 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 text-emerald-800 dark:text-[#76f4e0] border border-emerald-200 dark:border-emerald-800 shadow-2xs font-extrabold text-[11px] transition-all cursor-pointer active:scale-95 shrink-0"
+              title="1-Click Auto Sync: Instantly synchronize orders, recoveries, and database"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-emerald-600' : 'text-[#006b5f] dark:text-[#76f4e0]'}`} />
+              <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : '1-Click Sync'}</span>
+              <span className="inline sm:hidden">{isSyncing ? 'Sync...' : 'Sync'}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setIsDrawerOpen(true)}
@@ -225,18 +328,34 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
                     </div>
                   </div>
 
-                  {/* Manual/Auto Sync Trigger Action Button */}
-                  {onTriggerManualSync && (
-                    <button
-                      type="button"
-                      onClick={handleManualSync}
-                      disabled={isSyncing}
-                      className="w-full flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-500 transition-colors cursor-pointer active:scale-98 shadow-sm"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                      <span>{isSyncing ? 'Synchronizing State...' : 'Sync Live Data Now'}</span>
-                    </button>
-                  )}
+                  {/* Manual Sync & Logout Action Buttons */}
+                  <div className="flex items-center gap-2 pt-1">
+                    {onTriggerManualSync && (
+                      <button
+                        type="button"
+                        onClick={handleManualSync}
+                        disabled={isSyncing}
+                        className="flex-1 flex items-center justify-center gap-2 h-10 px-3 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-500 transition-colors cursor-pointer active:scale-98 shadow-sm"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                        <span>{isSyncing ? 'Syncing...' : 'Sync Live Data'}</span>
+                      </button>
+                    )}
+                    {onSignOut && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsDrawerOpen(false);
+                          onSignOut();
+                        }}
+                        className="flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-xl text-xs font-black text-rose-700 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 transition-colors cursor-pointer active:scale-98 shadow-2xs"
+                        title="Log out and return to Login Screen"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Logout</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Main Actions & Modules List */}

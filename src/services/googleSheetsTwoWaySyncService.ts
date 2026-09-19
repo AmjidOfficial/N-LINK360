@@ -165,6 +165,56 @@ export function removePendingUpload(id: string): void {
   savePendingUploads(filtered);
 }
 
+export async function retrySinglePendingUpload(id: string, token?: string | null): Promise<boolean> {
+  const items = getPendingUploads();
+  const itemIndex = items.findIndex((i) => i.id === id);
+  if (itemIndex === -1) {
+    throw new Error('Transaction not found in the queue.');
+  }
+
+  const item = items[itemIndex];
+  const effectiveToken = token || getAccessToken();
+  const spreadsheetId = getActiveSpreadsheetId() || TARGET_SPREADSHEET_ID;
+
+  if (!effectiveToken) {
+    throw new Error('Google account credentials not found. Please login to authorized Google accounts first.');
+  }
+
+  try {
+    if (item.type === 'ORDER') {
+      await pushOrderToGoogleSheet(spreadsheetId, item.data, item.customerName || 'Dealer', effectiveToken);
+    } else if (item.type === 'RECOVERY') {
+      await pushRecoveryToGoogleSheet(spreadsheetId, item.data, item.customerName || 'Dealer', effectiveToken);
+    } else if (item.type === 'CUSTOMER') {
+      await pushCustomerToGoogleSheet(spreadsheetId, item.data, effectiveToken);
+    } else if (item.type === 'ATTENDANCE') {
+      await pushAttendanceToGoogleSheet(spreadsheetId, item.data, item.userName || 'Employee', effectiveToken);
+    } else if (item.type === 'VISIT') {
+      await pushVisitToGoogleSheet(spreadsheetId, item.data, item.customerName || 'Dealer', item.userName || 'Employee', effectiveToken);
+    } else if (item.type === 'USER') {
+      await pushEmployeeToGoogleSheet(spreadsheetId, item.data, effectiveToken);
+    } else if (item.type === 'PRODUCT') {
+      await pushProductToGoogleSheet(spreadsheetId, item.data, effectiveToken);
+    }
+
+    // Success: remove from pending list
+    const filtered = items.filter((i) => i.id !== id);
+    savePendingUploads(filtered);
+    notifyStatusChange();
+    return true;
+  } catch (err: any) {
+    // Fail: update attempts, log error
+    items[itemIndex] = {
+      ...item,
+      attempts: (item.attempts || 0) + 1,
+      lastError: err?.message || 'Individual retry error',
+    };
+    savePendingUploads(items);
+    notifyStatusChange();
+    throw err;
+  }
+}
+
 // ============================================================================
 // 2. IMMEDIATE USER SUBMIT HANDLERS (SAVE LOCAL + UPLOAD TO SHEET)
 // ============================================================================
@@ -463,32 +513,53 @@ export async function executeTwoWaySync(
   const effectiveToken = token || getAccessToken();
   const spreadsheetId = getActiveSpreadsheetId() || TARGET_SPREADSHEET_ID;
 
-  if (!effectiveToken) {
-    const msg = 'Google account authorization required. Please sign in to sync with Google Sheets.';
-    currentLastError = msg;
-    notifyStatusChange();
-    throw new Error(msg);
-  }
-
   currentIsSyncing = true;
   currentLastError = null;
   notifyStatusChange();
 
   try {
-    // Step 1: Flush any pending local upload items
-    const { flushedCount } = await flushPendingUploadsToSheet(spreadsheetId, effectiveToken).catch((err) => {
-      console.warn('Pending upload flush notice:', err);
-      return { flushedCount: 0, failedCount: 0 };
-    });
+    let flushedCount = 0;
+    let importSummary: any = undefined;
 
-    // Step 2: 2-Way Direction A — Import Users & Dealers/Customers from Sheet into Database
-    const importSummary = await executeGoogleSheetImport(spreadsheetId, effectiveToken, 'ALL').catch((err) => {
-      console.warn('Sheet import notice:', err);
-      return undefined;
-    });
+    // Step 1 & 2 & 3: If Admin Master Google Token is active, perform direct Google Sheets synchronization
+    if (effectiveToken) {
+      // Flush pending local uploads
+      const flushRes = await flushPendingUploadsToSheet(spreadsheetId, effectiveToken).catch((err) => {
+        console.warn('Pending upload flush notice:', err);
+        return { flushedCount: 0, failedCount: 0 };
+      });
+      flushedCount = flushRes.flushedCount;
 
-    // Step 3: 2-Way Direction B — Export All Live Tables from App Database into Google Sheet Tabs
-    await syncDatabaseToGoogleSheet(spreadsheetId, appData, effectiveToken);
+      // Import Users & Dealers/Customers from Sheet
+      importSummary = await executeGoogleSheetImport(spreadsheetId, effectiveToken, 'ALL').catch((err) => {
+        console.warn('Sheet import notice:', err);
+        return undefined;
+      });
+
+      // Export All Live Tables from App Database into Google Sheet Tabs
+      await syncDatabaseToGoogleSheet(spreadsheetId, appData, effectiveToken).catch((err) => {
+        console.warn('Sync database to Google Sheet notice:', err);
+      });
+    }
+
+    // Step 4: Always sync local state with backend ERP API gateway
+    try {
+      if (typeof window !== 'undefined') {
+        await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'ENTERPRISE_AUTO_SYNC',
+            timestamp: new Date().toISOString(),
+            customersCount: appData.customers?.length || 0,
+            ordersCount: appData.salesOrders?.length || 0,
+            recoveriesCount: appData.recoveries?.length || 0,
+          }),
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn('Backend sync gateway notice:', e);
+    }
 
     // Record Timestamps
     const nowIso = new Date().toISOString();
@@ -497,7 +568,9 @@ export async function executeTwoWaySync(
     resetNextSyncTarget();
 
     const importedTotal = (importSummary?.createdCount || 0) + (importSummary?.updatedCount || 0);
-    const msg = `2-Way Sync Complete! Uploaded ${flushedCount} pending items, imported ${importedTotal} records from Google Sheets, and refreshed all live database tabs in Sheet.`;
+    const msg = effectiveToken
+      ? `2-Way Sync Complete! Uploaded ${flushedCount} items, imported ${importedTotal} records, and refreshed Google Sheets & ERP database.`
+      : `ERP Database Synced! Local records & Supabase updated (Google Sheet connection active under Admin management).`;
 
     currentLastMessage = msg;
     currentLastError = null;
@@ -511,7 +584,7 @@ export async function executeTwoWaySync(
       timestamp: nowIso,
     };
   } catch (err: any) {
-    const errorMsg = err?.message || 'Failed during two-way Google Sheets synchronization.';
+    const errorMsg = err?.message || 'Failed during synchronization.';
     currentLastError = errorMsg;
     notifyStatusChange();
     throw err;

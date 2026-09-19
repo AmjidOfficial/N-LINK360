@@ -122,6 +122,31 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
     };
   }, [orders]);
 
+  // Aggregate MTD target metrics for Sales & Recovery
+  const targetMetrics = useMemo(() => {
+    const baseMonthlyTarget = currentUser.monthlyTarget && currentUser.monthlyTarget > 0 
+      ? currentUser.monthlyTarget 
+      : 4500000;
+
+    const salesTarget = baseMonthlyTarget;
+    const recoveryTarget = Math.round(baseMonthlyTarget * 0.8);
+
+    const salesAchieved = salesMetrics.totalSale;
+    const recoveryAchieved = recoveryMetrics.totalRecovery;
+
+    const salesPercent = salesTarget > 0 ? Math.round((salesAchieved / salesTarget) * 100) : 0;
+    const recoveryPercent = recoveryTarget > 0 ? Math.round((recoveryAchieved / recoveryTarget) * 100) : 0;
+
+    return {
+      salesTarget,
+      salesAchieved,
+      salesPercent,
+      recoveryTarget,
+      recoveryAchieved,
+      recoveryPercent,
+    };
+  }, [currentUser, salesMetrics.totalSale, recoveryMetrics.totalRecovery]);
+
   // Town-wise Sales & Recovery report
   const townPerformanceReport = useMemo(() => {
     const towns = Array.from(
@@ -311,6 +336,89 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
         </div>
       )}
 
+      {/* Target vs Achievement MTD Panel */}
+      <div className="bg-white dark:bg-[#0c1420] p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-3xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 dark:border-slate-800 pb-3 gap-2">
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-[#006b5f] dark:text-[#76f4e0]">
+              Month-to-Date Targets vs Achievements
+            </h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Comparative analysis of field officer targets vs verified transactions for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </p>
+          </div>
+          <span className="self-start sm:self-center text-[10px] font-black px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-100 dark:border-indigo-900/40">
+            Active Profile: {currentUser.fullName}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Sales Target vs Achievement */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-end">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">
+                  FMCG Sales Booking Target
+                </span>
+                <div className="text-base font-extrabold text-slate-800 dark:text-slate-200 mt-0.5 font-mono">
+                  Rs. {targetMetrics.salesAchieved.toLocaleString()} <span className="text-xs font-normal text-slate-500 dark:text-slate-400 font-sans">of Rs. {targetMetrics.salesTarget.toLocaleString()}</span>
+                </div>
+              </div>
+              <span className={`text-xs font-black px-2 py-0.5 rounded-lg font-mono ${
+                targetMetrics.salesPercent >= 100 
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' 
+                  : 'bg-teal-50 text-[#006b5f] dark:bg-[#006b5f]/10 dark:text-[#76f4e0]'
+              }`}>
+                {targetMetrics.salesPercent}% Achieved
+              </span>
+            </div>
+            {/* Elegant Progress bar */}
+            <div className="relative w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-teal-500 to-teal-600 rounded-full transition-all duration-500" 
+                style={{ width: `${Math.min(100, targetMetrics.salesPercent)}%` }} 
+              />
+            </div>
+            <div className="flex justify-between text-[9px] font-semibold text-slate-400">
+              <span>Remaining: Rs. {Math.max(0, targetMetrics.salesTarget - targetMetrics.salesAchieved).toLocaleString()}</span>
+              <span>Target: 100%</span>
+            </div>
+          </div>
+
+          {/* Recovery Target vs Achievement */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-end">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">
+                  Recovery Collection Target (80% Efficiency Target)
+                </span>
+                <div className="text-base font-extrabold text-slate-800 dark:text-slate-200 mt-0.5 font-mono">
+                  Rs. {targetMetrics.recoveryAchieved.toLocaleString()} <span className="text-xs font-normal text-slate-500 dark:text-slate-400 font-sans">of Rs. {targetMetrics.recoveryTarget.toLocaleString()}</span>
+                </div>
+              </div>
+              <span className={`text-xs font-black px-2 py-0.5 rounded-lg font-mono ${
+                targetMetrics.recoveryPercent >= 100 
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' 
+                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400'
+              }`}>
+                {targetMetrics.recoveryPercent}% Achieved
+              </span>
+            </div>
+            {/* Elegant Progress bar */}
+            <div className="relative w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all duration-500" 
+                style={{ width: `${Math.min(100, targetMetrics.recoveryPercent)}%` }} 
+              />
+            </div>
+            <div className="flex justify-between text-[9px] font-semibold text-slate-400">
+              <span>Remaining: Rs. {Math.max(0, targetMetrics.recoveryTarget - targetMetrics.recoveryAchieved).toLocaleString()}</span>
+              <span>Target: 100% (80% Collection Ratio)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 4. Core Numerical Business Cards (Grid of 4) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="executive-metric-cards">
         
@@ -440,26 +548,45 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
 
           <div className="flex-1 w-full text-xs font-mono">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartTimelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={chartTimelineData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#006b5f" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#006b5f" stopOpacity={0.01} />
+                    <stop offset="5%" stopColor="#006b5f" stopOpacity={0.28} />
+                    <stop offset="95%" stopColor="#006b5f" stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="recGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.01} />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.28} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:stroke-slate-800/50" />
                 <XAxis dataKey="date" stroke="#94a3b8" fontSize={9} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', color: '#fff' }}
-                  labelStyle={{ fontWeight: 'bold', fontSize: '10px' }}
+                {/* Dual Axis: Left Y-Axis for Sales Booking */}
+                <YAxis
+                  yAxisId="left"
+                  stroke="#006b5f"
+                  fontSize={9}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => `Rs.${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`}
                 />
-                <Area type="monotone" dataKey="Sales" stroke="#006b5f" strokeWidth={2.5} fillOpacity={1} fill="url(#salesGrad)" />
-                <Area type="monotone" dataKey="Recovery" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#recGrad)" />
+                {/* Dual Axis: Right Y-Axis for Recovery Collection */}
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="#10b981"
+                  fontSize={9}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => `Rs.${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`}
+                />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
+                  labelStyle={{ fontWeight: 'bold', fontSize: '11px', color: '#76f4e0' }}
+                  formatter={(value: any, name: any) => [`Rs. ${Number(value || 0).toLocaleString()}`, name === 'Sales' ? 'Sales Booked (PKR)' : 'Recovery Collected (PKR)']}
+                />
+                <Area yAxisId="left" type="monotone" dataKey="Sales" stroke="#006b5f" strokeWidth={2.5} fillOpacity={1} fill="url(#salesGrad)" name="Sales" />
+                <Area yAxisId="right" type="monotone" dataKey="Recovery" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#recGrad)" name="Recovery" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

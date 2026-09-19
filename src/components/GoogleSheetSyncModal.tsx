@@ -55,6 +55,9 @@ import {
   AutoSyncStatus,
   getPendingUploads,
   getLocalDatabaseCache,
+  retrySinglePendingUpload,
+  removePendingUpload,
+  PendingUploadItem,
 } from '../services/googleSheetsTwoWaySyncService';
 
 interface GoogleSheetSyncModalProps {
@@ -70,7 +73,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
   appData,
   onSyncComplete,
 }) => {
-  const [activeMode, setActiveMode] = useState<'FULL_SYNC' | 'IMPORT' | 'EXPORT'>('FULL_SYNC');
+  const [activeMode, setActiveMode] = useState<'FULL_SYNC' | 'IMPORT' | 'EXPORT' | 'OFFLINE_QUEUE'>('FULL_SYNC');
   const [spreadsheetId, setSpreadsheetId] = useState<string>(getActiveSpreadsheetId());
   const [user, setUser] = useState<any>(getCurrentGoogleUser());
   const [token, setToken] = useState<string | null>(getAccessToken());
@@ -138,6 +141,48 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
       setMetadata(meta);
     } catch (err: any) {
       console.warn('Could not load spreadsheet metadata:', err);
+    }
+  };
+
+  const [pendingItems, setPendingItems] = useState<PendingUploadItem[]>([]);
+  const [retryingIds, setRetryingIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setPendingItems(getPendingUploads());
+  }, [autoSyncStatus]);
+
+  const handleRetryItem = async (id: string) => {
+    setRetryingIds(prev => ({ ...prev, [id]: true }));
+    setOpStatus({ type: 'idle' });
+    try {
+      await retrySinglePendingUpload(id, token);
+      setPendingItems(getPendingUploads());
+      setOpStatus({
+        type: 'success',
+        message: '✓ Transaction synchronized successfully to Google Sheet!',
+      });
+      if (onSyncComplete) {
+        onSyncComplete('Individual transaction synchronized successfully.');
+      }
+    } catch (err: any) {
+      setOpStatus({
+        type: 'error',
+        message: `Failed to retry transaction: ${err.message || err}`,
+      });
+    } finally {
+      setRetryingIds(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleDeleteItem = (id: string) => {
+    removePendingUpload(id);
+    setPendingItems(getPendingUploads());
+    setOpStatus({
+      type: 'success',
+      message: '✓ Transaction removed from queue.',
+    });
+    if (onSyncComplete) {
+      onSyncComplete('Transaction removed from queue.');
     }
   };
 
@@ -306,42 +351,59 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
         </div>
 
         {/* Mode Selector Tabs */}
-        <div className="grid grid-cols-3 p-2 bg-slate-100 border-b border-slate-200 shrink-0 gap-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 p-2 bg-slate-100 border-b border-slate-200 shrink-0 gap-1">
           <button
             type="button"
             onClick={() => { setActiveMode('FULL_SYNC'); setOpStatus({ type: 'idle' }); }}
-            className={`py-2 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`py-1.5 px-1 rounded-xl text-[10px] sm:text-xs font-black flex items-center justify-center gap-1 transition-all cursor-pointer ${
               activeMode === 'FULL_SYNC'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 bg-white/60'
             }`}
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
             <span>2-Way Sync All</span>
           </button>
           <button
             type="button"
             onClick={() => { setActiveMode('IMPORT'); setOpStatus({ type: 'idle' }); }}
-            className={`py-2 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`py-1.5 px-1 rounded-xl text-[10px] sm:text-xs font-black flex items-center justify-center gap-1 transition-all cursor-pointer ${
               activeMode === 'IMPORT'
                 ? 'bg-teal-700 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 bg-white/60'
             }`}
           >
-            <ArrowDownToLine className="w-3.5 h-3.5" />
+            <ArrowDownToLine className="w-3.5 h-3.5 shrink-0" />
             <span>Import &rarr; DB</span>
           </button>
           <button
             type="button"
             onClick={() => { setActiveMode('EXPORT'); setOpStatus({ type: 'idle' }); }}
-            className={`py-2 px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`py-1.5 px-1 rounded-xl text-[10px] sm:text-xs font-black flex items-center justify-center gap-1 transition-all cursor-pointer ${
               activeMode === 'EXPORT'
                 ? 'bg-teal-700 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 bg-white/60'
             }`}
           >
-            <ArrowUpFromLine className="w-3.5 h-3.5" />
+            <ArrowUpFromLine className="w-3.5 h-3.5 shrink-0" />
             <span>Push &rarr; Sheet</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setActiveMode('OFFLINE_QUEUE'); setOpStatus({ type: 'idle' }); }}
+            className={`py-1.5 px-1 rounded-xl text-[10px] sm:text-xs font-black flex items-center justify-center gap-1 transition-all cursor-pointer relative ${
+              activeMode === 'OFFLINE_QUEUE'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 bg-white/60'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 shrink-0" />
+            <span>Offline Queue</span>
+            {pendingItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border border-white animate-bounce">
+                {pendingItems.length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -547,6 +609,132 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                       : 'Sign in to Google to Upload All'}
                   </span>
                 </button>
+              </div>
+
+              {/* Individual Sync Queue & Retries Section */}
+              <div className="border border-slate-200 rounded-2xl bg-slate-50/50 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-emerald-700" />
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                      Individual Transactions Queue ({pendingItems.length})
+                    </span>
+                  </div>
+                  {pendingItems.length > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                      Sync Pending
+                    </span>
+                  )}
+                </div>
+
+                <div className="max-h-[180px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                  {pendingItems.length === 0 ? (
+                    <div className="text-center py-6 px-4 bg-white rounded-xl border border-dashed border-slate-200">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                      <div className="text-xs font-bold text-slate-800">All Transactions Synchronized</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        No pending orders or recoveries in local storage queue.
+                      </div>
+                    </div>
+                  ) : (
+                    pendingItems.map((item) => {
+                      const dateStr = item.timestamp
+                        ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : '—';
+                      const isOrder = item.type === 'ORDER';
+                      const isRecovery = item.type === 'RECOVERY';
+
+                      // Determine safe display values
+                      let amountDisplay = '';
+                      if (isOrder) {
+                        amountDisplay = `PKR ${(item.data?.grandTotal || item.data?.totalAmount || 0).toLocaleString()}`;
+                      } else if (isRecovery) {
+                        amountDisplay = `PKR ${(item.data?.amount || item.data?.recoveryAmount || 0).toLocaleString()}`;
+                      }
+
+                      const detailLabel = item.customerName || 'Direct Dealer';
+                      const retryLoading = !!retryingIds[item.id];
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs hover:shadow-xs transition-all space-y-2 text-xs"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span
+                                  className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
+                                    isOrder
+                                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                      : isRecovery
+                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                      : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                  }`}
+                                >
+                                  {item.type}
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-400">{dateStr}</span>
+                                {amountDisplay && (
+                                  <span className="font-bold font-mono text-slate-800 text-[10px]">
+                                    {amountDisplay}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="font-black text-slate-800 mt-1 truncate">{detailLabel}</div>
+                              {item.userName && (
+                                <div className="text-[10px] text-slate-500">Officer: {item.userName}</div>
+                              )}
+                            </div>
+
+                            {/* Row Actions */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                disabled={retryLoading || isOperating}
+                                onClick={() => handleRetryItem(item.id)}
+                                className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                                  retryLoading
+                                    ? 'bg-slate-100 text-slate-400 border-slate-200'
+                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 shadow-2xs'
+                                }`}
+                                title="Retry specific sync item"
+                              >
+                                <RefreshCw className={`w-3.5 h-3.5 ${retryLoading ? 'animate-spin' : ''}`} />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={retryLoading || isOperating}
+                                onClick={() => handleDeleteItem(item.id)}
+                                className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 hover:border-rose-300 shadow-2xs transition-all cursor-pointer"
+                                title="Clear item from local queue"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Failure / Attempt Logs */}
+                          {(item.attempts > 0 || item.lastError) && (
+                            <div className="p-2 bg-rose-50 border border-rose-100 rounded-lg text-[10px] text-rose-700 space-y-0.5 leading-relaxed">
+                              <div className="flex justify-between font-bold text-rose-800">
+                                <span>Failed Attempts: {item.attempts}</span>
+                                <span className="flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3" /> Failed
+                                </span>
+                              </div>
+                              {item.lastError && (
+                                <div className="font-mono text-[9px] line-clamp-2 break-all bg-white/40 p-1 rounded border border-rose-100/30">
+                                  Error: {item.lastError}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               {/* Data Summary */}
@@ -838,6 +1026,166 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                       : 'Sign in to Push Database'}
                   </span>
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* 4. DEDICATED OFFLINE QUEUE TAB */}
+          {activeMode === 'OFFLINE_QUEUE' && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-amber-700" />
+                    <h3 className="text-sm font-black text-slate-900 uppercase">
+                      Dedicated Offline & Sync Queue
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Transactions recorded offline or pending due to intermittent network / Google Sheet rate limits.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-3 py-1 bg-amber-200/80 text-amber-950 rounded-full font-black text-xs font-mono">
+                    {pendingItems.length} Record{pendingItems.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+              </div>
+
+              {pendingItems.length === 0 ? (
+                <div className="text-center py-12 px-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Queue is Clean</h4>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    All offline sales orders and recovery collections have been completely synced to Google Sheets.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-700">
+                      Pending Transaction Items ({pendingItems.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm('Are you sure you want to clear all pending records from local cache?')) {
+                          pendingItems.forEach(item => removePendingUpload(item.id));
+                          setPendingItems(getPendingUploads());
+                          setOpStatus({ type: 'success', message: 'Cleared all items from queue.' });
+                        }
+                      }}
+                      className="text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+                    >
+                      Clear Entire Queue
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                    {pendingItems.map((item) => {
+                      const isOrder = item.type === 'ORDER';
+                      const isRecovery = item.type === 'RECOVERY';
+                      const dateStr = item.timestamp
+                        ? new Date(item.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                        : '—';
+                      
+                      let amountDisplay = '';
+                      if (isOrder) {
+                        amountDisplay = `PKR ${(item.data?.grandTotal || item.data?.totalAmount || 0).toLocaleString()}`;
+                      } else if (isRecovery) {
+                        amountDisplay = `PKR ${(item.data?.amount || item.data?.recoveryAmount || 0).toLocaleString()}`;
+                      }
+
+                      const detailLabel = item.customerName || (item.data?.customerName) || 'Direct Dealer / Retailer';
+                      const retryLoading = !!retryingIds[item.id];
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-2 text-xs"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span
+                                  className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                    isOrder
+                                      ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                      : isRecovery
+                                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                                      : 'bg-slate-100 text-slate-800 border border-slate-300'
+                                  }`}
+                                >
+                                  {item.type}
+                                </span>
+                                <span className="font-mono text-slate-400 text-[11px]">{dateStr}</span>
+                                {amountDisplay && (
+                                  <span className="font-black font-mono text-emerald-700 text-xs">
+                                    {amountDisplay}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="font-black text-slate-900 text-xs sm:text-sm mt-1.5 truncate">
+                                {detailLabel}
+                              </div>
+                              <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-0.5">
+                                <span>Officer: <strong className="text-slate-700">{item.userName || 'Current User'}</strong></span>
+                                <span>Ref ID: <code className="font-mono text-[10px] text-slate-600">{item.id.slice(0, 8)}</code></span>
+                              </div>
+                            </div>
+
+                            {/* Targeted Retry & Delete Buttons */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                disabled={retryLoading || isOperating}
+                                onClick={() => handleRetryItem(item.id)}
+                                className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-black flex items-center gap-1 transition-all cursor-pointer ${
+                                  retryLoading
+                                    ? 'bg-slate-100 text-slate-400 border-slate-200'
+                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300 active:scale-95'
+                                }`}
+                                title="Retry syncing this record"
+                              >
+                                <RefreshCw className={`w-3.5 h-3.5 ${retryLoading ? 'animate-spin' : ''}`} />
+                                <span className="hidden sm:inline">Retry</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={retryLoading || isOperating}
+                                onClick={() => {
+                                  if (confirm(`Remove ${item.type} record for ${detailLabel} from queue?`)) {
+                                    handleDeleteItem(item.id);
+                                  }
+                                }}
+                                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 hover:border-rose-300 text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                                title="Delete record from queue"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Delete</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Failure notes if any */}
+                          {(item.attempts > 0 || item.lastError) && (
+                            <div className="p-2.5 bg-rose-50/80 border border-rose-200/80 rounded-xl text-[10px] text-rose-800 space-y-1 leading-relaxed">
+                              <div className="flex justify-between font-bold">
+                                <span>Failed Attempts: {item.attempts}</span>
+                                <span className="text-rose-600 font-mono">Status: Retry Queued</span>
+                              </div>
+                              {item.lastError && (
+                                <div className="text-slate-700 bg-white/70 p-1.5 rounded border border-rose-100 font-mono text-[9px] break-all">
+                                  {item.lastError}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
           )}

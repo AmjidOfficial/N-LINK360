@@ -6,8 +6,10 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { NLinkUser, TEAM_USERS } from './data/nlink-users-team';
+import { NLinkUser, TEAM_USERS, getStoredUsers } from './data/nlink-users-team';
 import { Customer, SalesOrder, Recovery, User } from './types';
+import { getAccessToken } from './services/googleAuth';
+import { AuthGate } from './components/AuthGate';
 import { SalesRecoveryApp } from './components/SalesRecoveryApp';
 import { EnterpriseHeader } from './components/stitch/EnterpriseHeader';
 import { EnterpriseBottomNav, EnterpriseTabType } from './components/stitch/EnterpriseBottomNav';
@@ -21,7 +23,12 @@ import { DailyPerformancePDFModal } from './components/stitch/DailyPerformancePD
 import { SettingsModal } from './components/SettingsModal';
 import { DualApprovalModal } from './components/stitch/DualApprovalModal';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import { fallbackAppData, SupabaseAppData } from './services/supabase-data';
+import { fallbackAppData, SupabaseAppData, loadSupabaseAppData } from './services/supabase-data';
+import {
+  syncOrderToSupabase,
+  syncRecoveryToSupabase,
+  syncCustomerToSupabase,
+} from './services/dbSync';
 import { NLINK_OFFICIAL_PRODUCTS } from './data/nlink-products';
 import {
   getLocalDatabaseCache,
@@ -41,8 +48,61 @@ export default function App() {
   // Ledger Live Toast Message
   const [ledgerToastMessage, setLedgerToastMessage] = useState<string | null>(null);
 
-  // 2. Active User Persona
-  const [currentUser, setCurrentUser] = useState<NLinkUser>(TEAM_USERS[0]);
+  // 2. Active User Persona (Null initially to show Login Window, or restored from active session)
+  const [currentUser, setCurrentUser] = useState<NLinkUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('nlink_active_logged_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Login handler
+  const handleSignIn = async (signedInUser: User) => {
+    const storedUsers = getStoredUsers();
+    const allAvailable = storedUsers && storedUsers.length > 0 ? storedUsers : TEAM_USERS;
+    
+    const matched = allAvailable.find(
+      (u) => u.email?.toLowerCase() === signedInUser.email?.toLowerCase() || u.id === signedInUser.id
+    );
+
+    const userPersona: NLinkUser = matched || {
+      id: signedInUser.id || `USR-${Date.now()}`,
+      employeeCode: 'EMP-001',
+      fullName: signedInUser.fullName || signedInUser.email?.split('@')[0] || 'National Lights Personnel',
+      email: signedInUser.email,
+      phone: signedInUser.phone || '+92 300 1234567',
+      role: signedInUser.role || 'SALES_RECOVERY',
+      roleTitle: signedInUser.role || 'Field Officer',
+      department: 'SALES_FIELD',
+      region: 'National',
+      area: 'National',
+      territory: 'National',
+      assignedTowns: ['Peshawar', 'Rawalpindi', 'Lahore'],
+      assignedBeats: ['All Beats'],
+      monthlySalesTarget: 5000000,
+      monthlyRecoveryTarget: 4000000,
+      mtdSalesAchieved: 0,
+      mtdRecoveryAchieved: 0,
+      todaySalesAchieved: 0,
+      todayRecoveryAchieved: 0,
+      status: 'ACTIVE',
+      avatarInitials: signedInUser.fullName?.slice(0, 2).toUpperCase() || 'NL',
+    };
+
+    setCurrentUser(userPersona);
+    try {
+      localStorage.setItem('nlink_active_logged_user', JSON.stringify(userPersona));
+    } catch (e) {}
+  };
+
+  const handleSignOut = async () => {
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem('nlink_active_logged_user');
+    } catch (e) {}
+  };
 
   // Unified Selected Attendance Town State
   const [selectedAttendanceTown, setSelectedAttendanceTown] = useState<string>(() => {
@@ -108,25 +168,52 @@ export default function App() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
 
-  // Load cached database on mount & purge all mock/dummy dealers, distributors and users
+  // Load cached database on mount & sync with Supabase and purge all mock/dummy dealers, distributors and users
   useEffect(() => {
-    try {
-      // Purge all mock/dummy data immediately on startup, strictly keeping Syed Zain & Shahzadullah
-      const purgeRes = purgeMockDataFromState();
-      setCustomers(purgeRes.remainingCustomers);
-      setOrders(purgeRes.remainingOrders);
-      setRecoveries(purgeRes.remainingRecoveries);
+    const initData = async () => {
+      let localCusts: Customer[] = [];
+      let localOrders: SalesOrder[] = [];
+      let localRecs: Recovery[] = [];
 
-      if (!isProductionUser(currentUser)) {
-        setCurrentUser(purgeRes.remainingUsers[0]);
+      try {
+        // Purge all mock/dummy data immediately on startup, strictly keeping Syed Zain & Shahzadullah
+        const purgeRes = purgeMockDataFromState();
+        localCusts = purgeRes.remainingCustomers;
+        localOrders = purgeRes.remainingOrders;
+        localRecs = purgeRes.remainingRecoveries;
+
+        if (!isProductionUser(currentUser)) {
+          setCurrentUser(purgeRes.remainingUsers[0]);
+        }
+      } catch (err) {
+        console.warn('Database initialization & purge:', err);
+        const cached = getLocalDatabaseCache();
+        if (cached?.customers) localCusts = cached.customers;
+        if (cached?.orders) localOrders = cached.orders;
+        if (cached?.recoveries) localRecs = cached.recoveries;
       }
-    } catch (err) {
-      console.warn('Database initialization & purge:', err);
-      const cached = getLocalDatabaseCache();
-      if (cached?.customers) setCustomers(cached.customers);
-      if (cached?.orders) setOrders(cached.orders);
-      if (cached?.recoveries) setRecoveries(cached.recoveries);
-    }
+
+      setCustomers(localCusts);
+      setOrders(localOrders);
+      setRecoveries(localRecs);
+
+      // Fetch and merge live Supabase database content
+      try {
+        console.log('🔄 ERP Startup: Connecting to Supabase database...');
+        const liveData = await loadSupabaseAppData(currentUser);
+        if (liveData && (liveData.customers.length > 0 || liveData.salesOrders.length > 0 || liveData.recoveries.length > 0)) {
+          console.log('✓ Successfully retrieved live Supabase data:', liveData);
+          setCustomers(liveData.customers);
+          setOrders(liveData.salesOrders);
+          setRecoveries(liveData.recoveries);
+          syncToCache(liveData.customers, liveData.salesOrders, liveData.recoveries);
+        }
+      } catch (err: any) {
+        console.warn('Supabase remote load bypassed/failed, operating on local sync:', err.message || err);
+      }
+    };
+
+    initData();
   }, []);
 
   // Handler to manually trigger full mock/dummy data purge
@@ -177,6 +264,29 @@ export default function App() {
     };
   }, [customers, orders, recoveries]);
 
+  // Automated live real-time synchronization with Google Sheets upon data modifications (Debounced)
+  useEffect(() => {
+    const token = getAccessToken();
+    if (!token) return;
+
+    // Acknowledge live changes and auto-sync to Google Sheet in background
+    const timer = setTimeout(async () => {
+      try {
+        console.log('🔄 Live Auto-Sync: Local modifications detected. Syncing to Google Sheets...');
+        const result = await executeTwoWaySync(currentAppData, token);
+        if (result.success) {
+          console.log('✓ Live Auto-Sync Success:', result.message);
+        } else {
+          console.warn('⚠ Live Auto-Sync Notice:', result.message);
+        }
+      } catch (err: any) {
+        console.error('❌ Live Auto-Sync Failed:', err.message || err);
+      }
+    }, 2500); // 2.5 seconds debounce to aggregate rapid edits
+
+    return () => clearTimeout(timer);
+  }, [customers, orders, recoveries]);
+
   // Auto-dismiss ledger notification toast after 4.5 seconds
   useEffect(() => {
     if (ledgerToastMessage) {
@@ -199,6 +309,11 @@ export default function App() {
 
     if (!isOnline) {
       addToOfflineQueue({ type: 'ORDER', payload: orderPayload });
+    } else {
+      // Direct live synchronization to Supabase database
+      syncOrderToSupabase(orderPayload).catch(err => {
+        console.warn('Supabase order upload failed:', err);
+      });
     }
     const updatedOrders = [orderPayload, ...orders];
     setOrders(updatedOrders);
@@ -217,6 +332,11 @@ export default function App() {
 
     if (!isOnline) {
       addToOfflineQueue({ type: 'RECOVERY', payload: recoveryPayload });
+    } else {
+      // Direct live synchronization to Supabase database
+      syncRecoveryToSupabase(recoveryPayload).catch(err => {
+        console.warn('Supabase recovery upload failed:', err);
+      });
     }
     const updatedRecoveries = [recoveryPayload, ...recoveries];
     setRecoveries(updatedRecoveries);
@@ -463,6 +583,12 @@ export default function App() {
       updatedAt: new Date().toISOString(),
     };
 
+    if (isOnline) {
+      syncCustomerToSupabase(newCustomer).catch((err) => {
+        console.warn('Supabase customer upload failed:', err);
+      });
+    }
+
     const updated = [newCustomer, ...customers];
     setCustomers(updated);
     syncToCache(updated, orders, recoveries);
@@ -471,7 +597,7 @@ export default function App() {
   const handleUpdateDealerAssignment = (customerId: string, salesUserId: string, salesUserName: string) => {
     const updated = customers.map((c) => {
       if (c.id === customerId) {
-        return {
+        const up = {
           ...c,
           salesUserId,
           salesUserName,
@@ -479,6 +605,12 @@ export default function App() {
           assignedOfficerName: salesUserName,
           updatedAt: new Date().toISOString(),
         };
+        if (isOnline) {
+          syncCustomerToSupabase(up).catch((err) => {
+            console.warn('Supabase customer assignment failed:', err);
+          });
+        }
+        return up;
       }
       return c;
     });
@@ -489,12 +621,18 @@ export default function App() {
   const handleApproveDealer = (customerId: string) => {
     const updated = customers.map((c) => {
       if (c.id === customerId) {
-        return {
+        const up = {
           ...c,
           approvalStatus: 'APPROVED' as const,
           isActive: true,
           status: 'NORMAL' as const,
         };
+        if (isOnline) {
+          syncCustomerToSupabase(up).catch((err) => {
+            console.warn('Supabase customer approval failed:', err);
+          });
+        }
+        return up;
       }
       return c;
     });
@@ -514,6 +652,11 @@ export default function App() {
   };
 
   const handleEditDealer = (updatedDealer: Customer) => {
+    if (isOnline) {
+      syncCustomerToSupabase(updatedDealer).catch((err) => {
+        console.warn('Supabase customer edit failed:', err);
+      });
+    }
     const updated = customers.map((c) => (c.id === updatedDealer.id ? updatedDealer : c));
     setCustomers(updated);
     syncToCache(updated, orders, recoveries);
@@ -550,6 +693,18 @@ export default function App() {
     return pendingOrds + pendingRecs;
   }, [orders, recoveries]);
 
+  if (!currentUser) {
+    return (
+      <AuthGate
+        currentUser={null}
+        onSignIn={handleSignIn}
+        onSignOut={handleSignOut}
+      >
+        <div />
+      </AuthGate>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f8f9fb] dark:bg-[#070c14] text-[#191c1e] dark:text-slate-100 font-sans flex flex-col antialiased selection:bg-[#76f4e0] selection:text-[#006f63] transition-colors">
       {/* 1. Universal Enterprise Header */}
@@ -564,9 +719,10 @@ export default function App() {
         isDarkMode={isDarkMode}
         onToggleDarkMode={toggleDarkMode}
         isOnline={isOnline}
+        onSignOut={handleSignOut}
         onTriggerManualSync={async () => {
           try {
-            setLedgerToastMessage('🔄 Sync started. Contacting Google Sheets...');
+            setLedgerToastMessage('🔄 Sync started. Synchronizing database state...');
             const result = await executeTwoWaySync(currentAppData);
             if (result.success) {
               setLedgerToastMessage(`✓ ${result.message || 'Sync completed successfully!'}`);

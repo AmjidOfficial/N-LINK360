@@ -10,6 +10,16 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend as RechartsLegend,
+} from 'recharts';
+import {
   Clock,
   Store,
   TrendingUp,
@@ -1911,6 +1921,63 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       list: mtdRecs.slice(0, 5)
     };
   }, [recoveries, mtdStats.mtdTarget]);
+
+  // Daily Sales vs Recovery MTD trends dataset for Recharts visualization
+  const mtdDailyTrendsData = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    
+    // Total days in the current month
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthNameAbbrev = monthNames[month];
+
+    // Build map for each day of the month
+    const dailyMap: Record<number, { day: string; sales: number; recovery: number }> = {};
+    for (let d = 1; d <= totalDays; d++) {
+      dailyMap[d] = {
+        day: `${monthNameAbbrev} ${d}`,
+        sales: 0,
+        recovery: 0,
+      };
+    }
+
+    // Accumulate sales orders
+    salesOrders.forEach((o) => {
+      if (o.status === 'CANCELLED' || o.status === 'REJECTED') return;
+      const orderDateStr = o.orderDate || o.createdAt;
+      if (!orderDateStr) return;
+      const date = new Date(orderDateStr);
+      if (date.getFullYear() === year && date.getMonth() === month) {
+        const dayNum = date.getDate();
+        if (dailyMap[dayNum]) {
+          dailyMap[dayNum].sales += Number(o.totalAmount || 0);
+        }
+      }
+    });
+
+    // Accumulate recoveries
+    recoveries.forEach((r) => {
+      if (r.status === 'REJECTED') return;
+      const collectionDateStr = r.collectionDate || r.createdAt;
+      if (!collectionDateStr) return;
+      const date = new Date(collectionDateStr);
+      if (date.getFullYear() === year && date.getMonth() === month) {
+        const dayNum = date.getDate();
+        if (dailyMap[dayNum]) {
+          dailyMap[dayNum].recovery += Number(r.amount || 0);
+        }
+      }
+    });
+
+    // Sort and return array
+    return Object.keys(dailyMap)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map(dayNum => dailyMap[dayNum]);
+  }, [salesOrders, recoveries]);
 
   // MTD Visits calculation
   const mtdVisitsStats = useMemo(() => {
@@ -4675,6 +4742,117 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                         </span>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* 2.5. DAILY SALES VS RECOVERY MTD TRENDS (RECHARTS LINE CHART) */}
+                <div className="sra-card bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-teal-600" />
+                        <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                          Daily Sales vs. Recovery Trends (MTD)
+                        </h2>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Month-to-Date comparative daily run-rate progress for {mtdStats.monthName}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] font-bold">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block" />
+                        Daily Booking
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+                        Daily Recovery
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="h-64 sm:h-72 w-full text-xs font-sans">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={mtdDailyTrendsData}
+                        margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="day" 
+                          stroke="#94a3b8" 
+                          fontSize={9} 
+                          tickLine={false} 
+                          axisLine={false}
+                          tickFormatter={(value) => {
+                            // Only show every 2nd or 3rd label on small screens to prevent overlap
+                            const dayNum = parseInt(value.split(' ')[1] || '0', 10);
+                            return dayNum % 3 === 1 ? value : '';
+                          }}
+                        />
+                        {/* Left axis for Sales Booking run-rate */}
+                        <YAxis 
+                          yAxisId="left"
+                          stroke="#0d9488" 
+                          fontSize={9} 
+                          tickLine={false} 
+                          axisLine={false}
+                          tickFormatter={(value) => `S:Rs.${(value / 1000).toFixed(0)}k`}
+                        />
+                        {/* Right axis for Recovery Collections run-rate */}
+                        <YAxis 
+                          yAxisId="right"
+                          orientation="right"
+                          stroke="#10b981" 
+                          fontSize={9} 
+                          tickLine={false} 
+                          axisLine={false}
+                          tickFormatter={(value) => `R:Rs.${(value / 1000).toFixed(0)}k`}
+                        />
+                        <RechartsTooltip
+                          contentStyle={{
+                            background: '#0f172a',
+                            borderRadius: '12px',
+                            color: '#f8fafc',
+                            fontSize: '11px',
+                            border: 'none',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                          }}
+                          labelStyle={{ fontWeight: 'bold', color: '#38bdf8', marginBottom: '4px' }}
+                          formatter={(value: any, name: any) => [
+                            `PKR ${Number(value).toLocaleString()}`,
+                            name === 'sales' ? 'Daily Booking (Left Axis)' : 'Daily Recovery (Right Axis)'
+                          ]}
+                        />
+                        <Line
+                          yAxisId="left"
+                          type="monotone"
+                          dataKey="sales"
+                          name="sales"
+                          stroke="#0d9488"
+                          strokeWidth={2.5}
+                          dot={{ r: 2, stroke: '#0d9488', strokeWidth: 1, fill: '#fff' }}
+                          activeDot={{ r: 5 }}
+                        />
+                        <Line
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="recovery"
+                          name="recovery"
+                          stroke="#10b981"
+                          strokeWidth={2.5}
+                          dot={{ r: 2, stroke: '#10b981', strokeWidth: 1, fill: '#fff' }}
+                          activeDot={{ r: 5 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200/60 text-[10px] text-slate-500 leading-relaxed flex items-center gap-2">
+                    <TrendingUp className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                    <span>
+                      <strong>Analytical Insight:</strong> Tracking daily booking against collection velocity helps prevent credit age build-up. Aim to keep daily recovery lines tracking closely with or above daily sales bookings.
+                    </span>
                   </div>
                 </div>
 

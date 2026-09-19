@@ -32,6 +32,101 @@ export interface SheetMetadata {
   }>;
 }
 
+export interface RateLimitStatus {
+  isRateLimited: boolean;
+  retryAfterSeconds: number;
+  lastLimitedTime: number | null;
+}
+
+let rateLimitStatus: RateLimitStatus = {
+  isRateLimited: false,
+  retryAfterSeconds: 0,
+  lastLimitedTime: null,
+};
+
+const subscribers = new Set<(status: RateLimitStatus) => void>();
+
+export function getRateLimitStatus(): RateLimitStatus {
+  if (rateLimitStatus.isRateLimited && rateLimitStatus.lastLimitedTime) {
+    const elapsed = Math.floor((Date.now() - rateLimitStatus.lastLimitedTime) / 1000);
+    const remaining = Math.max(0, rateLimitStatus.retryAfterSeconds - elapsed);
+    if (remaining === 0) {
+      rateLimitStatus.isRateLimited = false;
+      rateLimitStatus.retryAfterSeconds = 0;
+      rateLimitStatus.lastLimitedTime = null;
+    } else {
+      return {
+        ...rateLimitStatus,
+        retryAfterSeconds: remaining,
+      };
+    }
+  }
+  return rateLimitStatus;
+}
+
+export function subscribeToRateLimit(callback: (status: RateLimitStatus) => void) {
+  subscribers.add(callback);
+  callback(getRateLimitStatus());
+  return () => {
+    subscribers.delete(callback);
+  };
+}
+
+export function notifyRateLimit(retryAfterSecs: number) {
+  rateLimitStatus = {
+    isRateLimited: true,
+    retryAfterSeconds: retryAfterSecs,
+    lastLimitedTime: Date.now(),
+  };
+  subscribers.forEach((cb) => cb(getRateLimitStatus()));
+}
+
+/**
+ * Exponential Backoff Fetch wrapper to mitigate API Rate limits and intermittent 429/403 errors
+ */
+export async function fetchWithBackoff(
+  url: string,
+  options: RequestInit,
+  maxRetries = 4,
+  baseDelayMs = 1000
+): Promise<Response> {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok) {
+        return response;
+      }
+      
+      // Handle rate limits (429) or potential quota errors (403)
+      if (response.status === 429 || response.status === 403) {
+        attempt++;
+        if (response.status === 403) {
+          // Trigger rate limit state (60 seconds countdown block)
+          notifyRateLimit(60);
+        }
+        if (attempt >= maxRetries) {
+          return response;
+        }
+        const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 200;
+        console.warn(`[Google API Rate Limit] Status ${response.status} detected on attempt ${attempt}/${maxRetries}. Retrying in ${Math.round(delay)}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      attempt++;
+      if (attempt >= maxRetries) {
+        throw error;
+      }
+      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 200;
+      console.warn(`[Google API Network Error] Error on attempt ${attempt}/${maxRetries}. Retrying in ${Math.round(delay)}ms...`, error);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error(`Google Sheets API call failed after ${maxRetries} backoff attempts.`);
+}
+
 /**
  * Fetch Google Spreadsheet metadata (Title, sheet tab names, dimensions)
  */
@@ -39,7 +134,7 @@ export async function fetchSpreadsheetMetadata(
   spreadsheetId: string,
   accessToken: string
 ): Promise<SheetMetadata> {
-  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+  const res = await fetchWithBackoff(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
@@ -75,7 +170,7 @@ export async function readSpreadsheetRange(
   accessToken: string
 ): Promise<any[][]> {
   const encodedRange = encodeURIComponent(range);
-  const res = await fetch(
+  const res = await fetchWithBackoff(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodedRange}`,
     {
       headers: {
@@ -103,7 +198,7 @@ export async function appendSpreadsheetRows(
   accessToken: string
 ): Promise<{ updatedRows: number }> {
   const encodedRange = encodeURIComponent(range);
-  const res = await fetch(
+  const res = await fetchWithBackoff(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodedRange}:append?valueInputOption=USER_ENTERED`,
     {
       method: 'POST',
@@ -138,7 +233,7 @@ export async function updateSpreadsheetRange(
   accessToken: string
 ): Promise<void> {
   const encodedRange = encodeURIComponent(range);
-  const res = await fetch(
+  const res = await fetchWithBackoff(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodedRange}?valueInputOption=USER_ENTERED`,
     {
       method: 'PUT',
@@ -155,6 +250,35 @@ export async function updateSpreadsheetRange(
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error?.message || `Error updating Google Sheet range ${range}`);
+  }
+}
+
+/**
+ * Update (overwrite) multiple ranges simultaneously using a single batchUpdate API request to avoid rate limits
+ */
+export async function batchUpdateSpreadsheetRanges(
+  spreadsheetId: string,
+  data: { range: string; values: any[][] }[],
+  accessToken: string
+): Promise<void> {
+  const res = await fetchWithBackoff(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        valueInputOption: 'USER_ENTERED',
+        data,
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Error batch updating Google Sheet ranges`);
   }
 }
 
@@ -183,7 +307,7 @@ export async function ensureSheetTabsExist(
     },
   }));
 
-  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+  const res = await fetchWithBackoff(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -266,9 +390,6 @@ export async function syncDatabaseToGoogleSheet(
       nowIso,
     ]),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'User_Management!A1:O', userRows, accessToken).catch((e) => {
-    console.error('Failed to sync User_Management tab:', e);
-  });
 
   // 2. Product Management Sheet (National Light Official Catalog & Stock Valuation)
   const productRows: any[][] = [
@@ -305,11 +426,6 @@ export async function syncDatabaseToGoogleSheet(
       ];
     }),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'Product_Management!A1:L', productRows, accessToken).catch((e) => {
-    console.error('Failed to sync Product_Management tab:', e);
-  });
-  // Also update legacy Inventory_Stock tab for existing references
-  await updateSpreadsheetRange(spreadsheetId, 'Inventory_Stock!A1:L', productRows, accessToken).catch(() => {});
 
   // 3. Customers / Dealers Sheet
   const customerRows: any[][] = [
@@ -344,10 +460,6 @@ export async function syncDatabaseToGoogleSheet(
       nowIso,
     ]),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'Customers_Dealers!A1:M', customerRows, accessToken).catch((e) => {
-    console.error('Failed to sync Customers_Dealers tab:', e);
-  });
-  await updateSpreadsheetRange(spreadsheetId, 'Customers!A1:M', customerRows, accessToken).catch(() => {});
 
   // 4. Sales Data Sheet (All Sales Orders & Velocity)
   const salesRows: any[][] = [
@@ -389,10 +501,6 @@ export async function syncDatabaseToGoogleSheet(
       ];
     }),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'Sales_Data!A1:O', salesRows, accessToken).catch((e) => {
-    console.error('Failed to sync Sales_Data tab:', e);
-  });
-  await updateSpreadsheetRange(spreadsheetId, 'Sales_Orders!A1:O', salesRows, accessToken).catch(() => {});
 
   // 5. Invoices Sheet (Detailed Invoice Ledger & Breakdown)
   const invoiceRows: any[][] = [
@@ -447,9 +555,6 @@ export async function syncDatabaseToGoogleSheet(
       ];
     }),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'Invoice_Data!A1:R', invoiceRows, accessToken).catch((e) => {
-    console.error('Failed to sync Invoice_Data tab:', e);
-  });
 
   // 6. Recoveries Collections Sheet (Cash & Bank Deposit details)
   const recoveryRows: any[][] = [
@@ -491,10 +596,6 @@ export async function syncDatabaseToGoogleSheet(
       ];
     }),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'Recoveries_Collections!A1:O', recoveryRows, accessToken).catch((e) => {
-    console.error('Failed to sync Recoveries_Collections tab:', e);
-  });
-  await updateSpreadsheetRange(spreadsheetId, 'Recoveries!A1:O', recoveryRows, accessToken).catch(() => {});
 
   // 7. Running Double-Entry Ledger Sheet
   const ledgerRows: any[][] = [
@@ -580,10 +681,6 @@ export async function syncDatabaseToGoogleSheet(
     });
   });
 
-  await updateSpreadsheetRange(spreadsheetId, 'Ledger!A1:L', ledgerRows, accessToken).catch((e) => {
-    console.error('Failed to sync Ledger tab:', e);
-  });
-
   // 8. Attendance & Visits Sheet
   const visitRows: any[][] = [
     [
@@ -622,9 +719,24 @@ export async function syncDatabaseToGoogleSheet(
       ];
     }),
   ];
-  await updateSpreadsheetRange(spreadsheetId, 'Attendance_Visits!A1:N', visitRows, accessToken).catch((e) => {
-    console.error('Failed to sync Attendance_Visits tab:', e);
-  });
+
+  // Perform Atomic Batch Update to avoid Google Sheets API "Rate exceeded" (429) errors
+  const batchData = [
+    { range: 'User_Management!A1:O', values: userRows },
+    { range: 'Product_Management!A1:L', values: productRows },
+    { range: 'Inventory_Stock!A1:L', values: productRows },
+    { range: 'Customers_Dealers!A1:M', values: customerRows },
+    { range: 'Customers!A1:M', values: customerRows },
+    { range: 'Sales_Data!A1:O', values: salesRows },
+    { range: 'Sales_Orders!A1:O', values: salesRows },
+    { range: 'Invoice_Data!A1:R', values: invoiceRows },
+    { range: 'Recoveries_Collections!A1:O', values: recoveryRows },
+    { range: 'Recoveries!A1:O', values: recoveryRows },
+    { range: 'Ledger!A1:L', values: ledgerRows },
+    { range: 'Attendance_Visits!A1:N', values: visitRows },
+  ];
+
+  await batchUpdateSpreadsheetRanges(spreadsheetId, batchData, accessToken);
 
   const timestamp = new Date().toISOString();
   localStorage.setItem('nlink_google_sheets_last_sync', nowIso);
