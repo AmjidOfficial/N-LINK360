@@ -1499,8 +1499,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       const subtotal = previewBreakdown ? previewBreakdown.subtotal : orderSummary.orderValue;
       const discountAmount = previewBreakdown ? previewBreakdown.discountAmount : 0;
       const taxable = subtotal - discountAmount;
-      const taxAmount = previewBreakdown ? previewBreakdown.taxAmount : Math.round(taxable * 0.18);
-      const totalAmount = previewBreakdown ? previewBreakdown.totalAmount : taxable + taxAmount;
+      const taxAmount = previewBreakdown ? previewBreakdown.taxAmount : 0;
+      const totalAmount = previewBreakdown ? previewBreakdown.totalAmount : taxable;
 
       const newOrder: Partial<SalesOrder> = {
         id: `ORD-${Date.now().toString().slice(-6)}`,

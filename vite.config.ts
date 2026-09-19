@@ -11,7 +11,7 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'national_light_logo.jpg'],
+        includeAssets: ['national_light_logo.jpg'],
         manifest: {
           id: '/',
           name: 'National Light Pakistan - N-LINK 360',
@@ -65,10 +65,6 @@ export default defineConfig(() => {
             },
           ],
         },
-        devOptions: {
-          enabled: true,
-          type: 'module',
-        },
       }),
       {
         name: 'api-health-plugin',
@@ -97,18 +93,8 @@ export default defineConfig(() => {
     },
     build: {
       outDir: 'dist',
-      emptyOutDir: false,
-      sourcemap: true,
-      chunkSizeWarningLimit: 2500,
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            reactVendor: ['react', 'react-dom'],
-            icons: ['lucide-react'],
-            charts: ['recharts', 'd3'],
-          },
-        },
-      },
+      sourcemap: false,
+      chunkSizeWarningLimit: 3000,
     },
     server: {
       port: 3000,

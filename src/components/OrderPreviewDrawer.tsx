@@ -67,10 +67,7 @@ export const OrderPreviewDrawer: React.FC<OrderPreviewDrawerProps> = ({
         const lineGross = quantityNum * unitPrice;
         // Line-level item discount (inherits overall discount)
         const lineDiscount = Math.round(lineGross * (overallDiscountPercent / 100));
-        const lineTaxable = lineGross - lineDiscount;
-        // 18% FBR Standard Sales Tax (GST)
-        const lineGst = Math.round(lineTaxable * 0.18);
-        const lineNet = lineTaxable + lineGst;
+        const lineNet = lineGross - lineDiscount;
 
         return {
           skuId,
@@ -84,8 +81,8 @@ export const OrderPreviewDrawer: React.FC<OrderPreviewDrawerProps> = ({
           unitPrice,
           lineGross,
           lineDiscount,
-          lineTaxable,
-          lineGst,
+          lineTaxable: lineNet,
+          lineGst: 0,
           lineNet,
           currentStock: Number(sku?.currentStock || 100),
         };
@@ -98,17 +95,15 @@ export const OrderPreviewDrawer: React.FC<OrderPreviewDrawerProps> = ({
     const totalPieces = lineItems.reduce((acc, i) => acc + i.quantity, 0);
     const grossSubtotal = lineItems.reduce((acc, i) => acc + i.lineGross, 0);
     const discountAmount = Math.round(grossSubtotal * (overallDiscountPercent / 100));
-    const taxableSubtotal = grossSubtotal - discountAmount;
-    const taxAmount = Math.round(taxableSubtotal * 0.18); // 18% FBR GST
-    const grandTotal = taxableSubtotal + taxAmount;
+    const grandTotal = Math.max(0, grossSubtotal - discountAmount);
 
     return {
       totalSKUs,
       totalPieces,
       grossSubtotal,
       discountAmount,
-      taxableSubtotal,
-      taxAmount,
+      taxableSubtotal: grandTotal,
+      taxAmount: 0,
       grandTotal,
     };
   }, [lineItems, overallDiscountPercent]);
@@ -383,15 +378,12 @@ export const OrderPreviewDrawer: React.FC<OrderPreviewDrawerProps> = ({
             </div>
           </div>
 
-          {/* 4. Complete FBR 18% Tax & Invoice Breakdown Math Card */}
+          {/* 4. Complete Order Breakdown Math Card */}
           <div className="bg-white p-4.5 rounded-2xl border-2 border-teal-600/30 shadow-sm space-y-2.5 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <Calculator className="w-4 h-4 text-teal-600" />
-                <span>Final Order & Tax Audit Breakdown</span>
-              </span>
-              <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                18% FBR GST STANDARD
+                <span>Final Order Breakdown</span>
               </span>
             </div>
 
@@ -409,18 +401,6 @@ export const OrderPreviewDrawer: React.FC<OrderPreviewDrawerProps> = ({
                   <span className="font-mono font-bold">- Rs. {totals.discountAmount.toLocaleString()}</span>
                 </div>
               )}
-
-              <div className="flex justify-between border-t border-slate-100 pt-1.5 font-semibold text-slate-700">
-                <span>Taxable Value (Subtotal Excl. Tax):</span>
-                <span className="font-mono font-bold text-slate-900">
-                  Rs. {totals.taxableSubtotal.toLocaleString()}
-                </span>
-              </div>
-
-              <div className="flex justify-between text-teal-700 font-semibold">
-                <span>Sales Tax (18% FBR GST):</span>
-                <span className="font-mono font-bold">+ Rs. {totals.taxAmount.toLocaleString()}</span>
-              </div>
 
               <div className="flex justify-between border-t-2 border-slate-200 pt-2 text-sm">
                 <span className="font-black text-slate-900 uppercase">Grand Total Payable:</span>

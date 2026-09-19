@@ -206,10 +206,10 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
 
   // Order Cart Calculations
   const cartSubtotal = orderCart.reduce((sum, item) => sum + item.product.listPrice * item.quantity, 0);
-  const cartDiscount = Math.round(cartSubtotal * 0.05); // 5% commercial discount
-  const cartTax = Math.round((cartSubtotal - cartDiscount) * 0.18); // 18% General Sales Tax (GST)
-  const cartFreight = orderCart.length > 0 ? 350 : 0; // Flat trade delivery charges
-  const cartTotal = Math.max(0, cartSubtotal - cartDiscount + cartTax + cartFreight);
+  const cartDiscount = 0; // Removed Volume Trade Discount
+  const cartTax = 0; // Removed General Sales Tax (GST)
+  const cartFreight = 0; // Removed Cargo Freight Delivery
+  const cartTotal = cartSubtotal;
 
   // Hourly Auto-Save Effect (Saves order progress to localStorage every 1 Hour to prevent mobile browser crash data loss)
   useEffect(() => {
@@ -481,8 +481,8 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
         salesUserName: currentUser.fullName,
         orderDate: new Date().toISOString().split('T')[0],
         subtotal: cartSubtotal,
-        discountAmount: cartDiscount,
-        taxAmount: cartTax,
+        discountAmount: 0,
+        taxAmount: 0,
         totalAmount: cartTotal,
         status: 'SUBMITTED',
         creditCheckStatus: (isOverLimit || isCreditExceeded) ? 'RED' : 'GREEN',
@@ -617,10 +617,10 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
       invoiceNo: o.orderNumber,
       date: o.orderDate,
       amount: o.totalAmount,
-      subtotal: o.subtotal,
-      discountAmount: o.discountAmount,
-      taxAmount: o.taxAmount,
-      freightAmount: 350,
+      subtotal: o.subtotal || o.totalAmount,
+      discountAmount: 0,
+      taxAmount: 0,
+      freightAmount: 0,
       itemsCount: o.items?.length || 0,
       status: o.status === 'APPROVED' ? 'Approved & Dispatched' : o.status === 'REJECTED' ? 'Rejected' : 'Awaiting Approval',
       badgeColor: o.status === 'APPROVED'
@@ -1590,18 +1590,10 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
               {/* Pricing Math */}
               <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col gap-2 font-semibold">
                 <div className="flex justify-between text-xs text-slate-500">
-                  <span>Gross Catalog Value</span>
+                  <span>Gross Order Value</span>
                   <span className="font-mono text-slate-900 dark:text-slate-100">
                     Rs. {cartSubtotal.toLocaleString()}
                   </span>
-                </div>
-                <div className="flex justify-between text-xs text-slate-500">
-                  <span>Commercial Trade Volume Discount (5%)</span>
-                  <span className="font-mono text-emerald-500">-Rs. {cartDiscount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-xs text-slate-500">
-                  <span>Standard Delivery Cargo &amp; Freight</span>
-                  <span className="font-mono text-slate-900 dark:text-slate-100">Rs. {cartFreight}</span>
                 </div>
                 <div className="h-[1px] bg-slate-100 dark:bg-slate-800 my-1" />
                 <div className="flex justify-between text-sm text-[#191c1e] dark:text-white font-black">
@@ -2778,10 +2770,7 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
                     ];
 
                     const modalSubtotal = selectedInvoiceModal.subtotal || modalItemsList.reduce((sum: number, i: any) => sum + i.lineTotal, 0);
-                    const modalDiscount = selectedInvoiceModal.discountAmount || Math.round(modalSubtotal * 0.05);
-                    const modalTax = selectedInvoiceModal.taxAmount || Math.round((modalSubtotal - modalDiscount) * 0.18);
-                    const modalFreight = selectedInvoiceModal.freightAmount || (selectedInvoiceModal.amount ? 0 : 350);
-                    const modalTotal = selectedInvoiceModal.amount || (modalSubtotal - modalDiscount + modalTax + modalFreight);
+                    const modalTotal = selectedInvoiceModal.amount || modalSubtotal;
 
                     return (
                       <>
@@ -2805,20 +2794,6 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
                             <span>Subtotal:</span>
                             <span className="font-mono text-slate-800 dark:text-slate-200">Rs. {modalSubtotal.toLocaleString()}</span>
                           </div>
-                          <div className="flex justify-between text-emerald-600">
-                            <span>Discount (5%):</span>
-                            <span className="font-mono">-Rs. {modalDiscount.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Sales Tax (18% GST):</span>
-                            <span className="font-mono text-slate-800 dark:text-slate-200">Rs. {modalTax.toLocaleString()}</span>
-                          </div>
-                          {modalFreight > 0 && (
-                            <div className="flex justify-between">
-                              <span>Delivery Freight Charge:</span>
-                              <span className="font-mono text-slate-800 dark:text-slate-200">Rs. {modalFreight}</span>
-                            </div>
-                          )}
                           <div className="h-[1px] bg-slate-200 dark:bg-slate-800 my-0.5" />
                           <div className="flex justify-between font-black text-xs text-[#006b5f] dark:text-[#76f4e0]">
                             <span>TOTAL COMMITTED NET:</span>
@@ -2980,20 +2955,8 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
               {/* Financial calculations breakdown */}
               <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200/50 dark:border-slate-850 text-xs font-semibold flex flex-col gap-2">
                 <div className="flex justify-between text-slate-500">
-                  <span>Gross Catalog Subtotal Value</span>
+                  <span>Gross Order Value</span>
                   <span className="font-mono text-slate-900 dark:text-white">Rs. {cartSubtotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-emerald-600">
-                  <span>Volume Trade Discount (5%)</span>
-                  <span className="font-mono">-Rs. {cartDiscount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>General Sales Tax (18% GST)</span>
-                  <span className="font-mono text-slate-900 dark:text-white">Rs. {cartTax.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Standard Cargo Freight Delivery</span>
-                  <span className="font-mono text-slate-900 dark:text-white">Rs. {cartFreight}</span>
                 </div>
                 <div className="h-[1px] bg-slate-200 dark:bg-slate-800 my-0.5" />
                 <div className="flex justify-between font-black text-sm text-[#001428] dark:text-white">
@@ -3132,10 +3095,7 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
             ];
 
             const printSubtotal = selectedInvoiceModal.subtotal || invoiceItemsList.reduce((sum: number, i: any) => sum + i.lineTotal, 0);
-            const printDiscount = selectedInvoiceModal.discountAmount || Math.round(printSubtotal * 0.05);
-            const printTax = selectedInvoiceModal.taxAmount || Math.round((printSubtotal - printDiscount) * 0.18);
-            const printFreight = selectedInvoiceModal.freightAmount || (selectedInvoiceModal.amount ? 0 : 350);
-            const printTotal = selectedInvoiceModal.amount || (printSubtotal - printDiscount + printTax + printFreight);
+            const printTotal = selectedInvoiceModal.amount || printSubtotal;
 
             return (
               <div className="bg-white p-6 max-w-[750px] mx-auto border border-slate-300 rounded-lg shadow-sm">
@@ -3212,23 +3172,9 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
                       <span className="text-slate-500">Gross Total Subtotal:</span>
                       <span className="font-mono text-slate-950">Rs. {printSubtotal.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between text-emerald-600">
-                      <span>Volume Trade Discount (5%):</span>
-                      <span className="font-mono">-Rs. {printDiscount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">General Sales Tax (18% GST):</span>
-                      <span className="font-mono text-slate-950">Rs. {printTax.toLocaleString()}</span>
-                    </div>
-                    {printFreight > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Cargo Freight Delivery:</span>
-                        <span className="font-mono text-slate-950">Rs. {printFreight}</span>
-                      </div>
-                    )}
                     <div className="h-[1px] bg-slate-200 my-1" />
                     <div className="flex justify-between font-black text-sm text-[#006b5f]">
-                      <span>NET COMITTED TOTAL:</span>
+                      <span>NET COMMITTED TOTAL:</span>
                       <span className="font-mono text-base">Rs. {printTotal.toLocaleString()}</span>
                     </div>
                   </div>
