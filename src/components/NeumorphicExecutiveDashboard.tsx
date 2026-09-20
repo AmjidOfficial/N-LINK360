@@ -717,7 +717,7 @@ export const NeumorphicExecutiveDashboard: React.FC<ExecutiveDashboardProps> = (
               </h2>
               <p className="text-[11px] text-slate-500">
                 {isField
-                  ? 'CreditBook & Invoice Maker mode: Fast party khata, cash-in logging & 1-tap professional billing'
+                  ? 'N-Link Khata & Invoice Maker mode: Fast party ledger, cash-in logging & 1-tap professional billing'
                   : 'Manage national branch hubs, automotive SKU catalogue, target quotas & territories'}
               </p>
             </div>
@@ -742,7 +742,7 @@ export const NeumorphicExecutiveDashboard: React.FC<ExecutiveDashboardProps> = (
                 {isField ? 'Party Khata / Accounts' : 'Dealer & Distributor Network'}
               </div>
               <p className="text-[10px] text-slate-500">
-                {isField ? 'CreditBook style ledger balances & phone contacts' : 'All accounts across all national regions'}
+                {isField ? 'Digital ledger balances & direct WhatsApp reminders' : 'All accounts across all national regions'}
               </p>
             </div>
 

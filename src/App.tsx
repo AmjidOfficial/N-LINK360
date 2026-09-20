@@ -17,6 +17,7 @@ import { EnterpriseDashboardTab } from './components/stitch/EnterpriseDashboardT
 import { EnterpriseAttendanceTab } from './components/stitch/EnterpriseAttendanceTab';
 import { EnterpriseOrdersTab } from './components/stitch/EnterpriseOrdersTab';
 import { EnterpriseDealersTab } from './components/stitch/EnterpriseDealersTab';
+import { NLinkKhataView } from './components/stitch/NLinkKhataView';
 import { NationalLightRateListModal } from './components/stitch/NationalLightRateListModal';
 import { GoogleSheetSyncModal } from './components/GoogleSheetSyncModal';
 import { DailyPerformancePDFModal } from './components/stitch/DailyPerformancePDFModal';
@@ -710,6 +711,7 @@ export default function App() {
       {/* 1. Universal Enterprise Header */}
       <EnterpriseHeader
         activeTab={activeTab}
+        onTabChange={setActiveTab}
         currentUser={currentUser}
         onSelectUser={setCurrentUser}
         onOpenRateCard={() => setIsRateCardOpen(true)}
@@ -720,6 +722,7 @@ export default function App() {
         onToggleDarkMode={toggleDarkMode}
         isOnline={isOnline}
         onSignOut={handleSignOut}
+        onOpenSyncModal={() => setIsSyncModalOpen(true)}
         onTriggerManualSync={async () => {
           try {
             setLedgerToastMessage('🔄 Sync started. Synchronizing database state...');
@@ -770,7 +773,7 @@ export default function App() {
       )}
 
       {/* 2. Main Viewport Container */}
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 pt-4 pb-20">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24">
         {activeTab === 'DASHBOARD' && (
           <EnterpriseDashboardTab
             currentUser={currentUser}
@@ -825,21 +828,19 @@ export default function App() {
         )}
 
         {activeTab === 'LEDGERS' && (
-          <EnterpriseOrdersTab
+          <NLinkKhataView
             currentUser={currentUser}
             customers={customers}
             orders={orders}
             recoveries={recoveries}
             onPlaceOrder={handlePlaceOrder}
             onRecordRecovery={handleRecordRecovery}
+            onAddDealer={handleAddDealer}
             onOpenRateCard={() => setIsRateCardOpen(true)}
             initialSelectedCustomerId={targetedCustomerId}
             selectedAttendanceTown={selectedAttendanceTown}
             isCheckedIn={isCheckedIn}
             onNavigateToAttendance={() => setActiveTab('ATTENDANCE')}
-            lockModeTo="LEDGERS"
-            initialMode="invoices"
-            onOpenRegisterDealer={() => setActiveTab('DEALERS')}
           />
         )}
 

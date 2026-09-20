@@ -29,6 +29,8 @@ import {
   Server,
   FileJson,
   ShieldAlert,
+  FileText,
+  Share2,
 } from 'lucide-react';
 import {
   getOfflineQueue,
@@ -41,6 +43,7 @@ import {
   ErrorCategory,
 } from '../services/offlineSyncEngine';
 import { triggerDownload } from '../services/exportEngine';
+import { getLocalDatabaseCache } from '../services/googleSheetsTwoWaySyncService';
 
 interface OfflineSyncModalProps {
   isOpen: boolean;
@@ -268,6 +271,234 @@ export const OfflineSyncModal: React.FC<OfflineSyncModalProps> = ({
       `NLink360_Sync_Diagnostics_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '_')}.json`,
       'application/json'
     );
+  };
+
+  const handleExportDailyLog = () => {
+    // 1. Get today's local date string (safe local offset string)
+    const localDate = new Date();
+    const offset = localDate.getTimezoneOffset();
+    const todayDateObj = new Date(localDate.getTime() - (offset * 60 * 1000));
+    const todayStr = todayDateObj.toISOString().split('T')[0]; // "YYYY-MM-DD"
+    
+    // 2. Fetch logged-in user details
+    let activeUser: any = null;
+    try {
+      const saved = localStorage.getItem('nlink_active_logged_user');
+      if (saved) activeUser = JSON.parse(saved);
+    } catch (e) {
+      console.error('Error parsing logged-in user:', e);
+    }
+    
+    const userName = activeUser?.fullName || 'Field Officer';
+    const userCode = activeUser?.employeeCode || 'N/A';
+    const userRole = activeUser?.roleTitle || activeUser?.role || 'Field Personnel';
+    const userPhone = activeUser?.phone || 'N/A';
+    
+    // 3. Load local database cache
+    let cache: any = null;
+    try {
+      cache = getLocalDatabaseCache();
+    } catch (e) {
+      console.error('Error fetching database cache:', e);
+    }
+    
+    // 4. Gather today's items from local cache
+    const cachedOrders = (cache?.orders || []).filter((o: any) => {
+      const d = o.orderDate || o.createdAt?.slice(0, 10);
+      return d === todayStr;
+    });
+    
+    const cachedRecoveries = (cache?.recoveries || []).filter((r: any) => {
+      const d = r.collectionDate || r.createdAt?.slice(0, 10);
+      return d === todayStr;
+    });
+    
+    const cachedVisits = (cache?.visits || []).filter((v: any) => {
+      const d = v.visitAt?.slice(0, 10) || v.createdAt?.slice(0, 10);
+      return d === todayStr;
+    });
+    
+    const cachedAttendance = (cache?.attendance || []).filter((a: any) => {
+      const d = a.date || a.createdAt?.slice(0, 10);
+      return d === todayStr;
+    });
+
+    // 5. Gather today's items from current offline queue to merge anything not cached yet
+    const queueOrders = queue.filter(item => item.module === 'ORDERS' && item.createdAt?.slice(0, 10) === todayStr);
+    const queueRecoveries = queue.filter(item => item.module === 'RECOVERY' && item.createdAt?.slice(0, 10) === todayStr);
+    const queueVisits = queue.filter(item => item.module === 'VISITS' && item.createdAt?.slice(0, 10) === todayStr);
+
+    // Merge lists avoiding duplicates
+    const orderMap = new Map();
+    cachedOrders.forEach((o: any) => orderMap.set(o.id || o.orderNumber, o));
+    queueOrders.forEach((item: any) => {
+      const o = (item.payload?.order || item.payload || {}) as any;
+      orderMap.set(o.id || o.orderNumber || item.id, {
+        orderNumber: o.orderNumber || 'Pending Sync',
+        customerName: o.customerName || 'Offline Partner',
+        customerCode: o.customerCode || '',
+        orderDate: o.orderDate || item.createdAt?.slice(0, 10),
+        totalAmount: o.totalAmount || o.netTotal || 0,
+        status: 'AWAITING UPLOAD (OFFLINE QUEUE)',
+        items: o.items || [],
+      });
+    });
+    const finalOrders = Array.from(orderMap.values());
+
+    const recoveryMap = new Map();
+    cachedRecoveries.forEach((r: any) => recoveryMap.set(r.id || r.recoveryNumber, r));
+    queueRecoveries.forEach((item: any) => {
+      const r = (item.payload || {}) as any;
+      recoveryMap.set(r.id || r.recoveryNumber || item.id, {
+        recoveryNumber: r.recoveryNumber || 'Pending Sync',
+        customerName: r.customerName || 'Offline Partner',
+        customerCode: r.customerCode || '',
+        collectionDate: r.collectionDate || item.createdAt?.slice(0, 10),
+        amount: r.amount || 0,
+        paymentMode: r.paymentMode || 'CASH',
+        instrumentNumber: r.instrumentNumber || '',
+        status: 'AWAITING UPLOAD (OFFLINE QUEUE)',
+      });
+    });
+    const finalRecoveries = Array.from(recoveryMap.values());
+
+    const visitMap = new Map();
+    cachedVisits.forEach((v: any) => visitMap.set(v.id, v));
+    queueVisits.forEach((item: any) => {
+      const v = (item.payload || {}) as any;
+      visitMap.set(v.id || item.id, {
+        customerName: v.customerName || 'Offline Partner',
+        purpose: v.purpose || 'Field Visit',
+        notes: v.notes || '',
+        visitAt: v.visitAt || item.createdAt,
+      });
+    });
+    const finalVisits = Array.from(visitMap.values());
+
+    // Calculate totals
+    const totalOrderAmount = finalOrders.reduce((sum: number, o: any) => sum + (o.totalAmount || o.netTotal || 0), 0);
+    const totalRecoveryAmount = finalRecoveries.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
+
+    // Generate plain text report
+    const divider = '='.repeat(60);
+    const subDivider = '-'.repeat(60);
+    
+    let reportText = '';
+    reportText += `${divider}\n`;
+    reportText += `                NATIONAL LIGHTS PAKISTAN\n`;
+    reportText += `            N-LINK 360 ENTERPRISE DAILY LOG\n`;
+    reportText += `${divider}\n`;
+    reportText += `Date: ${localDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+    reportText += `Generated At: ${localDate.toLocaleTimeString('en-US')} (Local Time)\n`;
+    reportText += `Device Online Status: ${isOnline ? 'ONLINE (CONNECTED)' : 'OFFLINE (LOCAL QUEUE ACTIVE)'}\n`;
+    reportText += `${divider}\n\n`;
+
+    reportText += `------------------ FIELD OFFICER PROFILE -------------------\n`;
+    reportText += `Officer Name:   ${userName}\n`;
+    reportText += `Employee Code:  ${userCode}\n`;
+    reportText += `Role / Rank:    ${userRole}\n`;
+    reportText += `Phone Number:   ${userPhone}\n`;
+    reportText += `${subDivider}\n\n`;
+
+    reportText += `==================== DAILY METRICS SUMMARY =================\n`;
+    reportText += `Total Orders Logged:      ${finalOrders.length}\n`;
+    reportText += `Total Booking Value:      PKR ${totalOrderAmount.toLocaleString()}\n`;
+    reportText += `Total Recoveries Logged:  ${finalRecoveries.length}\n`;
+    reportText += `Total Cash Collected:     PKR ${totalRecoveryAmount.toLocaleString()}\n`;
+    reportText += `Total Client Visits:      ${finalVisits.length}\n`;
+    reportText += `Attendance Synced:        ${cachedAttendance.length > 0 ? 'YES' : 'PENDING'}\n`;
+    reportText += `============================================================\n\n`;
+
+    // 1. Orders section
+    reportText += `----------------------- DAILY ORDERS -----------------------\n`;
+    if (finalOrders.length === 0) {
+      reportText += `No sales orders logged today.\n`;
+    } else {
+      finalOrders.forEach((o: any, idx) => {
+        reportText += `${idx + 1}. Order Code: ${o.orderNumber || 'Pending'}\n`;
+        reportText += `   Customer:   ${o.customerName} (${o.customerCode || 'N/A'})\n`;
+        reportText += `   Amount:     PKR ${(o.totalAmount || o.netTotal || 0).toLocaleString()}\n`;
+        reportText += `   Status:     ${o.status || 'DRAFT'}\n`;
+        if (Array.isArray(o.items) && o.items.length > 0) {
+          reportText += `   SKUs Logged:\n`;
+          o.items.forEach((it: any) => {
+            reportText += `     - ${it.skuCode || it.name || 'SKU'} (x${it.quantity})\n`;
+          });
+        }
+        reportText += `\n`;
+      });
+    }
+    reportText += `${subDivider}\n\n`;
+
+    // 2. Recoveries section
+    reportText += `--------------------- DAILY RECOVERIES ---------------------\n`;
+    if (finalRecoveries.length === 0) {
+      reportText += `No payment collections logged today.\n`;
+    } else {
+      finalRecoveries.forEach((r: any, idx) => {
+        reportText += `${idx + 1}. Recovery Ref: ${r.recoveryNumber || 'Pending'}\n`;
+        reportText += `   Customer:     ${r.customerName} (${r.customerCode || 'N/A'})\n`;
+        reportText += `   Amount:       PKR ${(r.amount || 0).toLocaleString()}\n`;
+        reportText += `   Payment Mode: ${r.paymentMode}\n`;
+        if (r.instrumentNumber) {
+          reportText += `   Details:      ${r.instrumentNumber}\n`;
+        }
+        reportText += `   Status:       ${r.status || 'DRAFT'}\n`;
+        reportText += `\n`;
+      });
+    }
+    reportText += `${subDivider}\n\n`;
+
+    // 3. Visits section
+    reportText += `----------------------- CLIENT VISITS ----------------------\n`;
+    if (finalVisits.length === 0) {
+      reportText += `No customer visits logged today.\n`;
+    } else {
+      finalVisits.forEach((v: any, idx) => {
+        reportText += `${idx + 1}. Customer: ${v.customerName}\n`;
+        reportText += `   Purpose:  ${v.purpose || 'Routine visit'}\n`;
+        if (v.notes) {
+          reportText += `   Notes:    ${v.notes}\n`;
+        }
+        if (v.visitAt) {
+          reportText += `   Time:     ${new Date(v.visitAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}\n`;
+        }
+        reportText += `\n`;
+      });
+    }
+    reportText += `${subDivider}\n\n`;
+
+    // 4. Attendance section
+    reportText += `-------------------- ATTENDANCE RECORDS --------------------\n`;
+    if (cachedAttendance.length === 0) {
+      reportText += `No attendance punch logged on this device today.\n`;
+    } else {
+      cachedAttendance.forEach((a: any, idx) => {
+        reportText += `${idx + 1}. Punch Type: ${a.punchType || a.type || 'PUNCH_IN'}\n`;
+        reportText += `   Time:       ${a.punchTime || a.time || new Date(a.createdAt).toLocaleTimeString()}\n`;
+        if (a.latitude) {
+          reportText += `   GPS:        ${Number(a.latitude).toFixed(5)}, ${Number(a.longitude).toFixed(5)}\n`;
+        }
+        reportText += `\n`;
+      });
+    }
+    reportText += `${divider}\n`;
+    reportText += `  End of Local Report. Copy this text to share on WhatsApp.\n`;
+    reportText += `${divider}\n`;
+
+    // Trigger text file download
+    const cleanDateStr = todayStr.replace(/[^a-zA-Z0-9]/g, '-');
+    const filename = `NLink_Daily_Log_${cleanDateStr}.txt`;
+    triggerDownload(reportText, filename, 'text/plain;charset=utf-8;');
+
+    // Copy to clipboard for easy WhatsApp pasting
+    void navigator.clipboard.writeText(reportText);
+    
+    // Set feedback toast
+    setSyncFeedback({
+      type: 'SUCCESS',
+      message: `Daily Log text report generated and downloaded! Copied to clipboard for instant WhatsApp sharing.`,
+    });
   };
 
   const togglePayloadExpand = (id: string) => {
@@ -981,6 +1212,16 @@ export const OfflineSyncModal: React.FC<OfflineSyncModalProps> = ({
             >
               <Download className="h-3.5 w-3.5 text-slate-500" />
               <span>Export Diagnostics</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportDailyLog}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs font-extrabold text-emerald-800 shadow-2xs hover:bg-emerald-100/90 cursor-pointer transition-all"
+              title="Generate a local summary text file of today's activities for offline sharing on WhatsApp"
+            >
+              <FileText className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Export Daily Log</span>
             </button>
 
             {syncedCount > 0 && (

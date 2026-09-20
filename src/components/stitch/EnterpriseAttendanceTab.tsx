@@ -223,13 +223,13 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
   return (
     <div className="flex flex-col w-full gap-4 pb-12 animate-fadeIn" id="enterprise-attendance-view">
       {/* 1. Sub-Tab Switcher (My Attendance vs Team Records & Tracking) */}
-      <div className="flex p-1 bg-[#eceef0] dark:bg-slate-800/80 rounded-2xl gap-1 shadow-2xs">
+      <div className="flex p-1.5 bg-slate-100 dark:bg-slate-950/60 border border-slate-200/40 dark:border-slate-800/40 rounded-2xl gap-1.5 shadow-3xs">
         <button
           onClick={() => setActiveSubTab('my_attendance')}
-          className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeSubTab === 'my_attendance'
-              ? 'bg-white dark:bg-slate-900 text-[#191c1e] dark:text-white shadow-xs'
-              : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e] dark:hover:text-white'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200/40 dark:border-slate-800/40'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <span className="material-symbols-outlined text-[18px] text-[#006b5f] dark:text-[#76f4e0]">
@@ -240,10 +240,10 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
 
         <button
           onClick={() => setActiveSubTab('team_records')}
-          className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeSubTab === 'team_records'
-              ? 'bg-white dark:bg-slate-900 text-[#191c1e] dark:text-white shadow-xs'
-              : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e] dark:hover:text-white'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm border border-slate-200/40 dark:border-slate-800/40'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <span className="material-symbols-outlined text-[18px] text-blue-600 dark:text-blue-400">
@@ -257,25 +257,23 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
       {activeSubTab === 'my_attendance' && (
           <div className="flex flex-col gap-4 animate-fadeIn">
             {/* Status Banner & Punch Clock Card */}
-            <div className="flex flex-col bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800 relative overflow-hidden animate-fadeIn">
-              <div className="absolute -right-8 -top-8 w-36 h-36 bg-[#76f4e0]/20 rounded-full blur-2xl pointer-events-none" />
-
+            <div className="flex flex-col bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl shadow-xs border border-slate-200/90 dark:border-slate-800 relative overflow-hidden animate-fadeIn">
               <div className="flex items-center justify-between mb-4 z-10">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`w-3 h-3 rounded-full ${
-                      isCheckedIn ? 'bg-[#006b5f] dark:bg-[#76f4e0] animate-pulse' : 'bg-slate-400'
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      isCheckedIn ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
                     }`}
                   />
-                  <span className="text-xs text-[#43474d] dark:text-slate-400 font-bold tracking-wider uppercase">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-bold tracking-wider uppercase">
                     Live Field Status
                   </span>
                 </div>
                 <span
                   className={`px-3 py-1 text-xs font-bold rounded-full ${
                     isCheckedIn
-                      ? 'bg-[#76f4e0] text-[#006f63] dark:bg-[#76f4e0]/20 dark:text-[#76f4e0]'
-                      : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                   }`}
                 >
                   {isCheckedIn ? 'Checked In' : 'Checked Out'}
@@ -284,24 +282,24 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
 
               <div className="flex items-baseline justify-between mb-4 z-10 flex-wrap gap-2">
                 <div>
-                  <h2 className="text-3xl font-extrabold text-[#191c1e] dark:text-white tracking-tight font-mono">
+                  <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight font-mono">
                     {currentTime}
                   </h2>
-                  <p className="text-xs sm:text-sm text-[#43474d] dark:text-slate-400 font-medium mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                     {currentDateString}
                   </p>
                   {isCheckedIn && checkedInTime && (
-                    <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-[#006b5f] dark:text-[#76f4e0] bg-[#76f4e0]/20 dark:bg-[#76f4e0]/10 px-2 py-0.5 rounded-md">
-                      <span className="material-symbols-outlined text-[12px]">schedule</span>
+                    <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#006b5f] dark:text-[#76f4e0] bg-[#006b5f]/10 dark:bg-[#76f4e0]/10 px-2.5 py-0.5 rounded-md">
+                      <span className="material-symbols-outlined text-[13px]">schedule</span>
                       Checked in at {checkedInTime}
                     </span>
                   )}
                 </div>
                 <div className="text-right">
-                  <span className="text-[11px] text-[#43474d] dark:text-slate-400 block font-semibold uppercase tracking-wider">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-semibold uppercase tracking-wider">
                     Shift Duration
                   </span>
-                  <span className="text-xl font-bold text-[#001428] dark:text-[#76f4e0] font-mono">
+                  <span className="text-xl sm:text-2xl font-bold text-[#006b5f] dark:text-[#76f4e0] font-mono">
                     {isCheckedIn ? '04h 12m' : '00h 00m'}
                   </span>
                 </div>
@@ -309,14 +307,14 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
 
               {/* A. Town Selection as per Assigned */}
               <div className="mb-4 z-10">
-                <label className="block text-[11px] font-bold text-[#43474d] dark:text-slate-300 mb-1 uppercase tracking-wider">
-                  Town Beat Location
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
+                  Assigned Town Beat Location
                 </label>
                 <div className="relative">
                   <select
                     value={selectedTown}
                     onChange={(e) => onSelectTown(e.target.value)}
-                    className="w-full bg-[#f2f4f6] dark:bg-slate-800 text-[#191c1e] dark:text-white px-3 py-2.5 rounded-xl outline-none border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-bold appearance-none cursor-pointer text-ellipsis overflow-hidden"
+                    className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white px-3.5 py-2.5 rounded-xl outline-none border border-slate-200/90 dark:border-slate-700 text-xs sm:text-sm font-bold appearance-none cursor-pointer focus:ring-2 focus:ring-[#006b5f]"
                   >
                     {availableTowns.map((town) => (
                       <option key={town} value={town}>
@@ -324,29 +322,29 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
                       </option>
                     ))}
                   </select>
-                  <span className="material-symbols-outlined absolute right-3 top-3 text-slate-400 pointer-events-none">
+                  <span className="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 pointer-events-none text-[20px]">
                     expand_more
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Only dealers registered under this selected town will load in your Entry Form.
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                  Only dealers registered under this selected town will load in your booking form.
                 </p>
               </div>
 
               {/* B & C. Check Location & Geofence Indicator */}
-              <div className="flex flex-col gap-2.5 p-3 bg-[#eceef0]/70 dark:bg-slate-800/80 rounded-xl mb-4 z-10">
+              <div className="flex flex-col gap-2.5 p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl mb-4 z-10 border border-slate-200/70 dark:border-slate-700/60">
                 <div className="flex items-start gap-2.5">
                   <span className="material-symbols-outlined text-[#006b5f] dark:text-[#76f4e0] text-[20px] shrink-0 mt-0.5">
                     location_on
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-semibold text-[#191c1e] dark:text-white truncate">
+                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                       {selectedTown} Center • Lat: {townCoords.lat.toFixed(4)}, Lng: {townCoords.lng.toFixed(4)}
                     </p>
-                    <p className="text-[11px] text-[#43474d] dark:text-slate-400">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
                       Live Device GPS: Lat: {userLat.toFixed(4)}, Lng: {userLng.toFixed(4)}
                     </p>
-                    <p className="text-[11px] font-bold mt-1 text-[#001428] dark:text-slate-200 flex items-center gap-1">
+                    <p className="text-[11px] font-bold mt-1 text-slate-800 dark:text-slate-200 flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px]">radar</span>
                       Calculated Distance: <span className="font-mono text-[#006b5f] dark:text-[#76f4e0] font-black">{Math.round(geofenceResult.distanceMeters)} meters</span>
                     </p>
@@ -355,10 +353,10 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
                     onClick={() => {
                       setIsSimulatedOutside(!isSimulatedOutside);
                     }}
-                    className="text-[10px] text-slate-500 dark:text-slate-300 font-bold hover:underline shrink-0 px-2.5 py-1 bg-white dark:bg-slate-700 rounded-lg shadow-2xs border border-slate-200 dark:border-slate-600"
+                    className="text-[10px] text-slate-500 dark:text-slate-400 font-bold hover:underline shrink-0 px-2.5 py-1 bg-white dark:bg-slate-700 rounded-lg shadow-2xs border border-slate-200 dark:border-slate-600 cursor-pointer"
                     title="Tap to toggle out-of-range simulation"
                   >
-                    {isSimulatedOutside ? '✓ Reset Inside' : '✗ Simulate Away'}
+                    {isSimulatedOutside ? '✓ Reset Inside' : 'Simulate Away'}
                   </button>
                 </div>
 
@@ -379,22 +377,20 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
               <button
                 onClick={() => {
                   if (!isCheckedIn) {
-                    // Clocking In
                     const now = new Date();
                     setCheckedInTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
                   } else {
-                    // Clocking Out
                     setCheckedInTime(null);
                   }
                   onToggleCheckIn();
                 }}
-                className={`w-full h-14 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] z-10 min-touch-target ${
+                className={`w-full h-12 sm:h-13 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] z-10 min-touch-target cursor-pointer ${
                   isCheckedIn
-                    ? 'bg-[#001428] text-white hover:bg-[#0f2942]'
-                    : 'bg-[#006b5f] text-white hover:bg-[#005047]'
+                    ? 'bg-slate-800 hover:bg-slate-900 text-white'
+                    : 'bg-[#006b5f] hover:bg-[#005047] text-white'
                 }`}
               >
-                <span className="material-symbols-outlined text-[24px]">
+                <span className="material-symbols-outlined text-[22px]">
                   {isCheckedIn ? 'logout' : 'login'}
                 </span>
                 <span>{isCheckedIn ? 'Check Out of Field' : 'Check In to Field'}</span>
@@ -403,27 +399,27 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
 
             {/* Quick Stats Row */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800 text-center">
-                <span className="text-2xl font-bold text-[#001428] dark:text-[#76f4e0] block font-mono">
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-slate-200/90 dark:border-slate-800 text-center">
+                <span className="text-2xl font-black text-slate-900 dark:text-white block font-mono">
                   {presentCount}
                 </span>
-                <span className="text-[11px] sm:text-xs text-[#43474d] dark:text-slate-400 font-medium mt-0.5 block">
+                <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5 block">
                   Present Days
                 </span>
               </div>
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800 text-center">
-                <span className="text-2xl font-bold text-[#006b5f] dark:text-emerald-400 block font-mono">
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-slate-200/90 dark:border-slate-800 text-center">
+                <span className="text-2xl font-black text-[#006b5f] dark:text-[#76f4e0] block font-mono">
                   {visitCount}
                 </span>
-                <span className="text-[11px] sm:text-xs text-[#43474d] dark:text-slate-400 font-medium mt-0.5 block">
+                <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5 block">
                   Client Visits
                 </span>
               </div>
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800 text-center">
-                <span className="text-2xl font-bold text-[#74777e] dark:text-slate-400 block font-mono">
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-slate-200/90 dark:border-slate-800 text-center">
+                <span className="text-2xl font-black text-slate-400 dark:text-slate-500 block font-mono">
                   {leaveCount}
                 </span>
-                <span className="text-[11px] sm:text-xs text-[#43474d] dark:text-slate-400 font-medium mt-0.5 block">
+                <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5 block">
                   On Leave
                 </span>
               </div>
@@ -484,62 +480,60 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
       {activeSubTab === 'team_records' && (
         <div className="flex flex-col gap-4 animate-fadeIn">
           {/* Team Search & Filters */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800 flex items-center justify-between gap-3">
-            <div className="flex-1 flex items-center bg-[#f8f9fb] dark:bg-slate-800 rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-slate-200/90 dark:border-slate-800 flex items-center justify-between gap-3">
+            <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 rounded-xl px-3.5 py-2.5 border border-slate-200/80 dark:border-slate-700">
               <span className="material-symbols-outlined text-slate-400 mr-2 text-[20px]">search</span>
               <input
                 type="text"
                 value={teamSearchQuery}
                 onChange={(e) => setTeamSearchQuery(e.target.value)}
                 placeholder="Search team member, territory, or role..."
-                className="bg-transparent w-full text-xs sm:text-sm text-[#191c1e] dark:text-white outline-none"
+                className="bg-transparent w-full text-xs sm:text-sm text-slate-900 dark:text-white outline-none font-medium placeholder:text-slate-400"
               />
             </div>
-            <span className="text-xs font-bold text-[#006b5f] dark:text-[#76f4e0] bg-[#76f4e0]/20 px-3 py-2 rounded-xl whitespace-nowrap">
+            <span className="text-xs font-bold text-[#006b5f] dark:text-[#76f4e0] bg-[#006b5f]/10 dark:bg-[#76f4e0]/10 px-3 py-2 rounded-xl whitespace-nowrap">
               {filteredTeam.length} Officers Live
             </span>
           </div>
 
           {/* Team Members List */}
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             {filteredTeam.map((member) => (
               <div
                 key={member.id}
-                className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800 flex items-center justify-between gap-3 hover:border-slate-300 dark:hover:border-slate-700 transition-all"
+                className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-xs border border-slate-200/90 dark:border-slate-800 flex items-center justify-between gap-3 hover:border-slate-300 dark:hover:border-slate-700 transition-all"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-xl bg-[#001428] dark:bg-[#76f4e0]/10 text-[#76f4e0] flex items-center justify-center font-extrabold text-sm shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-[#006b5f]/10 dark:bg-[#76f4e0]/10 text-[#006b5f] dark:text-[#76f4e0] flex items-center justify-center font-black text-sm shrink-0 font-mono">
                     {member.avatarInitials}
                   </div>
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <h4 className="text-xs sm:text-sm font-bold text-[#191c1e] dark:text-white truncate">
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                         {member.fullName}
                       </h4>
                       <span className="text-[10px] text-slate-400 font-mono">({member.employeeCode})</span>
                     </div>
-                    <span className="text-[11px] text-[#006b5f] dark:text-[#76f4e0] font-black font-mono truncate">
+                    <span className="text-[11px] text-[#006b5f] dark:text-[#76f4e0] font-bold truncate">
                       {member.roleTitle || member.role}
                     </span>
-                    <span className="text-[10px] text-[#74777e] dark:text-slate-400 truncate">
-                      Territory: {member.territory} • {member.region}
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                      Assigned Beat: {member.assignedTowns?.join(', ') || 'Peshawar Region'}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end shrink-0 gap-1">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                      member.status === 'ACTIVE'
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
-                    }`}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    Active
+                  </span>
+                  <a
+                    href={`tel:${member.phone}`}
+                    className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-[#006b5f] transition-all"
+                    title={`Call ${member.fullName}`}
                   >
-                    {member.status === 'ACTIVE' ? 'Clocked In' : 'On Leave'}
-                  </span>
-                  <span className="text-[10px] text-[#74777e] dark:text-slate-400 font-mono">
-                    MTD: Rs. {(member.mtdSalesAchieved / 100000).toFixed(1)} Lacs
-                  </span>
+                    <span className="material-symbols-outlined text-[18px]">call</span>
+                  </a>
                 </div>
               </div>
             ))}

@@ -29,6 +29,8 @@ import {
   Activity,
   ShieldAlert,
   Info,
+  FileSpreadsheet,
+  ChevronDown,
 } from 'lucide-react';
 import { getAccessToken, googleSignIn, initAuth, getCurrentGoogleUser } from '../../services/googleAuth';
 import { subscribeToRateLimit, getRateLimitStatus, RateLimitStatus } from '../../services/googleSheetsLiveService';
@@ -36,6 +38,7 @@ import { subscribeToAutoSync, getAutoSyncStatus, AutoSyncStatus } from '../../se
 
 export interface EnterpriseHeaderProps {
   activeTab: 'DASHBOARD' | 'ATTENDANCE' | 'ORDERS' | 'LEDGERS' | 'DEALERS';
+  onTabChange?: (tab: 'DASHBOARD' | 'ATTENDANCE' | 'ORDERS' | 'LEDGERS' | 'DEALERS') => void;
   currentUser: NLinkUser;
   onSelectUser: (user: NLinkUser) => void;
   onOpenRateCard: () => void;
@@ -47,6 +50,7 @@ export interface EnterpriseHeaderProps {
   isOnline?: boolean;
   onTriggerManualSync?: () => Promise<void>;
   onSignOut?: () => void;
+  onOpenSyncModal?: () => void;
 }
 
 const TAB_CONFIG: Record<
@@ -54,7 +58,7 @@ const TAB_CONFIG: Record<
   { label: string; icon: string }
 > = {
   DASHBOARD: { label: 'Dashboard', icon: 'dashboard' },
-  ATTENDANCE: { label: 'Attendance & Punch', icon: 'how_to_reg' },
+  ATTENDANCE: { label: 'Attendance', icon: 'how_to_reg' },
   ORDERS: { label: 'Sales & Orders', icon: 'shopping_cart_checkout' },
   LEDGERS: { label: 'Party Ledgers', icon: 'menu_book' },
   DEALERS: { label: 'Distributor Network', icon: 'storefront' },
@@ -62,6 +66,7 @@ const TAB_CONFIG: Record<
 
 export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
   activeTab,
+  onTabChange,
   currentUser,
   onSelectUser,
   onOpenRateCard,
@@ -73,8 +78,10 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
   isOnline = true,
   onTriggerManualSync,
   onSignOut,
+  onOpenSyncModal,
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   
   // Google OAuth connection states
@@ -92,6 +99,13 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
   // Auto-Sync & Connection health state tracker
   const [autoSync, setAutoSync] = useState<AutoSyncStatus>(() => getAutoSyncStatus());
   const [showSyncPopover, setShowSyncPopover] = useState(false);
+  const [isToastDismissed, setIsToastDismissed] = useState(false);
+
+  useEffect(() => {
+    if (rateLimit.isRateLimited) {
+      setIsToastDismissed(false);
+    }
+  }, [rateLimit.isRateLimited]);
 
   useEffect(() => {
     // Initial load check
@@ -173,6 +187,24 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
     }
   };
 
+  const handleGoogleSignInLocal = async () => {
+    setIsAuthLoading(true);
+    try {
+      const res = await googleSignIn();
+      if (res) {
+        setGoogleUser(res.user);
+        setGoogleToken(res.accessToken);
+        if (onTriggerManualSync) {
+          await onTriggerManualSync();
+        }
+      }
+    } catch (err: any) {
+      alert(`Google Sign-In failed: ${err.message || err}`);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
   return (
     <>
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0c1420]/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800/90 shadow-xs transition-colors">
@@ -214,9 +246,41 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
             </div>
           </div>
 
-          {/* Right: Clean Unified Sync & Menu Actions */}
-          <div className="flex items-center gap-2">
-            {/* Unified Sync Status Button */}
+          {/* Center: Luxury Executive Desktop Navigation */}
+          {onTabChange && (
+            <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 dark:bg-slate-900/80 p-1 rounded-2xl border border-slate-200/60 dark:border-slate-800/60 shadow-2xs">
+              {[
+                { id: 'DASHBOARD' as const, label: 'Dashboard', icon: 'dashboard' },
+                { id: 'ORDERS' as const, label: 'Sales & Orders', icon: 'shopping_cart_checkout' },
+                { id: 'LEDGERS' as const, label: 'Party Ledgers', icon: 'menu_book' },
+                { id: 'DEALERS' as const, label: 'Distributors', icon: 'storefront' },
+                { id: 'ATTENDANCE' as const, label: 'Attendance', icon: 'how_to_reg' },
+              ].map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => onTabChange(tab.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                      isActive
+                        ? 'bg-white dark:bg-slate-800 text-[#006b5f] dark:text-[#76f4e0] shadow-xs border border-slate-200/50 dark:border-slate-700/50'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      {tab.icon}
+                    </span>
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          )}
+
+          {/* Right: Clean Unified Luxury Actions */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Unified Quiet Sync Pill */}
             <div className="relative">
               <button
                 type="button"
@@ -229,41 +293,41 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
                   }
                 }}
                 disabled={isSyncing}
-                className={`flex items-center gap-2 h-9 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer active:scale-95 select-none shadow-2xs ${
+                className={`flex items-center gap-1.5 h-8 px-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer active:scale-95 select-none ${
                   rateLimit.isRateLimited
                     ? 'bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200'
                     : isSyncing || autoSync.isSyncing
                     ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-300 dark:border-teal-700 text-[#006b5f] dark:text-[#76f4e0]'
                     : !isOnline
                     ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200'
-                    : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 border-slate-200/90 dark:border-slate-800 text-slate-700 dark:text-slate-200'
+                    : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 border-slate-200/90 dark:border-slate-800 text-slate-700 dark:text-slate-300'
                 }`}
-                title={rateLimit.isRateLimited ? 'Rate limited - click for details' : 'Click to sync data'}
+                title={rateLimit.isRateLimited ? 'Rate limited - click for details' : 'Cloud Sync Status'}
               >
                 {rateLimit.isRateLimited ? (
                   <>
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0 animate-bounce" />
-                    <span className="font-mono text-[11px] font-bold text-rose-700 dark:text-rose-300">
-                      Wait {rateLimit.retryAfterSeconds}s
+                    <AlertTriangle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0 animate-bounce" />
+                    <span className="font-mono text-[10px] font-bold text-rose-700 dark:text-rose-300">
+                      {rateLimit.retryAfterSeconds}s
                     </span>
                   </>
                 ) : isSyncing || autoSync.isSyncing ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 text-[#006b5f] dark:text-[#76f4e0] animate-spin shrink-0" />
-                    <span className="font-extrabold text-[#006b5f] dark:text-[#76f4e0]">
+                    <RefreshCw className="w-3 h-3 text-[#006b5f] dark:text-[#76f4e0] animate-spin shrink-0" />
+                    <span className="hidden sm:inline text-[11px] font-bold text-[#006b5f] dark:text-[#76f4e0]">
                       Syncing...
                     </span>
                   </>
                 ) : !isOnline ? (
                   <>
-                    <WifiOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span className="font-extrabold text-amber-800 dark:text-amber-300">Offline</span>
+                    <WifiOff className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span className="hidden sm:inline text-[11px] font-bold text-amber-800 dark:text-amber-300">Offline</span>
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span className="font-extrabold text-slate-700 dark:text-slate-200">
-                      {autoSync.pendingUploadsCount > 0 ? `${autoSync.pendingUploadsCount} Pending` : 'Sync'}
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="hidden sm:inline text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                      {autoSync.pendingUploadsCount > 0 ? `${autoSync.pendingUploadsCount} Pending` : 'Cloud Synced'}
                     </span>
                   </>
                 )}
@@ -321,6 +385,42 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
                           {autoSync.pendingUploadsCount} items
                         </span>
                       </div>
+                      <div className="flex flex-col gap-1 py-1 border-b border-slate-100 dark:border-slate-800/60">
+                        <span className="text-slate-500 dark:text-slate-400">Google Connection:</span>
+                        {googleUser ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400 truncate">
+                              ✓ Connected: {googleUser.email}
+                            </span>
+                            {onOpenSyncModal && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowSyncPopover(false);
+                                  onOpenSyncModal();
+                                }}
+                                className="text-left text-[#006b5f] dark:text-[#76f4e0] hover:underline font-bold mt-0.5"
+                              >
+                                Manage Sheet Sync
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1.5 mt-1">
+                            <span className="font-semibold text-rose-600 dark:text-rose-400">
+                              ⚠️ NOT CONNECTED
+                            </span>
+                            <button
+                              type="button"
+                              disabled={isAuthLoading}
+                              onClick={handleGoogleSignInLocal}
+                              className="px-2 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10px] uppercase text-center cursor-pointer transition-all active:scale-95"
+                            >
+                              {isAuthLoading ? 'Connecting...' : 'Sign In with Google'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <button
@@ -340,15 +440,149 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
               )}
             </div>
 
-            {/* Menu Trigger Button */}
+            {/* Wholesale Price List Quick Action */}
+            <button
+              type="button"
+              onClick={onOpenRateCard}
+              className="hidden lg:flex items-center gap-1.5 h-8 px-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer transition-all active:scale-95"
+              title="Official Wholesale Rate Card"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#006b5f] dark:text-[#76f4e0]" />
+              <span className="text-[11px]">Price List</span>
+            </button>
+
+            {/* Pending Dual Executive Approvals */}
+            {pendingApprovalsCount > 0 && onOpenDualApprovals && (
+              <button
+                type="button"
+                onClick={onOpenDualApprovals}
+                className="flex items-center gap-1.5 h-8 px-2.5 rounded-xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 text-[#006b5f] dark:text-[#76f4e0] text-xs font-bold cursor-pointer transition-all active:scale-95 animate-pulse"
+                title="Pending Dual Executive Approvals"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-mono">{pendingApprovalsCount}</span>
+              </button>
+            )}
+
+            {/* Dark / Light Theme Toggle */}
+            {onToggleDarkMode && (
+              <button
+                type="button"
+                onClick={onToggleDarkMode}
+                className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer transition-all active:scale-95"
+                title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-600" />}
+              </button>
+            )}
+
+            {/* Desktop User Profile Pill & Quick Dropdown */}
+            <div className="relative hidden sm:block">
+              <button
+                type="button"
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center gap-2 h-8 pl-1.5 pr-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200 transition-all cursor-pointer select-none"
+              >
+                <div className="w-5 h-5 rounded-full bg-[#006b5f] text-white flex items-center justify-center font-black text-[9px] tracking-tight">
+                  {currentUser.fullName ? currentUser.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2) : 'NL'}
+                </div>
+                <span className="text-[11px] font-bold max-w-[90px] truncate">
+                  {currentUser.fullName.split(' ')[0]}
+                </span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
+
+              {isUserMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
+                  <div className="absolute right-0 top-10 z-50 w-64 bg-white dark:bg-[#0c1420] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-3 animate-fadeIn text-slate-900 dark:text-white">
+                    <div className="p-2 border-b border-slate-100 dark:border-slate-800/80">
+                      <p className="text-xs font-black text-slate-900 dark:text-white">{currentUser.fullName}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold mt-0.5">{currentUser.role.replace('_', ' ')}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
+                    </div>
+
+                    {/* Quick Switch User */}
+                    <div className="py-2 border-b border-slate-100 dark:border-slate-800/80 space-y-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">Switch Active User</p>
+                      {availableUsers.map((user) => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => {
+                            onSelectUser(user);
+                            setIsUserMenuOpen(false);
+                          }}
+                          className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between cursor-pointer transition-colors ${
+                            currentUser.id === user.id
+                              ? 'bg-[#006b5f]/10 text-[#006b5f] dark:text-[#76f4e0]'
+                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className="truncate">
+                            <span>{user.fullName}</span>
+                            <span className="text-[10px] text-slate-400 block font-normal">{user.role.replace('_', ' ')}</span>
+                          </div>
+                          {currentUser.id === user.id && <CheckCircle className="w-3.5 h-3.5 text-[#006b5f] dark:text-[#76f4e0] shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Quick Links */}
+                    <div className="pt-2 space-y-1">
+                      {onOpenDualApprovals && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            onOpenDualApprovals();
+                          }}
+                          className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                          <span>Dual Approvals ({pendingApprovalsCount})</span>
+                        </button>
+                      )}
+                      {onOpenSettings && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            onOpenSettings();
+                          }}
+                          className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                        >
+                          <Settings className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Settings &amp; Offline Sync</span>
+                        </button>
+                      )}
+                      {onSignOut && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            onSignOut();
+                          }}
+                          className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2 cursor-pointer"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Sign Out</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Mobile Drawer Trigger (Only on phone/small viewports) */}
             <button
               type="button"
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white transition-all cursor-pointer active:scale-95 shadow-2xs font-bold text-xs"
+              className="md:hidden flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white transition-all cursor-pointer active:scale-95"
               title="Open Navigation Menu"
             >
               <Menu className="w-4 h-4 text-[#006b5f] dark:text-[#76f4e0]" />
-              <span className="hidden sm:inline">Menu</span>
             </button>
           </div>
 
@@ -473,6 +707,24 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
                       <span className="text-[9px] text-slate-400 font-medium block">All products standard tiered lists</span>
                     </div>
                   </button>
+
+                  {/* Google Sheets Sync Manager */}
+                  {onOpenSyncModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenSyncModal();
+                        setIsDrawerOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-200 border border-slate-200/65 dark:border-slate-800 text-left transition-colors cursor-pointer active:scale-98 shadow-2xs font-bold text-xs"
+                    >
+                      <FileSpreadsheet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      <div className="flex-1">
+                        <span className="block">Google Sheet Sync Manager</span>
+                        <span className="text-[9px] text-slate-400 font-medium block">Live two-way synchronization dashboard</span>
+                      </div>
+                    </button>
+                  )}
 
                   {/* 2. Dual Approvals (Admins Only) */}
                   {isAdmin && onOpenDualApprovals && (
@@ -602,6 +854,58 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
               </div>
 
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Rate-Limiting Toast Notification System */}
+      {rateLimit.isRateLimited && !isToastDismissed && (
+        <div
+          id="sync-rate-limit-toast"
+          className="fixed bottom-6 right-6 z-50 w-full max-w-sm bg-white dark:bg-[#0c1420] border-l-4 border-rose-500 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 border border-slate-200 dark:border-slate-800 animate-slideUp text-slate-900 dark:text-white"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex gap-2.5">
+              <div className="w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
+              </div>
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-rose-700 dark:text-rose-400">
+                  Google Sheet Rate Limit (403)
+                </h4>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                  Google Sheet API rate limit exceeded. Cooldown active to protect ERP data synchronization.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsToastDismissed(true)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg shrink-0"
+              title="Dismiss toast"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 bg-rose-50/50 dark:bg-rose-950/20 px-3 py-2 rounded-xl border border-rose-100 dark:border-rose-900/40">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 animate-pulse" />
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Cooldown Timer:
+              </span>
+            </div>
+            <span className="font-mono text-xs font-black text-rose-600 dark:text-rose-400 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-md border border-rose-200 dark:border-rose-800 shadow-3xs">
+              Next Sync in {rateLimit.retryAfterSeconds}s
+            </span>
+          </div>
+
+          {/* Progress bar tracking remaining cooldown */}
+          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-rose-500 transition-all duration-1000 ease-linear rounded-full"
+              style={{ width: `${Math.max(0, Math.min(100, (rateLimit.retryAfterSeconds / 60) * 100))}%` }}
+            />
           </div>
         </div>
       )}

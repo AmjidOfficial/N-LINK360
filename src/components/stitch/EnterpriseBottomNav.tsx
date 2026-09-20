@@ -24,14 +24,14 @@ export const EnterpriseBottomNav: React.FC<EnterpriseBottomNavProps> = ({
   const navItems: { id: EnterpriseTabType; label: string; icon: string; isPrimary?: boolean }[] = [
     { id: 'DASHBOARD', label: 'Home', icon: 'dashboard' },
     { id: 'ATTENDANCE', label: 'Attendance', icon: 'event_available' },
-    { id: 'ORDERS', label: 'Entry', icon: 'add_circle', isPrimary: true },
-    { id: 'LEDGERS', label: 'Ledger', icon: 'receipt_long' },
+    { id: 'ORDERS', label: 'Order', icon: 'add_circle', isPrimary: true },
+    { id: 'LEDGERS', label: 'Khata', icon: 'menu_book' },
     { id: 'DEALERS', label: 'Dealers', icon: 'storefront' },
   ];
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 bg-white/95 dark:bg-[#0b131e]/95 backdrop-blur-md border-t border-[#e0e3e5] dark:border-slate-800 z-40 shadow-lg transition-colors"
+      className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 dark:bg-[#0b131e]/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 z-40 shadow-lg transition-colors"
       id="enterprise-bottom-navigation"
     >
       <div className="max-w-[420px] mx-auto h-[64px] flex items-center justify-between px-1 relative">

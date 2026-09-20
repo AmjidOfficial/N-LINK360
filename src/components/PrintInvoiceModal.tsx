@@ -1169,10 +1169,12 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                           <span>Sub Total:</span>
                           <span className="font-mono font-bold">PKR {invoice.subtotal.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-slate-600">
-                          <span>Sales Tax (GST 18%):</span>
-                          <span className="font-mono font-bold">PKR {invoice.taxAmount.toFixed(2)}</span>
-                        </div>
+                        {invoice.taxAmount > 0 && (
+                          <div className="flex justify-between text-slate-600">
+                            <span>Sales Tax (GST 18%):</span>
+                            <span className="font-mono font-bold">PKR {invoice.taxAmount.toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between font-bold text-slate-900 border-t border-slate-200 pt-1">
                           <span>Current Invoice Total:</span>
                           <span className="font-mono text-yellow-700">PKR {currentInvoiceAmount.toFixed(2)}</span>
@@ -1352,10 +1354,12 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                           <span>Invoice Subtotal:</span>
                           <span className="font-mono font-bold">PKR {invoice.subtotal.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Sales Tax (18%):</span>
-                          <span className="font-mono font-bold">PKR {invoice.taxAmount.toFixed(2)}</span>
-                        </div>
+                        {invoice.taxAmount > 0 && (
+                          <div className="flex justify-between">
+                            <span>Sales Tax (18%):</span>
+                            <span className="font-mono font-bold">PKR {invoice.taxAmount.toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between font-bold text-emerald-800 border-t pt-1">
                           <span>New Invoice:</span>
                           <span className="font-mono">PKR {currentInvoiceAmount.toFixed(2)}</span>
@@ -1479,10 +1483,12 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                       <span className="text-slate-600">Sub Total:</span>
                       <span className="font-mono font-bold">PKR {invoice.subtotal.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Sales Tax (GST):</span>
-                      <span className="font-mono font-bold">PKR {invoice.taxAmount.toFixed(2)}</span>
-                    </div>
+                    {invoice.taxAmount > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Sales Tax (GST):</span>
+                        <span className="font-mono font-bold">PKR {invoice.taxAmount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between font-bold text-slate-900 border-t pt-1">
                       <span>Invoice Total:</span>
                       <span className="font-mono">PKR {currentInvoiceAmount.toFixed(2)}</span>

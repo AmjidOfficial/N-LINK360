@@ -976,54 +976,56 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
 
   return (
     <div className="flex flex-col w-full gap-5 pb-12 animate-fadeIn" id="unified-orders-recovery-flow">
-      {/* 1. Header Dealer Selection Component */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl shadow-xs border border-[#e0e3e5] dark:border-slate-800 flex flex-col gap-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <label className="text-xs font-bold text-[#006b5f] dark:text-[#76f4e0] uppercase tracking-wider block">
-            Select Active Dealer / Distributor
-          </label>
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold">
-            <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
-            <span>{isSyncing ? 'Syncing...' : 'Live Cloud Connected'}</span>
+      {/* 1. Unified Executive Dealer Terminal Card */}
+      <div className="bg-[#0f2942] dark:bg-slate-950 p-4 sm:p-5 rounded-2xl text-white shadow-md border border-[#1a3b5c] relative overflow-hidden flex flex-col gap-4">
+        <div className="absolute right-0 top-0 w-48 h-48 bg-[#76f4e0]/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Top bar: Dealer selector dropdown + Cloud status */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-700/60 relative z-10">
+          <div className="flex-1 min-w-0">
+            <label className="text-[10px] font-black text-[#76f4e0] uppercase tracking-widest block mb-1.5">
+              Active Dealer / Distributor Account
+            </label>
+            <div className="relative">
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => {
+                  setSelectedCustomerId(e.target.value);
+                  setOrderCart([]); // Clear cart when switching dealers to prevent cross-dealer booking
+                }}
+                className="w-full bg-slate-900/90 text-white pl-3.5 pr-9 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#76f4e0] transition-all text-xs sm:text-sm font-bold border border-slate-700/80 appearance-none cursor-pointer"
+              >
+                {filteredCustomers.length === 0 ? (
+                  <option value="">No Registered Dealers Found (Add in Dealers Tab or Sync Sheet)</option>
+                ) : (
+                  filteredCustomers.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-slate-900 text-white">
+                      {c.companyName} ({c.city || 'KPK'}) — Bal: Rs. {(c.currentBalance || 0).toLocaleString()}
+                    </option>
+                  ))
+                )}
+              </select>
+              <span className="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 pointer-events-none text-[18px]">
+                unfold_more
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1 sm:pt-4">
+            {selectedAttendanceTown && (
+              <span className="text-[10px] text-[#76f4e0] font-bold flex items-center gap-1 bg-[#76f4e0]/10 px-2.5 py-1 rounded-full">
+                <span className="material-symbols-outlined text-[13px]">location_on</span>
+                Town: {selectedAttendanceTown}
+              </span>
+            )}
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-300 font-medium">
+              <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+              <span>{isSyncing ? 'Syncing...' : 'Live Cloud Connected'}</span>
+            </div>
           </div>
         </div>
 
-        <div className="relative">
-          <select
-            value={selectedCustomerId}
-            onChange={(e) => {
-              setSelectedCustomerId(e.target.value);
-              setOrderCart([]); // Clear cart when switching dealers to prevent cross-dealer booking
-            }}
-            className="w-full bg-[#f2f4f6] dark:bg-slate-800 text-[#191c1e] dark:text-white px-4 py-3.5 rounded-xl outline-none focus:ring-2 focus:ring-[#006b5f] transition-all text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-700 appearance-none"
-          >
-            {filteredCustomers.length === 0 ? (
-              <option value="">No Registered Dealers Found (Add in Dealers Tab or Sync Sheet)</option>
-            ) : (
-              filteredCustomers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.companyName} ({c.city || 'KPK'}) — Bal: Rs. {(c.currentBalance || 0).toLocaleString()}
-                </option>
-              ))
-            )}
-          </select>
-          <span className="material-symbols-outlined absolute right-4 top-3.5 text-slate-400 pointer-events-none">
-            expand_more
-          </span>
-        </div>
-        {selectedAttendanceTown && (
-          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1 mt-1">
-            <span className="material-symbols-outlined text-[12px]">filter_list</span>
-            Filtered strictly by town of selected attendance: {selectedAttendanceTown}
-          </p>
-        )}
-      </div>
-
-      {/* 2. Top-most Active Dealer Details Profile Card */}
-      <div className="bg-[#0f2942] dark:bg-slate-950 p-4 sm:p-5 rounded-2xl text-white shadow-md border border-[#1a3b5c] relative overflow-hidden flex flex-col gap-4">
-        <div className="absolute right-0 top-0 w-32 h-32 bg-[#76f4e0]/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-start justify-between gap-3 flex-wrap relative z-10">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-[#76f4e0] text-[#001428]">
@@ -1040,7 +1042,7 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
             </p>
           </div>
 
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <span className="text-[10px] uppercase text-[#7991af] tracking-wider font-semibold block">Outstanding Balance</span>
             <span className="text-xl sm:text-2xl font-black text-[#76f4e0] font-mono block">
               Rs. {(activeDealer.currentBalance || 0).toLocaleString()}
@@ -1136,102 +1138,102 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
 
       {/* 3. Sub-segment Navigation Tabs */}
       {lockModeTo === 'ENTRY' ? (
-        <div className="grid grid-cols-2 bg-[#eceef0] dark:bg-slate-900 p-1.5 rounded-2xl gap-2 shadow-2xs">
+        <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 p-1.5 rounded-2xl gap-2 shadow-3xs">
           <button
             onClick={() => setActiveMode('order')}
-            className={`py-3.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+            className={`py-3 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeMode === 'order'
-                ? 'bg-[#006b5f] text-white shadow-sm'
-                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e] dark:hover:text-white'
+                ? 'bg-[#006b5f] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
-            <span>ORDERING</span>
+            <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
+            <span>Sales Order Booking</span>
           </button>
           <button
             onClick={() => setActiveMode('recovery')}
-            className={`py-3.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+            className={`py-3 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeMode === 'recovery'
-                ? 'bg-[#006b5f] text-white shadow-sm'
-                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e] dark:hover:text-white'
+                ? 'bg-[#006b5f] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">add_card</span>
-            <span>RECOVERY</span>
+            <span className="material-symbols-outlined text-[18px]">payments</span>
+            <span>Cash & Bank Recovery</span>
           </button>
         </div>
       ) : lockModeTo === 'LEDGERS' ? (
-        <div className="grid grid-cols-2 bg-[#eceef0] dark:bg-slate-900 p-1.5 rounded-2xl gap-2 shadow-2xs">
+        <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 p-1.5 rounded-2xl gap-2 shadow-3xs">
           <button
             onClick={() => setActiveMode('invoices')}
-            className={`py-3.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+            className={`py-3 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeMode === 'invoices'
-                ? 'bg-[#006b5f] text-white shadow-sm'
-                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e] dark:hover:text-white'
+                ? 'bg-[#006b5f] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">receipt_long</span>
-            <span>INVOICES & BILLING</span>
+            <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+            <span>Invoices & Billing Statement</span>
           </button>
           <button
             onClick={() => setActiveMode('ledger')}
-            className={`py-3.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+            className={`py-3 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeMode === 'ledger'
-                ? 'bg-[#006b5f] text-white shadow-sm'
-                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e] dark:hover:text-white'
+                ? 'bg-[#006b5f] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">account_balance</span>
-            <span>ACCOUNT LEDGER</span>
+            <span className="material-symbols-outlined text-[18px]">account_balance</span>
+            <span>Party Running Ledger</span>
           </button>
         </div>
       ) : (
-        <div className="flex bg-[#eceef0] dark:bg-slate-900 p-1.5 rounded-2xl gap-1.5 shadow-2xs">
+        <div className="flex bg-slate-100 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 p-1 rounded-2xl gap-1 shadow-3xs">
           <button
             onClick={() => setActiveMode('order')}
-            className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
               activeMode === 'order'
-                ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
-                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
+                ? 'bg-[#006b5f] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
+            <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
             <span>Order Entry</span>
           </button>
 
           <button
             onClick={() => setActiveMode('recovery')}
-            className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
               activeMode === 'recovery'
-                ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
-                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
+                ? 'bg-[#006b5f] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">add_card</span>
+            <span className="material-symbols-outlined text-[18px]">add_card</span>
             <span>Recovery Entry</span>
           </button>
 
           <button
             onClick={() => setActiveMode('invoices')}
-            className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
               activeMode === 'invoices'
-                ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
-                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
+                ? 'bg-[#006b5f] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">receipt_long</span>
+            <span className="material-symbols-outlined text-[18px]">receipt_long</span>
             <span>Old Invoices</span>
           </button>
 
           <button
             onClick={() => setActiveMode('ledger')}
-            className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
               activeMode === 'ledger'
-                ? 'bg-white dark:bg-slate-800 text-[#191c1e] dark:text-white shadow-xs'
-                : 'text-[#43474d] dark:text-slate-400 hover:text-[#191c1e]'
+                ? 'bg-[#006b5f] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">account_balance</span>
+            <span className="material-symbols-outlined text-[18px]">account_balance</span>
             <span>Running Ledger</span>
           </button>
         </div>

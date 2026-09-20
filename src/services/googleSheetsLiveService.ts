@@ -971,8 +971,8 @@ export async function pushOrdersBatchToGoogleSheet(
     nowStr,
   ]);
 
-  await appendSpreadsheetRows(spreadsheetId, 'Sales_Data!A:O', rows, accessToken).catch(() => {});
-  await appendSpreadsheetRows(spreadsheetId, 'Sales_Orders!A:O', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Sales_Data!A:O', rows, accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Sales_Orders!A:O', rows, accessToken);
 }
 
 /**
@@ -1003,8 +1003,8 @@ export async function pushRecoveriesBatchToGoogleSheet(
     nowStr,
   ]);
 
-  await appendSpreadsheetRows(spreadsheetId, 'Recoveries_Collections!A:O', rows, accessToken).catch(() => {});
-  await appendSpreadsheetRows(spreadsheetId, 'Recoveries!A:O', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Recoveries_Collections!A:O', rows, accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Recoveries!A:O', rows, accessToken);
 }
 
 /**
@@ -1033,8 +1033,8 @@ export async function pushCustomersBatchToGoogleSheet(
     nowStr,
   ]);
 
-  await appendSpreadsheetRows(spreadsheetId, 'Customers_Dealers!A:M', rows, accessToken).catch(() => {});
-  await appendSpreadsheetRows(spreadsheetId, 'Customers!A:M', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Customers_Dealers!A:M', rows, accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Customers!A:M', rows, accessToken);
 }
 
 /**
@@ -1059,8 +1059,8 @@ export async function pushAttendanceBatchToGoogleSheet(
     nowStr,
   ]);
 
-  await appendSpreadsheetRows(spreadsheetId, 'Attendance_Visits!A:N', rows, accessToken).catch(() => {});
-  await appendSpreadsheetRows(spreadsheetId, 'Attendance!A:I', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Attendance_Visits!A:N', rows, accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Attendance!A:I', rows, accessToken);
 }
 
 /**
@@ -1085,8 +1085,8 @@ export async function pushVisitsBatchToGoogleSheet(
     nowStr,
   ]);
 
-  await appendSpreadsheetRows(spreadsheetId, 'Attendance_Visits!A:N', rows, accessToken).catch(() => {});
-  await appendSpreadsheetRows(spreadsheetId, 'Visits!A:I', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Attendance_Visits!A:N', rows, accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Visits!A:I', rows, accessToken);
 }
 
 /**
@@ -1117,8 +1117,8 @@ export async function pushEmployeesBatchToGoogleSheet(
     nowStr,
   ]);
 
-  await appendSpreadsheetRows(spreadsheetId, 'User_Management!A:O', rows, accessToken).catch(() => {});
-  await appendSpreadsheetRows(spreadsheetId, 'Users_Team!A:O', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'User_Management!A:O', rows, accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Users_Team!A:O', rows, accessToken);
 }
 
 /**
@@ -1150,6 +1150,6 @@ export async function pushProductsBatchToGoogleSheet(
     ];
   });
 
-  await appendSpreadsheetRows(spreadsheetId, 'Product_Management!A:L', rows, accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Product_Management!A:L', rows, accessToken);
 }
 

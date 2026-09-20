@@ -652,19 +652,38 @@ export async function executeTwoWaySync(
       // 1. Batch flush pending local uploads
       const flushRes = await flushPendingUploadsToSheet(spreadsheetId, authToken).catch((err) => {
         console.warn('Pending batch upload flush notice:', err);
-        return { flushedCount: 0, failedCount: 0 };
+        const isAuthError =
+          err?.message?.includes('401') ||
+          err?.message?.includes('Invalid Credentials') ||
+          err?.message?.includes('UNAUTHENTICATED') ||
+          err?.status === 401;
+        if (isAuthError) {
+          throw err;
+        }
+        // Rethrow non-auth errors too, so the user knows sync failed!
+        throw new Error(`Batch queue upload failed: ${err.message || err}`);
       });
       flushedCount = flushRes.flushedCount;
 
       // 2. Batch import Users & Dealers/Customers from Sheet
       importSummary = await executeGoogleSheetImport(spreadsheetId, authToken, 'ALL').catch((err) => {
         console.warn('Sheet import notice:', err);
+        const isAuthError =
+          err?.message?.includes('401') ||
+          err?.message?.includes('Invalid Credentials') ||
+          err?.message?.includes('UNAUTHENTICATED') ||
+          err?.status === 401;
+        if (isAuthError) {
+          throw err;
+        }
+        // Don't crash full sync for import failures, but log
         return undefined;
       });
 
       // 3. Batch export All Live Tables into Google Sheet Tabs via batchUpdate
       await syncDatabaseToGoogleSheet(spreadsheetId, appData, authToken).catch((err) => {
         console.warn('Sync database batch to Google Sheet notice:', err);
+        throw new Error(`Google Sheet Batch Export failed: ${err.message || err}`);
       });
     }
 
@@ -728,7 +747,7 @@ export async function executeTwoWaySync(
     const importedTotal = (importSummary?.createdCount || 0) + (importSummary?.updatedCount || 0);
     const msg = effectiveToken
       ? `2-Way Batch Sync Complete! Uploaded ${flushedCount} items in batch, imported ${importedTotal} records, and refreshed Google Sheets & ERP database.`
-      : `ERP Database Synced! Local records & Supabase updated (Google Sheet connection active under Admin management).`;
+      : `ERP Database Synced! Local records & Supabase updated (Google Sheet sync was skipped because Google account sign-in is required).`;
 
     currentLastMessage = msg;
     currentLastError = null;

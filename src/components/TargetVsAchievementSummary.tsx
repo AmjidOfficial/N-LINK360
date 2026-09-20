@@ -84,6 +84,7 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
       return (
         o.salesOfficerId === currentUser.id ||
         o.salesRepId === currentUser.id ||
+        o.salesUserId === currentUser.id ||
         o.salesOfficerName === currentUser.fullName
       );
     });
@@ -97,7 +98,8 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
       return (
         r.collectorId === currentUser.id ||
         r.collectorName === currentUser.fullName ||
-        r.salesOfficerId === currentUser.id
+        r.salesOfficerId === currentUser.id ||
+        r.salesUserId === currentUser.id
       );
     });
 
@@ -253,27 +255,12 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
           </div>
 
           {/* Progress Bar Container */}
-          <div className="space-y-1.5">
-            <div className="relative w-full h-3.5 bg-slate-200/80 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
+          <div className="space-y-1">
+            <div className="relative w-full h-2.5 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
               <div
-                className="h-full bg-gradient-to-r from-[#006b5f] via-teal-500 to-[#76f4e0] rounded-full transition-all duration-700 shadow-sm relative"
+                className="h-full bg-gradient-to-r from-[#006b5f] to-teal-400 rounded-full transition-all duration-700 relative"
                 style={{ width: `${Math.min(100, Math.max(2, salesPercent))}%` }}
-              >
-                {salesPercent >= 15 && (
-                  <div className="absolute right-1 top-0 bottom-0 flex items-center">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse opacity-90" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Milestones / Tick Marks */}
-            <div className="flex justify-between text-[9px] font-mono text-slate-400 dark:text-slate-500 px-0.5">
-              <span>0%</span>
-              <span>25%</span>
-              <span>50%</span>
-              <span>75%</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">100% Target</span>
+              />
             </div>
           </div>
 
@@ -336,27 +323,12 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
           </div>
 
           {/* Progress Bar Container */}
-          <div className="space-y-1.5">
-            <div className="relative w-full h-3.5 bg-slate-200/80 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
+          <div className="space-y-1">
+            <div className="relative w-full h-2.5 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
               <div
-                className="h-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-400 rounded-full transition-all duration-700 shadow-sm relative"
+                className="h-full bg-gradient-to-r from-emerald-600 to-green-400 rounded-full transition-all duration-700 relative"
                 style={{ width: `${Math.min(100, Math.max(2, recoveryPercent))}%` }}
-              >
-                {recoveryPercent >= 15 && (
-                  <div className="absolute right-1 top-0 bottom-0 flex items-center">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse opacity-90" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Milestones / Tick Marks */}
-            <div className="flex justify-between text-[9px] font-mono text-slate-400 dark:text-slate-500 px-0.5">
-              <span>0%</span>
-              <span>25%</span>
-              <span>50%</span>
-              <span>75%</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">100% Target</span>
+              />
             </div>
           </div>
 

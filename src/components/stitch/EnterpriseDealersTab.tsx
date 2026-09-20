@@ -324,44 +324,44 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
   return (
     <div className="flex flex-col w-full pb-20 animate-fadeIn" id="enterprise-dealers-view">
       {/* 1. Top Stats Summary (2 Cards) */}
-      <div className="grid grid-cols-2 gap-3.5 mb-4">
-        <div className="bg-white p-4 rounded-2xl shadow-xs border border-[#e0e3e5] flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#43474d] mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Dealers Network</span>
-            <span className="material-symbols-outlined text-[#006b5f] text-[20px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl shadow-xs border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Distributor Network</span>
+            <span className="material-symbols-outlined text-[#006b5f] dark:text-[#76f4e0] text-[20px]">
               storefront
             </span>
           </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold text-[#191c1e] font-mono">{customers.length || 48}</span>
-            <span className="text-[11px] text-[#006b5f] font-bold">Pakistan Wide</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">{customers.length || 48}</span>
+            <span className="text-xs text-[#006b5f] dark:text-[#76f4e0] font-bold">Verified Parties Nationwide</span>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl shadow-xs border border-[#e0e3e5] flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#43474d] mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Total Portfolio Outstanding</span>
-            <span className="material-symbols-outlined text-[#ba1a1a] text-[20px]">
+        <div className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl shadow-xs border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Portfolio Receivables</span>
+            <span className="material-symbols-outlined text-rose-500 text-[20px]">
               account_balance_wallet
             </span>
           </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold text-[#191c1e] font-mono">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">
               Rs. {(totalOutstanding > 0 ? (totalOutstanding / 100000).toFixed(1) : '14.2')} Lacs
             </span>
-            <span className="text-[11px] text-[#006b5f] font-bold">{utilizationRate}% utilized</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">({utilizationRate}% limit used)</span>
           </div>
         </div>
       </div>
 
       {/* 2. Pakistan Region Filter Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3 no-scrollbar">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3.5 no-scrollbar">
         <button
           onClick={() => setSelectedRegionFilter('ALL')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             selectedRegionFilter === 'ALL'
-              ? 'bg-[#001428] text-white shadow-xs'
-              : 'bg-white text-[#43474d] border border-[#e0e3e5] hover:bg-slate-50'
+              ? 'bg-[#006b5f] text-white shadow-xs'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
         >
           All Pakistan
@@ -370,10 +370,10 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
           <button
             key={r.id}
             onClick={() => setSelectedRegionFilter(r.id)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
               selectedRegionFilter === r.id
-                ? 'bg-[#001428] text-white shadow-xs'
-                : 'bg-white text-[#43474d] border border-[#e0e3e5] hover:bg-slate-50'
+                ? 'bg-[#006b5f] text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             {r.name} ({r.shortCode})
@@ -382,17 +382,17 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
       </div>
 
       {/* 3. Search Bar with Top Register CTA */}
-      <div className="flex items-center gap-2 mb-3.5">
+      <div className="flex items-center gap-2.5 mb-3.5">
         <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#74777e] text-[20px]">
+          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">
             search
           </span>
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white rounded-xl text-xs sm:text-sm text-[#191c1e] placeholder:text-[#74777e] focus:outline-none focus:ring-2 focus:ring-[#006b5f] transition-all shadow-xs border border-[#e0e3e5] font-medium"
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#006b5f] transition-all shadow-2xs border border-slate-200/90 dark:border-slate-800 font-medium"
             id="dealer-search"
-            placeholder="Search by dealer name, city (Peshawar, Lahore, Karachi...), phone..."
+            placeholder="Search by shop name, owner, city (Peshawar, Lahore, Karachi...), phone..."
             type="text"
           />
         </div>
@@ -401,7 +401,7 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
           type="button"
           id="top-register-dealer-btn"
           onClick={() => setIsAddModalOpen(true)}
-          className="px-4 py-3 bg-[#006b5f] hover:bg-[#005047] text-white rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-sm active:scale-95 transition-all shrink-0 cursor-pointer"
+          className="px-4 py-2.5 bg-[#006b5f] hover:bg-[#005047] text-white rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
           title="Register a new Dealer or Distributor"
         >
           <span className="material-symbols-outlined text-[18px]">person_add</span>
@@ -413,43 +413,43 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
       <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4 no-scrollbar">
         <button
           onClick={() => setFilterType('all')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-2xs transition-all ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             filterType === 'all'
-              ? 'bg-[#006b5f] text-white shadow-xs'
-              : 'bg-[#f2f4f6] text-[#43474d]'
+              ? 'bg-[#001428] dark:bg-slate-800 text-white shadow-xs'
+              : 'bg-slate-100 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-slate-900'
           }`}
         >
           All Status ({filteredDealers.length})
         </button>
         <button
           onClick={() => setFilterType('active')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-2xs transition-all ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             filterType === 'active'
-              ? 'bg-[#006b5f] text-white shadow-xs'
-              : 'bg-[#f2f4f6] text-[#43474d]'
+              ? 'bg-[#001428] dark:bg-slate-800 text-white shadow-xs'
+              : 'bg-slate-100 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-slate-900'
           }`}
         >
           Active Verified ({activeCount})
         </button>
         <button
           onClick={() => setFilterType('pending')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-2xs transition-all ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             filterType === 'pending'
-              ? 'bg-[#006b5f] text-white shadow-xs'
-              : 'bg-[#f2f4f6] text-[#43474d]'
+              ? 'bg-[#001428] dark:bg-slate-800 text-white shadow-xs'
+              : 'bg-slate-100 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-slate-900'
           }`}
         >
           Pending Approval ({pendingCount})
         </button>
         <button
           onClick={() => setFilterType('overdue')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-2xs transition-all ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             filterType === 'overdue'
-              ? 'bg-[#006b5f] text-white shadow-xs'
-              : 'bg-[#f2f4f6] text-[#43474d]'
+              ? 'bg-[#001428] dark:bg-slate-800 text-white shadow-xs'
+              : 'bg-slate-100 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-slate-900'
           }`}
         >
-          High Balance / Aging ({highBalanceCount})
+          High Balance ({highBalanceCount})
         </button>
       </div>
 
@@ -468,31 +468,31 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
           return (
             <div
               key={dealer.id}
-              className="bg-white p-4 rounded-2xl shadow-xs border border-[#e0e3e5] transition-all hover:border-slate-300"
+              className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl shadow-xs border border-slate-200/90 dark:border-slate-800 transition-all hover:border-slate-300 dark:hover:border-slate-700"
             >
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-3 gap-2">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-[#001428] text-[#76f4e0] flex items-center justify-center font-bold text-xs shrink-0 font-mono shadow-2xs">
+                  <div className="w-10 h-10 rounded-xl bg-[#006b5f]/10 dark:bg-[#76f4e0]/10 text-[#006b5f] dark:text-[#76f4e0] flex items-center justify-center font-bold text-xs shrink-0 font-mono">
                     {initials}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-sm sm:text-base font-bold text-[#191c1e] truncate">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
                       {dealer.companyName}
                     </h3>
-                    <p className="text-xs text-[#43474d] truncate flex items-center gap-1.5 flex-wrap">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5 flex-wrap mt-0.5">
                       <span>{dealer.contactPerson}</span>
                       <span>•</span>
-                      <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                      <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-bold">
                         {dealer.city || 'Peshawar'}
                       </span>
                       <span>•</span>
-                      <span className="text-[11px] text-slate-500 truncate">{dealer.territory || 'Main Commercial Beat'}</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{dealer.territory || 'Commercial Beat'}</span>
                       <span>•</span>
-                      <span className="inline-flex items-center gap-1 bg-[#001428]/5 text-[#001428] px-2 py-0.5 rounded text-[10px] font-semibold border border-slate-200">
-                        <span className="material-symbols-outlined text-[12px] text-[#006b5f]">badge</span>
+                      <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 text-[10px] font-semibold">
+                        <span className="material-symbols-outlined text-[12px] text-[#006b5f] dark:text-[#76f4e0]">badge</span>
                         <span>Officer: {dealer.salesUserName || dealer.assignedOfficerName || 'Shahid Khan'}</span>
                       </span>
-                    </p>
+                    </div>
                   </div>
                 </div>
 
@@ -500,8 +500,8 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
                   <span
                     className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold shrink-0 ${
                       isPending
-                        ? 'bg-[#e0e3e5] text-[#43474d]'
-                        : 'bg-[#76f4e0] text-[#006f63]'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
+                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
                     }`}
                   >
                     {isPending ? 'Pending' : 'Active'}
@@ -513,7 +513,7 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
                         setReassigningDealer(dealer);
                         setSelectedNewOfficerId(dealer.salesUserId || fieldOfficers[0]?.id || '');
                       }}
-                      className="p-1 rounded-lg text-slate-500 hover:text-[#006b5f] hover:bg-slate-100 transition-all"
+                      className="p-1 rounded-lg text-slate-400 hover:text-[#006b5f] dark:hover:text-[#76f4e0] hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
                       title="Reassign Officer"
                     >
                       <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
@@ -527,27 +527,27 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
                 <CreditHealthIndicator
                   customer={dealer}
                   variant="compact"
-                  className="bg-[#f8fafc] border-slate-200/80"
+                  className="bg-slate-50 dark:bg-slate-800/40 border-slate-200/60 dark:border-slate-800"
                 />
               </div>
 
               {/* Credit Limit & Outstanding Matrix */}
-              <div className="grid grid-cols-2 gap-2 py-2.5 bg-[#f2f4f6] rounded-xl px-4 mb-3 border border-slate-100">
+              <div className="grid grid-cols-2 gap-2 py-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl px-4 mb-3 border border-slate-100 dark:border-slate-800">
                 <div>
-                  <span className="text-[10px] text-[#74777e] font-semibold block uppercase">
-                    Credit Limit
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block uppercase">
+                    Approved Credit Limit
                   </span>
-                  <span className="text-xs sm:text-sm font-bold text-[#191c1e] font-mono">
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white font-mono">
                     Rs. {(dealer.creditLimit || 250000).toLocaleString()}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-[#74777e] font-semibold block uppercase">
-                    Outstanding
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block uppercase">
+                    Outstanding Balance
                   </span>
                   <span
                     className={`text-xs sm:text-sm font-bold font-mono ${
-                      (dealer.currentBalance || 0) > 0 ? 'text-[#ba1a1a]' : 'text-[#191c1e]'
+                      (dealer.currentBalance || 0) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'
                     }`}
                   >
                     Rs. {(dealer.currentBalance || 0).toLocaleString()}
@@ -556,10 +556,10 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
               </div>
 
               {/* Footer Phone & Action Buttons */}
-              <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
+              <div className="flex items-center justify-between pt-1 flex-wrap gap-2 border-t border-slate-100 dark:border-slate-800/80">
                 <a
                   href={`tel:${dealer.phone}`}
-                  className="flex items-center gap-1.5 text-xs text-[#43474d] hover:text-[#006b5f] font-medium"
+                  className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-[#006b5f] dark:hover:text-[#76f4e0] font-medium"
                 >
                   <span className="material-symbols-outlined text-[16px]">call</span>
                   <span>{dealer.phone || '+92 300 1234567'}</span>
@@ -568,19 +568,19 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     onClick={() => setProfileDealer(dealer)}
-                    className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1"
+                    className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer"
                     title="View 360° Customer Profile & Credit Health"
                   >
-                    <span className="material-symbols-outlined text-[14px] text-emerald-600">health_and_safety</span>
+                    <span className="material-symbols-outlined text-[14px] text-emerald-600 dark:text-emerald-400">health_and_safety</span>
                     <span>Profile</span>
                   </button>
 
                   <button
                     onClick={() => handleOpenEditModal(dealer)}
-                    className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1"
+                    className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer"
                     title="Edit Dealer Information"
                   >
-                    <span className="material-symbols-outlined text-[14px] text-blue-600">edit</span>
+                    <span className="material-symbols-outlined text-[14px] text-blue-600 dark:text-blue-400">edit</span>
                     <span>Edit</span>
                   </button>
 
@@ -591,7 +591,7 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
                           setReassigningDealer(dealer);
                           setSelectedNewOfficerId(dealer.salesUserId || fieldOfficers[0]?.id || '');
                         }}
-                        className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1"
+                        className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer"
                         title="Reassign to Another Officer"
                       >
                         <span className="material-symbols-outlined text-[14px]">swap_horiz</span>
@@ -600,7 +600,7 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
 
                       <button
                         onClick={() => setDealerToDelete(dealer)}
-                        className="px-2 py-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-all flex items-center gap-1"
+                        className="px-2 py-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-all flex items-center gap-1 cursor-pointer"
                         title="Admin Authorized: Delete Dealer"
                       >
                         <span className="material-symbols-outlined text-[14px]">delete</span>
@@ -611,7 +611,7 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
 
                   <button
                     onClick={() => onSelectDealerForOrder(dealer.id)}
-                    className="px-3 py-1.5 bg-[#eceef0] dark:bg-slate-800 text-[#191c1e] dark:text-white rounded-xl text-xs font-bold hover:bg-[#e0e3e5] dark:hover:bg-slate-700 transition-all"
+                    className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
                     title="Book new order for this dealer"
                   >
                     Order
@@ -623,14 +623,14 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
                         onApproveDealer(dealer.id);
                         triggerToast(`${dealer.companyName} has been approved!`);
                       }}
-                      className="px-3.5 py-1.5 bg-[#001428] text-white rounded-xl text-xs font-bold hover:bg-[#0f2942] transition-all"
+                      className="px-3.5 py-1.5 bg-[#006b5f] hover:bg-[#005047] text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
                     >
                       Approve
                     </button>
                   ) : (
                     <button
                       onClick={() => onSelectDealerForLedger(dealer.id)}
-                      className="px-3.5 py-1.5 bg-[#76f4e0]/40 text-[#006f63] rounded-xl text-xs font-bold hover:bg-[#76f4e0] transition-all"
+                      className="px-3.5 py-1.5 bg-[#006b5f] hover:bg-[#005047] text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
                     >
                       View Ledger
                     </button>
@@ -642,10 +642,10 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
         })}
 
         {filteredDealers.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
+          <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
             <span className="material-symbols-outlined text-slate-400 text-[40px]">store_mall_directory</span>
-            <h4 className="font-bold text-slate-800 mt-2">No dealers found in this region</h4>
-            <p className="text-xs text-slate-500 mt-1">Try switching province or adjusting your search keyword.</p>
+            <h4 className="font-bold text-slate-800 dark:text-white mt-2">No dealers found in this region</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Try switching province or adjusting your search keyword.</p>
           </div>
         )}
       </div>

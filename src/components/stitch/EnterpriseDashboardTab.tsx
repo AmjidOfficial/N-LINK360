@@ -190,14 +190,35 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
       .sort((a, b) => b.sales - a.sales);
   }, [customers, orders, recoveries]);
 
-  // Chronological Daily Sales vs Recovery data for Recharts (Past 7 Days)
+  // Market credit & outstanding exposure calculations across all dealers
+  const marketCreditStats = useMemo(() => {
+    const totalOutstanding = customers.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
+    const totalCreditLimit = customers.reduce((sum, c) => sum + (c.creditLimit || 500000), 0);
+    const utilizationRate = totalCreditLimit > 0 ? Math.round((totalOutstanding / totalCreditLimit) * 100) : 0;
+    const uniqueTowns = new Set(customers.map((c) => c.city).filter(Boolean)).size;
+
+    return {
+      totalOutstanding,
+      totalCreditLimit,
+      utilizationRate,
+      uniqueTowns,
+    };
+  }, [customers]);
+
+  // Chronological Daily Sales vs Recovery data for Recharts (Month-to-Date MTD)
   const chartTimelineData = useMemo(() => {
     const dateMap = new Map<string, { date: string; Sales: number; Recovery: number }>();
 
-    // Populating last 7 days keys
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentDay = now.getDate();
+
+    // To ensure a rich chart even at the start of the month, we show from the 1st till today, with at least 7 trailing days
+    const totalPoints = Math.max(7, currentDay);
+
+    for (let i = totalPoints - 1; i >= 0; i--) {
+      const d = new Date(currentYear, currentMonth, currentDay - i);
       const dStr = d.toISOString().slice(0, 10);
       const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       dateMap.set(dStr, { date: label, Sales: 0, Recovery: 0 });
@@ -273,7 +294,7 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
     <div className="flex flex-col w-full gap-5 pb-16 animate-fadeIn" id="enterprise-dashboard-view">
       
       {/* 1. Welcoming executive panel */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-slate-900 px-6 py-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-3xs gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-[#121a28] px-6 py-6 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-xs gap-4">
         <div>
           <span className="text-[10px] font-black uppercase tracking-widest text-[#006b5f] dark:text-[#76f4e0]">
             Executive Operations Terminal
@@ -281,29 +302,18 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
           <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
             National Light Business Dashboard
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Real-time analytics and financial health check of the distributor network.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           {onOpenPDFReport && (
             <button
               onClick={onOpenPDFReport}
-              className="min-h-[44px] px-4 py-2 bg-[#001428] dark:bg-slate-800 text-white font-extrabold text-xs rounded-xl hover:bg-[#00254b] dark:hover:bg-slate-700 transition-colors cursor-pointer active:scale-95 flex items-center gap-1.5 shadow-sm"
+              className="px-4 py-2 bg-[#006b5f] hover:bg-[#005c52] text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shadow-xs"
             >
               <span>Export Executive Brief (PDF)</span>
-            </button>
-          )}
-
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={handlePurgeMockDataClick}
-              disabled={isPurging}
-              className="min-h-[44px] px-3.5 py-2 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs rounded-xl hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20 dark:hover:text-rose-400 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-            >
-              <span>Purge Mock Data</span>
             </button>
           )}
         </div>
@@ -311,28 +321,28 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
 
       {/* 2. Sync / Purge Feedback Alerts */}
       {purgeFeedback && (
-        <div className="p-3 bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/80 rounded-xl text-xs text-teal-800 dark:text-teal-200 flex items-center gap-2 animate-fadeIn shadow-2xs">
+        <div className="p-3 bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/80 rounded-xl text-xs text-teal-800 dark:text-teal-200 flex items-center gap-2 animate-fadeIn shadow-xs">
           <span>{purgeFeedback}</span>
         </div>
       )}
 
-      {/* 3. Shift Check-In Redirection Banner (Optimized touch targets) */}
+      {/* 3. Shift Check-In Redirection Banner (Refined luxury alert) */}
       {!isCheckedIn && (
-        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-300 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-3 animate-fadeIn shadow-3xs">
+        <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 text-amber-900 dark:text-amber-300 p-3.5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 animate-fadeIn">
           <div className="flex items-center gap-3 text-left">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 font-bold text-lg">
-              !
+            <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 font-bold text-sm">
+              <span className="material-symbols-outlined text-[18px]">location_off</span>
             </div>
             <div>
-              <h4 className="text-xs font-black uppercase tracking-wider leading-none">Awaiting Shift Check-In</h4>
-              <p className="text-[11px] opacity-90 mt-1">Please record your attendance and check-in location to start routing your beat.</p>
+              <h4 className="text-xs font-black uppercase tracking-wider leading-none">Shift Check-In Pending</h4>
+              <p className="text-[11px] text-amber-800/80 dark:text-amber-400/80 mt-0.5">Punch in attendance and assigned beat town to unlock active field booking.</p>
             </div>
           </div>
           <button
             onClick={() => onNavigateTab('ATTENDANCE')}
-            className="min-h-[44px] w-full md:w-auto px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl active:scale-95 transition-all cursor-pointer shadow-xs"
+            className="w-full sm:w-auto px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl active:scale-95 transition-all cursor-pointer shadow-xs shrink-0"
           >
-            Go to Attendance &amp; Punch
+            Check In Now
           </button>
         </div>
       )}
@@ -345,17 +355,43 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
         onViewDetails={onOpenPDFReport || (() => onNavigateTab('LEDGERS'))}
       />
 
-      {/* 4. Core Numerical Business Cards (Grid of 4) */}
+      {/* 4. Core Executive Business KPI Cards (Grid of 4 Non-Redundant Metrics) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="executive-metric-cards">
         
-        {/* CARD 1: TOTAL RECOVERY */}
-        <div className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between gap-2.5">
+        {/* CARD 1: GROSS SALES BOOKED */}
+        <div className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Total Recovery
+              Gross Sales Booked
+            </span>
+            <span className="text-[9px] font-bold text-[#006b5f] dark:text-[#76f4e0] bg-[#006b5f]/10 dark:bg-[#76f4e0]/10 px-2 py-0.5 rounded-full font-mono">
+              {salesMetrics.orderCount} Orders
+            </span>
+          </div>
+          <div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+              Rs. {salesMetrics.totalSale.toLocaleString()}
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Month-to-date booked catalog volume
+            </p>
+          </div>
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-400 flex justify-between items-center">
+            <span>Avg Order Value:</span>
+            <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
+              Rs. {salesMetrics.avgOrderValue.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* CARD 2: TOTAL COLLECTIONS */}
+        <div className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Total Collections
             </span>
             <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full font-mono">
-              {recoveryMetrics.recoveryCount} Trans
+              {recoveryMetrics.recoveryCount} Vouchers
             </span>
           </div>
           <div>
@@ -363,7 +399,7 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
               Rs. {recoveryMetrics.totalRecovery.toLocaleString()}
             </div>
             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-              Cash received + Bank deposits
+              Cash on-ground + Bank deposits
             </p>
           </div>
           {/* Progress split */}
@@ -379,69 +415,60 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
           </div>
         </div>
 
-        {/* CARD 2: CASH COLLECTIONS */}
-        <div className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between gap-2.5">
+        {/* CARD 3: MARKET CREDIT EXPOSURE */}
+        <div className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Cash Received
+              Market Outstanding
             </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full font-mono ${
+              marketCreditStats.utilizationRate > 80
+                ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400'
+                : 'bg-teal-50 text-[#006b5f] dark:bg-teal-950/40 dark:text-[#76f4e0]'
+            }`}>
+              {marketCreditStats.utilizationRate}% Utilized
+            </span>
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-800 dark:text-white font-mono tracking-tight">
-              Rs. {recoveryMetrics.cashSum.toLocaleString()}
+            <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+              Rs. {marketCreditStats.totalOutstanding.toLocaleString()}
             </div>
             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-              On-field physical cash collection
+              Total dealer ledger balance in market
             </p>
           </div>
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-400">
-            Handled by on-ground sales officers
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-400 flex justify-between items-center">
+            <span>Approved Limit:</span>
+            <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">
+              Rs. {marketCreditStats.totalCreditLimit.toLocaleString()}
+            </span>
           </div>
         </div>
 
-        {/* CARD 3: BANK DEPOSITS */}
-        <div className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between gap-2.5">
+        {/* CARD 4: BEAT NETWORK COVERAGE */}
+        <div className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Bank Deposits
+              Beat Coverage
             </span>
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
-          </div>
-          <div>
-            <div className="text-2xl font-black text-slate-800 dark:text-white font-mono tracking-tight">
-              Rs. {recoveryMetrics.bankSum.toLocaleString()}
-            </div>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-              Direct clearing bank slips / EasyPaisa
-            </p>
-          </div>
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-400">
-            Subject to dual-executive clearance
-          </div>
-        </div>
-
-        {/* CARD 4: TOTAL SALES ORDERS */}
-        <div className="bg-white dark:bg-slate-900 p-4.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between gap-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Total Order Volume
-            </span>
-            <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-full font-mono">
-              {salesMetrics.orderCount} Orders
+            <span className="text-[9px] font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 px-2 py-0.5 rounded-full">
+              Live Network
             </span>
           </div>
           <div>
-            <div className="text-2xl font-black text-[#006b5f] dark:text-[#76f4e0] font-mono tracking-tight">
-              Rs. {salesMetrics.totalSale.toLocaleString()}
+            <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+              {customers.length} Dealers
             </div>
             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-              Aggregated catalog value of new orders
+              Covering {marketCreditStats.uniqueTowns} regional beat towns
             </p>
           </div>
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-400 flex justify-between">
-            <span>AOV:</span>
-            <span className="font-bold text-slate-700 dark:text-slate-300 font-mono">Rs. {salesMetrics.avgOrderValue.toLocaleString()}</span>
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-400 flex justify-between items-center">
+            <span>Operational Status:</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Active Route
+            </span>
           </div>
         </div>
 
@@ -474,17 +501,7 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
 
           <div className="flex-1 w-full text-xs font-mono">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartTimelineData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#006b5f" stopOpacity={0.28} />
-                    <stop offset="95%" stopColor="#006b5f" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="recGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.28} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
+              <LineChart data={chartTimelineData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:stroke-slate-800/50" />
                 <XAxis dataKey="date" stroke="#94a3b8" fontSize={9} tickLine={false} />
                 {/* Dual Axis: Left Y-Axis for Sales Booking */}
@@ -511,9 +528,10 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
                   labelStyle={{ fontWeight: 'bold', fontSize: '11px', color: '#76f4e0' }}
                   formatter={(value: any, name: any) => [`Rs. ${Number(value || 0).toLocaleString()}`, name === 'Sales' ? 'Sales Booked (PKR)' : 'Recovery Collected (PKR)']}
                 />
-                <Area yAxisId="left" type="monotone" dataKey="Sales" stroke="#006b5f" strokeWidth={2.5} fillOpacity={1} fill="url(#salesGrad)" name="Sales" />
-                <Area yAxisId="right" type="monotone" dataKey="Recovery" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#recGrad)" name="Recovery" />
-              </AreaChart>
+                <Legend verticalAlign="top" height={36} iconType="circle" />
+                <Line yAxisId="left" type="monotone" dataKey="Sales" stroke="#006b5f" strokeWidth={3} dot={{ r: 2 }} activeDot={{ r: 6 }} name="Sales Booked" />
+                <Line yAxisId="right" type="monotone" dataKey="Recovery" stroke="#10b981" strokeWidth={3} dot={{ r: 2 }} activeDot={{ r: 6 }} name="Recovery Collected" />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -659,6 +677,19 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
         </div>
 
       </div>
+
+      {isAdmin && (
+        <div className="flex justify-center mt-8">
+          <button
+            type="button"
+            onClick={handlePurgeMockDataClick}
+            disabled={isPurging}
+            className="text-[10px] uppercase tracking-widest font-black text-slate-400 hover:text-rose-500 hover:bg-rose-50/30 dark:hover:bg-rose-950/20 dark:hover:text-rose-400 px-4 py-2 rounded-xl border border-slate-200/40 dark:border-slate-800/40 transition-all cursor-pointer"
+          >
+            {isPurging ? 'Purging Systems...' : 'System Administration: Purge Mock Data'}
+          </button>
+        </div>
+      )}
 
     </div>
   );
