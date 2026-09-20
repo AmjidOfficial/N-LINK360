@@ -1240,7 +1240,7 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
 
   // Rebuilt SalesPulse N-LINK Entry Form States
   const [entryRegion, setEntryRegion] = useState<string>('All Regions');
-  const [entryTsm, setEntryTsm] = useState<string>('Syed Zain');
+  const [entryTsm, setEntryTsm] = useState<string>('Shahid Khan');
   const [entryDate, setEntryDate] = useState<string>('09/17/2026');
   const [todaysRecoveryAmount, setTodaysRecoveryAmount] = useState<string>('');
   const [todaysRecoveryMode, setTodaysRecoveryMode] = useState<PaymentMode>('CASH');
@@ -3550,8 +3550,8 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                         onChange={(e) => setEntryTsm(e.target.value)}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
                       >
-                        <option value="Syed Zain">Syed Zain (TSM - Central)</option>
-                        <option value="Shahzad Ullah">Shahzad Ullah (ZSM - Punjab)</option>
+                        <option value="Shahid Khan">Shahid Khan (TSM - KPK / Hazara)</option>
+                        <option value="Shahzad Ullah">Shahzad Ullah (Managing Director)</option>
                         <option value={currentUser.fullName}>{currentUser.fullName} ({currentUser.role})</option>
                       </select>
                     </div>

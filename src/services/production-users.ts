@@ -31,13 +31,11 @@ export const AVAILABLE_ROLES: { role: UserRole; title: string; category: string;
 
 export const AUTHORIZED_APPROVER_EMAILS: readonly string[] = [
   'shahzadullah@nationallights.com',
-  'syedzain@nationallights.com',
   'nationallights2026@gmail.com',
 ];
 
 export const ADMIN_ROLE_EMAILS: readonly string[] = [
   'shahzadullah@nationallights.com',
-  'syedzain@nationallights.com',
   'nationallights2026@gmail.com',
   'admin@nationallights.com',
   'superadmin@nationallights.com',
@@ -61,14 +59,13 @@ export function isAuthorizedApproverEmail(email?: string | null): boolean {
   return (
     AUTHORIZED_APPROVER_EMAILS.some((x) => x.toLowerCase() === clean) ||
     clean.includes('nationallights2026') ||
-    clean.includes('shahzadullah') ||
-    clean.includes('syedzain')
+    clean.includes('shahzadullah')
   );
 }
 
 export function assertAuthorizedApprover(email?: string | null): void {
   if (!isAuthorizedApproverEmail(email)) {
-    throw new Error('Only designated executive officers may authorize this transaction.');
+    throw new Error('Unauthorized: Only ShahzadUllah (Managing Director) is authorized to approve orders or confirm payments.');
   }
 }
 

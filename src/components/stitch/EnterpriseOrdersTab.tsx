@@ -445,7 +445,7 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
         `New Order Amount: Rs. ${cartTotal.toLocaleString()} PKR\n` +
         `Projected Total Exposure: Rs. ${projectedExposure.toLocaleString()} PKR\n\n` +
         `${warningReason}\n\n` +
-        `Submitting this entry will flag the order for Mandatory Dual Executive Approval (Syed Zain & Shahzad Ullah).\n\n` +
+        `Submitting this entry will flag the order for Executive Approval (Shahzad Ullah).\n\n` +
         `Do you want to confirm and proceed with this order entry?`;
 
       const isConfirmed = window.confirm(confirmMessage);
@@ -487,7 +487,6 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
         status: 'SUBMITTED',
         creditCheckStatus: (isOverLimit || isCreditExceeded) ? 'RED' : 'GREEN',
         dualApprovalStatus: 'PENDING_DUAL_APPROVAL',
-        zainApproval: 'PENDING',
         shahzadApproval: 'PENDING',
         syncStatus: 'SYNCED',
         notes: orderRemarks || (isOverLimit ? 'Credit threshold flagged: Pending executive sign-off' : 'Field Order Booked'),
@@ -512,7 +511,7 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
       setOrderRemarks('');
       setShowOrderConfirmModal(false);
       triggerLiveSyncNotification();
-      triggerToast('Order submitted! Awaiting dual executive approval (Syed Zain & Shahzad Ullah).');
+      triggerToast('Order submitted! Awaiting executive approval (Shahzad Ullah).');
       if (lockModeTo !== 'ENTRY') {
         setActiveMode('invoices');
       }
@@ -585,7 +584,6 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
         bankName: paymentMode !== 'CASH' ? bankName : undefined,
         status: 'PENDING_VERIFICATION',
         dualApprovalStatus: 'PENDING_DUAL_APPROVAL',
-        zainApproval: 'PENDING',
         shahzadApproval: 'PENDING',
         syncStatus: 'SYNCED',
         remarks: recoveryRemarks || (receiptSimulated ? 'Payment slip attachment uploaded.' : 'Standard payment recovery logged.'),
@@ -598,7 +596,7 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
       setReceiptSimulated(false);
       setRecoveryRemarks('');
       triggerLiveSyncNotification();
-      triggerToast('Recovery logged! Awaiting dual executive sign-off (Syed Zain & Shahzad Ullah).');
+      triggerToast('Recovery logged! Awaiting executive sign-off (Shahzad Ullah).');
       if (lockModeTo !== 'ENTRY') {
         setActiveMode('ledger');
       }

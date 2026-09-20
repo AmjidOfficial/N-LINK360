@@ -587,9 +587,6 @@ export interface SalesOrder {
   rejectionReason?: string;
   dualApprovalStatus?: 'PENDING_DUAL_APPROVAL' | 'DUAL_APPROVED' | 'PARTIALLY_APPROVED' | 'REJECTED';
   syncStatus?: 'SYNCED' | 'PENDING' | 'OFFLINE';
-  zainApproval?: DualApprovalStatus;
-  zainApprovedAt?: string;
-  zainRejectionReason?: string;
   shahzadApproval?: DualApprovalStatus;
   shahzadApprovedAt?: string;
   shahzadRejectionReason?: string;
@@ -723,9 +720,6 @@ export interface Recovery {
   rejectionReason?: string;
   dualApprovalStatus?: 'PENDING_DUAL_APPROVAL' | 'DUAL_APPROVED' | 'PARTIALLY_APPROVED' | 'REJECTED';
   syncStatus?: 'SYNCED' | 'PENDING' | 'OFFLINE';
-  zainApproval?: DualApprovalStatus;
-  zainApprovedAt?: string;
-  zainRejectionReason?: string;
   shahzadApproval?: DualApprovalStatus;
   shahzadApprovedAt?: string;
   shahzadRejectionReason?: string;

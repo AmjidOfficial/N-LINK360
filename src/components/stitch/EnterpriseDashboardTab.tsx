@@ -81,7 +81,6 @@ export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
   const isAdmin = useMemo(() => {
     return (
       ['SUPER_ADMIN', 'MANAGEMENT'].includes(currentUser.role) ||
-      currentUser.email?.includes('zain') ||
       currentUser.email?.includes('shahzad')
     );
   }, [currentUser]);

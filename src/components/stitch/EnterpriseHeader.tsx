@@ -150,7 +150,7 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
     return () => clearInterval(interval);
   }, [rateLimit.isRateLimited]);
 
-  // Dynamic stored users (Shahzad Ullah & Syed Zain + corporate employees)
+  // Dynamic stored users (Shahzad Ullah + corporate employees)
   const availableUsers = useMemo(() => {
     try {
       const stored = getStoredUsers();
@@ -164,7 +164,6 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
     return (
       currentUser.role === 'SUPER_ADMIN' ||
       currentUser.role === 'MANAGEMENT' ||
-      currentUser.email?.includes('zain') ||
       currentUser.email?.includes('shahzad')
     );
   }, [currentUser]);
@@ -739,8 +738,8 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
                       <ShieldCheck className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                       <div className="flex-1 flex justify-between items-center gap-2">
                         <div>
-                          <span className="block">Dual Approvals Center</span>
-                          <span className="text-[9px] text-slate-400 font-medium block">Zain & Shahzad authority controls</span>
+                          <span className="block">Executive Approval Center</span>
+                          <span className="text-[9px] text-slate-400 font-medium block">Shahzad Ullah (MD) Authority Controls</span>
                         </div>
                         {pendingApprovalsCount > 0 && (
                           <span className="px-2 py-0.5 rounded-full bg-amber-600 text-white font-mono text-[10px] font-bold">

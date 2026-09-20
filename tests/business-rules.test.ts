@@ -141,7 +141,6 @@ console.log('\n🛡️ [3/16] Testing Row-Level Security (RLS) Isolation Rules..
   };
 
   const admin = { id: 'usr-admin', email: 'admin@nationallights.com', role: 'SUPER_ADMIN' as UserRole };
-  const approverZain = { id: 'usr-zain', email: 'syedzain@nationallights.com', role: 'SUPER_ADMIN' as UserRole };
   const approverShahzad = { id: 'usr-shahzad', email: 'shahzadullah@nationallights.com', role: 'MANAGEMENT' as UserRole };
   const rsmPunjab = { id: 'usr-rsm', email: 'rsm.punjab@nationallights.com', role: 'RSM' as UserRole, assignedTerritory: 'PUNJAB' };
   const fieldOfficer1 = { id: 'usr-field-1', email: 'officer1@nationallights.com', role: 'OB' as UserRole };
@@ -177,7 +176,6 @@ console.log('\n🛡️ [3/16] Testing Row-Level Security (RLS) Isolation Rules..
   assert(!evaluateCustomerRLS(fieldOfficer2, punjabCust), 'Field Officer cannot view unassigned active customers');
 
   // 2. Customer Registration RLS & PENDING_APPROVAL Queue Isolation Tests
-  assert(evaluateCustomerRLS(approverZain, pendingByOfficer1) && evaluateCustomerRLS(approverZain, pendingByOfficer2), 'Authorized Approver (Syed Zain) can read ALL records in PENDING_APPROVAL queue');
   assert(evaluateCustomerRLS(approverShahzad, pendingByOfficer1) && evaluateCustomerRLS(approverShahzad, pendingByOfficer2), 'Authorized Approver (Shahzad Ullah) can read ALL records in PENDING_APPROVAL queue');
   assert(evaluateCustomerRLS(admin, pendingByOfficer1) && evaluateCustomerRLS(admin, pendingByOfficer2), 'Super Admin can read ALL records in PENDING_APPROVAL queue');
   assert(evaluateCustomerRLS(fieldOfficer1, pendingByOfficer1), 'Field Officer 1 can see registration request created by Officer 1');
@@ -724,14 +722,18 @@ console.log('\n🏆 [16/16] SIMULATING COMPLETE 30-STEP END-TO-END BUSINESS TRAN
 }
 
 // ==============================================================================
-// 17. CRITICAL TWO-PERSON APPROVAL RULE VERIFICATION (SECTION 10 & 11)
+// 17. CRITICAL EXECUTIVE APPROVAL RULE VERIFICATION (SHAHZAD ULLAH SOLE APPROVER)
 // ==============================================================================
-console.log('🏛️ [17/17] Testing Critical Two-Person Executive Approval Authorization...');
+console.log('🏛️ [17/17] Testing Critical Executive Approval Authorization (Shahzad Ullah Sole Approver)...');
 {
   assert(
-    AUTHORIZED_APPROVER_EMAILS.includes('shahzadullah@nationallights.com') &&
-    AUTHORIZED_APPROVER_EMAILS.includes('syedzain@nationallights.com'),
-    'Designated executives (Shahzad Ullah & Syed Zain) exist in approver whitelist'
+    AUTHORIZED_APPROVER_EMAILS.includes('shahzadullah@nationallights.com'),
+    'Designated executive (Shahzad Ullah) exists in approver whitelist'
+  );
+
+  assert(
+    !AUTHORIZED_APPROVER_EMAILS.includes('syedzain@nationallights.com'),
+    'Syed Zain is strictly excluded from approver whitelist'
   );
 
   assert(
@@ -740,13 +742,13 @@ console.log('🏛️ [17/17] Testing Critical Two-Person Executive Approval Auth
   );
 
   assert(
-    isAuthorizedApproverEmail('syedzain@nationallights.com') === true,
-    'Syed Zain email passes approver check'
+    isAuthorizedApproverEmail('SHAHZADULLAH@nationallights.com') === true,
+    'Case-insensitive approval check handles uppercase'
   );
 
   assert(
-    isAuthorizedApproverEmail('SYEDZAIN@nationallights.com') === true,
-    'Case-insensitive approval check handles uppercase'
+    isAuthorizedApproverEmail('syedzain@nationallights.com') === false,
+    'Syed Zain email is rejected from approval check'
   );
 
   assert(
@@ -770,7 +772,7 @@ console.log('🏛️ [17/17] Testing Critical Two-Person Executive Approval Auth
   } catch (err: any) {
     threwForUnauthorized = true;
     assert(
-      err.message.includes('Only designated executive officers') || err.message.includes('shahzadullah@nationallights.com'),
+      err.message.includes('ShahzadUllah') || err.message.includes('shahzadullah'),
       'assertAuthorizedApprover throws descriptive enterprise security error'
     );
   }

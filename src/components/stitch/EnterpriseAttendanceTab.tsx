@@ -49,8 +49,8 @@ export const EnterpriseAttendanceTab: React.FC<EnterpriseAttendanceTabProps> = (
   const isExecutive =
     currentUser.role === 'SUPER_ADMIN' ||
     currentUser.role === 'MANAGEMENT' ||
-    currentUser.email === 'syedzain@nationallights.com' ||
-    currentUser.email === 'shahzadullah@nationallights.com';
+    currentUser.email === 'shahzadullah@nationallights.com' ||
+    currentUser.email === 'nationallights2026@gmail.com';
 
   // Lifted town calculations and geofence checks
   const availableTowns = useMemo(() => {

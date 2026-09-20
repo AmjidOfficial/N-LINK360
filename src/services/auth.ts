@@ -25,7 +25,6 @@ const roleMap: Record<string, UserRole> = {
 export const REGISTERED_CORPORATE_EMAILS: readonly string[] = [
   'nationallights2026@gmail.com',
   'shahzadullah@nationallights.com',
-  'syedzain@nationallights.com',
   'admin@nationallights.com',
   'superadmin@nationallights.com',
   'management@nationallights.com',

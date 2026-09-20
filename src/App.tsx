@@ -177,7 +177,7 @@ export default function App() {
       let localRecs: Recovery[] = [];
 
       try {
-        // Purge all mock/dummy data immediately on startup, strictly keeping Syed Zain & Shahzadullah
+        // Purge all mock/dummy data immediately on startup, strictly keeping production roster & Shahzadullah
         const purgeRes = purgeMockDataFromState();
         localCusts = purgeRes.remainingCustomers;
         localOrders = purgeRes.remainingOrders;
@@ -300,11 +300,10 @@ export default function App() {
 
   // 7. Core Handlers: Dual Approval & Ledger Posting Architecture
   const handlePlaceOrder = (newOrder: SalesOrder) => {
-    // Orders start in PENDING_APPROVAL state awaiting Syed Zain & Shahzad Ullah
+    // Orders start in SUBMITTED state awaiting Shahzad Ullah approval
     const orderPayload: SalesOrder = {
       ...newOrder,
       status: 'SUBMITTED',
-      zainApproval: 'PENDING',
       shahzadApproval: 'PENDING',
     };
 
@@ -318,16 +317,15 @@ export default function App() {
     }
     const updatedOrders = [orderPayload, ...orders];
     setOrders(updatedOrders);
-    // Ledger balance remains unchanged until fully approved by both Zain & Shahzad
+    // Ledger balance remains unchanged until officially approved by Shahzad Ullah
     syncToCache(customers, updatedOrders, recoveries);
   };
 
   const handleRecordRecovery = (newRecovery: Recovery) => {
-    // Recoveries start in PENDING_VERIFICATION state awaiting Syed Zain & Shahzad Ullah
+    // Recoveries start in PENDING_VERIFICATION state awaiting Shahzad Ullah confirmation
     const recoveryPayload: Recovery = {
       ...newRecovery,
       status: 'PENDING_VERIFICATION',
-      zainApproval: 'PENDING',
       shahzadApproval: 'PENDING',
     };
 
@@ -341,42 +339,27 @@ export default function App() {
     }
     const updatedRecoveries = [recoveryPayload, ...recoveries];
     setRecoveries(updatedRecoveries);
-    // Ledger balance remains unchanged until fully approved by both Zain & Shahzad
+    // Ledger balance remains unchanged until officially confirmed by Shahzad Ullah
     syncToCache(customers, orders, updatedRecoveries);
   };
 
-  // Executive Approval Handlers: Either Syed Zain OR Shahzad Ullah approval authorizes immediate posting & execution
-  const handleApproveOrder = (orderId: string, approver: 'ZAIN' | 'SHAHZAD') => {
+  // Executive Approval Handlers: Shahzad Ullah sole executive signing authority
+  const handleApproveOrder = (orderId: string, _approver?: string) => {
     let newlyApprovedOrder: SalesOrder | null = null;
 
     const updatedOrders = orders.map((o) => {
       if (o.id === orderId) {
-        const nextZain = approver === 'ZAIN' ? 'APPROVED' as const : (o.zainApproval || 'PENDING');
-        const nextZainDate = approver === 'ZAIN' ? new Date().toISOString() : o.zainApprovedAt;
-        const nextShahzad = approver === 'SHAHZAD' ? 'APPROVED' as const : (o.shahzadApproval || 'PENDING');
-        const nextShahzadDate = approver === 'SHAHZAD' ? new Date().toISOString() : o.shahzadApprovedAt;
-
-        // Executive Rule: Either Syed Zain OR Shahzad Ullah approved -> go ahead to proceed!
-        const isApproved = nextZain === 'APPROVED' || nextShahzad === 'APPROVED';
-        const approverName = approver === 'ZAIN' ? 'Syed Zain' : 'Shahzad Ullah';
-
         const updated: SalesOrder = {
           ...o,
-          zainApproval: nextZain,
-          zainApprovedAt: nextZainDate,
-          shahzadApproval: nextShahzad,
-          shahzadApprovedAt: nextShahzadDate,
-          status: isApproved ? 'APPROVED' : o.status,
-          dualApprovalStatus: isApproved ? 'DUAL_APPROVED' : 'PENDING_DUAL_APPROVAL',
-          approvedBy: isApproved
-            ? nextZain === 'APPROVED' && nextShahzad === 'APPROVED'
-              ? 'Syed Zain & Shahzad Ullah'
-              : (o.approvedBy ? `${o.approvedBy} & ${approverName}` : approverName)
-            : o.approvedBy,
-          approvedAt: isApproved ? (o.approvedAt || new Date().toISOString()) : o.approvedAt,
+          shahzadApproval: 'APPROVED',
+          shahzadApprovedAt: new Date().toISOString(),
+          status: 'APPROVED',
+          dualApprovalStatus: 'DUAL_APPROVED',
+          approvedBy: 'Shahzad Ullah',
+          approvedAt: new Date().toISOString(),
         };
 
-        if (isApproved && o.status !== 'APPROVED') {
+        if (o.status !== 'APPROVED') {
           newlyApprovedOrder = updated;
         }
         return updated;
@@ -386,7 +369,7 @@ export default function App() {
 
     setOrders(updatedOrders);
 
-    // If approved by either Syed Zain or Shahzad Ullah, trigger immediate ledger posting & balance update
+    // Immediate ledger posting & balance update upon Shahzad Ullah's approval
     let updatedCusts = customers;
     if (newlyApprovedOrder) {
       const ord: SalesOrder = newlyApprovedOrder;
@@ -427,18 +410,18 @@ export default function App() {
     syncToCache(updatedCusts, updatedOrders, recoveries);
   };
 
-  const handleRejectOrder = (orderId: string, approver: 'ZAIN' | 'SHAHZAD', reason: string) => {
+  const handleRejectOrder = (orderId: string, _approver: string, reason?: string) => {
+    const finalReason = reason || 'Declined by Shahzad Ullah';
     const updatedOrders = orders.map((o) => {
       if (o.id === orderId) {
         return {
           ...o,
-          zainApproval: approver === 'ZAIN' ? 'REJECTED' as const : o.zainApproval,
-          zainRejectionReason: approver === 'ZAIN' ? reason : o.zainRejectionReason,
-          shahzadApproval: approver === 'SHAHZAD' ? 'REJECTED' as const : o.shahzadApproval,
-          shahzadRejectionReason: approver === 'SHAHZAD' ? reason : o.shahzadRejectionReason,
+          shahzadApproval: 'REJECTED' as const,
+          shahzadRejectionReason: finalReason,
           status: 'REJECTED' as const,
-          dualApprovalStatus: 'REJECTED',
-          rejectionReason: reason,
+          dualApprovalStatus: 'REJECTED' as const,
+          rejectionReason: finalReason,
+          approvedBy: 'Shahzad Ullah',
         };
       }
       return o;
@@ -448,37 +431,22 @@ export default function App() {
     syncToCache(customers, updatedOrders, recoveries);
   };
 
-  const handleApproveRecovery = (recoveryId: string, approver: 'ZAIN' | 'SHAHZAD') => {
+  const handleApproveRecovery = (recoveryId: string, _approver?: string) => {
     let newlyVerifiedRecovery: Recovery | null = null;
 
     const updatedRecoveries = recoveries.map((r) => {
       if (r.id === recoveryId) {
-        const nextZain = approver === 'ZAIN' ? 'APPROVED' as const : (r.zainApproval || 'PENDING');
-        const nextZainDate = approver === 'ZAIN' ? new Date().toISOString() : r.zainApprovedAt;
-        const nextShahzad = approver === 'SHAHZAD' ? 'APPROVED' as const : (r.shahzadApproval || 'PENDING');
-        const nextShahzadDate = approver === 'SHAHZAD' ? new Date().toISOString() : r.shahzadApprovedAt;
-
-        // Executive Rule: Either Syed Zain OR Shahzad Ullah approved -> go ahead to proceed!
-        const isVerified = nextZain === 'APPROVED' || nextShahzad === 'APPROVED';
-        const approverName = approver === 'ZAIN' ? 'Syed Zain' : 'Shahzad Ullah';
-
         const updated: Recovery = {
           ...r,
-          zainApproval: nextZain,
-          zainApprovedAt: nextZainDate,
-          shahzadApproval: nextShahzad,
-          shahzadApprovedAt: nextShahzadDate,
-          status: isVerified ? 'VERIFIED' : r.status,
-          dualApprovalStatus: isVerified ? 'DUAL_APPROVED' : 'PENDING_DUAL_APPROVAL',
-          verifiedBy: isVerified
-            ? nextZain === 'APPROVED' && nextShahzad === 'APPROVED'
-              ? 'Syed Zain & Shahzad Ullah'
-              : (r.verifiedBy ? `${r.verifiedBy} & ${approverName}` : approverName)
-            : r.verifiedBy,
-          verifiedAt: isVerified ? (r.verifiedAt || new Date().toISOString()) : r.verifiedAt,
+          shahzadApproval: 'APPROVED',
+          shahzadApprovedAt: new Date().toISOString(),
+          status: 'VERIFIED',
+          dualApprovalStatus: 'DUAL_APPROVED',
+          verifiedBy: 'Shahzad Ullah',
+          verifiedAt: new Date().toISOString(),
         };
 
-        if (isVerified && r.status !== 'VERIFIED') {
+        if (r.status !== 'VERIFIED') {
           newlyVerifiedRecovery = updated;
         }
         return updated;
@@ -488,7 +456,7 @@ export default function App() {
 
     setRecoveries(updatedRecoveries);
 
-    // If verified by either Syed Zain or Shahzad Ullah, credit the customer's ledger balance immediately
+    // Credit the customer's ledger balance immediately upon Shahzad Ullah's confirmation
     let updatedCusts = customers;
     if (newlyVerifiedRecovery) {
       const rec: Recovery = newlyVerifiedRecovery;
@@ -529,17 +497,17 @@ export default function App() {
     syncToCache(updatedCusts, orders, updatedRecoveries);
   };
 
-  const handleRejectRecovery = (recoveryId: string, approver: 'ZAIN' | 'SHAHZAD', reason: string) => {
+  const handleRejectRecovery = (recoveryId: string, _approver: string, reason?: string) => {
+    const finalReason = reason || 'Declined by Shahzad Ullah';
     const updatedRecoveries = recoveries.map((r) => {
       if (r.id === recoveryId) {
         return {
           ...r,
-          zainApproval: approver === 'ZAIN' ? 'REJECTED' as const : r.zainApproval,
-          zainRejectionReason: approver === 'ZAIN' ? reason : r.zainRejectionReason,
-          shahzadApproval: approver === 'SHAHZAD' ? 'REJECTED' as const : r.shahzadApproval,
-          shahzadRejectionReason: approver === 'SHAHZAD' ? reason : r.shahzadRejectionReason,
+          shahzadApproval: 'REJECTED' as const,
+          shahzadRejectionReason: finalReason,
           status: 'REJECTED' as const,
-          rejectionReason: reason,
+          rejectionReason: finalReason,
+          verifiedBy: 'Shahzad Ullah',
         };
       }
       return r;
@@ -553,8 +521,8 @@ export default function App() {
     const isExecutive =
       currentUser.role === 'SUPER_ADMIN' ||
       currentUser.role === 'MANAGEMENT' ||
-      currentUser.email === 'syedzain@nationallights.com' ||
-      currentUser.email === 'shahzadullah@nationallights.com';
+      currentUser.email === 'shahzadullah@nationallights.com' ||
+      currentUser.email === 'nationallights2026@gmail.com';
 
     const newCustomer: Customer = {
       id: newDealerData.id || `CUST-${Date.now().toString().slice(-6)}`,
@@ -683,13 +651,13 @@ export default function App() {
     visits: fallbackAppData.visits,
   };
 
-  // Pending Executive Approval Count: Items where neither Syed Zain nor Shahzad Ullah has approved yet
+  // Pending Executive Approval Count: Items awaiting Shahzad Ullah review
   const pendingApprovalsCount = useMemo(() => {
     const pendingOrds = orders.filter(
-      (o) => o.zainApproval !== 'APPROVED' && o.shahzadApproval !== 'APPROVED' && o.status !== 'APPROVED' && o.status !== 'REJECTED'
+      (o) => o.status === 'SUBMITTED' || o.status === 'PENDING_APPROVAL'
     ).length;
     const pendingRecs = recoveries.filter(
-      (r) => r.zainApproval !== 'APPROVED' && r.shahzadApproval !== 'APPROVED' && r.status !== 'VERIFIED' && r.status !== 'REJECTED'
+      (r) => r.status === 'PENDING_VERIFICATION'
     ).length;
     return pendingOrds + pendingRecs;
   }, [orders, recoveries]);
@@ -897,7 +865,7 @@ export default function App() {
         onToggleDarkMode={toggleDarkMode}
       />
 
-      {/* 9. Executive Dual Approval Modal (Syed Zain & Shahzad Ullah) */}
+      {/* 9. Executive Approval Center Modal (Shahzad Ullah Sole Signing Authority) */}
       <DualApprovalModal
         isOpen={isDualApprovalOpen}
         onClose={() => setIsDualApprovalOpen(false)}

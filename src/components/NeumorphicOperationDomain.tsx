@@ -427,7 +427,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
   };
 
   const handleApproveRegistration = async (regId: string, customApproverEmail?: string) => {
-    const approverEmail = customApproverEmail || (isAuthorizedApprover ? currentUser.email : 'syedzain@nationallights.com');
+    const approverEmail = customApproverEmail || (isAuthorizedApprover ? currentUser.email : 'shahzadullah@nationallights.com');
     const reg = pendingRegistrations.find((r) => r.id === regId);
     if (!reg) return;
 
@@ -479,7 +479,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
   };
 
   const handleRejectRegistration = async (regId: string) => {
-    const approverEmail = isAuthorizedApprover ? currentUser.email : 'syedzain@nationallights.com';
+    const approverEmail = isAuthorizedApprover ? currentUser.email : 'shahzadullah@nationallights.com';
     try {
       if (onRejectCustomer) {
         await onRejectCustomer(regId, 'Credit policy non-compliance / incomplete territory documentation');
@@ -501,7 +501,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
 
   const handleApproveInvoice = async (id: string) => {
     if (!isAuthorizedApprover) {
-      alert('Approval Denied: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to clear orders/invoices.');
+      alert('Approval Denied: Only Shahzad Ullah (shahzadullah@nationallights.com) is authorized to approve orders/invoices.');
       return;
     }
     try {
@@ -517,7 +517,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
 
   const handleRejectInvoice = async (id: string) => {
     if (!isAuthorizedApprover) {
-      alert('Action Denied: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to reject orders/invoices.');
+      alert('Action Denied: Only Shahzad Ullah (shahzadullah@nationallights.com) is authorized to reject orders/invoices.');
       return;
     }
     try {
@@ -533,7 +533,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
 
   const handleApproveRecovery = async (id: string) => {
     if (!isAuthorizedApprover) {
-      alert('Approval Denied: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to verify recoveries.');
+      alert('Approval Denied: Only Shahzad Ullah (shahzadullah@nationallights.com) is authorized to verify recoveries.');
       return;
     }
     try {
@@ -549,7 +549,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
 
   const handleRejectRecovery = async (id: string) => {
     if (!isAuthorizedApprover) {
-      alert('Action Denied: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to reject recoveries.');
+      alert('Action Denied: Only Shahzad Ullah (shahzadullah@nationallights.com) is authorized to reject recoveries.');
       return;
     }
     try {
@@ -2295,7 +2295,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
                 <p className="text-[11px] leading-relaxed">
                   {isAuthorizedApprover
                     ? `Authorized executive active: ${currentUser.name} (${currentUser.email}). You possess valid executive credentials to approve commercial invoices, verify customer recovery receipts, and issue new dealer party codes.`
-                    : `In compliance with National Lights enterprise financial protocol, only designated executive accounts (shahzadullah@nationallights.com & syedzain@nationallights.com) are authorized to clear invoices, customer applications, and recoveries. Current session (${currentUser.email}) is restricted to view-only audit mode.`}
+                    : `In compliance with National Lights enterprise financial protocol, only designated executive account (shahzadullah@nationallights.com) is authorized to clear invoices, customer applications, and recoveries. Current session (${currentUser.email}) is restricted to view-only audit mode.`}
                 </p>
               </div>
             </div>

@@ -5,12 +5,12 @@
 -- REQUIREMENTS:
 -- 1. Field officers (OB, TSM, SS, ASM, RSM, etc.) can ONLY see registration requests
 --    (PENDING_APPROVAL queue) that THEY CREATED (or where they are the assigned officer).
--- 2. ONLY authorized admins/executive approvers (shahzadullah@nationallights.com,
---    syedzain@nationallights.com, SUPER_ADMIN, MANAGEMENT) can read ALL records
+-- 2. ONLY authorized admins/executive approver (shahzadullah@nationallights.com,
+--    SUPER_ADMIN, MANAGEMENT) can read ALL records
 --    in the 'PENDING_APPROVAL' queue.
 -- 3. Approved / active customers are visible to authorized managers and to field
 --    officers assigned directly or via geographical hierarchy (Town/Territory/Area/Region).
--- 4. Customer approval authorization is strictly restricted to designated approvers.
+-- 4. Customer approval authorization is strictly restricted to designated approver.
 -- ==============================================================================
 
 -- 1. Ensure required columns exist on public.customers
@@ -41,7 +41,6 @@ begin
   v_jwt_email := lower(trim(coalesce(auth.jwt() ->> 'email', '')));
   if v_jwt_email in (
     'shahzadullah@nationallights.com',
-    'syedzain@nationallights.com',
     'admin@nationallights.com',
     'nationallights2026@gmail.com'
   ) then
@@ -54,7 +53,6 @@ begin
 
   if v_auth_email in (
     'shahzadullah@nationallights.com',
-    'syedzain@nationallights.com',
     'admin@nationallights.com',
     'nationallights2026@gmail.com'
   ) then
@@ -69,7 +67,6 @@ begin
 
   if v_emp_email in (
     'shahzadullah@nationallights.com',
-    'syedzain@nationallights.com',
     'admin@nationallights.com',
     'nationallights2026@gmail.com'
   ) then

@@ -54,7 +54,6 @@ export interface GoogleSheetsSyncPayload {
     totalAmount: number;
     status: string;
     dualApprovalStatus: string;
-    zainApproval: string;
     shahzadApproval: string;
     itemsCount: number;
   }>;
@@ -67,7 +66,6 @@ export interface GoogleSheetsSyncPayload {
     instrumentNumber: string;
     bankName: string;
     dualApprovalStatus: string;
-    zainApproval: string;
     shahzadApproval: string;
     recordedAt: string;
   }>;
@@ -145,12 +143,11 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
       return {
         orderId: o.orderNumber || o.orderCode || o.id,
         customerName: o.customerName || cust?.companyName || (cust as any)?.businessName || o.customerId,
-        salesUserName: o.salesUserName || 'Shahid Khan',
+        salesUserName: o.salesUserName || 'Sales Officer',
         orderDate: o.orderDate || o.createdAt || new Date().toISOString().slice(0, 10),
         totalAmount: o.totalAmount || o.netTotal || 0,
         status: o.status,
-        dualApprovalStatus: o.dualApprovalStatus || (isApproved ? 'DUAL_APPROVED' : 'PENDING_DUAL_APPROVAL'),
-        zainApproval: o.zainApproval || (isApproved ? 'APPROVED' : 'PENDING'),
+        dualApprovalStatus: o.dualApprovalStatus || (isApproved ? 'APPROVED' : 'PENDING_APPROVAL'),
         shahzadApproval: o.shahzadApproval || (isApproved ? 'APPROVED' : 'PENDING'),
         itemsCount: (o.items || []).length,
       };
@@ -161,13 +158,12 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
       return {
         id: r.recoveryNumber || r.recoveryCode || r.id,
         customerName: r.customerName || cust?.companyName || (cust as any)?.businessName || r.customerId,
-        salesUserName: r.salesUserName || 'Shahid Khan',
+        salesUserName: r.salesUserName || 'Sales Officer',
         amount: r.amount || 0,
         paymentMode: r.paymentMode || 'CASH',
         instrumentNumber: r.instrumentNumber || 'N/A',
         bankName: r.bankName || 'Direct Deposit',
-        dualApprovalStatus: r.dualApprovalStatus || (isApproved ? 'DUAL_APPROVED' : 'PENDING_DUAL_APPROVAL'),
-        zainApproval: r.zainApproval || (isApproved ? 'APPROVED' : 'PENDING'),
+        dualApprovalStatus: r.dualApprovalStatus || (isApproved ? 'CONFIRMED' : 'PENDING_CONFIRMATION'),
         shahzadApproval: r.shahzadApproval || (isApproved ? 'APPROVED' : 'PENDING'),
         recordedAt: r.collectionDate || r.recordedAt || r.createdAt || new Date().toISOString(),
       };
@@ -351,16 +347,16 @@ export function exportGoogleSheetsCsv(appData: SupabaseAppData): void {
     csvContent += `"${c.code}","${c.name}","${c.type}","${c.town}","${c.route}","${c.contactPerson}","${c.phone}",${c.creditLimit},${c.currentBalance},"${c.status}","${payload.timestamp}"\n`;
   });
 
-  csvContent += '\n=== SALES ORDERS (WITH DUAL APPROVAL) ===\n';
-  csvContent += 'Order ID,Customer Name,Sales Officer,Order Date,Total Amount (PKR),Status,Dual Approval,Syed Zain,Shahzad Ullah,Items Count\n';
+  csvContent += '\n=== SALES ORDERS (EXECUTIVE APPROVAL) ===\n';
+  csvContent += 'Order ID,Customer Name,Sales Officer,Order Date,Total Amount (PKR),Status,Approval Status,Shahzad Ullah Approval,Items Count\n';
   payload.salesOrders.forEach((o) => {
-    csvContent += `"${o.orderId}","${o.customerName}","${o.salesUserName}","${o.orderDate}",${o.totalAmount},"${o.status}","${o.dualApprovalStatus}","${o.zainApproval}","${o.shahzadApproval}",${o.itemsCount}\n`;
+    csvContent += `"${o.orderId}","${o.customerName}","${o.salesUserName}","${o.orderDate}",${o.totalAmount},"${o.status}","${o.dualApprovalStatus}","${o.shahzadApproval}",${o.itemsCount}\n`;
   });
 
-  csvContent += '\n=== PAYMENT RECOVERIES (WITH DUAL APPROVAL) ===\n';
-  csvContent += 'Recovery Code,Customer Name,Sales Officer,Amount (PKR),Payment Mode,Instrument Ref,Bank,Dual Approval,Syed Zain,Shahzad Ullah,Date\n';
+  csvContent += '\n=== PAYMENT RECOVERIES (EXECUTIVE CONFIRMATION) ===\n';
+  csvContent += 'Recovery Code,Customer Name,Sales Officer,Amount (PKR),Payment Mode,Instrument Ref,Bank,Confirmation Status,Shahzad Ullah Confirmation,Date\n';
   payload.recoveries.forEach((r) => {
-    csvContent += `"${r.id}","${r.customerName}","${r.salesUserName}",${r.amount},"${r.paymentMode}","${r.instrumentNumber}","${r.bankName}","${r.dualApprovalStatus}","${r.zainApproval}","${r.shahzadApproval}","${r.recordedAt}"\n`;
+    csvContent += `"${r.id}","${r.customerName}","${r.salesUserName}",${r.amount},"${r.paymentMode}","${r.instrumentNumber}","${r.bankName}","${r.dualApprovalStatus}","${r.shahzadApproval}","${r.recordedAt}"\n`;
   });
 
   csvContent += '\n=== RUNNING LEDGER TRANSACTIONS (DUAL-APPROVED ARCHITECTURE) ===\n';
@@ -413,34 +409,34 @@ function doPost(e) {
       custSheet.getRange(2, 1, custRows.length, 11).setValues(custRows);
     }
 
-    // 2. Sync Sales Orders Sheet (With Syed Zain & Shahzad Ullah Dual Approval Columns)
+    // 2. Sync Sales Orders Sheet (With Shahzad Ullah Executive Approval Columns)
     var orderSheet = sheet.getSheetByName("Sales_Orders") || sheet.insertSheet("Sales_Orders");
     if (orderSheet.getLastRow() === 0) {
-      orderSheet.appendRow(["Order ID", "Customer Name", "Sales Officer", "Order Date", "Total Amount (PKR)", "Status", "Dual Approval Status", "Syed Zain", "Shahzad Ullah", "Items Count", "Last Synced"]);
+      orderSheet.appendRow(["Order ID", "Customer Name", "Sales Officer", "Order Date", "Total Amount (PKR)", "Status", "Approval Status", "Shahzad Ullah", "Items Count", "Last Synced"]);
     }
     if (payload.salesOrders && payload.salesOrders.length > 0) {
       if (orderSheet.getLastRow() > 1) {
-        orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, 11).clearContent();
+        orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, 10).clearContent();
       }
       var orderRows = payload.salesOrders.map(function(o) {
-        return [o.orderId, o.customerName, o.salesUserName, o.orderDate, o.totalAmount, o.status, o.dualApprovalStatus, o.zainApproval, o.shahzadApproval, o.itemsCount, payload.timestamp];
+        return [o.orderId, o.customerName, o.salesUserName, o.orderDate, o.totalAmount, o.status, o.dualApprovalStatus, o.shahzadApproval, o.itemsCount, payload.timestamp];
       });
-      orderSheet.getRange(2, 1, orderRows.length, 11).setValues(orderRows);
+      orderSheet.getRange(2, 1, orderRows.length, 10).setValues(orderRows);
     }
 
-    // 3. Sync Recoveries Sheet (With Syed Zain & Shahzad Ullah Dual Approval Columns)
+    // 3. Sync Recoveries Sheet (With Shahzad Ullah Executive Confirmation Columns)
     var recSheet = sheet.getSheetByName("Recoveries") || sheet.insertSheet("Recoveries");
     if (recSheet.getLastRow() === 0) {
-      recSheet.appendRow(["Recovery Code", "Customer Name", "Sales Officer", "Amount (PKR)", "Mode", "Instrument Ref", "Bank", "Dual Approval Status", "Syed Zain", "Shahzad Ullah", "Date Recorded", "Last Synced"]);
+      recSheet.appendRow(["Recovery Code", "Customer Name", "Sales Officer", "Amount (PKR)", "Mode", "Instrument Ref", "Bank", "Confirmation Status", "Shahzad Ullah", "Date Recorded", "Last Synced"]);
     }
     if (payload.recoveries && payload.recoveries.length > 0) {
       if (recSheet.getLastRow() > 1) {
-        recSheet.getRange(2, 1, recSheet.getLastRow() - 1, 12).clearContent();
+        recSheet.getRange(2, 1, recSheet.getLastRow() - 1, 11).clearContent();
       }
       var recRows = payload.recoveries.map(function(r) {
-        return [r.id, r.customerName, r.salesUserName, r.amount, r.paymentMode, r.instrumentNumber, r.bankName, r.dualApprovalStatus, r.zainApproval, r.shahzadApproval, r.recordedAt, payload.timestamp];
+        return [r.id, r.customerName, r.salesUserName, r.amount, r.paymentMode, r.instrumentNumber, r.bankName, r.dualApprovalStatus, r.shahzadApproval, r.recordedAt, payload.timestamp];
       });
-      recSheet.getRange(2, 1, recRows.length, 12).setValues(recRows);
+      recSheet.getRange(2, 1, recRows.length, 11).setValues(recRows);
     }
 
     // 4. Sync Ledgers Sheet (Permanent Running Balance from Transaction History)

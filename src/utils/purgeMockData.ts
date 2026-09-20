@@ -5,7 +5,7 @@
  * Purges all mock, dummy, and test dealers, distributors, and users from application state.
  * Strictly guarantees that only production-ready data remains, preserving users:
  * 1. 'Shahzad Ullah' (Shahzadullah)
- * 2. 'Syed Zain'
+ * 2. Real Production Team
  */
 
 import { Customer, SalesOrder, Recovery } from '../types';
@@ -15,7 +15,7 @@ import { getLocalDatabaseCache, saveLocalDatabaseCache } from '../services/googl
 /**
  * Authoritative production user names (case-insensitive, whitespace-insensitive)
  */
-export const PRODUCTION_USER_NAMES = ['shahzadullah', 'syedzain'];
+export const PRODUCTION_USER_NAMES = ['shahzadullah', 'shahidkhan'];
 
 /**
  * Checks whether a user account belongs to the verified production roster
@@ -33,7 +33,7 @@ export function isProductionUser(user: { fullName?: string; email?: string } | n
   // Official production email match
   if (
     emailClean.includes('shahzadullah') ||
-    emailClean.includes('syedzain') ||
+    
     emailClean === 'nationallights2026@gmail.com'
   ) {
     return true;
@@ -98,7 +98,7 @@ export interface PurgeResult {
 
 /**
  * Executes a thorough purge of all mock/dummy dealers, distributors, and users from application state.
- * Preserves ONLY 'Syed Zain' and 'Shahzadullah' in user state, and removes any mock dealers and their test transactions.
+ * Preserves verified production users in user state, and removes any mock dealers and their test transactions.
  */
 export function purgeMockDataFromState(currentState?: {
   customers?: Customer[];
@@ -140,7 +140,7 @@ export function purgeMockDataFromState(currentState?: {
     }
   }
 
-  // Filter existing users to keep ONLY 'Shahzad Ullah' (Shahzadullah) and 'Syed Zain'
+  // Filter existing users to keep verified production users
   const filteredUsers = storedUsers.filter((u) => isProductionUser(u));
 
   // Ensure both production users are present in the final roster
@@ -238,7 +238,7 @@ export function purgeMockDataFromState(currentState?: {
     remainingCustomers: cleanCustomers,
     remainingOrders: cleanOrders,
     remainingRecoveries: cleanRecoveries,
-    message: `State purified: Retained verified users 'Syed Zain' & 'Shahzad Ullah'. Added 4 verified parties for Syed Zain with precise ledger data. Purged ${purgedDealerCount} dummy dealer(s) and obsolete records.`,
+    message: `State purified: Retained verified production users. Added verified parties with precise ledger data. Purged ${purgedDealerCount} dummy dealer(s) and obsolete records.`,
   };
 }
 
@@ -263,9 +263,9 @@ export const SEED_CUSTOMERS: Customer[] = [
     updatedAt: '2026-09-19T00:00:00.000Z',
     town: 'Mingora',
     assignedOfficerId: 'USR-002',
-    assignedOfficerName: 'Syed Zain',
+    assignedOfficerName: 'Shahid Khan',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain'
+    salesUserName: 'Shahid Khan'
   },
   {
     id: 'cust-sharafat',
@@ -287,9 +287,9 @@ export const SEED_CUSTOMERS: Customer[] = [
     updatedAt: '2026-09-19T00:00:00.000Z',
     town: 'Mingora',
     assignedOfficerId: 'USR-002',
-    assignedOfficerName: 'Syed Zain',
+    assignedOfficerName: 'Shahid Khan',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain'
+    salesUserName: 'Shahid Khan'
   },
   {
     id: 'cust-mingora-elec',
@@ -311,9 +311,9 @@ export const SEED_CUSTOMERS: Customer[] = [
     updatedAt: '2026-09-19T00:00:00.000Z',
     town: 'Mingora',
     assignedOfficerId: 'USR-002',
-    assignedOfficerName: 'Syed Zain',
+    assignedOfficerName: 'Shahid Khan',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain'
+    salesUserName: 'Shahid Khan'
   },
   {
     id: 'cust-ziyad',
@@ -335,9 +335,9 @@ export const SEED_CUSTOMERS: Customer[] = [
     updatedAt: '2026-09-19T00:00:00.000Z',
     town: 'Mingora',
     assignedOfficerId: 'USR-002',
-    assignedOfficerName: 'Syed Zain',
+    assignedOfficerName: 'Shahid Khan',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain'
+    salesUserName: 'Shahid Khan'
   },
   {
     id: 'cust-rasheed',
@@ -359,9 +359,9 @@ export const SEED_CUSTOMERS: Customer[] = [
     updatedAt: '2026-08-30T00:00:00.000Z',
     town: 'Duran Pur',
     assignedOfficerId: 'USR-002',
-    assignedOfficerName: 'Syed Zain',
+    assignedOfficerName: 'Shahid Khan',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain'
+    salesUserName: 'Shahid Khan'
   }
 ];
 
@@ -373,7 +373,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     customerName: 'Sharafat Traders',
     customerCode: 'DL-SHARAFAT',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     orderDate: '2026-08-25',
     status: 'APPROVED',
     items: [],
@@ -382,8 +382,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     taxAmount: 0,
     totalAmount: 462267,
     creditCheckStatus: 'GREEN',
-    approvedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    approvedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-25T10:00:00.000Z'
   },
@@ -394,7 +393,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     customerName: 'Sharafat Traders',
     customerCode: 'DL-SHARAFAT',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     orderDate: '2026-09-15',
     status: 'APPROVED',
     items: [],
@@ -403,8 +402,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     taxAmount: 0,
     totalAmount: 41904,
     creditCheckStatus: 'GREEN',
-    approvedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    approvedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-09-15T11:00:00.000Z'
   },
@@ -415,7 +413,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     customerName: 'Mingora Electric Store',
     customerCode: 'DL-MINGORA-EST',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     orderDate: '2026-09-15',
     status: 'APPROVED',
     items: [],
@@ -424,8 +422,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     taxAmount: 0,
     totalAmount: 46560,
     creditCheckStatus: 'GREEN',
-    approvedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    approvedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-09-15T10:30:00.000Z'
   },
@@ -436,7 +433,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     orderDate: '2026-07-03',
     status: 'APPROVED',
     items: [],
@@ -445,8 +442,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     taxAmount: 0,
     totalAmount: 128056,
     creditCheckStatus: 'GREEN',
-    approvedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    approvedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-07-03T09:00:00.000Z'
   },
@@ -457,7 +453,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     orderDate: '2026-08-05',
     status: 'APPROVED',
     items: [],
@@ -466,8 +462,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     taxAmount: 0,
     totalAmount: 99570,
     creditCheckStatus: 'GREEN',
-    approvedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    approvedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-05T10:00:00.000Z'
   },
@@ -478,7 +473,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     orderDate: '2026-08-05',
     status: 'APPROVED',
     items: [],
@@ -487,8 +482,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     taxAmount: 0,
     totalAmount: 25390,
     creditCheckStatus: 'GREEN',
-    approvedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    approvedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-05T14:00:00.000Z'
   },
@@ -499,7 +493,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     orderDate: '2026-09-14',
     status: 'APPROVED',
     items: [],
@@ -508,8 +502,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     taxAmount: 0,
     totalAmount: 122440,
     creditCheckStatus: 'GREEN',
-    approvedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    approvedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-09-14T11:00:00.000Z'
   },
@@ -520,7 +513,7 @@ export const SEED_ORDERS: SalesOrder[] = [
     customerName: 'Rasheed Electric',
     customerCode: 'DL-RASHEED',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     orderDate: '2026-08-06',
     status: 'APPROVED',
     items: [],
@@ -530,7 +523,6 @@ export const SEED_ORDERS: SalesOrder[] = [
     totalAmount: 322204,
     creditCheckStatus: 'GREEN',
     approvedBy: 'Shahzad Ullah',
-    zainApproval: 'APPROVED',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-06T09:00:00.000Z'
   }
@@ -544,13 +536,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Iqbal Electric',
     customerCode: 'DL-IQBAL',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-09-15',
     amount: 5000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-09-15T15:00:00.000Z'
   },
@@ -561,15 +552,14 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Sharafat Traders',
     customerCode: 'DL-SHARAFAT',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-09-14',
     amount: 50000,
     paymentMode: 'ONLINE_TRANSFER',
     instrumentNumber: 'Bank Online',
     bankName: 'Meezan Bank Ltd',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-09-14T16:00:00.000Z'
   },
@@ -580,13 +570,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Mingora Electric Store',
     customerCode: 'DL-MINGORA-EST',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-09-07',
     amount: 40000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-09-07T12:00:00.000Z'
   },
@@ -597,13 +586,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Mingora Electric Store',
     customerCode: 'DL-MINGORA-EST',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-09-15',
     amount: 40000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-09-15T14:30:00.000Z'
   },
@@ -614,13 +602,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-07-03',
     amount: 15000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-07-03T10:00:00.000Z'
   },
@@ -631,13 +618,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-07-09',
     amount: 8000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-07-09T10:00:00.000Z'
   },
@@ -648,13 +634,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-07-17',
     amount: 8000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-07-17T11:00:00.000Z'
   },
@@ -665,13 +650,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-07-24',
     amount: 8000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-07-24T11:00:00.000Z'
   },
@@ -682,13 +666,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-07-30',
     amount: 8000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-07-30T12:00:00.000Z'
   },
@@ -699,13 +682,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-08-05',
     amount: 20000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-05T11:00:00.000Z'
   },
@@ -716,13 +698,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-08-15',
     amount: 11000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-15T10:00:00.000Z'
   },
@@ -733,15 +714,14 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-08-29',
     amount: 15000,
     paymentMode: 'ONLINE_TRANSFER',
     instrumentNumber: 'Bank Online',
     bankName: 'Meezan Bank Ltd',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-29T10:00:00.000Z'
   },
@@ -752,13 +732,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-09-02',
     amount: 15000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-09-02T10:00:00.000Z'
   },
@@ -769,13 +748,12 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Ziyad Electric',
     customerCode: 'DL-ZIYAD',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-09-15',
     amount: 20000,
     paymentMode: 'CASH',
     status: 'VERIFIED',
-    verifiedBy: 'Syed Zain',
-    zainApproval: 'APPROVED',
+    verifiedBy: 'Shahzad Ullah',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-09-15T15:30:00.000Z'
   },
@@ -786,14 +764,13 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Rasheed Electric',
     customerCode: 'DL-RASHEED',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-08-06',
     amount: 30000,
     paymentMode: 'ONLINE_TRANSFER',
     instrumentNumber: 'EasyPaisa Mobile',
     status: 'VERIFIED',
     verifiedBy: 'Shahzad Ullah',
-    zainApproval: 'APPROVED',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-06T12:00:00.000Z'
   },
@@ -804,14 +781,13 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Rasheed Electric',
     customerCode: 'DL-RASHEED',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-08-13',
     amount: 30000,
     paymentMode: 'ONLINE_TRANSFER',
     instrumentNumber: 'HBL Bank - Shahzad Account',
     status: 'VERIFIED',
     verifiedBy: 'Shahzad Ullah',
-    zainApproval: 'APPROVED',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-13T12:00:00.000Z'
   },
@@ -822,14 +798,13 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Rasheed Electric',
     customerCode: 'DL-RASHEED',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-08-20',
     amount: 30000,
     paymentMode: 'CASH',
     instrumentNumber: 'Online Cash - Shahzad',
     status: 'VERIFIED',
     verifiedBy: 'Shahzad Ullah',
-    zainApproval: 'APPROVED',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-20T12:00:00.000Z'
   },
@@ -840,14 +815,13 @@ export const SEED_RECOVERIES: Recovery[] = [
     customerName: 'Rasheed Electric',
     customerCode: 'DL-RASHEED',
     salesUserId: 'USR-002',
-    salesUserName: 'Syed Zain',
+    salesUserName: 'Shahid Khan',
     collectionDate: '2026-08-30',
     amount: 19500,
     paymentMode: 'ONLINE_TRANSFER',
     instrumentNumber: 'Meezan Bank - Online to Shahzad',
     status: 'VERIFIED',
     verifiedBy: 'Shahzad Ullah',
-    zainApproval: 'APPROVED',
     shahzadApproval: 'APPROVED',
     createdAt: '2026-08-30T12:00:00.000Z'
   }

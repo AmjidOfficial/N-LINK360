@@ -466,18 +466,18 @@ export const NLinkUserManagementTab: React.FC<NLinkUserManagementTabProps> = ({
   };
 
   const handleCleanDummyUsers = () => {
-    if (window.confirm('Delete all dummy users and retain only Syed Zain and Shahzad Ullah in the system and Google Sheet sync?')) {
+    if (window.confirm('Reset system roster to verified production team (Shahzad Ullah & Field Team)?')) {
       const cleanRoster = NLINK_TEAM_ROSTER;
       setUsersList(cleanRoster);
       saveStoredUsers(cleanRoster);
-      setNewEmpSuccessBanner('Cleaned all dummy users! Active users retained: Shahzad Ullah (MD) & Syed Zain (ED).');
+      setNewEmpSuccessBanner('Cleaned dummy users! Active roster reset to verified production team.');
     }
   };
 
   const handleDeleteUser = (userId: string, userName: string) => {
     const lower = userName.toLowerCase();
-    if (lower.includes('shahzad') || lower.includes('zain')) {
-      alert('Principal Directors (Syed Zain & Shahzad Ullah) cannot be deleted.');
+    if (lower.includes('shahzad')) {
+      alert('Managing Director (Shahzad Ullah) cannot be deleted.');
       return;
     }
     if (window.confirm(`Delete user "${userName}" from system roster?`)) {
@@ -589,10 +589,10 @@ export const NLinkUserManagementTab: React.FC<NLinkUserManagementTabProps> = ({
               type="button"
               onClick={handleCleanDummyUsers}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-all shadow-sm"
-              title="Delete all dummy users and retain only Syed Zain and Shahzad Ullah"
+              title="Reset system roster to verified production team"
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-              Retain Syed Zain &amp; Shahzad Ullah Only
+              Reset Verified Team Roster
             </button>
             <button
               type="button"
@@ -1316,7 +1316,7 @@ export const NLinkUserManagementTab: React.FC<NLinkUserManagementTabProps> = ({
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           {user.status}
                         </span>
-                        {!user.fullName.toLowerCase().includes('shahzad') && !user.fullName.toLowerCase().includes('zain') && (
+                        {!user.fullName.toLowerCase().includes('shahzad') && (
                           <button
                             type="button"
                             onClick={() => handleDeleteUser(user.id, user.fullName)}

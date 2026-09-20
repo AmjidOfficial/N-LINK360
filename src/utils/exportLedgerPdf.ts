@@ -41,7 +41,7 @@ export const downloadCustomerLedgerPdf = async (
     startDate,
     endDate,
     selectedMonths,
-    preparedByName = 'Syed Zain (Executive Director)',
+    preparedByName = 'Shahzad Ullah (Managing Director)',
   } = options;
 
   const totalDebits =

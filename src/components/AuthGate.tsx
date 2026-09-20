@@ -15,8 +15,7 @@ interface AuthGateProps {
 
 const QUICK_SIGN_IN_ACCOUNTS = [
   { email: 'nationallights2026@gmail.com', label: 'Super Admin', role: 'SUPER_ADMIN' as UserRole, desc: 'Full System Access' },
-  { email: 'shahzadullah@nationallights.com', label: 'Shahzad Ullah', role: 'SUPER_ADMIN' as UserRole, desc: 'Executive Approver' },
-  { email: 'syedzain@nationallights.com', label: 'Syed Zain', role: 'SUPER_ADMIN' as UserRole, desc: 'Executive Approver' },
+  { email: 'shahzadullah@nationallights.com', label: 'Shahzad Ullah', role: 'SUPER_ADMIN' as UserRole, desc: 'Managing Director (Sole Approver)' },
   { email: 'accounts@nationallights.com', label: 'Accounts & Finance', role: 'ACCOUNTS' as UserRole, desc: 'Ledgers & Invoices' },
   { email: 'sales@nationallights.com', label: 'Sales & Recovery', role: 'SALES_RECOVERY' as UserRole, desc: 'Field Orders & Recovery' },
   { email: 'warehouse@nationallights.com', label: 'Warehouse & Dispatch', role: 'WAREHOUSE_MANAGER' as UserRole, desc: 'Stock & Dispatches' },

@@ -72,7 +72,6 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
     const isExecutive =
       currentUser.role === 'SUPER_ADMIN' ||
       currentUser.role === 'MANAGEMENT' ||
-      currentUser.email?.includes('zain') ||
       currentUser.email?.includes('shahzad');
 
     // Scoped or global orders

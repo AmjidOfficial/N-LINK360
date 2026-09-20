@@ -1,13 +1,13 @@
 -- ==============================================================================
 -- N-LINK 360 - 009_critical_two_person_approval_rule.sql
--- CRITICAL TWO-PERSON APPROVAL RULE (SECTION 10 & 11)
--- ONLY THESE TWO ACCOUNTS MAY APPROVE INVOICES, RECOVERY AND APPROVAL-CONTROLLED TRANSACTIONS:
+-- CRITICAL EXECUTIVE APPROVAL RULE (SOLE EXECUTIVE APPROVAL: SHAHZAD ULLAH)
+-- ONLY SHAHZAD ULLAH MAY APPROVE INVOICES, RECOVERY AND APPROVAL-CONTROLLED TRANSACTIONS:
 -- 1. shahzadullah@nationallights.com
--- 2. syedzain@nationallights.com
+-- 2. nationallights2026@gmail.com (Head Office Backup)
 -- ABSOLUTE RESTRICTION: No other role, admin, super-admin, or client condition may bypass this.
 -- ==============================================================================
 
--- 1. Helper Function to strictly verify authorized approver identity
+-- 1. Helper Function to strictly verify authorized approver identity (Shahzad Ullah)
 create or replace function public.nlink_is_authorized_approver()
 returns boolean
 language plpgsql security definer set search_path = public
@@ -19,7 +19,7 @@ declare
 begin
   -- Retrieve email from auth JWT claims
   v_jwt_email := lower(trim(coalesce(auth.jwt() ->> 'email', '')));
-  if v_jwt_email in ('shahzadullah@nationallights.com', 'syedzain@nationallights.com') then
+  if v_jwt_email in ('shahzadullah@nationallights.com', 'nationallights2026@gmail.com') then
     return true;
   end if;
 
@@ -28,7 +28,7 @@ begin
   from auth.users
   where id = auth.uid();
 
-  if v_auth_email in ('shahzadullah@nationallights.com', 'syedzain@nationallights.com') then
+  if v_auth_email in ('shahzadullah@nationallights.com', 'nationallights2026@gmail.com') then
     return true;
   end if;
 
@@ -39,7 +39,7 @@ begin
   where u.auth_user_id = auth.uid()
   limit 1;
 
-  if v_emp_email in ('shahzadullah@nationallights.com', 'syedzain@nationallights.com') then
+  if v_emp_email in ('shahzadullah@nationallights.com', 'nationallights2026@gmail.com') then
     return true;
   end if;
 
@@ -49,7 +49,7 @@ $$;
 
 grant execute on function public.nlink_is_authorized_approver() to authenticated, anon;
 
--- 2. Hardened Order Approval Engine
+-- 2. Hardened Order Approval Engine (Shahzad Ullah Sole Signing Authority)
 create or replace function public.nlink_approve_order(
   p_order_id uuid,
   p_notes text default null
@@ -60,9 +60,9 @@ as $$
 declare
   v_order record;
 begin
-  -- ABSOLUTE APPROVAL RULE ENFORCEMENT: Only Syed Zain and Shahzad Ullah
+  -- ABSOLUTE APPROVAL RULE ENFORCEMENT: Only Shahzad Ullah
   if not public.nlink_is_authorized_approver() then
-    raise exception 'Unauthorized: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to approve transactions.';
+    raise exception 'Unauthorized: Only Shahzad Ullah (shahzadullah@nationallights.com) is authorized to approve orders.';
   end if;
 
   select * into v_order from public.sales_orders where id = p_order_id for update;
@@ -110,7 +110,7 @@ declare
   v_order record;
 begin
   if not public.nlink_is_authorized_approver() then
-    raise exception 'Unauthorized: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to reject transactions.';
+    raise exception 'Unauthorized: Only Shahzad Ullah (shahzadullah@nationallights.com) is authorized to reject orders.';
   end if;
 
   select * into v_order from public.sales_orders where id = p_order_id for update;
@@ -156,7 +156,7 @@ declare
   v_employee uuid := public.nlink_current_employee_id();
 begin
   if not public.nlink_is_authorized_approver() then
-    raise exception 'Unauthorized: Only designated executive approvers (shahzadullah@nationallights.com, syedzain@nationallights.com) are authorized to verify recoveries.';
+    raise exception 'Unauthorized: Only Shahzad Ullah (shahzadullah@nationallights.com) is authorized to verify recoveries.';
   end if;
 
   select * into v_recovery from public.recoveries where id = p_recovery_id for update;

@@ -1530,7 +1530,7 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                   <div>Party: <span className="font-bold">{customer.companyName}</span></div>
                   <div>Code: {customer.customerCode} | City: {customer.city || 'Lahore'}</div>
                   <div>Phone: {customer.phone || '—'}</div>
-                  <div>Officer: {customer.salesUserName || 'Zain'}</div>
+                  <div>Officer: {customer.salesUserName || 'Sales Officer'}</div>
                 </div>
 
                 <div className="py-2 border-b border-dashed border-slate-400">
