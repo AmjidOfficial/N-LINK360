@@ -189,7 +189,11 @@ export interface EmployeeAttendance {
   department: string;
   date: string; // YYYY-MM-DD
   checkInTime?: string; // HH:mm
+  checkInLocation?: string;
+  checkInCoordinates?: { lat: number; lng: number };
   checkOutTime?: string; // HH:mm
+  checkOutLocation?: string;
+  checkOutCoordinates?: { lat: number; lng: number };
   status: AttendanceStatus;
   location?: string;
   gpsCoordinates?: { lat: number; lng: number };
@@ -198,6 +202,29 @@ export interface EmployeeAttendance {
   isVerified?: boolean;
   verifiedBy?: string;
   createdAt: string;
+}
+
+export interface UserProfileUpdateRequest {
+  id: string;
+  userId: string;
+  userEmail: string;
+  currentFullName: string;
+  currentRole: string;
+  requestedFullName: string;
+  requestedPhone: string;
+  requestedEmail?: string;
+  requestedCnic?: string;
+  requestedTowns?: string[];
+  requestedRouteBeat?: string;
+  requestedVehicleNo?: string;
+  requestedEmergencyContact?: string;
+  requestedAddress?: string;
+  reason?: string;
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  requestedAt: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
 }
 
 export type TargetType = 'SALES' | 'RECOVERY';
@@ -401,6 +428,9 @@ export interface Customer {
   priceTier?: 'STANDARD' | 'WHOLESALE' | 'DISTRIBUTOR' | 'SPECIAL' | string;
   approvalStatus?: RegistrationRequestStatus | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'NORMAL' | 'PENDING_APPROVAL';
+  latitude?: number;
+  longitude?: number;
+  gpsCoordinates?: { lat: number; lng: number };
 }
 
 export interface CustomerVisit {
@@ -910,4 +940,27 @@ export interface DesignationFinancialSummary {
   totalOutstanding: number;
   totalCustomersCount: number;
 }
+
+/**
+ * Town Node Configuration Model
+ * Represents a configurable geographic town node with associated commercial routes/beats.
+ */
+export interface TownNode {
+  id: string;
+  name: string;
+  region: string; // KPK | PUNJAB | SINDH | BALOCHISTAN | ICT | AJK | GB
+  isActive: boolean;
+  commercialHub?: string;
+  routes: string[];
+  district?: string;
+  notes?: string;
+  geofenceRadiusMeters?: number; // Allowed check-in radius in meters (e.g. 1000m)
+  centerCoordinates?: {
+    lat: number;
+    lng: number;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 

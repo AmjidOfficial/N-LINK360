@@ -80,6 +80,14 @@ import { NearbyDealersMap } from './NearbyDealersMap';
 import { DealerHeatmap } from './DealerHeatmap';
 import { GoogleSheetSyncModal } from './GoogleSheetSyncModal';
 import { AutoSyncStatusBanner } from './AutoSyncStatusBanner';
+import { InvoicePdfPreviewModal } from './stitch/InvoicePdfPreviewModal';
+import {
+  downloadSalesInvoicePdf,
+  generateSalesInvoicePdfDoc,
+  buildInvoiceWhatsAppText,
+  buildInvoiceEmailUrl,
+  InvoicePdfOptions,
+} from '../utils/exportInvoicePdf';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
 import { MtdAchievementGauge } from './MtdAchievementGauge';
@@ -1235,6 +1243,20 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
   const [showOrderPreviewDrawer, setShowOrderPreviewDrawer] = useState(false);
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
+  const [lastSubmittedOrder, setLastSubmittedOrder] = useState<{
+    order: Partial<SalesOrder>;
+    customer: Customer;
+  } | null>(null);
+  const [showPostOrderModal, setShowPostOrderModal] = useState<boolean>(false);
+  const [pdfPreviewModalData, setPdfPreviewModalData] = useState<{
+    isOpen: boolean;
+    pdfDataUrl: string;
+    pdfFilename: string;
+    order: any;
+    customer: Customer;
+    onDownload: () => void;
+  } | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const [skuSearchQuery, setSkuSearchQuery] = useState('');
   const [skuStockFilter, setSkuStockFilter] = useState<'ALL' | 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'SELECTED'>('ALL');
 
@@ -1534,15 +1556,97 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
       setOrderQuantities({});
       setShowOrderConfirmModal(false);
       setShowOrderPreviewDrawer(false);
+      setLastSubmittedOrder({
+        order: newOrder,
+        customer: activeCustomer,
+      });
+      setShowPostOrderModal(true);
       setOrderSuccessMessage(`Order #${newOrder.orderNumber} placed successfully for Rs. ${newOrder.totalAmount?.toLocaleString()}!`);
       toast.success(
         'Order Placed Successfully',
-        `Order #${newOrder.orderNumber} booked for Rs. ${newOrder.totalAmount?.toLocaleString()} (${newOrder.items?.length || 0} line items).`
+        `Order #${newOrder.orderNumber} booked for Rs. ${newOrder.totalAmount?.toLocaleString()} (${newOrder.items?.length || 0} line items). Ready for PDF download!`
       );
-      setTimeout(() => setOrderSuccessMessage(null), 5000);
+      setTimeout(() => setOrderSuccessMessage(null), 10000);
     } finally {
       setOrderSubmitting(false);
     }
+  };
+
+  // Dedicated PDF Generation & Dispatch Actions
+  const handleDownloadOrderPdf = async (orderToPrint?: any, targetCustomer?: Customer) => {
+    const ord = orderToPrint || lastSubmittedOrder?.order;
+    const cust = targetCustomer || lastSubmittedOrder?.customer || activeCustomer;
+    if (!ord || !cust) {
+      toast.warning('No Order Selected', 'Please select or book an order to generate the PDF receipt.');
+      return;
+    }
+    setIsGeneratingPdf(true);
+    try {
+      const result = await downloadSalesInvoicePdf({
+        customer: cust,
+        order: ord,
+        previousBalance: cust.currentBalance || cust.openingBalance || 0,
+        preparedByName: `${currentUser.fullName} (${currentUser.role || 'Field Officer'})`,
+      });
+      toast.success('Invoice PDF Downloaded', `Successfully generated & downloaded: ${result.filename}`);
+    } catch (err: any) {
+      console.error('PDF generation error:', err);
+      toast.error('PDF Error', 'Failed to generate official invoice PDF document.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleLivePreviewOrderPdf = async (orderToPreview?: any, targetCustomer?: Customer) => {
+    const ord = orderToPreview || lastSubmittedOrder?.order;
+    const cust = targetCustomer || lastSubmittedOrder?.customer || activeCustomer;
+    if (!ord || !cust) {
+      toast.warning('No Order Selected', 'Please select or book an order to preview.');
+      return;
+    }
+    setIsGeneratingPdf(true);
+    try {
+      const result = await generateSalesInvoicePdfDoc({
+        customer: cust,
+        order: ord,
+        previousBalance: cust.currentBalance || cust.openingBalance || 0,
+        preparedByName: `${currentUser.fullName} (${currentUser.role || 'Field Officer'})`,
+      });
+      setPdfPreviewModalData({
+        isOpen: true,
+        pdfDataUrl: result.dataUrl,
+        pdfFilename: result.filename,
+        order: ord,
+        customer: cust,
+        onDownload: () => {
+          result.doc.save(result.filename);
+          toast.success('Downloaded', `Saved ${result.filename}`);
+        },
+      });
+    } catch (err: any) {
+      console.error('PDF preview error:', err);
+      toast.error('Preview Error', 'Failed to render live PDF preview.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleWhatsAppShareOrder = (orderToShare?: any, targetCustomer?: Customer) => {
+    const ord = orderToShare || lastSubmittedOrder?.order;
+    const cust = targetCustomer || lastSubmittedOrder?.customer || activeCustomer;
+    if (!ord || !cust) {
+      toast.warning('No Order Selected', 'Please select or book an order to share.');
+      return;
+    }
+    const text = buildInvoiceWhatsAppText(cust, ord, {
+      officerName: currentUser.fullName,
+      officerPhone: (currentUser as any).phone || '',
+    });
+    const cleanPhone = (cust.phone || '').replace(/[^0-9]/g, '');
+    const url = cleanPhone
+      ? `https://wa.me/${cleanPhone.startsWith('0') ? '92' + cleanPhone.slice(1) : cleanPhone}?text=${encodeURIComponent(text)}`
+      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   };
 
   // In-Customer Recovery Form State
@@ -3451,6 +3555,79 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                   </div>
                 </div>
 
+                {/* POST-ORDER SUBMISSION PDF & DISPATCH QUICK-ACTION BANNER */}
+                {lastSubmittedOrder && (
+                  <div className="bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 p-4 sm:p-5 rounded-2xl text-white shadow-lg border border-teal-600/40 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shrink-0 mt-0.5">
+                          <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-mono font-bold bg-emerald-400/20 text-emerald-300 border border-emerald-400/40 px-2 py-0.5 rounded-full">
+                              Order #{lastSubmittedOrder.order.orderNumber}
+                            </span>
+                            <span className="text-[11px] font-bold text-teal-200">
+                              Booked for {lastSubmittedOrder.customer.companyName}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-300 bg-black/30 px-2 py-0.5 rounded-full">
+                              Rs. {Number(lastSubmittedOrder.order.totalAmount || 0).toLocaleString()} PKR
+                            </span>
+                          </div>
+                          <p className="text-xs text-teal-100/90 font-medium mt-1">
+                            Sales order is recorded and synchronized. Generate the official branded customer invoice receipt for instant printing or dispatch:
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* PDF Action Buttons */}
+                      <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto justify-start lg:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadOrderPdf(lastSubmittedOrder.order, lastSubmittedOrder.customer)}
+                          disabled={isGeneratingPdf}
+                          className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+                          title="Generate and download branded National Lights PDF invoice"
+                        >
+                          <Download className={`w-4 h-4 ${isGeneratingPdf ? 'animate-bounce' : ''}`} />
+                          <span>{isGeneratingPdf ? 'Generating PDF...' : 'Download Order PDF'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleLivePreviewOrderPdf(lastSubmittedOrder.order, lastSubmittedOrder.customer)}
+                          disabled={isGeneratingPdf}
+                          className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                          title="View live interactive vector PDF preview"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-teal-300" />
+                          <span>Preview PDF</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleWhatsAppShareOrder(lastSubmittedOrder.order, lastSubmittedOrder.customer)}
+                          className="px-3 py-2 rounded-xl bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
+                          title="Send pre-formatted invoice text to customer via WhatsApp"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 text-white" />
+                          <span>WhatsApp</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setLastSubmittedOrder(null)}
+                          className="p-2 rounded-xl hover:bg-white/10 text-teal-300 hover:text-white transition-colors cursor-pointer"
+                          title="Dismiss this notification"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* SALESPULSE N-LINK QUICK-JUMP STICKY PILLS */}
                 <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-1.5 overflow-x-auto scrollbar-none">
                   <button
@@ -4275,22 +4452,34 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
                                   </span>
                                 </td>
                                 <td className="px-3 py-2.5 text-center">
-                                  <div className="flex items-center justify-center gap-1.5">
+                                  <div className="flex items-center justify-center gap-1.5 flex-wrap">
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        setIsAutoDownloadPdf(true);
-                                        setSelectedInvoiceForPrint(inv);
-                                        toast.info(
-                                          'Generating PDF Invoice',
-                                          `Preparing official tax invoice #${inv.invoiceNumber || inv.id}...`
-                                        );
-                                      }}
-                                      className="px-2 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-md font-bold text-[11px] cursor-pointer inline-flex items-center gap-1 shadow-2xs transition-all active:scale-95"
-                                      title="Download PDF invoice directly"
+                                      onClick={() => handleDownloadOrderPdf(inv, activeCustomer)}
+                                      disabled={isGeneratingPdf}
+                                      className="px-2 py-1 bg-teal-700 hover:bg-teal-800 text-white rounded-md font-bold text-[11px] cursor-pointer inline-flex items-center gap-1 shadow-2xs transition-all active:scale-95"
+                                      title="Download branded National Lights PDF invoice"
                                     >
                                       <Download className="w-3 h-3" />
                                       <span>Download PDF</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleLivePreviewOrderPdf(inv, activeCustomer)}
+                                      disabled={isGeneratingPdf}
+                                      className="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-md font-bold text-[11px] cursor-pointer inline-flex items-center gap-1 transition-all active:scale-95"
+                                      title="Interactive live PDF preview"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      <span>Preview</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleWhatsAppShareOrder(inv, activeCustomer)}
+                                      className="p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md font-bold text-[11px] cursor-pointer inline-flex items-center transition-all active:scale-95"
+                                      title="Share invoice on WhatsApp"
+                                    >
+                                      <MessageCircle className="w-3.5 h-3.5" />
                                     </button>
                                     <button
                                       type="button"
@@ -5744,6 +5933,182 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
           </div>
         </div>
       </div>
+
+      {/* POST-ORDER SUBMISSION RECEIPT & PDF DOWNLOAD MODAL */}
+      {showPostOrderModal && lastSubmittedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 p-5 sm:p-6 text-white relative">
+              <button
+                type="button"
+                onClick={() => setShowPostOrderModal(false)}
+                className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shrink-0">
+                  <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-widest block">
+                    Sales Booking Confirmed &amp; Logged
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black text-white">
+                    Order #{lastSubmittedOrder.order.orderNumber}
+                  </h2>
+                </div>
+              </div>
+              <p className="text-xs text-teal-100/90 font-medium mt-2">
+                Order recorded for <strong className="text-white">{lastSubmittedOrder.customer.companyName}</strong>. You can now download or print the official vector PDF tax invoice receipt.
+              </p>
+            </div>
+
+            {/* Modal Body: Order Summary */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
+              {/* Customer & Officer Info Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <div>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Customer / Dealer</span>
+                  <span className="font-black text-slate-900 truncate block text-sm">
+                    {lastSubmittedOrder.customer.companyName}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-500">
+                    ({lastSubmittedOrder.customer.customerCode})
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Town / Route</span>
+                  <span className="font-bold text-slate-800 block">
+                    {lastSubmittedOrder.customer.city || lastSubmittedOrder.customer.town || 'General Route'}
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    {lastSubmittedOrder.customer.route || 'Standard Market'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Field Officer</span>
+                  <span className="font-bold text-slate-800 block">
+                    {currentUser.fullName}
+                  </span>
+                  <span className="text-[10px] text-teal-700 font-bold">
+                    {new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                <div className="bg-slate-100 px-3.5 py-2 text-[11px] font-black text-slate-700 uppercase tracking-wider flex justify-between">
+                  <span>Ordered Items ({lastSubmittedOrder.order.items?.length || 0})</span>
+                  <span>Line Total</span>
+                </div>
+                <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
+                  {lastSubmittedOrder.order.items?.map((item, idx) => (
+                    <div key={item.id || idx} className="p-3 flex items-center justify-between gap-2 hover:bg-slate-50">
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 truncate">{item.skuName}</p>
+                        <p className="text-[10px] text-slate-500 font-medium">
+                          <span className="font-mono">{item.skuCode}</span> &bull; {item.orderedQuantity} {item.packagingUnit || 'pcs'} &times; Rs. {Number(item.unitPrice || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 font-mono font-bold text-slate-900">
+                        Rs. {Number(item.lineTotal || 0).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Total Line */}
+                <div className="bg-teal-50/80 p-3.5 border-t border-teal-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-teal-900 block">Total Order Net Value</span>
+                    <span className="text-[10px] text-teal-700">Inclusive of trade discounts &amp; standard packing</span>
+                  </div>
+                  <span className="text-lg font-black font-mono text-teal-900">
+                    Rs. {Number(lastSubmittedOrder.order.totalAmount || 0).toLocaleString()} PKR
+                  </span>
+                </div>
+              </div>
+
+              {/* Financial Impact Note */}
+              <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-center justify-between">
+                <div>
+                  <span className="font-bold block">Customer Account Impact:</span>
+                  <span className="text-amber-800">
+                    Current Balance: Rs. {Number(lastSubmittedOrder.customer.currentBalance || lastSubmittedOrder.customer.openingBalance || 0).toLocaleString()} &rarr; Projected Balance: Rs. {(Number(lastSubmittedOrder.customer.currentBalance || lastSubmittedOrder.customer.openingBalance || 0) + Number(lastSubmittedOrder.order.totalAmount || 0)).toLocaleString()}
+                  </span>
+                </div>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                  Pending Sync
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Actions Footer */}
+            <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handleWhatsAppShareOrder(lastSubmittedOrder.order, lastSubmittedOrder.customer)}
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs active:scale-95 cursor-pointer"
+                  title="Send invoice text via WhatsApp"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPostOrderModal(false);
+                    setSelectedInvoiceForPrint(lastSubmittedOrder.order);
+                  }}
+                  className="w-full sm:w-auto px-3 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  title="Open Print Dialog"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleLivePreviewOrderPdf(lastSubmittedOrder.order, lastSubmittedOrder.customer)}
+                  disabled={isGeneratingPdf}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Eye className="w-4 h-4 text-teal-700" />
+                  <span>Live Preview</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadOrderPdf(lastSubmittedOrder.order, lastSubmittedOrder.customer)}
+                  disabled={isGeneratingPdf}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+                >
+                  <Download className={`w-4 h-4 text-emerald-300 ${isGeneratingPdf ? 'animate-bounce' : ''}`} />
+                  <span>{isGeneratingPdf ? 'Generating PDF...' : 'Download Order PDF'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LIVE VECTOR PDF PREVIEW & DISPATCH MODAL */}
+      {pdfPreviewModalData && (
+        <InvoicePdfPreviewModal
+          isOpen={pdfPreviewModalData.isOpen}
+          onClose={() => setPdfPreviewModalData(null)}
+          pdfDataUrl={pdfPreviewModalData.pdfDataUrl}
+          pdfFilename={pdfPreviewModalData.pdfFilename}
+          order={pdfPreviewModalData.order}
+          customer={pdfPreviewModalData.customer}
+          onDownload={pdfPreviewModalData.onDownload}
+        />
+      )}
 
       {/* Application Settings Modal (Auto-Save, Crash Protection & Preferences) */}
       <SettingsModal

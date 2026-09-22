@@ -14,6 +14,7 @@ import { Customer, SalesOrder, Recovery, PaymentMode, SalesOrderItem } from '../
 import { NLinkUser } from '../../data/nlink-users-team';
 import { NLINK_OFFICIAL_PRODUCTS, NLinkSKU } from '../../data/nlink-products';
 import { downloadCustomerLedgerPdf } from '../../utils/exportLedgerPdf';
+import { downloadSalesInvoicePdf } from '../../utils/exportInvoicePdf';
 import {
   Phone,
   MessageCircle,
@@ -340,6 +341,29 @@ export const NLinkKhataView: React.FC<NLinkKhataViewProps> = ({
     const phoneClean = cust?.phone?.replace(/[^0-9]/g, '') || '';
     const url = phoneClean ? `https://wa.me/${phoneClean}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
+  };
+
+  // Download PDF Invoice Receipt
+  const handleDownloadInvoicePdf = async (order: SalesOrder) => {
+    const cust = customers.find((c) => c.id === order.customerId) || activeCustomer;
+    if (!cust) return;
+    try {
+      triggerToast(`Generating Official Invoice PDF Receipt for ${order.orderNumber}...`);
+      const result = await downloadSalesInvoicePdf({
+        customer: cust,
+        order,
+        previousBalance: cust.currentBalance || cust.openingBalance || 0,
+        preparedByName: `${currentUser.fullName || currentUser.name} (${currentUser.roleTitle || currentUser.role})`,
+        remarks: order.notes,
+      });
+      if (result.success) {
+        triggerToast(`✓ Invoice receipt downloaded: ${result.filename}`);
+      }
+    } catch (err) {
+      console.error('Invoice PDF download error:', err);
+      triggerToast('Could not download PDF receipt. Opening print view.');
+      window.print();
+    }
   };
 
   // Download PDF statement
@@ -1120,7 +1144,7 @@ export const NLinkKhataView: React.FC<NLinkKhataViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <div className="text-right">
                         <span className="text-sm sm:text-base font-black font-mono text-slate-900 dark:text-white block">
                           Rs. {ord.totalAmount.toLocaleString()}
@@ -1129,6 +1153,19 @@ export const NLinkKhataView: React.FC<NLinkKhataViewProps> = ({
                           DISPATCHED
                         </span>
                       </div>
+
+                      {/* PDF Invoice Receipt Download Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadInvoicePdf(ord);
+                        }}
+                        className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 flex items-center justify-center transition-all cursor-pointer"
+                        title="Download PDF Invoice Receipt"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
 
                       {/* 1-tap WhatsApp Share */}
                       <button
@@ -1831,25 +1868,36 @@ export const NLinkKhataView: React.FC<NLinkKhataViewProps> = ({
                 </span>
               </div>
 
-              {/* Actions: WhatsApp Bill Share & Print */}
-              <div className="grid grid-cols-2 gap-2 pt-2">
+              {/* Actions: Download PDF, WhatsApp Bill Share & Print */}
+              <div className="flex flex-col gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => handleShareInvoiceWhatsApp(inspectedInvoice)}
-                  className="py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                  onClick={() => handleDownloadInvoicePdf(inspectedInvoice)}
+                  className="py-3 bg-[#006b5f] hover:bg-[#005047] text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.98] transition-all"
                 >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>WhatsApp Bill</span>
+                  <Download className="w-4 h-4" />
+                  <span>Download Official PDF Receipt</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="py-3 bg-slate-900 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Print Receipt</span>
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleShareInvoiceWhatsApp(inspectedInvoice)}
+                    className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer text-xs"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>WhatsApp Bill</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="py-2.5 bg-slate-900 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer text-xs"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print Receipt</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

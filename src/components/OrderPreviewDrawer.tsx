@@ -16,8 +16,10 @@ import {
   Building2,
   ArrowRight,
   Calculator,
+  Printer,
 } from 'lucide-react';
 import { Customer, SKU } from '../types';
+import { ThermalOrderSummaryModal } from './ThermalOrderSummaryModal';
 
 export interface OrderPreviewDrawerProps {
   isOpen: boolean;
@@ -50,6 +52,7 @@ export const OrderPreviewDrawer: React.FC<OrderPreviewDrawerProps> = ({
   const [isFullExpanded, setIsFullExpanded] = useState(false);
   const [overallDiscountPercent, setOverallDiscountPercent] = useState<number>(0);
   const [remarks, setRemarks] = useState<string>('');
+  const [showThermalModal, setShowThermalModal] = useState<boolean>(false);
 
   // Extract selected items with details
   const lineItems = useMemo(() => {
@@ -181,6 +184,15 @@ export const OrderPreviewDrawer: React.FC<OrderPreviewDrawerProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowThermalModal(true)}
+              className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold text-xs rounded-xl border border-teal-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Print Thermal Receipt"
+            >
+              <Printer className="w-4 h-4 text-teal-600" />
+              <span className="hidden sm:inline">Thermal Print</span>
+            </button>
             <button
               type="button"
               onClick={() => setIsFullExpanded(!isFullExpanded)}
@@ -454,6 +466,15 @@ export const OrderPreviewDrawer: React.FC<OrderPreviewDrawerProps> = ({
           </button>
         </div>
       </div>
+
+      <ThermalOrderSummaryModal
+        isOpen={showThermalModal}
+        onClose={() => setShowThermalModal(false)}
+        customer={customer}
+        orderQuantities={orderQuantities}
+        skus={skus}
+        overallDiscountPercent={overallDiscountPercent}
+      />
     </div>
   );
 };

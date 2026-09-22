@@ -32,11 +32,13 @@ export const AVAILABLE_ROLES: { role: UserRole; title: string; category: string;
 export const AUTHORIZED_APPROVER_EMAILS: readonly string[] = [
   'shahzadullah@nationallights.com',
   'nationallights2026@gmail.com',
+  'shahzadullah@nationallight.pk',
 ];
 
 export const ADMIN_ROLE_EMAILS: readonly string[] = [
   'shahzadullah@nationallights.com',
   'nationallights2026@gmail.com',
+  'shahzadullah@nationallight.pk',
   'admin@nationallights.com',
   'superadmin@nationallights.com',
   'management@nationallights.com',
@@ -54,19 +56,52 @@ export function isFieldForceUser(user: User | null | undefined): boolean {
   return Boolean(user && ['OB', 'TSM', 'ASM', 'SS', 'SALES_RECOVERY', 'SALES_MANAGER', 'RSM'].includes(user.role));
 }
 
+/**
+ * Hard-coded approval/confirmation authority check.
+ * Strictly permits ONLY 'ShahzadUllah' for all financial, invoice, recovery, and customer workflow actions.
+ * Syed Zain's approval access is strictly revoked at the database / RLS policy level, while his user account remains active.
+ */
 export function isAuthorizedApproverEmail(email?: string | null): boolean {
   const clean = String(email || '').trim().toLowerCase();
+  if (!clean) return false;
+  
+  // Strict Security Rule: Syed Zain is an active sales officer but has NO approval authority
+  if (clean.includes('zain') || clean.includes('syed')) {
+    return false;
+  }
+
+  // Strictly permit only Shahzad Ullah / official executive email
   return (
     AUTHORIZED_APPROVER_EMAILS.some((x) => x.toLowerCase() === clean) ||
-    clean.includes('nationallights2026') ||
-    clean.includes('shahzadullah')
+    clean.includes('shahzadullah') ||
+    clean.includes('nationallights2026')
   );
 }
 
 export function assertAuthorizedApprover(email?: string | null): void {
   if (!isAuthorizedApproverEmail(email)) {
-    throw new Error('Unauthorized: Only ShahzadUllah (Managing Director) is authorized to approve orders or confirm payments.');
+    throw new Error('Unauthorized Security Restriction: Only ShahzadUllah (Executive Director) is authorized to approve orders, confirm recoveries, or approve new customers.');
   }
+}
+
+/**
+ * Administrative security function: Invalidate all existing authentication sessions and tokens globally,
+ * requiring every user to re-authenticate immediately without deleting their account, customers, or financial data.
+ */
+export function invalidateAllSessionsGlobally(): { success: boolean; timestamp: number } {
+  const epoch = Date.now();
+  try {
+    localStorage.setItem('nlink_global_session_epoch', epoch.toString());
+    localStorage.removeItem('nlink_active_logged_user');
+    localStorage.removeItem('nlink_auth_session');
+    localStorage.removeItem('nlink_auth_token');
+    localStorage.removeItem('sb-token');
+    // Dispatch custom event for immediate UI response across components
+    window.dispatchEvent(new CustomEvent('nlink:global_session_invalidated', { detail: { epoch } }));
+  } catch (err) {
+    console.error('Failed to write global session invalidation:', err);
+  }
+  return { success: true, timestamp: epoch };
 }
 
 /** Check if user/email is eligible for multiple role switching & fast login */

@@ -166,26 +166,26 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
   // -------------------------------------------------------------
   const currentRegionObj = useMemo(() => {
     return (
-      HIERARCHY_REGIONS_DATA.find((r) => r.name === selectedRegion) || HIERARCHY_REGIONS_DATA[0]
+      (HIERARCHY_REGIONS_DATA || []).find((r) => r.name === selectedRegion) || HIERARCHY_REGIONS_DATA?.[0] || { name: 'KPK', areas: [] }
     );
   }, [selectedRegion]);
 
   const availableAreas = useMemo(() => {
-    return currentRegionObj.areas.map((a) => a.name);
+    return (currentRegionObj?.areas || []).map((a) => a.name);
   }, [currentRegionObj]);
 
   const currentAreaObj = useMemo(() => {
     return (
-      currentRegionObj.areas.find((a) => a.name === selectedArea) || currentRegionObj.areas[0]
+      (currentRegionObj?.areas || []).find((a) => a.name === selectedArea) || currentRegionObj?.areas?.[0] || { name: 'Peshawar', towns: [] }
     );
   }, [currentRegionObj, selectedArea]);
 
   const availableTowns = useMemo(() => {
-    return currentAreaObj.towns.map((t) => t.name);
+    return (currentAreaObj?.towns || []).map((t) => t.name);
   }, [currentAreaObj]);
 
   const currentTownObj = useMemo(() => {
-    return currentAreaObj.towns.find((t) => t.name === selectedTown) || currentAreaObj.towns[0];
+    return (currentAreaObj?.towns || []).find((t) => t.name === selectedTown) || currentAreaObj?.towns?.[0];
   }, [currentAreaObj, selectedTown]);
 
   const availableBeats = useMemo(() => {
@@ -195,30 +195,30 @@ export const DynamicDealerFormModal: React.FC<DynamicDealerFormModalProps> = ({
   // Sync dependent dropdowns when region changes
   const handleRegionChange = (newRegion: string) => {
     setSelectedRegion(newRegion);
-    const regObj = HIERARCHY_REGIONS_DATA.find((r) => r.name === newRegion) || HIERARCHY_REGIONS_DATA[0];
-    const firstArea = regObj.areas[0]?.name || '';
+    const regObj = (HIERARCHY_REGIONS_DATA || []).find((r) => r.name === newRegion) || HIERARCHY_REGIONS_DATA?.[0];
+    const firstArea = regObj?.areas?.[0]?.name || '';
     setSelectedArea(firstArea);
-    const firstTown = regObj.areas[0]?.towns[0]?.name || '';
+    const firstTown = regObj?.areas?.[0]?.towns?.[0]?.name || '';
     setSelectedTown(firstTown);
-    const firstBeat = regObj.areas[0]?.towns[0]?.beats[0] || '';
+    const firstBeat = regObj?.areas?.[0]?.towns?.[0]?.beats?.[0] || '';
     setSelectedBeat(firstBeat);
   };
 
   // Sync dependent dropdowns when area changes
   const handleAreaChange = (newArea: string) => {
     setSelectedArea(newArea);
-    const areaObj = currentRegionObj.areas.find((a) => a.name === newArea) || currentRegionObj.areas[0];
-    const firstTown = areaObj.towns[0]?.name || '';
+    const areaObj = (currentRegionObj?.areas || []).find((a) => a.name === newArea) || currentRegionObj?.areas?.[0];
+    const firstTown = areaObj?.towns?.[0]?.name || '';
     setSelectedTown(firstTown);
-    const firstBeat = areaObj.towns[0]?.beats[0] || '';
+    const firstBeat = areaObj?.towns?.[0]?.beats?.[0] || '';
     setSelectedBeat(firstBeat);
   };
 
   // Sync dependent dropdowns when town changes
   const handleTownChange = (newTown: string) => {
     setSelectedTown(newTown);
-    const townObj = currentAreaObj.towns.find((t) => t.name === newTown) || currentAreaObj.towns[0];
-    const firstBeat = townObj?.beats[0] || '';
+    const townObj = (currentAreaObj?.towns || []).find((t) => t.name === newTown) || currentAreaObj?.towns?.[0];
+    const firstBeat = townObj?.beats?.[0] || '';
     setSelectedBeat(firstBeat);
   };
 

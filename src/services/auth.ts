@@ -2,6 +2,7 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { sendFirebasePasswordReset } from '../lib/firebase';
 import type { User, UserRole } from '../types';
 import { isMultiRoleEligibleEmail, isAuthorizedApproverEmail, getCentralEmployees } from './production-users';
+import { getStoredUsers } from '../data/nlink-users-team';
 
 const roleMap: Record<string, UserRole> = {
   SUPER_ADMIN: 'SUPER_ADMIN',
@@ -25,6 +26,8 @@ const roleMap: Record<string, UserRole> = {
 export const REGISTERED_CORPORATE_EMAILS: readonly string[] = [
   'nationallights2026@gmail.com',
   'shahzadullah@nationallights.com',
+  'shahzadullah@nationallight.pk',
+  'shahid.khan@nationallight.pk',
   'admin@nationallights.com',
   'superadmin@nationallights.com',
   'management@nationallights.com',
@@ -41,7 +44,18 @@ export async function isRegisteredEmail(email: string): Promise<{ isRegistered: 
   const clean = String(email || '').trim().toLowerCase();
   if (!clean) return { isRegistered: false };
 
-  // 1. Executive list & recognized corporate domains
+  // 1. Check stored active team roster
+  try {
+    const stored = getStoredUsers();
+    const storedMatch = stored.find(
+      (u: any) => u.email && String(u.email).trim().toLowerCase() === clean
+    );
+    if (storedMatch) {
+      return { isRegistered: true, employeeData: storedMatch };
+    }
+  } catch {}
+
+  // 2. Executive list & recognized corporate domains
   if (
     isMultiRoleEligibleEmail(clean) ||
     isAuthorizedApproverEmail(clean) ||
@@ -52,7 +66,7 @@ export async function isRegisteredEmail(email: string): Promise<{ isRegistered: 
     return { isRegistered: true };
   }
 
-  // 2. Central Employees list (from Google Sheet sync or system registry)
+  // 3. Central Employees list (from Google Sheet sync or system registry)
   try {
     const centralEmployees = getCentralEmployees();
     const centralMatch = centralEmployees.find(
@@ -63,7 +77,7 @@ export async function isRegisteredEmail(email: string): Promise<{ isRegistered: 
     }
   } catch {}
 
-  // 3. Supabase Employees table lookup
+  // 4. Supabase Employees table lookup
   if (isSupabaseConfigured && supabase) {
     try {
       const { data: emp } = await supabase
@@ -83,19 +97,39 @@ export async function isRegisteredEmail(email: string): Promise<{ isRegistered: 
 }
 
 /**
- * Sign in using registered email only (Passwordless authentication).
+ * Sign in using registered email and optional corporate password.
  * Validates against registered personnel records, executive authorizations, or Google Sheet users.
  */
-export async function signInWithRegisteredEmail(email: string, roleOverride?: UserRole): Promise<User> {
+export async function signInWithRegisteredEmail(
+  email: string,
+  password?: string,
+  roleOverride?: UserRole
+): Promise<User> {
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail) {
-    throw new Error('Please enter your registered corporate email address.');
+    throw new Error('Please enter your corporate email address.');
+  }
+
+  // If password provided and Supabase is configured with active credentials, attempt Supabase Auth
+  if (password && password.trim().length > 0 && isSupabaseConfigured && supabase) {
+    try {
+      const { data: authData } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: password.trim(),
+      });
+      if (authData?.user) {
+        console.log('✓ Supabase direct authenticated:', authData.user.email);
+      }
+    } catch (authErr) {
+      // Continue to local registry verification so field personnel are never locked out
+      console.warn('Supabase auth fallback:', authErr);
+    }
   }
 
   const check = await isRegisteredEmail(cleanEmail);
   if (!check.isRegistered) {
     throw new Error(
-      `Email '${cleanEmail}' is not recognized in the National Lights registry. Please enter an authorized email (e.g. nationallights2026@gmail.com, shahzadullah@nationallights.com, sales@nationallights.com) or sync users from Google Sheets.`
+      `Email '${cleanEmail}' is not recognized in the National Lights registry. Please enter an authorized email (e.g. nationallights2026@gmail.com, shahzadullah@nationallights.com, shahid.khan@nationallight.pk) or contact your administrator.`
     );
   }
 
@@ -123,17 +157,21 @@ export async function signInWithRegisteredEmail(email: string, roleOverride?: Us
       userRole = 'RSM';
     } else if (cleanEmail.includes('asm')) {
       userRole = 'ASM';
-    } else if (cleanEmail.includes('tsm')) {
+    } else if (cleanEmail.includes('tsm') || cleanEmail.includes('shahid')) {
       userRole = 'TSM';
-    } else {
+    } else if (cleanEmail.includes('shahzadullah') || cleanEmail === 'nationallights2026@gmail.com') {
       userRole = 'SUPER_ADMIN';
+    } else {
+      userRole = 'SALES_RECOVERY';
     }
   }
 
   const displayName =
-    emp?.full_name ||
     emp?.fullName ||
-    cleanEmail.split('@')[0].replace(/[\._]/g, ' ').toUpperCase();
+    emp?.full_name ||
+    (cleanEmail.includes('shahzad') ? 'Shahzad Ullah' :
+     cleanEmail.includes('shahid') ? 'Shahid Khan' :
+     cleanEmail.split('@')[0].replace(/[\._]/g, ' ').toUpperCase());
 
   const authenticatedUser: User = {
     id: emp?.id || `usr_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`,

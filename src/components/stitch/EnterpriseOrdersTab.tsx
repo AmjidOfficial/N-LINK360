@@ -13,6 +13,14 @@ import { NLinkUser } from '../../data/nlink-users-team';
 import { NationalLightLogo } from '../NationalLightLogo';
 import { downloadCustomerLedgerPdf } from '../../utils/exportLedgerPdf';
 import {
+  downloadSalesInvoicePdf,
+  generateSalesInvoicePdfDoc,
+  generateBulkSalesInvoicesPdfDoc,
+  downloadBulkSalesInvoicesPdf,
+  buildBulkInvoiceWhatsAppText,
+} from '../../utils/exportInvoicePdf';
+import { InvoicePdfPreviewModal } from './InvoicePdfPreviewModal';
+import {
   isAutoSaveEnabled,
   saveDraftOrderProgress,
   getDraftOrderProgress,
@@ -254,12 +262,29 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
   const [ledgerEndDate, setLedgerEndDate] = useState('2026-09-30');
   const [selectedInvoiceModal, setSelectedInvoiceModal] = useState<any | null>(null);
 
+  // Multi-Order / Invoices Selection State for Bulk PDF & Sharing
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+  const [pdfPreviewModalData, setPdfPreviewModalData] = useState<{
+    isOpen: boolean;
+    pdfDataUrl: string;
+    pdfFilename: string;
+    order?: any;
+    customer?: Customer;
+    bulkInvoices?: { customer: Customer; order: any }[];
+    onDownload: () => void;
+  } | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   // Party-wise View Isolation & Directory Navigation States
   const [invoiceViewMode, setInvoiceViewMode] = useState<'SINGLE_PARTY' | 'ALL_PARTIES_DIRECTORY'>('SINGLE_PARTY');
   const [ledgerViewMode, setLedgerViewMode] = useState<'SINGLE_PARTY' | 'ALL_PARTIES_DIRECTORY'>('SINGLE_PARTY');
   const [partyDirectorySearch, setPartyDirectorySearch] = useState('');
   const [partyLedgerSearch, setPartyLedgerSearch] = useState('');
   const [showRecentOrdersInOrdersTab, setShowRecentOrdersInOrdersTab] = useState(false);
+  const [bookedOrderSuccessModal, setBookedOrderSuccessModal] = useState<{
+    order: SalesOrder;
+    customer: Customer;
+  } | null>(null);
 
   // Last 5 Recent Orders for the currently active Customer/Dealer
   const activeDealerRecentOrders = useMemo(() => {
@@ -512,6 +537,10 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
       setShowOrderConfirmModal(false);
       triggerLiveSyncNotification();
       triggerToast('Order submitted! Awaiting executive approval (Shahzad Ullah).');
+      setBookedOrderSuccessModal({
+        order: newOrder,
+        customer: activeDealer,
+      });
       if (lockModeTo !== 'ENTRY') {
         setActiveMode('invoices');
       }
@@ -893,6 +922,255 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
     }
   };
 
+  // Download single invoice / sales order PDF receipt
+  const handleDownloadSingleInvoicePdf = async (invOrOrder: any, customCustomer?: Customer) => {
+    const targetCust = customCustomer || activeDealer;
+    try {
+      triggerToast(`Generating Official Invoice Receipt PDF...`);
+      const result = await downloadSalesInvoicePdf({
+        customer: targetCust,
+        order: {
+          id: invOrOrder.id,
+          orderNumber: invOrOrder.invoiceNo || invOrOrder.orderNumber,
+          customerId: targetCust.id,
+          customerName: targetCust.companyName,
+          customerCode: targetCust.customerCode,
+          orderDate: invOrOrder.date || invOrOrder.orderDate || new Date().toISOString().split('T')[0],
+          salesUserName: invOrOrder.salesUserName || currentUser.fullName || currentUser.name,
+          paymentMode: invOrOrder.paymentMode || 'CREDIT (30 DAYS)',
+          status: invOrOrder.status || 'PENDING',
+          totalAmount: invOrOrder.amount || invOrOrder.totalAmount,
+          subtotal: invOrOrder.subtotal,
+          discountAmount: invOrOrder.discountAmount,
+          items: invOrOrder.items,
+          notes: invOrOrder.notes,
+        },
+        previousBalance: targetCust.currentBalance || targetCust.openingBalance || 0,
+        preparedByName: `${currentUser.fullName || currentUser.name} (${currentUser.roleTitle || currentUser.role})`,
+      });
+      if (result.success) {
+        triggerToast(`✓ Invoice receipt downloaded: ${result.filename}`);
+      }
+    } catch (err) {
+      console.error('Invoice PDF error:', err);
+      triggerToast('Failed to generate PDF. Falling back to print view.');
+      setActivePrintType('SINGLE_INVOICE');
+      setTimeout(() => {
+        window.print();
+      }, 150);
+    }
+  };
+
+  // Toggle single invoice selection
+  const handleToggleInvoiceSelection = (invId: string) => {
+    setSelectedInvoiceIds((prev) =>
+      prev.includes(invId) ? prev.filter((id) => id !== invId) : [...prev, invId]
+    );
+  };
+
+  // Toggle select all invoices in the current filtered list
+  const handleToggleSelectAllInvoices = () => {
+    const currentListIds = filteredInvoicesForStatement.map((inv) => inv.id);
+    const allSelected = currentListIds.length > 0 && currentListIds.every((id) => selectedInvoiceIds.includes(id));
+    if (allSelected) {
+      setSelectedInvoiceIds((prev) => prev.filter((id) => !currentListIds.includes(id)));
+    } else {
+      setSelectedInvoiceIds((prev) => Array.from(new Set([...prev, ...currentListIds])));
+    }
+  };
+
+  // Clear all selections
+  const handleClearInvoiceSelections = () => {
+    setSelectedInvoiceIds([]);
+  };
+
+  // Selected Invoices objects list
+  const selectedInvoicesList = useMemo(() => {
+    return dealerInvoices.filter((inv) => selectedInvoiceIds.includes(inv.id));
+  }, [dealerInvoices, selectedInvoiceIds]);
+
+  // Live Vector PDF Preview for a Single Invoice
+  const handleLivePreviewSingleInvoice = async (invOrOrder: any, customCustomer?: Customer) => {
+    const targetCust = customCustomer || activeDealer;
+    try {
+      setIsGeneratingPdf(true);
+      triggerToast('Rendering high-fidelity vector PDF preview...');
+      const orderPayload = {
+        id: invOrOrder.id,
+        orderNumber: invOrOrder.invoiceNo || invOrOrder.orderNumber,
+        customerId: targetCust.id,
+        customerName: targetCust.companyName,
+        customerCode: targetCust.customerCode,
+        orderDate: invOrOrder.date || invOrOrder.orderDate || new Date().toISOString().split('T')[0],
+        salesUserName: invOrOrder.salesUserName || currentUser.fullName || currentUser.name,
+        paymentMode: invOrOrder.paymentMode || 'CREDIT (30 DAYS)',
+        status: invOrOrder.status || 'PENDING',
+        totalAmount: invOrOrder.amount || invOrOrder.totalAmount,
+        subtotal: invOrOrder.subtotal,
+        discountAmount: invOrOrder.discountAmount,
+        items: invOrOrder.items,
+        notes: invOrOrder.notes,
+      };
+
+      const result = await generateSalesInvoicePdfDoc({
+        customer: targetCust,
+        order: orderPayload,
+        previousBalance: targetCust.currentBalance || targetCust.openingBalance || 0,
+        preparedByName: `${currentUser.fullName || currentUser.name} (${currentUser.roleTitle || currentUser.role})`,
+      });
+
+      const pdfDataUrl = result.dataUrl;
+      const filename = result.filename;
+
+      setPdfPreviewModalData({
+        isOpen: true,
+        pdfDataUrl,
+        pdfFilename: filename,
+        order: orderPayload,
+        customer: targetCust,
+        onDownload: () => {
+          result.doc.save(filename);
+          triggerToast(`✓ Downloaded ${filename}`);
+        },
+      });
+    } catch (err) {
+      console.error('Single PDF preview error:', err);
+      triggerToast('Could not render vector preview. Opening standard print view.');
+      setActivePrintType('SINGLE_INVOICE');
+      setTimeout(() => window.print(), 150);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  // Bulk Invoices PDF generation for Live Preview
+  const handleLivePreviewBulkInvoices = async () => {
+    if (selectedInvoicesList.length === 0) {
+      triggerToast('Please select at least one sales invoice first.');
+      return;
+    }
+
+    try {
+      setIsGeneratingPdf(true);
+      triggerToast(`Compiling bulk PDF with manifest for ${selectedInvoicesList.length} orders...`);
+
+      const bulkPayload = selectedInvoicesList.map((inv) => ({
+        customer: activeDealer,
+        order: {
+          id: inv.id,
+          orderNumber: inv.invoiceNo || inv.orderNumber,
+          customerId: activeDealer.id,
+          customerName: activeDealer.companyName,
+          customerCode: activeDealer.customerCode,
+          orderDate: inv.date || new Date().toISOString().split('T')[0],
+          salesUserName: currentUser.fullName || currentUser.name,
+          paymentMode: inv.paymentMode || 'CREDIT (30 DAYS)',
+          status: inv.status || 'PENDING',
+          totalAmount: inv.amount,
+          items: inv.items,
+        },
+        previousBalance: activeDealer.currentBalance || 0,
+        preparedByName: `${currentUser.fullName || currentUser.name} (${currentUser.roleTitle || currentUser.role})`,
+      }));
+
+      const result = await generateBulkSalesInvoicesPdfDoc(
+        bulkPayload,
+        `National Light Bulk Invoices Batch (${activeDealer.companyName})`
+      );
+
+      const pdfDataUrl = result.dataUrl;
+      const filename = result.filename;
+
+      setPdfPreviewModalData({
+        isOpen: true,
+        pdfDataUrl,
+        pdfFilename: filename,
+        bulkInvoices: bulkPayload,
+        customer: activeDealer,
+        onDownload: () => {
+          result.doc.save(filename);
+          triggerToast(`✓ Downloaded ${filename}`);
+        },
+      });
+    } catch (err) {
+      console.error('Bulk PDF preview error:', err);
+      triggerToast('Failed to compile bulk PDF preview.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  // Direct Bulk PDF Download
+  const handleDownloadBulkInvoices = async () => {
+    if (selectedInvoicesList.length === 0) {
+      triggerToast('Please select at least one sales invoice first.');
+      return;
+    }
+    try {
+      setIsGeneratingPdf(true);
+      triggerToast(`Generating bulk PDF package (${selectedInvoicesList.length} orders)...`);
+
+      const bulkPayload = selectedInvoicesList.map((inv) => ({
+        customer: activeDealer,
+        order: {
+          id: inv.id,
+          orderNumber: inv.invoiceNo || inv.orderNumber,
+          customerId: activeDealer.id,
+          customerName: activeDealer.companyName,
+          customerCode: activeDealer.customerCode,
+          orderDate: inv.date || new Date().toISOString().split('T')[0],
+          salesUserName: currentUser.fullName || currentUser.name,
+          paymentMode: inv.paymentMode || 'CREDIT (30 DAYS)',
+          status: inv.status || 'PENDING',
+          totalAmount: inv.amount,
+          items: inv.items,
+        },
+        previousBalance: activeDealer.currentBalance || 0,
+        preparedByName: `${currentUser.fullName || currentUser.name} (${currentUser.roleTitle || currentUser.role})`,
+      }));
+
+      const res = await downloadBulkSalesInvoicesPdf(
+        bulkPayload,
+        `National Light Bulk Invoices Manifest (${activeDealer.companyName})`
+      );
+
+      if (res.success) {
+        triggerToast(`✓ Bulk PDF downloaded: ${res.filename}`);
+      }
+    } catch (err) {
+      console.error('Bulk download error:', err);
+      triggerToast('Failed to generate bulk PDF file.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  // Bulk WhatsApp Dispatch
+  const handleBulkWhatsAppDispatch = () => {
+    if (selectedInvoicesList.length === 0) {
+      triggerToast('Please select at least one sales invoice first.');
+      return;
+    }
+    const bulkPayload = selectedInvoicesList.map((inv) => ({
+      customer: activeDealer,
+      order: {
+        id: inv.id,
+        orderNumber: inv.invoiceNo,
+        customerId: activeDealer.id,
+        customerName: activeDealer.companyName,
+        customerCode: activeDealer.customerCode,
+        orderDate: inv.date,
+        totalAmount: inv.amount,
+        items: inv.items,
+      },
+    }));
+    const message = buildBulkInvoiceWhatsAppText(
+      bulkPayload,
+      `${currentUser.fullName || currentUser.name} (${currentUser.roleTitle || currentUser.role})`
+    );
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
   // PDF / Print Exporter (uses jsPDF Statement)
   const handleExportPDF = () => {
     handleDownloadLedgerPdfStatement();
@@ -1120,6 +1398,17 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
                         <span className="font-mono font-black text-white">
                           Rs. {Number(ord.totalAmount || 0).toLocaleString()}
                         </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadSingleInvoicePdf(ord, activeDealer);
+                          }}
+                          className="w-7 h-7 rounded-lg bg-[#006b5f]/80 hover:bg-[#006b5f] text-white flex items-center justify-center transition-all cursor-pointer"
+                          title="Download PDF Invoice Receipt"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+                        </button>
                       </div>
                     </div>
                   );
@@ -2124,6 +2413,83 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
                 </div>
               </div>
 
+              {/* Multi-Select & Bulk Actions Header */}
+              <div className="bg-slate-900 text-white p-3.5 rounded-2xl border border-slate-800 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleToggleSelectAllInvoices}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                      filteredInvoicesForStatement.length > 0 &&
+                      filteredInvoicesForStatement.every((inv) => selectedInvoiceIds.includes(inv.id))
+                        ? 'bg-[#76f4e0] text-[#001428] border-[#76f4e0]'
+                        : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      {filteredInvoicesForStatement.length > 0 &&
+                      filteredInvoicesForStatement.every((inv) => selectedInvoiceIds.includes(inv.id))
+                        ? 'check_box'
+                        : selectedInvoiceIds.length > 0
+                        ? 'indeterminate_check_box'
+                        : 'check_box_outline_blank'}
+                    </span>
+                    <span>
+                      {filteredInvoicesForStatement.length > 0 &&
+                      filteredInvoicesForStatement.every((inv) => selectedInvoiceIds.includes(inv.id))
+                        ? 'Deselect All'
+                        : 'Select All Orders'}
+                    </span>
+                  </button>
+
+                  <span className="text-xs text-slate-300 font-medium">
+                    <strong className="text-[#76f4e0] font-mono">{selectedInvoiceIds.length}</strong> of {filteredInvoicesForStatement.length} Selected
+                  </span>
+                </div>
+
+                {selectedInvoiceIds.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isGeneratingPdf}
+                      onClick={handleLivePreviewBulkInvoices}
+                      className="px-3 py-1.5 bg-[#76f4e0] hover:bg-[#5ce1cd] text-[#001428] rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">visibility</span>
+                      <span>Live Bulk Preview ({selectedInvoiceIds.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isGeneratingPdf}
+                      onClick={handleDownloadBulkInvoices}
+                      className="px-3 py-1.5 bg-[#006b5f] hover:bg-[#005047] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                      <span>Bulk PDF</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleBulkWhatsAppDispatch}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">share</span>
+                      <span>WhatsApp Batch</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleClearInvoiceSelections}
+                      className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-slate-300 rounded-xl text-xs font-medium flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">close</span>
+                      <span>Clear</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Invoices for this specific party */}
               <div className="flex flex-col gap-3">
                 {dealerInvoices
@@ -2134,57 +2500,95 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
                     const invMonthYear = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
                     return invoiceSelectedMonths.includes(invMonthYear);
                   })
-                  .map((inv) => (
-                    <div
-                      key={inv.id}
-                      className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col gap-3 hover:border-slate-300 dark:hover:border-[#76f4e0]/30 transition-all shadow-2xs"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-[#006b5f] text-[20px]">description</span>
-                          <span className="text-sm sm:text-base font-bold text-[#191c1e] dark:text-white font-mono">
-                            {inv.invoiceNo}
+                  .map((inv) => {
+                    const isSelected = selectedInvoiceIds.includes(inv.id);
+                    return (
+                      <div
+                        key={inv.id}
+                        className={`p-4 rounded-2xl border transition-all shadow-2xs flex flex-col gap-3 ${
+                          isSelected
+                            ? 'bg-teal-50/50 dark:bg-teal-950/30 border-teal-500 ring-2 ring-teal-500/20'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-[#76f4e0]/30'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleInvoiceSelection(inv.id)}
+                              className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer border ${
+                                isSelected
+                                  ? 'bg-[#006b5f] border-[#006b5f] text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-400 hover:border-[#006b5f]'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[16px]">
+                                {isSelected ? 'check' : ''}
+                              </span>
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-[#006b5f] text-[20px]">description</span>
+                              <span className="text-sm sm:text-base font-bold text-[#191c1e] dark:text-white font-mono">
+                                {inv.invoiceNo}
+                              </span>
+                            </div>
+                          </div>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${inv.badgeColor}`}>
+                            {inv.status}
                           </span>
                         </div>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${inv.badgeColor}`}>
-                          {inv.status}
-                        </span>
-                      </div>
 
-                      <div className="flex justify-between items-center text-xs sm:text-sm text-slate-500">
-                        <span>Issued Date: {inv.date}</span>
-                        <span className="text-sm font-bold text-[#001428] dark:text-[#76f4e0] font-mono">
-                          Rs. {inv.amount.toLocaleString()}
-                        </span>
-                      </div>
+                        <div className="flex justify-between items-center text-xs sm:text-sm text-slate-500">
+                          <span>Issued Date: {inv.date}</span>
+                          <span className="text-sm font-bold text-[#001428] dark:text-[#76f4e0] font-mono">
+                            Rs. {inv.amount.toLocaleString()}
+                          </span>
+                        </div>
 
-                      <p className="text-[10px] text-slate-400">
-                        Items Booked: {inv.itemsCount} SKUs from National Light Rate list • Party: {activeDealer.companyName}
-                      </p>
+                        <p className="text-[10px] text-slate-400">
+                          Items Booked: {inv.itemsCount} SKUs from National Light Rate list • Party: {activeDealer.companyName}
+                        </p>
 
-                      <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedInvoiceModal(inv)}
-                          className="bg-[#f2f4f6] dark:bg-slate-800 text-[#191c1e] dark:text-slate-200 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">visibility</span>
-                          <span>Inspect Invoice</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const text = `National Light Pakistan • Official Invoice ${inv.invoiceNo}\nDealer: ${activeDealer.companyName} (${activeDealer.customerCode})\nTotal Amount: Rs. ${inv.amount.toLocaleString()}\nStatus: Verified & Signed\n\nContact Head Office Peshawar for any questions.`;
-                            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-                          }}
-                          className="bg-[#006b5f] text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-[#005047]"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">share</span>
-                          <span>Share Invoice</span>
-                        </button>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => handleLivePreviewSingleInvoice(inv, activeDealer)}
+                            className="bg-[#76f4e0]/20 hover:bg-[#76f4e0]/30 text-[#006b5f] dark:text-[#76f4e0] py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">visibility</span>
+                            <span>Live Preview</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadSingleInvoicePdf(inv, activeDealer)}
+                            className="bg-[#006b5f] hover:bg-[#005047] text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                            <span>Download PDF</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const text = `National Light Pakistan • Official Invoice ${inv.invoiceNo}\nDealer: ${activeDealer.companyName} (${activeDealer.customerCode})\nTotal Amount: Rs. ${inv.amount.toLocaleString()} PKR\nStatus: Verified & Signed\n\nContact National Light Peshawar for inquiries.`;
+                              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-95"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">share</span>
+                            <span>WhatsApp</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedInvoiceModal(inv)}
+                            className="bg-[#f2f4f6] dark:bg-slate-800 text-[#191c1e] dark:text-slate-200 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">info</span>
+                            <span>Details</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                 {dealerInvoices.length === 0 && (
                   <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center">
@@ -2820,6 +3224,15 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
 
             {/* Modal Actions */}
             <div className="bg-slate-50 dark:bg-slate-950 p-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => handleDownloadSingleInvoicePdf(selectedInvoiceModal, activeDealer)}
+                className="w-full bg-[#006b5f] hover:bg-[#005047] text-white py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                <span>Download Official PDF Receipt</span>
+              </button>
+
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -2834,7 +3247,7 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
                     const text = `National Light Pakistan • Official Invoice ${selectedInvoiceModal.invoiceNo}\nDealer: ${activeDealer.companyName} (${activeDealer.customerCode})\nTotal Amount: Rs. ${selectedInvoiceModal.amount.toLocaleString()}\nStatus: Verified & Signed\n\nContact Head Office Peshawar for any questions.`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
                   }}
-                  className="bg-[#006b5f] hover:bg-[#005047] text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                  className="bg-[#0f2942] hover:bg-[#0c2236] text-[#76f4e0] py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
                 >
                   <span className="material-symbols-outlined text-[16px]">share</span>
                   <span>WhatsApp Share</span>
@@ -2850,7 +3263,7 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
                     window.print();
                   }, 150);
                 }}
-                className="w-full bg-[#0f2942] hover:bg-[#0c2236] text-[#76f4e0] py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs"
+                className="w-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
               >
                 <span className="material-symbols-outlined text-[16px]">print</span>
                 <span>Print Official Invoice</span>
@@ -3413,6 +3826,137 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
             );
           })()}
         </div>
+      )}
+
+      {/* =======================================================================
+          ORDER BOOKED SUCCESS & IMMEDIATE PDF RECEIPT DOWNLOAD MODAL
+          ======================================================================= */}
+      {bookedOrderSuccessModal && (
+        <div className="fixed inset-0 bg-[#001428]/70 dark:bg-black/80 backdrop-blur-xs flex items-end sm:items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col animate-slideUp">
+            <div className="bg-gradient-to-r from-[#006b5f] to-[#0f2942] p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-white">
+                  <span className="material-symbols-outlined text-[24px]">task_alt</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">Order Booked Successfully!</h3>
+                  <p className="text-[11px] text-[#76f4e0] font-mono font-medium">Official Receipt Ready</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBookedOrderSuccessModal(null)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Order Details Card */}
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-semibold">Order Reference</span>
+                  <span className="font-bold font-mono text-[#006b5f] dark:text-[#76f4e0] text-sm">
+                    {bookedOrderSuccessModal.order.orderNumber}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-semibold">Customer / Dealer</span>
+                  <span className="font-bold text-slate-800 dark:text-white truncate max-w-[200px]">
+                    {bookedOrderSuccessModal.customer.companyName}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-semibold">Total Amount</span>
+                  <span className="font-black font-mono text-base text-slate-900 dark:text-white">
+                    Rs. {bookedOrderSuccessModal.order.totalAmount.toLocaleString()} PKR
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                  <span className="text-slate-500 font-semibold">Executive Verification</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                    Awaiting Shahzad Ullah Approval
+                  </span>
+                </div>
+              </div>
+
+              {/* Primary Action: Download PDF Invoice Receipt & Live Preview */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleLivePreviewSingleInvoice(bookedOrderSuccessModal.order, bookedOrderSuccessModal.customer);
+                  }}
+                  className="w-full py-3 bg-[#76f4e0]/20 hover:bg-[#76f4e0]/30 text-[#006b5f] dark:text-[#76f4e0] border border-[#76f4e0]/40 rounded-2xl font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
+                >
+                  <span className="material-symbols-outlined text-[18px]">visibility</span>
+                  <span>Live PDF Preview</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDownloadSingleInvoicePdf(bookedOrderSuccessModal.order, bookedOrderSuccessModal.customer);
+                  }}
+                  className="w-full py-3 bg-[#006b5f] hover:bg-[#005047] text-white rounded-2xl font-bold text-xs shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
+                >
+                  <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                  <span>Download PDF</span>
+                </button>
+              </div>
+
+              {/* Secondary Actions */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const o = bookedOrderSuccessModal.order;
+                    const c = bookedOrderSuccessModal.customer;
+                    const text = `National Light Pakistan • Order Booking Receipt\nOrder No: ${o.orderNumber}\nCustomer: ${c.companyName} (${c.customerCode})\nTotal Amount: Rs. ${o.totalAmount.toLocaleString()} PKR\nItems: ${o.items?.length || 0} SKUs\nOfficer: ${o.salesUserName}\nStatus: Submitted for Executive Sign-off`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                  }}
+                  className="py-2.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">share</span>
+                  <span>WhatsApp Share</span>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBookedOrderSuccessModal(null);
+                    if (lockModeTo !== 'ENTRY') {
+                      setActiveMode('invoices');
+                    }
+                  }}
+                  className="py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">list_alt</span>
+                  <span>View Invoices</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================================
+          INTERACTIVE LIVE PDF PREVIEW & MULTI-CHANNEL DISPATCH MODAL
+          ======================================================================= */}
+      {pdfPreviewModalData && (
+        <InvoicePdfPreviewModal
+          isOpen={pdfPreviewModalData.isOpen}
+          onClose={() => setPdfPreviewModalData(null)}
+          pdfDataUrl={pdfPreviewModalData.pdfDataUrl}
+          pdfFilename={pdfPreviewModalData.pdfFilename}
+          order={pdfPreviewModalData.order}
+          customer={pdfPreviewModalData.customer}
+          bulkInvoices={pdfPreviewModalData.bulkInvoices}
+          officerName={`${currentUser.fullName || currentUser.name} (${currentUser.roleTitle || currentUser.role})`}
+          onDownload={pdfPreviewModalData.onDownload}
+        />
       )}
 
       {/* Floating Sync & Save Feedback Popup Toast */}

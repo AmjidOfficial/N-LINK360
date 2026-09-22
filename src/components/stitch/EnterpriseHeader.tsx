@@ -7,6 +7,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { NLinkUser, getStoredUsers, TEAM_USERS } from '../../data/nlink-users-team';
+import { NationalLightLogo } from '../NationalLightLogo';
 import {
   Menu,
   X,
@@ -211,17 +212,7 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
           
           {/* Left: Clean Company Branding */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700/80 shadow-2xs flex items-center justify-center p-1 shrink-0">
-              <img
-                src="/national_light_logo.jpg"
-                alt="National Light"
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.currentTarget.parentElement as HTMLElement).innerHTML =
-                    '<div class="w-full h-full bg-[#001428] text-[#76f4e0] flex items-center justify-center font-black text-xs rounded-lg">NL</div>';
-                }}
-              />
-            </div>
+            <NationalLightLogo size="sm" showGlow={false} />
 
             <div className="flex flex-col">
               <div className="flex items-center gap-2">

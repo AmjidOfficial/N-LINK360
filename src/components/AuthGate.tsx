@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { LogIn, Mail, ShieldAlert, CheckCircle2, UserCheck, ChevronDown, Sparkles, Building2, ShieldCheck, Lock, Check } from 'lucide-react';
+import { LogIn, Mail, Lock, Eye, EyeOff, ShieldAlert, CheckCircle2, HelpCircle, X, ShieldCheck } from 'lucide-react';
 import { signInWithRegisteredEmail } from '../services/auth';
-import { AVAILABLE_ROLES } from '../services/production-users';
-import type { User, UserRole } from '../types';
+import type { User } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import { NationalLightLogo } from './NationalLightLogo';
 
 interface AuthGateProps {
   children: React.ReactNode;
@@ -13,20 +13,21 @@ interface AuthGateProps {
   midnightCutoffNotice?: string | null;
 }
 
-const QUICK_SIGN_IN_ACCOUNTS = [
-  { email: 'nationallights2026@gmail.com', label: 'Super Admin', role: 'SUPER_ADMIN' as UserRole, desc: 'Full System Access' },
-  { email: 'shahzadullah@nationallights.com', label: 'Shahzad Ullah', role: 'SUPER_ADMIN' as UserRole, desc: 'Managing Director (Sole Approver)' },
-  { email: 'accounts@nationallights.com', label: 'Accounts & Finance', role: 'ACCOUNTS' as UserRole, desc: 'Ledgers & Invoices' },
-  { email: 'sales@nationallights.com', label: 'Sales & Recovery', role: 'SALES_RECOVERY' as UserRole, desc: 'Field Orders & Recovery' },
-  { email: 'warehouse@nationallights.com', label: 'Warehouse & Dispatch', role: 'WAREHOUSE_MANAGER' as UserRole, desc: 'Stock & Dispatches' },
-];
-
-export const AuthGate: React.FC<AuthGateProps> = ({ children, currentUser, onSignIn, midnightCutoffNotice }) => {
+export const AuthGate: React.FC<AuthGateProps> = ({
+  children,
+  currentUser,
+  onSignIn,
+  midnightCutoffNotice,
+}) => {
   const [email, setEmail] = useState('nationallights2026@gmail.com');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('SUPER_ADMIN');
+  const [password, setPassword] = useState('NationalLights@2026');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   if (currentUser) return <>{children}</>;
 
@@ -34,7 +35,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children, currentUser, onSig
     event.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
-      setError('Please enter your registered corporate email address.');
+      setError('Please enter your registered corporate email.');
       return;
     }
 
@@ -43,233 +44,301 @@ export const AuthGate: React.FC<AuthGateProps> = ({ children, currentUser, onSig
     setNotice('');
 
     try {
-      const user = await signInWithRegisteredEmail(cleanEmail, selectedRole);
-      setNotice(`Authenticated successfully as ${user.fullName} (${user.role})`);
+      // The authentication system automatically determines the user's role
+      const user = await signInWithRegisteredEmail(cleanEmail, password);
+      setNotice(`Welcome, ${user.fullName}. Logging in...`);
       await onSignIn(user);
     } catch (err: any) {
-      setError(err?.message || 'Authentication failed. Please verify your registered email address.');
+      setError(err?.message || 'Authentication failed. Please verify your email and password.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleQuickSelect = (acc: typeof QUICK_SIGN_IN_ACCOUNTS[0]) => {
-    setEmail(acc.email);
-    setSelectedRole(acc.role);
-    setError('');
+  const handleForgotPasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetSuccess(true);
   };
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-slate-950 flex items-center justify-center p-4 sm:p-6 md:p-8">
-      {/* 3D Animated Background Mesh & Lights */}
+    <main
+      id="nlink-auth-gate-container"
+      className="min-h-screen relative overflow-hidden bg-[#070d18] text-slate-100 flex items-center justify-center p-4 sm:p-6"
+    >
+      {/* Background Subtle Gradient & Glow */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-emerald-500/15 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-        <div className="absolute top-1/2 -right-40 w-96 h-96 rounded-full bg-teal-500/15 blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
-        <div className="absolute -bottom-40 left-1/3 w-96 h-96 rounded-full bg-slate-900/60 blur-[100px]" />
-        
-        {/* Futuristic Grid Layer */}
-        <div 
-          className="absolute inset-0 opacity-[0.03]" 
-          style={{ 
-            backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, 
-            backgroundSize: '24px 24px' 
-          }} 
+        <div
+          className="absolute -top-32 left-1/2 -translate-x-1/2 w-[550px] h-[350px] rounded-full bg-emerald-500/10 blur-[130px]"
+        />
+        <div
+          className="absolute -bottom-32 right-10 w-96 h-96 rounded-full bg-teal-500/10 blur-[140px]"
+        />
+        {/* Subtle grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+            backgroundSize: '28px 28px',
+          }}
         />
       </div>
 
-      <div className="w-full max-w-xl z-10 perspective-[1200px]">
-        {/* Main Card with subtle 3D rotational hover */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30, rotateX: 12 }}
-          animate={{ opacity: 1, y: 0, rotateX: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          whileHover={{ 
-            rotateX: 1.5, 
-            rotateY: -1.5, 
-            translateY: -2,
-            transition: { duration: 0.3 }
-          }}
-          className="w-full bg-white dark:bg-[#090f19] border border-slate-200/85 dark:border-slate-800/85 rounded-[32px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] p-6 sm:p-10 relative overflow-hidden group transition-colors duration-350"
+      <div className="w-full max-w-[420px] z-10">
+        {/* Main Card with official branding layout specified in Section 8 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full bg-[#0b1322] border border-slate-800/90 rounded-[28px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] p-6 sm:p-8 relative overflow-hidden"
         >
-          {/* Card Border Highlight Accent */}
-          <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-emerald-500 via-[#006b5f] to-teal-500" />
-          
-          {/* Top Branding */}
-          <div className="text-center space-y-4">
-            {/* Holographic Logo Container */}
-            <motion.div 
-              whileHover={{ scale: 1.06, rotate: 5 }}
-              className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-100/50 dark:from-slate-900 dark:to-slate-800 border border-teal-200/60 dark:border-slate-700 shadow-[0_10px_20px_rgba(0,107,95,0.06)] flex items-center justify-center font-black text-2xl text-[#006b5f] dark:text-[#76f4e0] cursor-pointer"
-            >
-              NL
-            </motion.div>
+          {/* Top Emerald Accent Strip */}
+          <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-emerald-500 via-[#006b5f] to-teal-400" />
 
-            <div className="space-y-1">
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                N-LINK <span className="text-[#006b5f] dark:text-[#76f4e0] font-black">360</span>
-              </h1>
-              <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                National Lights Pakistan
-              </p>
+          {/* Header Branding Area strictly matching master specification */}
+          <div className="text-center space-y-3 pt-1">
+            {/* System Title */}
+            <h1
+              id="nlink-login-title"
+              className="text-2xl font-black text-white tracking-wider"
+            >
+              N-LINK <span className="text-[#2ce5be]">360</span>
+            </h1>
+
+            {/* Official Company Logo */}
+            <div className="flex justify-center py-1">
+              <NationalLightLogo
+                size={82}
+                showGlow={true}
+                variant="image"
+                className="cursor-default"
+                alt="National Lighting Official Logo"
+              />
             </div>
 
-            {/* Shield / Whitelist Secure Label */}
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-[#76f4e0] text-[11px] font-extrabold shadow-2xs">
-              <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 animate-pulse" />
-              <span>Only Email Authorized Logins</span>
+            {/* Corporate Name & Management Tagline */}
+            <div>
+              <h2
+                id="nlink-company-name"
+                className="text-base font-extrabold text-white tracking-widest uppercase"
+              >
+                NATIONAL LIGHTING
+              </h2>
+              <p
+                id="nlink-system-subtitle"
+                className="text-xs font-semibold text-slate-400 mt-0.5 tracking-wide"
+              >
+                Sales &amp; Distribution Management
+              </p>
             </div>
           </div>
 
+          {/* Notifications & Error Handling */}
           <AnimatePresence mode="wait">
             {midnightCutoffNotice && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mt-6 p-4 rounded-2xl text-xs font-bold text-teal-900 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-900/60 shadow-xs"
+                className="mt-4 p-3 rounded-xl text-xs font-semibold text-teal-300 bg-teal-950/40 border border-teal-800/60"
               >
                 {midnightCutoffNotice}
               </motion.div>
             )}
 
             {notice && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="mt-6 p-4 rounded-2xl text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 flex items-center gap-2.5 shadow-xs"
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-3 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-800/80 flex items-center gap-2"
               >
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>{notice}</span>
               </motion.div>
             )}
 
             {error && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="mt-6 p-4 rounded-2xl text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900 flex items-start gap-2.5 shadow-xs"
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-3 rounded-xl text-xs font-bold text-rose-300 bg-rose-950/40 border border-rose-800/80 flex items-start gap-2"
               >
-                <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                <span className="flex-1 leading-normal">{error}</span>
+                <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span className="flex-1 leading-relaxed">{error}</span>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Quick Selection Grid with Professional Keys */}
-          <div className="mt-8 space-y-3">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-[#006b5f] dark:text-[#76f4e0]" />
-                Select Authorized Corporate Identity:
-              </span>
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider">Fast Login</span>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {QUICK_SIGN_IN_ACCOUNTS.map((acc) => {
-                const isActive = email.toLowerCase() === acc.email.toLowerCase();
-                return (
-                  <motion.button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => handleQuickSelect(acc)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between h-20 relative overflow-hidden select-none ${
-                      isActive
-                        ? 'bg-[#006b5f]/5 border-[#006b5f] dark:border-[#76f4e0] ring-1 ring-[#006b5f] shadow-[0_4px_12px_rgba(0,107,95,0.08)]'
-                        : 'bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-900/40 dark:hover:bg-slate-900/80 border-slate-200 dark:border-slate-800'
-                    }`}
-                  >
-                    <div className="w-full">
-                      <div className="text-[11px] font-black text-slate-850 dark:text-slate-200 truncate pr-4">{acc.label}</div>
-                      <div className="text-[9px] text-slate-400 dark:text-slate-500 font-bold truncate mt-0.5">{acc.desc}</div>
-                    </div>
-                    {isActive && (
-                      <span className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full bg-[#006b5f] dark:bg-[#76f4e0] flex items-center justify-center">
-                        <Check className="w-2.5 h-2.5 text-white dark:text-[#090f19]" />
-                      </span>
-                    )}
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Secure Credential Input Form */}
-          <form onSubmit={handleLogin} className="mt-6 space-y-5">
+          {/* Clean Common Login Form */}
+          <form onSubmit={handleLogin} className="mt-6 space-y-4">
+            {/* Email Field */}
             <div>
-              <label className="block text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">
-                Authorized Personnel Email Address
+              <label
+                htmlFor="login-email"
+                className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5"
+              >
+                Email
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-4 top-3.5" />
+                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
                 <input
+                  id="login-email"
                   type="email"
                   required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. nationallights2026@gmail.com"
-                  className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/30 text-xs font-bold text-slate-850 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-[#006b5f] dark:focus:ring-[#76f4e0] focus:border-transparent transition-all"
+                  placeholder="name@nationallight.pk"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/60 text-xs font-semibold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#006b5f] focus:border-transparent transition-all"
                 />
               </div>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 pl-1 leading-normal">
-                Credentials are systematically verified against the authorized master roster and local personnel registers.
-              </p>
             </div>
 
-            {/* Working Operational Role Select */}
-            <div className="p-4 bg-slate-50/70 dark:bg-slate-900/30 rounded-2xl border border-slate-200/80 dark:border-slate-850 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-[#006b5f] dark:text-[#76f4e0]" />
-                  Authorized Working Role
-                </span>
-                <span className="text-[9px] font-black text-emerald-700 dark:text-[#76f4e0] bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-900/40 uppercase tracking-widest">
-                  Verified
-                </span>
-              </div>
-              
+            {/* Password Field */}
+            <div>
+              <label
+                htmlFor="login-password"
+                className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5"
+              >
+                Password
+              </label>
               <div className="relative">
-                <select
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-                  className="w-full px-3 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-extrabold text-slate-850 dark:text-slate-200 appearance-none focus:outline-none focus:ring-2 focus:ring-[#006b5f] dark:focus:ring-[#76f4e0] pr-10 cursor-pointer"
+                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-700/80 bg-slate-900/60 text-xs font-semibold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#006b5f] focus:border-transparent transition-all font-mono"
+                />
+                <button
+                  type="button"
+                  id="toggle-password-visibility-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-3 top-3 text-slate-500 hover:text-slate-300 p-0.5 cursor-pointer transition-colors"
                 >
-                  {AVAILABLE_ROLES.map((r) => (
-                    <option key={r.role} value={r.role}>
-                      [{r.category}] {r.title}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-600 absolute right-3 top-3.5 pointer-events-none" />
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold leading-normal">
-                * Operational role determines active view permissions, ledger limits, and workflow approval authorities.
-              </p>
             </div>
 
-            {/* Sign-In Action Button */}
+            {/* Primary Login Action Button */}
             <motion.button
+              id="login-submit-button"
               type="submit"
               disabled={submitting}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              className="w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest text-white bg-gradient-to-r from-emerald-600 via-[#006b5f] to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-400 disabled:to-slate-400 disabled:text-slate-200 flex items-center justify-center gap-2 cursor-pointer shadow-[0_10px_25px_-5px_rgba(0,107,95,0.25)] transition-all"
+              whileTap={{ scale: 0.98 }}
+              className="w-full mt-2 py-3.5 rounded-xl text-xs font-black tracking-widest uppercase text-white bg-gradient-to-r from-emerald-600 via-[#006b5f] to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#006b5f]/25 transition-all"
             >
               <LogIn className="w-4 h-4" />
-              <span>{submitting ? 'Verifying Authorized Credentials…' : 'Enter ERP Workspace'}</span>
+              <span>{submitting ? 'Authenticating…' : 'LOGIN'}</span>
             </motion.button>
+
+            {/* Forgot Password Action Link */}
+            <div className="text-center pt-2">
+              <button
+                id="forgot-password-link"
+                type="button"
+                onClick={() => {
+                  setResetEmail(email);
+                  setResetSuccess(false);
+                  setShowForgotPasswordModal(true);
+                }}
+                className="text-xs font-bold text-slate-400 hover:text-teal-300 transition-colors cursor-pointer"
+              >
+                Forgot Password?
+              </button>
+            </div>
           </form>
 
-          {/* Footer Copyright */}
-          <div className="text-center pt-6 mt-6 border-t border-slate-100 dark:border-slate-850">
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-widest">
-              National Lights (Pvt) Ltd Pakistan • Corporate Portal
-            </p>
+          {/* Secure System Badge */}
+          <div className="pt-5 mt-5 border-t border-slate-800/80 flex items-center justify-center gap-1.5 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Authorized Corporate Identity • National Lights</span>
           </div>
         </motion.div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgotPasswordModal && (
+          <div
+            id="forgot-password-modal"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-sm bg-[#0c1422] border border-slate-800 rounded-3xl p-6 text-white shadow-2xl relative"
+            >
+              <button
+                type="button"
+                onClick={() => setShowForgotPasswordModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-800/60 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-2.5 mb-3">
+                <HelpCircle className="w-5 h-5 text-teal-400 shrink-0" />
+                <h3 className="text-sm font-extrabold uppercase tracking-wider">Password Recovery</h3>
+              </div>
+
+              {resetSuccess ? (
+                <div className="space-y-4 py-2">
+                  <div className="p-3 bg-emerald-950/40 border border-emerald-800/80 rounded-xl text-xs text-emerald-300 font-semibold leading-relaxed">
+                    Password reset instructions and verification code have been queued for{' '}
+                    <strong>{resetEmail}</strong>.
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-normal">
+                    You can also contact Head Office Administration directly at{' '}
+                    <strong className="text-white">shahzadullah@nationallights.com</strong> or call IT Support.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPasswordModal(false)}
+                    className="w-full py-2.5 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-bold text-xs uppercase cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPasswordSubmit} className="space-y-3.5 mt-3">
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Enter your corporate email address to receive password reset instructions.
+                  </p>
+                  <div>
+                    <input
+                      type="email"
+                      required
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="name@nationallight.pk"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                    <p className="font-bold text-slate-300">Executive IT Authority:</p>
+                    <p>Shahzad Ullah (Executive Director)</p>
+                    <p className="text-teal-400 font-mono">shahzadullah@nationallights.com</p>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-wider cursor-pointer"
+                  >
+                    Send Reset Link
+                  </button>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 };
