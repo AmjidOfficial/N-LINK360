@@ -84,7 +84,7 @@ export const SuperAdminExecutiveDashboard: React.FC<SuperAdminExecutiveDashboard
   const metrics = useMemo(() => {
     const totalReceivables = filteredCustomers.reduce((acc, c) => acc + (c.currentBalance || 0), 0);
     const totalCreditLimit = filteredCustomers.reduce((acc, c) => acc + (c.creditLimit || 0), 0);
-    const totalSalesMTD = filteredOrders.reduce((acc, so) => acc + (so.netTotal || so.totalAmount || 0), 0) + 3840000;
+    const totalSalesMTD = filteredOrders.reduce((acc, so) => acc + ((so as any).netTotal || so.totalAmount || 0), 0) + 3840000;
     const totalRecoveryMTD = (filteredCustomers.reduce((acc, c) => acc + (c.currentBalance || 0), 0) * 0.68) + 3250000;
     
     const monthlySalesTarget = 6500000;
@@ -126,7 +126,13 @@ export const SuperAdminExecutiveDashboard: React.FC<SuperAdminExecutiveDashboard
     const list = [...filteredCustomers].sort((a, b) => (b.currentBalance || 0) - (a.currentBalance || 0));
     if (!dealerSearchQuery.trim()) return list.slice(0, 6);
     const q = dealerSearchQuery.toLowerCase();
-    return list.filter((d) => d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q)).slice(0, 6);
+    return list
+      .filter(
+        (d) =>
+          ((d as any).name || d.companyName || '').toLowerCase().includes(q) ||
+          ((d as any).code || d.customerCode || d.id || '').toLowerCase().includes(q)
+      )
+      .slice(0, 6);
   }, [filteredCustomers, dealerSearchQuery]);
 
   // Mock Trend Chart Data (6 Months Comparison)
@@ -872,10 +878,10 @@ export const SuperAdminExecutiveDashboard: React.FC<SuperAdminExecutiveDashboard
 
                   return (
                     <tr key={dealer.id} className="hover:bg-bg-secondary/70 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-text-primary">{dealer.code}</td>
+                      <td className="py-3 px-4 font-mono font-bold text-text-primary">{dealer.customerCode || (dealer as any).code || dealer.id}</td>
                       <td className="py-3 px-4">
-                        <div className="font-bold text-deep-green">{dealer.name}</div>
-                        <div className="text-[11px] text-slate-400 font-normal">{dealer.proprietorName || 'Electric Store'}</div>
+                        <div className="font-bold text-deep-green">{dealer.companyName || (dealer as any).name}</div>
+                        <div className="text-[11px] text-slate-400 font-normal">{dealer.contactPerson || (dealer as any).proprietorName || 'Electric Store'}</div>
                       </td>
                       <td className="py-3 px-4">
                         <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[11px]">

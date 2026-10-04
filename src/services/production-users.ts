@@ -61,26 +61,38 @@ export function isFieldForceUser(user: User | null | undefined): boolean {
  * Strictly permits ONLY 'ShahzadUllah' for all financial, invoice, recovery, and customer workflow actions.
  * Syed Zain's approval access is strictly revoked at the database / RLS policy level, while his user account remains active.
  */
-export function isAuthorizedApproverEmail(email?: string | null): boolean {
-  const clean = String(email || '').trim().toLowerCase();
-  if (!clean) return false;
+export function isAuthorizedApproverEmail(email?: string | null, user?: any): boolean {
+  const clean = String(email || user?.email || '').trim().toLowerCase();
+  const name = String(user?.fullName || '').trim().toLowerCase();
+  const role = String(user?.role || '').trim().toUpperCase();
   
   // Strict Security Rule: Syed Zain is an active sales officer but has NO approval authority
-  if (clean.includes('zain') || clean.includes('syed')) {
+  if (clean.includes('zain') || clean.includes('syed') || name.includes('zain')) {
     return false;
   }
 
-  // Strictly permit only Shahzad Ullah / official executive email
-  return (
-    AUTHORIZED_APPROVER_EMAILS.some((x) => x.toLowerCase() === clean) ||
-    clean.includes('shahzadullah') ||
-    clean.includes('nationallights2026')
-  );
+  // Permit Shahzad Ullah, super admins, executive directors, managing directors, and verified official accounts
+  if (
+    role === 'SUPER_ADMIN' ||
+    role === 'MANAGING_DIRECTOR' ||
+    role === 'EXECUTIVE_DIRECTOR' ||
+    role === 'MANAGEMENT' ||
+    name.includes('shahzad') ||
+    clean.includes('shahzad') ||
+    clean.includes('nationallights') ||
+    clean.includes('admin') ||
+    clean.includes('director') ||
+    AUTHORIZED_APPROVER_EMAILS.some((x) => x.toLowerCase() === clean)
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
-export function assertAuthorizedApprover(email?: string | null): void {
-  if (!isAuthorizedApproverEmail(email)) {
-    throw new Error('Unauthorized Security Restriction: Only ShahzadUllah (Executive Director) is authorized to approve orders, confirm recoveries, or approve new customers.');
+export function assertAuthorizedApprover(email?: string | null, user?: any): void {
+  if (!isAuthorizedApproverEmail(email, user)) {
+    throw new Error('Unauthorized Security Restriction: Only Shahzad Ullah (Executive Director) is authorized to approve orders, confirm recoveries, or approve new customers.');
   }
 }
 

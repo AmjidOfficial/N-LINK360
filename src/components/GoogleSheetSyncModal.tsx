@@ -25,7 +25,15 @@ import {
   HardDrive,
   UploadCloud,
   Check,
+  Link2,
+  Copy,
 } from 'lucide-react';
+import {
+  getGoogleSheetsWebhookUrl,
+  setGoogleSheetsWebhookUrl,
+  syncToGoogleSheetsWebhook,
+  GOOGLE_APPS_SCRIPT_CODE,
+} from '../services/google-sheets';
 import {
   TARGET_SPREADSHEET_ID,
   getActiveSpreadsheetId,
@@ -73,7 +81,9 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
   appData,
   onSyncComplete,
 }) => {
-  const [activeMode, setActiveMode] = useState<'FULL_SYNC' | 'IMPORT' | 'EXPORT' | 'OFFLINE_QUEUE'>('FULL_SYNC');
+  const [activeMode, setActiveMode] = useState<'FULL_SYNC' | 'IMPORT' | 'EXPORT' | 'OFFLINE_QUEUE' | 'WEBHOOK'>('FULL_SYNC');
+  const [customWebhookUrl, setCustomWebhookUrl] = useState(getGoogleSheetsWebhookUrl());
+  const [copiedScript, setCopiedScript] = useState(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string>(getActiveSpreadsheetId());
   const [user, setUser] = useState<any>(getCurrentGoogleUser());
   const [token, setToken] = useState<string | null>(getAccessToken());
@@ -351,7 +361,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
         </div>
 
         {/* Mode Selector Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 p-2 bg-slate-100 border-b border-slate-200 shrink-0 gap-1">
+        <div className="grid grid-cols-2 sm:grid-cols-5 p-2 bg-slate-100 border-b border-slate-200 shrink-0 gap-1">
           <button
             type="button"
             onClick={() => { setActiveMode('FULL_SYNC'); setOpStatus({ type: 'idle' }); }}
@@ -362,7 +372,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
             }`}
           >
             <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-            <span>2-Way Sync All</span>
+            <span>2-Way Sync</span>
           </button>
           <button
             type="button"
@@ -374,7 +384,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
             }`}
           >
             <ArrowDownToLine className="w-3.5 h-3.5 shrink-0" />
-            <span>Import &rarr; DB</span>
+            <span>Import</span>
           </button>
           <button
             type="button"
@@ -386,7 +396,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
             }`}
           >
             <ArrowUpFromLine className="w-3.5 h-3.5 shrink-0" />
-            <span>Push &rarr; Sheet</span>
+            <span>Push</span>
           </button>
           <button
             type="button"
@@ -398,12 +408,24 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
             }`}
           >
             <Clock className="w-3.5 h-3.5 shrink-0" />
-            <span>Offline Queue</span>
+            <span>Queue</span>
             {pendingItems.length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border border-white animate-bounce">
                 {pendingItems.length}
               </span>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setActiveMode('WEBHOOK'); setOpStatus({ type: 'idle' }); }}
+            className={`py-1.5 px-1 rounded-xl text-[10px] sm:text-xs font-black flex items-center justify-center gap-1 transition-all cursor-pointer col-span-2 sm:col-span-1 ${
+              activeMode === 'WEBHOOK'
+                ? 'bg-[#006b5f] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 bg-white/60'
+            }`}
+          >
+            <Link2 className="w-3.5 h-3.5 shrink-0" />
+            <span>Permanent Webhook</span>
           </button>
         </div>
 
@@ -1187,6 +1209,131 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 5. PERMANENT WEBHOOK SYNC CONFIGURATION */}
+          {activeMode === 'WEBHOOK' && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gradient-to-br from-[#004d40] to-[#00796b] text-white border border-[#00695c] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Link2 className="w-5 h-5 text-teal-300" />
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                      Permanent Webhook Mirror Channel
+                    </h3>
+                  </div>
+                  <p className="text-[11px] text-teal-100 mt-1 max-w-xl leading-relaxed">
+                    Set up a "set-and-forget" serverless synchronization channel. This connects all devices and web clients directly to your sheet permanently without requiring users to sign in again and again!
+                  </p>
+                </div>
+              </div>
+
+              {/* Configure Webhook URL Card */}
+              <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-3.5">
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight">Configure Webhook URL</h4>
+                
+                {import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL && (
+                  <div className="p-2.5 bg-emerald-50 text-emerald-900 rounded-xl border border-emerald-200 text-xs flex items-center gap-2 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span>Server-Attached Webhook Active: <strong className="font-mono text-[10px] break-all">{import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL.slice(0, 50)}...</strong></span>
+                  </div>
+                )}
+
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  setGoogleSheetsWebhookUrl(customWebhookUrl);
+                  setOpStatus({
+                    type: 'success',
+                    message: '✓ Permanent Webhook URL saved successfully on this device!',
+                  });
+                }} className="space-y-2.5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
+                      Google Apps Script Webhook Exec URL
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://script.google.com/macros/s/.../exec"
+                      value={customWebhookUrl}
+                      onChange={(e) => setCustomWebhookUrl(e.target.value)}
+                      className="w-full text-xs font-mono p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1.5">
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-[#006b5f] hover:bg-[#005a50] text-white font-bold text-xs cursor-pointer shadow-2xs transition-all active:scale-95"
+                    >
+                      Save Webhook
+                    </button>
+                    {customWebhookUrl && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setIsOperating(true);
+                          setOpStatus({ type: 'idle' });
+                          try {
+                            const res = await syncToGoogleSheetsWebhook(customWebhookUrl, appData);
+                            setOpStatus({
+                              type: 'success',
+                              message: res.message,
+                            });
+                          } catch (err: any) {
+                            setOpStatus({
+                              type: 'error',
+                              message: `Webhook Sync failed: ${err.message || err}`,
+                            });
+                          } finally {
+                            setIsOperating(false);
+                          }
+                        }}
+                        disabled={isOperating}
+                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs cursor-pointer border border-slate-300 transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isOperating ? 'animate-spin' : ''}`} />
+                        <span>Force Webhook Sync Now</span>
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+              {/* How to deploy Script instructions */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Deployment Script</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold">Google Apps Script</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
+                      setCopiedScript(true);
+                      setTimeout(() => setCopiedScript(false), 2000);
+                    }}
+                    className="text-[10px] font-black text-[#006b5f] hover:text-[#005a50] flex items-center gap-1 cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{copiedScript ? 'Copied!' : 'Copy Code'}</span>
+                  </button>
+                </div>
+
+                <div className="p-2.5 bg-slate-900 text-slate-300 rounded-xl font-mono text-[10px] max-h-[160px] overflow-y-auto leading-relaxed border border-slate-800">
+                  <pre className="whitespace-pre-wrap">{GOOGLE_APPS_SCRIPT_CODE}</pre>
+                </div>
+
+                <div className="text-[11px] text-slate-600 space-y-1.5 list-decimal list-inside leading-relaxed bg-white p-3 rounded-xl border border-slate-200">
+                  <p className="font-bold text-slate-900 text-xs mb-1">How to deploy Google Apps Script:</p>
+                  <div>1. Open your Google Spreadsheet. Click <strong>Extensions &rarr; Apps Script</strong>.</div>
+                  <div>2. Delete any existing code, paste the script copied above, and save the project.</div>
+                  <div>3. Click <strong>Deploy &rarr; New Deployment</strong>. Choose <strong>Web App</strong> type.</div>
+                  <div>4. Set "Execute as" to <strong>Me (your email)</strong> and "Who has access" to <strong>Anyone</strong>. Click Deploy.</div>
+                  <div>5. Authorize permissions when prompted, and paste the generated <strong>Web App Exec URL</strong> above.</div>
+                </div>
+              </div>
             </div>
           )}
 

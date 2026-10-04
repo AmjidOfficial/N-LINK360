@@ -63,9 +63,9 @@ export interface NLinkKhataViewProps {
 
 export const NLinkKhataView: React.FC<NLinkKhataViewProps> = ({
   currentUser,
-  customers,
-  orders,
-  recoveries,
+  customers = [],
+  orders = [],
+  recoveries = [],
   onPlaceOrder,
   onRecordRecovery,
   onAddDealer,

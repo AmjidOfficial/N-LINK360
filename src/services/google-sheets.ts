@@ -11,6 +11,8 @@ const GOOGLE_SHEETS_WEBHOOK_KEY = 'nlink_google_sheets_webhook_url';
 const LAST_SYNC_KEY = 'nlink_google_sheets_last_sync';
 
 export function getGoogleSheetsWebhookUrl(): string {
+  const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL : undefined;
+  if (envUrl) return envUrl;
   return localStorage.getItem(GOOGLE_SHEETS_WEBHOOK_KEY) || '';
 }
 
@@ -305,23 +307,62 @@ export async function syncToGoogleSheetsWebhook(
   webhookUrl: string,
   appData: SupabaseAppData
 ): Promise<{ success: boolean; message: string }> {
-  if (!webhookUrl || !webhookUrl.startsWith('https://script.google.com')) {
-    throw new Error(
-      'Invalid Google Apps Script Webhook URL. It must start with https://script.google.com/macros/s/.../exec'
-    );
-  }
-
+  const finalWebhookUrl = webhookUrl || getGoogleSheetsWebhookUrl();
   const payload = formatAppDataForGoogleSheets(appData);
 
-  // In browsers, Google Apps Script webhooks require mode: 'no-cors' for simple redirects,
-  // or a standard POST with text/plain body to avoid CORS preflight rejection.
-  const response = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8',
-    },
-    body: JSON.stringify(payload),
-  });
+  let success = false;
+  let errMsg = '';
+
+  // 1. First attempt to sync via server proxy (which handles server-side fetch, avoids CORS, and uses server-side secrets)
+  try {
+    const proxyRes = await fetch('/api/sync-google-sheets', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-google-sheets-webhook': finalWebhookUrl || '',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (proxyRes.ok) {
+      const data = await proxyRes.json();
+      if (data.success) {
+        success = true;
+      } else {
+        errMsg = data.error || 'Server proxy returned failure status';
+      }
+    } else {
+      const data = await proxyRes.json().catch(() => ({}));
+      errMsg = data.error || `Server proxy returned error status: ${proxyRes.status}`;
+    }
+  } catch (proxyErr: any) {
+    console.warn('[Google Sheet Webhook] Server-side proxy sync attempt failed, attempting direct browser sync:', proxyErr);
+    errMsg = proxyErr.message || 'Server proxy connection error';
+  }
+
+  // 2. Fall back to direct browser fetch if server proxy failed and we have a local webhookUrl
+  if (!success && finalWebhookUrl) {
+    if (!finalWebhookUrl.startsWith('https://script.google.com')) {
+      throw new Error(
+        'Invalid Google Apps Script Webhook URL. It must start with https://script.google.com/macros/s/.../exec'
+      );
+    }
+    try {
+      await fetch(finalWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify(payload),
+      });
+      success = true; // Google Apps Script redirects usually mean the write succeeded even if browser preflight block occurs
+    } catch (directErr: any) {
+      console.error('[Google Sheet Webhook] Direct browser sync failed:', directErr);
+      throw new Error(`Google Sheets Webhook Sync failed. Server proxy error: ${errMsg}. Direct error: ${directErr.message || directErr}`);
+    }
+  } else if (!success) {
+    throw new Error(`Google Sheets Webhook Sync failed: ${errMsg || 'Webhook URL is not configured'}`);
+  }
 
   const nowIso = new Date().toLocaleString();
   localStorage.setItem(LAST_SYNC_KEY, nowIso);

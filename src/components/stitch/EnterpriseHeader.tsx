@@ -34,6 +34,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { getAccessToken, googleSignIn, initAuth, getCurrentGoogleUser } from '../../services/googleAuth';
+import { getGoogleSheetsWebhookUrl } from '../../services/google-sheets';
 import { subscribeToRateLimit, getRateLimitStatus, RateLimitStatus } from '../../services/googleSheetsLiveService';
 import { subscribeToAutoSync, getAutoSyncStatus, AutoSyncStatus } from '../../services/googleSheetsTwoWaySyncService';
 
@@ -377,7 +378,26 @@ export const EnterpriseHeader: React.FC<EnterpriseHeaderProps> = ({
                       </div>
                       <div className="flex flex-col gap-1 py-1 border-b border-slate-100 dark:border-slate-800/60">
                         <span className="text-slate-500 dark:text-slate-400">Google Connection:</span>
-                        {googleUser ? (
+                        {getGoogleSheetsWebhookUrl() ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400 truncate flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                              ✓ Permanent Sync Active
+                            </span>
+                            {onOpenSyncModal && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowSyncPopover(false);
+                                  onOpenSyncModal();
+                                }}
+                                className="text-left text-[#006b5f] dark:text-[#76f4e0] hover:underline font-bold mt-0.5"
+                              >
+                                Configure Sheet Webhook
+                              </button>
+                            )}
+                          </div>
+                        ) : googleUser ? (
                           <div className="flex flex-col gap-1">
                             <span className="font-semibold text-emerald-600 dark:text-emerald-400 truncate">
                               ✓ Connected: {googleUser.email}

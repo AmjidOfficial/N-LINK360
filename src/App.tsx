@@ -20,6 +20,7 @@ import { GoogleSheetSyncModal } from './components/GoogleSheetSyncModal';
 import { InvoicePdfPreviewModal } from './components/stitch/InvoicePdfPreviewModal';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { fallbackAppData, SupabaseAppData, loadSupabaseAppData } from './services/supabase-data';
+import { SEED_LEDGER_ENTRIES } from './data/seed-ledger-data';
 import {
   syncOrderToSupabase,
   syncRecoveryToSupabase,
@@ -37,31 +38,48 @@ import { purgeMockDataFromState, isProductionUser } from './utils/purgeMockData'
 import { generateSalesInvoicePdfBlob, downloadSalesInvoicePdf, buildInvoiceWhatsAppText } from './utils/exportInvoicePdf';
 import { fetchLiveGoogleSheetData } from './services/liveGoogleSheetSync';
 import { assertAuthorizedApprover, invalidateAllSessionsGlobally } from './services/production-users';
-import { getStoredTownNodes, saveTownNodes } from './services/townManagement';
+import { getStoredTownNodes, saveTownNodes, PAKISTAN_TOWN_COORDINATES } from './services/townManagement';
+import { persistAttendanceRecord } from './services/attendance';
+import { TeamShareModal } from './components/TeamShareModal';
+import { detectDeviceExperience, isMobileDevice } from './utils/deviceDetection';
 
 export default function App() {
-  // Experience Mode: 'FIELD_MOBILE' | 'HEAD_OFFICE'
-  // Specification Section 9: Field users route to Attendance, Head Office users route to Command Center
-  const [experienceMode, setExperienceMode] = useState<'FIELD_MOBILE' | 'HEAD_OFFICE'>(() => {
-    try {
-      const savedUser = localStorage.getItem('nlink_active_logged_user');
-      if (savedUser) {
-        const u = JSON.parse(savedUser);
-        const fieldRoles = ['SALES_RECOVERY', 'ORDER_BOOKER', 'RECOVERY_OFFICER', 'TSM', 'ASM', 'OB', 'SS'];
-        if (
-          (fieldRoles.includes(u.role) || u.department === 'SALES_FIELD') &&
-          !['SUPER_ADMIN', 'MANAGING_DIRECTOR', 'EXECUTIVE_DIRECTOR'].includes(u.role)
-        ) {
-          return 'FIELD_MOBILE';
-        }
-        return 'HEAD_OFFICE';
-      }
-    } catch {}
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      return 'FIELD_MOBILE';
+  // User Pinned Mode (True if user explicitly clicked "Switch to..." in this session, or URL provided ?mode=)
+  const [isUserPinnedExperience, setIsUserPinnedExperience] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      return Boolean(p.get('mode') || p.get('view') || p.get('app'));
     }
-    return 'HEAD_OFFICE';
+    return false;
   });
+
+  // Experience Mode: 'FIELD_MOBILE' | 'HEAD_OFFICE'
+  // Auto-detect device: Phones & Tablets (< 1024px) -> Mobile Version; Laptops & Desktops -> Head Office Web Portal
+  const [experienceMode, setExperienceMode] = useState<'FIELD_MOBILE' | 'HEAD_OFFICE'>(() => {
+    return detectDeviceExperience();
+  });
+
+  // Responsive device auto-detection on resize / orientation change (unless manually pinned by user)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleResize = () => {
+      if (!isUserPinnedExperience) {
+        const detected = detectDeviceExperience();
+        setExperienceMode(detected);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, [isUserPinnedExperience]);
+
+  // Team Share Working Link Modal State
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Ledger Live Toast Message
   const [ledgerToastMessage, setLedgerToastMessage] = useState<string | null>(null);
@@ -118,26 +136,17 @@ export default function App() {
       localStorage.setItem('nlink_active_logged_user', JSON.stringify(userPersona));
     } catch (e) {}
 
-    // AUTOMATIC ROLE-BASED HOME SCREEN ROUTING (Specification Section 9):
-    // FIELD USER: LOGIN -> ATTENDANCE (FieldMobileExperience)
-    // HEAD OFFICE: LOGIN -> HEAD OFFICE COMMAND CENTER (HeadOfficeExperience)
-    const fieldRoles = ['SALES_RECOVERY', 'ORDER_BOOKER', 'RECOVERY_OFFICER', 'TSM', 'ASM', 'OB', 'SS'];
-    const isFieldRole = fieldRoles.includes(userPersona.role) || userPersona.department === 'SALES_FIELD';
-    const isHeadOfficeRole = [
-      'SUPER_ADMIN',
-      'MANAGING_DIRECTOR',
-      'EXECUTIVE_DIRECTOR',
-      'ACCOUNTS',
-      'WAREHOUSE_MANAGER',
-      'FACTORY_MANAGER',
-      'DISPATCH_OFFICER',
-      'MANAGEMENT',
-    ].includes(userPersona.role);
-
-    if (isFieldRole && !isHeadOfficeRole) {
+    // AUTOMATIC DEVICE-AWARE & ROLE-BASED ROUTING:
+    // 1. Mobile Phone / Tablet -> Automatically routes to Field Mobile Experience
+    // 2. Laptop / Desktop -> Routes to Head Office Command Center (or Field Mobile if field role)
+    if (isMobileDevice()) {
       setExperienceMode('FIELD_MOBILE');
     } else {
-      setExperienceMode('HEAD_OFFICE');
+      if (isFieldRole && !isHeadOfficeRole && !isUserPinnedExperience) {
+        setExperienceMode('FIELD_MOBILE');
+      } else {
+        setExperienceMode('HEAD_OFFICE');
+      }
     }
   };
 
@@ -346,58 +355,102 @@ export default function App() {
     } catch (e) {}
   }, [profileUpdateRequests]);
 
-  // Check-In State
-  const [isCheckedIn, setIsCheckedIn] = useState<boolean>(true);
-  const [checkedInTime, setCheckedInTime] = useState<string | null>('09:12 AM');
-  const [checkedOutTime, setCheckedOutTime] = useState<string | null>(null);
+  // Check-In State (persisted in localStorage, defaults to false to allow auto-detection via GPS)
+  const [isCheckedIn, setIsCheckedIn] = useState<boolean>(() => {
+    return localStorage.getItem('nlink_isCheckedIn') === 'true';
+  });
+  const [checkedInTime, setCheckedInTime] = useState<string | null>(() => {
+    return localStorage.getItem('nlink_checkedInTime') || null;
+  });
+  const [checkedOutTime, setCheckedOutTime] = useState<string | null>(() => {
+    return localStorage.getItem('nlink_checkedOutTime') || null;
+  });
 
-  const handleToggleCheckIn = () => {
+  const handleCheckIn = (townName: string) => {
     const todayDateStr = new Date().toISOString().slice(0, 10);
     const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    if (!isCheckedIn) {
-      setIsCheckedIn(true);
-      setCheckedInTime(nowTimeStr);
-      setCheckedOutTime(null);
+    setIsCheckedIn(true);
+    setCheckedInTime(nowTimeStr);
+    setCheckedOutTime(null);
+    try {
+      localStorage.setItem('nlink_isCheckedIn', 'true');
+      localStorage.setItem('nlink_checkedInTime', nowTimeStr);
+      localStorage.removeItem('nlink_checkedOutTime');
+    } catch (e) {}
 
-      // Create or update today's attendance record
-      const newRecord: EmployeeAttendance = {
-        id: `att-${Date.now()}`,
-        employeeId: currentUser?.id || 'usr-active',
-        employeeCode: currentUser?.id?.toUpperCase() || 'EMP-001',
-        employeeName: currentUser?.fullName || 'Field Officer',
-        designation: currentUser?.roleTitle || 'Sales Officer',
-        department: 'SALES_FIELD',
-        date: todayDateStr,
-        checkInTime: nowTimeStr,
-        checkInLocation: `${selectedAttendanceTown} (Commercial Beat)`,
-        status: 'PRESENT',
-        isVerified: true,
-        verifiedBy: 'Shahzad Ullah',
-        createdAt: new Date().toISOString(),
-      };
+    // Create today's attendance record
+    const newRecord: EmployeeAttendance = {
+      id: `att-${Date.now()}`,
+      employeeId: currentUser?.id || 'usr-active',
+      employeeCode: currentUser?.id?.toUpperCase() || 'EMP-001',
+      employeeName: currentUser?.fullName || 'Field Officer',
+      designation: currentUser?.roleTitle || 'Sales Officer',
+      department: 'SALES_FIELD',
+      date: todayDateStr,
+      checkInTime: nowTimeStr,
+      checkInLocation: `${townName} (Commercial Beat)`,
+      status: 'PRESENT',
+      isVerified: true,
+      verifiedBy: 'Shahzad Ullah',
+      createdAt: new Date().toISOString(),
+    };
 
-      setAttendanceRecords((prev) => [newRecord, ...prev.filter((r) => !(r.employeeId === currentUser?.id && r.date === todayDateStr))]);
-      setLedgerToastMessage(`✓ Checked In successfully at ${nowTimeStr} in ${selectedAttendanceTown}`);
-    } else {
-      setIsCheckedIn(false);
-      setCheckedOutTime(nowTimeStr);
+    setAttendanceRecords((prev) => [newRecord, ...prev.filter((r) => !(r.employeeId === currentUser?.id && r.date === todayDateStr))]);
+    setLedgerToastMessage(`✓ Checked In successfully at ${nowTimeStr} in ${townName}`);
 
-      // Update existing record with checkout info
-      setAttendanceRecords((prev) =>
-        prev.map((r) => {
-          if (r.employeeId === currentUser?.id && r.date === todayDateStr) {
-            return {
-              ...r,
-              checkOutTime: nowTimeStr,
-              checkOutLocation: `${selectedAttendanceTown} (Shift End)`,
-            };
-          }
-          return r;
-        })
-      );
-      setLedgerToastMessage(`✓ Checked Out successfully at ${nowTimeStr}`);
-    }
+    // Persist to master Supabase field_attendance table
+    const townCoords = PAKISTAN_TOWN_COORDINATES[townName] || { lat: 34.0151, lng: 71.5249 };
+    persistAttendanceRecord({
+      date: todayDateStr,
+      checkInTime: nowTimeStr,
+      town: townName,
+      lat: townCoords.lat,
+      lng: townCoords.lng,
+      accuracy: 5,
+      status: 'CHECKED_IN',
+      userName: currentUser?.fullName || 'Field Officer',
+    }).catch((err) => console.warn('Attendance check-in sync:', err));
+  };
+
+  const handleCheckOut = (townName: string) => {
+    const todayDateStr = new Date().toISOString().slice(0, 10);
+    const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    setIsCheckedIn(false);
+    setCheckedOutTime(nowTimeStr);
+    try {
+      localStorage.setItem('nlink_isCheckedIn', 'false');
+      localStorage.setItem('nlink_checkedOutTime', nowTimeStr);
+    } catch (e) {}
+
+    // Update today's record with check-out info
+    setAttendanceRecords((prev) =>
+      prev.map((r) => {
+        if (r.employeeId === currentUser?.id && r.date === todayDateStr) {
+          return {
+            ...r,
+            checkOutTime: nowTimeStr,
+            checkOutLocation: `${townName} (Shift End)`,
+          };
+        }
+        return r;
+      })
+    );
+    setLedgerToastMessage(`✓ Checked Out successfully at ${nowTimeStr}`);
+
+    // Persist check-out to master Supabase field_attendance table
+    const townCoords = PAKISTAN_TOWN_COORDINATES[townName] || { lat: 34.0151, lng: 71.5249 };
+    persistAttendanceRecord({
+      date: todayDateStr,
+      checkOutTime: nowTimeStr,
+      town: townName,
+      lat: townCoords.lat,
+      lng: townCoords.lng,
+      accuracy: 5,
+      status: 'CHECKED_OUT',
+      userName: currentUser?.fullName || 'Field Officer',
+    }).catch((err) => console.warn('Attendance check-out sync:', err));
   };
 
   // Submit Profile Update Request Handler
@@ -504,6 +557,7 @@ export default function App() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(() => SEED_LEDGER_ENTRIES || []);
 
   // Load cached database on mount & purge all mock/dummy data
   useEffect(() => {
@@ -518,7 +572,7 @@ export default function App() {
         localOrders = purgeRes.remainingOrders;
         localRecs = purgeRes.remainingRecoveries;
 
-        if (!isProductionUser(currentUser)) {
+        if (currentUser && !isProductionUser(currentUser)) {
           setCurrentUser(purgeRes.remainingUsers[0]);
         }
       } catch (err) {
@@ -533,14 +587,82 @@ export default function App() {
       setOrders(localOrders);
       setRecoveries(localRecs);
 
+      // Helper merger to preserve user-entered data
+      const mergeCustomers = (localList: Customer[], remoteList: Customer[]): Customer[] => {
+        const map = new Map<string, Customer>();
+        remoteList.forEach((c) => {
+          const key = c.id || c.customerCode || c.companyName;
+          if (key) map.set(key.toLowerCase(), c);
+        });
+        localList.forEach((c) => {
+          const key = c.id || c.customerCode || c.companyName;
+          if (key) {
+            const lower = key.toLowerCase();
+            if (!map.has(lower)) {
+              map.set(lower, c);
+            } else {
+              const existing = map.get(lower)!;
+              map.set(lower, { ...existing, ...c });
+            }
+          }
+        });
+        return Array.from(map.values());
+      };
+
+      const mergeOrders = (localList: SalesOrder[], remoteList: SalesOrder[]): SalesOrder[] => {
+        const map = new Map<string, SalesOrder>();
+        remoteList.forEach((o) => {
+          const key = o.id || o.orderNumber;
+          if (key) map.set(key, o);
+        });
+        localList.forEach((o) => {
+          const key = o.id || o.orderNumber;
+          if (key) {
+            if (!map.has(key)) {
+              map.set(key, o);
+            } else {
+              const existing = map.get(key)!;
+              map.set(key, { ...existing, ...o });
+            }
+          }
+        });
+        return Array.from(map.values());
+      };
+
+      const mergeRecoveries = (localList: Recovery[], remoteList: Recovery[]): Recovery[] => {
+        const map = new Map<string, Recovery>();
+        remoteList.forEach((r) => {
+          const key = r.id || (r as any).recoveryNumber;
+          if (key) map.set(key, r);
+        });
+        localList.forEach((r) => {
+          const key = r.id || (r as any).recoveryNumber;
+          if (key) {
+            if (!map.has(key)) {
+              map.set(key, r);
+            } else {
+              const existing = map.get(key)!;
+              map.set(key, { ...existing, ...r });
+            }
+          }
+        });
+        return Array.from(map.values());
+      };
+
       // Fetch live Supabase database content
       try {
         const liveData = await loadSupabaseAppData(currentUser);
         if (liveData && (liveData.customers.length > 0 || liveData.salesOrders.length > 0 || liveData.recoveries.length > 0)) {
-          setCustomers(liveData.customers);
-          setOrders(liveData.salesOrders);
-          setRecoveries(liveData.recoveries);
-          syncToCache(liveData.customers, liveData.salesOrders, liveData.recoveries);
+          const mergedC = mergeCustomers(localCusts, liveData.customers);
+          const mergedO = mergeOrders(localOrders, liveData.salesOrders);
+          const mergedR = mergeRecoveries(localRecs, liveData.recoveries);
+          setCustomers(mergedC);
+          setOrders(mergedO);
+          setRecoveries(mergedR);
+          if (liveData.ledgerEntries && liveData.ledgerEntries.length > 0) {
+            setLedgerEntries(liveData.ledgerEntries);
+          }
+          syncToCache(mergedC, mergedO, mergedR);
         }
       } catch (err: any) {
         console.warn('Supabase remote load bypassed, operating on local sync:', err.message || err);
@@ -551,10 +673,21 @@ export default function App() {
         const sheetData = await fetchLiveGoogleSheetData();
         if (sheetData && sheetData.customersCount > 0) {
           console.log(`✓ Auto-loaded ${sheetData.customersCount} dealers from Google Sheets`);
-          setCustomers(sheetData.customers);
-          setOrders(sheetData.orders);
-          setRecoveries(sheetData.recoveries);
-          syncToCache(sheetData.customers, sheetData.orders, sheetData.recoveries);
+          setCustomers((prevCusts) => {
+            const merged = mergeCustomers(prevCusts, sheetData.customers);
+            return merged;
+          });
+          setOrders((prevOrds) => {
+            const merged = mergeOrders(prevOrds, sheetData.orders);
+            return merged;
+          });
+          setRecoveries((prevRecs) => {
+            const merged = mergeRecoveries(prevRecs, sheetData.recoveries);
+            return merged;
+          });
+          if (sheetData.ledgerEntries && sheetData.ledgerEntries.length > 0) {
+            setLedgerEntries(sheetData.ledgerEntries);
+          }
         }
       } catch (sheetErr: any) {
         console.warn('Google Sheet auto-load error:', sheetErr.message || sheetErr);
@@ -632,17 +765,19 @@ export default function App() {
   const handleApproveOrder = (orderId: string, _approver?: string) => {
     let approvedTotal = 0;
     let targetCustomerId = '';
+    let targetCustomerName = '';
 
     const updatedOrders = orders.map((o) => {
       if (o.id === orderId || o.orderNumber === orderId) {
         approvedTotal = o.totalAmount || 0;
         targetCustomerId = o.customerId;
+        targetCustomerName = o.customerName;
         return {
           ...o,
           shahzadApproval: 'APPROVED' as const,
           shahzadApprovedAt: new Date().toISOString(),
           status: 'APPROVED' as const,
-          dualApprovalStatus: 'APPROVED' as const,
+          dualApprovalStatus: 'DUAL_APPROVED' as const,
           approvedBy: 'Shahzad Ullah',
         };
       }
@@ -651,7 +786,11 @@ export default function App() {
 
     // Immediate ledger posting upon Shahzad Ullah's approval
     const updatedCustomers = customers.map((c) => {
-      if (c.id === targetCustomerId) {
+      const isTarget =
+        (targetCustomerId && (c.id === targetCustomerId || c.customerCode === targetCustomerId)) ||
+        (targetCustomerName && c.companyName && c.companyName.toLowerCase().trim() === targetCustomerName.toLowerCase().trim());
+
+      if (isTarget) {
         const newBal = (c.currentBalance ?? c.openingBalance ?? 0) + approvedTotal;
         return {
           ...c,
@@ -668,7 +807,13 @@ export default function App() {
 
     const targetOrd = updatedOrders.find((o) => o.id === orderId || o.orderNumber === orderId);
     if (targetOrd) {
-      triggerLedgerApprovalSync('INVOICE_APPROVED', targetOrd.orderNumber || targetOrd.id, targetOrd.customerId, currentAppData);
+      const updatedAppData: SupabaseAppData = {
+        ...currentAppData,
+        customers: updatedCustomers,
+        salesOrders: updatedOrders,
+        recoveries: recoveries,
+      };
+      triggerLedgerApprovalSync('INVOICE_APPROVED', targetOrd.orderNumber || targetOrd.id, targetOrd.customerId, updatedAppData);
     }
 
     setLedgerToastMessage(`✓ Order approved by Shahzad Ullah. Official ledger updated.`);
@@ -699,17 +844,19 @@ export default function App() {
   const handleApproveRecovery = (recoveryId: string, _approver?: string) => {
     let confirmedAmount = 0;
     let targetCustomerId = '';
+    let targetCustomerName = '';
 
     const updatedRecoveries = recoveries.map((r) => {
-      if (r.id === recoveryId) {
+      if (r.id === recoveryId || (r as any).recoveryNumber === recoveryId) {
         confirmedAmount = r.amount || 0;
         targetCustomerId = r.customerId;
+        targetCustomerName = r.customerName;
         return {
           ...r,
           shahzadApproval: 'APPROVED' as const,
           shahzadApprovedAt: new Date().toISOString(),
           status: 'VERIFIED' as const,
-          dualApprovalStatus: 'APPROVED' as const,
+          dualApprovalStatus: 'DUAL_APPROVED' as const,
           verifiedBy: 'Shahzad Ullah',
         };
       }
@@ -718,7 +865,11 @@ export default function App() {
 
     // Immediate ledger credit upon Shahzad Ullah's confirmation
     const updatedCustomers = customers.map((c) => {
-      if (c.id === targetCustomerId) {
+      const isTarget =
+        (targetCustomerId && (c.id === targetCustomerId || c.customerCode === targetCustomerId)) ||
+        (targetCustomerName && c.companyName && c.companyName.toLowerCase().trim() === targetCustomerName.toLowerCase().trim());
+
+      if (isTarget) {
         const newBal = Math.max(0, (c.currentBalance ?? c.openingBalance ?? 0) - confirmedAmount);
         return {
           ...c,
@@ -735,7 +886,13 @@ export default function App() {
 
     const targetRec = updatedRecoveries.find((r) => r.id === recoveryId);
     if (targetRec) {
-      triggerLedgerApprovalSync('RECOVERY_VERIFIED', targetRec.id, targetRec.customerId, currentAppData);
+      const updatedAppData: SupabaseAppData = {
+        ...currentAppData,
+        customers: updatedCustomers,
+        salesOrders: orders,
+        recoveries: updatedRecoveries,
+      };
+      triggerLedgerApprovalSync('RECOVERY_VERIFIED', targetRec.id, targetRec.customerId, updatedAppData);
     }
 
     setLedgerToastMessage(`✓ Payment confirmed by Shahzad Ullah. Customer ledger credited.`);
@@ -774,6 +931,9 @@ export default function App() {
         setCustomers(sheetData.customers);
         setOrders(sheetData.orders);
         setRecoveries(sheetData.recoveries);
+        if (sheetData.ledgerEntries && sheetData.ledgerEntries.length > 0) {
+          setLedgerEntries(sheetData.ledgerEntries);
+        }
         syncToCache(sheetData.customers, sheetData.orders, sheetData.recoveries);
         setLedgerToastMessage(
           `✓ Google Sheet live sync complete! Loaded ${sheetData.customersCount} dealers, ${sheetData.ordersCount} invoices/orders, and ${sheetData.recoveriesCount} recoveries.`
@@ -876,9 +1036,16 @@ export default function App() {
       setCurrentUser(null);
       setLedgerToastMessage('⚠️ Global session reset by administrator. Please re-authenticate.');
     };
+    const handleSystemToast = (e: any) => {
+      if (e?.detail?.message) {
+        setLedgerToastMessage(e.detail.message);
+      }
+    };
     window.addEventListener('nlink:global_session_invalidated', handleGlobalSessionInvalidated);
+    window.addEventListener('nlink:system_toast', handleSystemToast);
     return () => {
       window.removeEventListener('nlink:global_session_invalidated', handleGlobalSessionInvalidated);
+      window.removeEventListener('nlink:system_toast', handleSystemToast);
     };
   }, []);
 
@@ -927,7 +1094,7 @@ export default function App() {
       setCustomers(purgeRes.remainingCustomers);
       setOrders(purgeRes.remainingOrders);
       setRecoveries(purgeRes.remainingRecoveries);
-      if (!isProductionUser(currentUser)) {
+      if (currentUser && !isProductionUser(currentUser)) {
         setCurrentUser(purgeRes.remainingUsers[0]);
       }
       setLedgerToastMessage(`✓ ${purgeRes.message}`);
@@ -987,7 +1154,8 @@ export default function App() {
           recoveries={recoveries}
           attendanceRecords={attendanceRecords}
           isCheckedIn={isCheckedIn}
-          onToggleCheckIn={handleToggleCheckIn}
+          onCheckIn={handleCheckIn}
+          onCheckOut={handleCheckOut}
           checkedInTime={checkedInTime}
           checkedOutTime={checkedOutTime}
           selectedTown={selectedAttendanceTown}
@@ -996,7 +1164,10 @@ export default function App() {
           onRecordRecovery={handleRecordRecovery}
           onOpenRateCard={() => setIsRateCardOpen(true)}
           onOpenSyncModal={() => setIsSyncModalOpen(true)}
-          onSwitchToHeadOffice={() => setExperienceMode('HEAD_OFFICE')}
+          onSwitchToHeadOffice={() => {
+            setIsUserPinnedExperience(true);
+            setExperienceMode('HEAD_OFFICE');
+          }}
           onSignOut={handleSignOut}
           onDownloadInvoicePdf={handleDownloadInvoicePdf}
           onPreviewInvoicePdf={handlePreviewInvoicePdf}
@@ -1008,6 +1179,8 @@ export default function App() {
           onSubmitProfileUpdateRequest={handleSubmitProfileUpdateRequest}
           pendingProfileRequest={profileUpdateRequests.find((r) => r.userId === currentUser.id && r.status === 'PENDING') || null}
           townNodes={townNodes}
+          ledgerEntries={ledgerEntries}
+          onOpenShareModal={() => setIsShareModalOpen(true)}
         />
       ) : (
         <HeadOfficeExperience
@@ -1015,6 +1188,7 @@ export default function App() {
           customers={customers}
           orders={orders}
           recoveries={recoveries}
+          ledgerEntries={ledgerEntries}
           attendanceRecords={attendanceRecords}
           profileUpdateRequests={profileUpdateRequests}
           townNodes={townNodes}
@@ -1034,13 +1208,24 @@ export default function App() {
           onRecordRecovery={handleRecordRecovery}
           onOpenRateCard={() => setIsRateCardOpen(true)}
           onOpenSyncModal={() => setIsSyncModalOpen(true)}
-          onSwitchToFieldMobile={() => setExperienceMode('FIELD_MOBILE')}
+          onSwitchToFieldMobile={() => {
+            setIsUserPinnedExperience(true);
+            setExperienceMode('FIELD_MOBILE');
+          }}
           onSignOut={handleSignOut}
           onPurgeMockData={handlePurgeMockData}
           onPreviewInvoicePdf={handlePreviewInvoicePdf}
+          onOpenShareModal={() => setIsShareModalOpen(true)}
           isOnline={isOnline}
         />
       )}
+
+      {/* Team Share Working Link Modal */}
+      <TeamShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        currentUser={currentUser}
+      />
 
       {/* Official Rate List Modal */}
       <NationalLightRateListModal

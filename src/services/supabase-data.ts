@@ -11,6 +11,7 @@ import {
   initialStockReturns,
   initialVisits,
 } from './store';
+import { SEED_LEDGER_ENTRIES } from '../data/seed-ledger-data';
 import type { Customer, CustomerVisit, Dispatch, InventoryBalance, Invoice, LedgerEntry, Recovery, SalesOrder, SKU, StockReturn, User } from '../types';
 
 export interface SupabaseAppData {
@@ -27,16 +28,16 @@ export interface SupabaseAppData {
 }
 
 export const fallbackAppData: SupabaseAppData = {
-  customers: initialCustomers,
-  skus: initialSKUs,
-  inventoryBalances: initialInventoryBalances,
-  salesOrders: initialSalesOrders,
-  invoices: initialInvoices,
-  recoveries: initialRecoveries,
-  ledgerEntries: initialLedgerEntries,
-  dispatches: initialDispatches,
-  stockReturns: initialStockReturns,
-  visits: initialVisits,
+  customers: initialCustomers || [],
+  skus: initialSKUs || [],
+  inventoryBalances: initialInventoryBalances || [],
+  salesOrders: initialSalesOrders || [],
+  invoices: initialInvoices || [],
+  recoveries: initialRecoveries || [],
+  ledgerEntries: initialLedgerEntries || SEED_LEDGER_ENTRIES || [],
+  dispatches: initialDispatches || [],
+  stockReturns: initialStockReturns || [],
+  visits: initialVisits || [],
 };
 
 export const emptyData: SupabaseAppData = fallbackAppData;

@@ -10,9 +10,12 @@ import { UserRole } from '../types';
 export interface NLinkUser {
   id: string;
   employeeCode: string;
+  userCode?: string;
   fullName: string;
+  name?: string;
   email: string;
   phone: string;
+  cnic?: string;
   role: UserRole;
   roleTitle: string;
   department: 'SALES_FIELD' | 'EXECUTIVE' | 'FINANCE_ACCOUNTS' | 'SUPPLY_CHAIN' | 'MANUFACTURING';
@@ -27,6 +30,7 @@ export interface NLinkUser {
   // Targets & Performance (Monthly in PKR)
   monthlySalesTarget: number;
   monthlyRecoveryTarget: number;
+  monthlyTarget?: number;
   mtdSalesAchieved: number;
   mtdRecoveryAchieved: number;
   todaySalesAchieved: number;

@@ -94,6 +94,7 @@ import { MtdAchievementGauge } from './MtdAchievementGauge';
 import { TargetVsAchievementSummary } from './TargetVsAchievementSummary';
 import { DailySummaryCard } from './DailySummaryCard';
 import { FmcgCommandCenter } from './FmcgCommandCenter';
+import { TownMetricsDashboardCard } from './TownMetricsDashboardCard';
 import { toast } from './ui/ToastNotification';
 import { getAccessToken } from '../services/googleAuth';
 import { validateTownGeofence, getTownCoordinates } from '../services/townCoordinates';
@@ -4675,6 +4676,16 @@ export const SalesRecoveryApp: React.FC<SalesRecoveryAppProps> = ({
               />
             ) : (
               <>
+                {/* Town-Based Metrics Summary Card */}
+                <TownMetricsDashboardCard
+                  selectedTown={selectedTown}
+                  onSelectTown={setSelectedTown}
+                  availableTowns={assignedTowns}
+                  customers={customers}
+                  salesOrders={salesOrders}
+                  recoveries={recoveries}
+                />
+
                 {/* Header & Hierarchy Role Badge */}
                 <div className="sra-card">
                   <div className="flex items-center justify-between flex-wrap gap-2">

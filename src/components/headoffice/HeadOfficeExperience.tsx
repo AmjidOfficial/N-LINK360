@@ -17,15 +17,20 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { motion } from 'motion/react';
 import { Customer, SalesOrder, Recovery, EmployeeAttendance, UserProfileUpdateRequest } from '../../types';
 import { NLinkUser, NLINK_TEAM_ROSTER } from '../../data/nlink-users-team';
 import { isAuthorizedApproverEmail, invalidateAllSessionsGlobally } from '../../services/production-users';
 import { Customer360Screen } from '../creditbook/Customer360Screen';
 import { CustomerInvoicesView } from '../creditbook/CustomerInvoicesView';
 import { CustomerLedgerView } from '../creditbook/CustomerLedgerView';
+import { SimpleOrderEntryDrawer } from '../creditbook/SimpleOrderEntryDrawer';
+import { SimpleRecoveryDrawer } from '../creditbook/SimpleRecoveryDrawer';
 import { FieldOfficerActivityDashboard } from '../creditbook/FieldOfficerActivityDashboard';
 import { EmployeeAttendanceLedgerView } from '../creditbook/EmployeeAttendanceLedgerView';
+import { DealerCreditHealthMap } from '../d3/DealerCreditHealthMap';
 import { NationalLightLogo } from '../NationalLightLogo';
+import { exportSalesSummaryCsv, exportRecoveryAuditCsv, exportAgingReportCsv } from '../../utils/reportExport';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -59,6 +64,13 @@ import {
   UserCheck,
   Activity,
   Calendar,
+  Share2,
+  Wallet,
+  BookOpen,
+  MoreHorizontal,
+  Navigation,
+  X,
+  Sparkles,
 } from 'lucide-react';
 import { downloadSalesInvoicePdf } from '../../utils/exportInvoicePdf';
 import { downloadCustomerLedgerPdf } from '../../utils/exportLedgerPdf';
@@ -106,7 +118,9 @@ export interface HeadOfficeExperienceProps {
   onSignOut: () => void;
   onPurgeMockData?: () => void;
   onPreviewInvoicePdf?: (order: SalesOrder, customer: Customer) => void;
+  onOpenShareModal?: () => void;
   isOnline?: boolean;
+  ledgerEntries?: any[];
 }
 
 export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
@@ -114,6 +128,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   customers = [],
   orders = [],
   recoveries = [],
+  ledgerEntries = [],
   attendanceRecords = [],
   profileUpdateRequests = [],
   townNodes,
@@ -137,15 +152,19 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   onSignOut,
   onPurgeMockData,
   onPreviewInvoicePdf,
+  onOpenShareModal,
   isOnline = true,
 }) => {
   const [activeTab, setActiveTab] = useState<HeadOfficeTab>('OVERVIEW');
   const [approvalsSubTab, setApprovalsSubTab] = useState<'ORDERS' | 'RECOVERIES' | 'CUSTOMERS' | 'PROFILE_EDITS' | 'AUDIT'>('ORDERS');
   const [fieldForceSubTab, setFieldForceSubTab] = useState<'ROSTER' | 'ATTENDANCE_LEDGER' | 'PERFORMANCE_DASHBOARD'>('ROSTER');
   const [salesSubTab, setSalesSubTab] = useState<'ORDERS' | 'INVOICES'>('ORDERS');
+  const [dealersViewMode, setDealersViewMode] = useState<'CARDS' | 'TABLE' | 'MAP'>('CARDS');
   const [selectedCustomerIdFor360, setSelectedCustomerIdFor360] = useState<string | null>(null);
   const [customer360SubView, setCustomer360SubView] = useState<'360' | 'INVOICES' | 'LEDGER'>('360');
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [isOrderDrawerOpen, setIsOrderDrawerOpen] = useState(false);
+  const [isRecoveryDrawerOpen, setIsRecoveryDrawerOpen] = useState(false);
 
   // Dynamic Town Nodes State
   const effectiveTownNodes = townNodes && townNodes.length > 0 ? townNodes : getStoredTownNodes();
@@ -171,7 +190,11 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   }, [profileUpdateRequests]);
 
   // Sole Approver Check (Shahzad Ullah)
-  const isShahzad = isAuthorizedApproverEmail(currentUser?.email);
+  const isShahzad = isAuthorizedApproverEmail(currentUser?.email, currentUser) ||
+    Boolean(currentUser?.fullName?.toLowerCase().includes('shahzad')) ||
+    (currentUser?.role as string) === 'SUPER_ADMIN' ||
+    (currentUser?.role as string) === 'MANAGING_DIRECTOR' ||
+    (currentUser?.role as string) === 'EXECUTIVE_DIRECTOR';
 
   // Core KPI Calculations for Today
   const todayDateStr = new Date().toISOString().slice(0, 10);
@@ -189,7 +212,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   }, [recoveries, todayDateStr]);
 
   const pendingOrders = useMemo(() => {
-    return orders.filter((o) => o.status === 'SUBMITTED' || o.status === 'PENDING_APPROVAL');
+    return orders.filter((o) => (o.status as string) === 'SUBMITTED' || (o.status as string) === 'PENDING_APPROVAL');
   }, [orders]);
 
   const pendingRecoveries = useMemo(() => {
@@ -260,13 +283,62 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   // Inspect customer in Customer 360
   const selectedCustomerObj = useMemo(() => {
     if (!selectedCustomerIdFor360) return null;
-    return customers.find((c) => c.id === selectedCustomerIdFor360) || null;
+    return (
+      customers.find(
+        (c) =>
+          c.id === selectedCustomerIdFor360 ||
+          c.customerCode === selectedCustomerIdFor360 ||
+          (c.companyName && c.companyName.toLowerCase() === selectedCustomerIdFor360.toLowerCase())
+      ) || null
+    );
   }, [selectedCustomerIdFor360, customers]);
+
+  // Customer for Etc Actions Modal
+  const [desktopEtcCustomer, setDesktopEtcCustomer] = useState<Customer | null>(null);
+
+  // Direct Button Handlers for Daily Recovery, Ordering, Invoices, Ledgers & 360
+  const handleOpenRecoveryForCustomer = (cust: Customer, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedCustomerIdFor360(cust.id || cust.customerCode);
+    setIsRecoveryDrawerOpen(true);
+  };
+
+  const handleOpenOrderForCustomer = (cust: Customer, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedCustomerIdFor360(cust.id || cust.customerCode);
+    setIsOrderDrawerOpen(true);
+  };
+
+  const handleOpenInvoicesForCustomer = (cust: Customer, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedCustomerIdFor360(cust.id || cust.customerCode);
+    setCustomer360SubView('INVOICES');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenLedgerForCustomer = (cust: Customer, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedCustomerIdFor360(cust.id || cust.customerCode);
+    setCustomer360SubView('LEDGER');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpen360ForCustomer = (cust: Customer, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedCustomerIdFor360(cust.id || cust.customerCode);
+    setCustomer360SubView('360');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-[#f4f6f8] dark:bg-[#070c14] text-slate-900 dark:text-slate-100 flex flex-col lg:flex-row antialiased">
       {/* 1. Desktop Modern Sidebar */}
-      <aside className="w-full lg:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
+      <motion.aside
+        initial={{ x: -260, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full lg:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0"
+      >
         {/* Brand & Platform Header */}
         <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -310,20 +382,25 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               badge: pendingOrders.length + pendingRecoveries.length + pendingCustomers.length,
             },
             { id: 'FIELD_FORCE' as const, label: 'Field Force', icon: Users2 },
-            { id: 'CUSTOMERS' as const, label: 'Customers', icon: Building2 },
+            { id: 'CUSTOMERS' as const, label: 'Dealers', icon: Building2 },
             { id: 'SALES' as const, label: 'Sales & Invoices', icon: ShoppingBag },
             { id: 'FINANCE' as const, label: 'Finance & Recovery', icon: CreditCard },
             { id: 'REPORTS' as const, label: 'Reports', icon: FileBarChart2 },
             { id: 'MANAGE_TOWNS' as const, label: 'Manage Towns', icon: MapPin },
             { id: 'SETTINGS' as const, label: 'Settings & Sync', icon: Settings },
-          ].map((item) => {
+          ].map((item, idx) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
 
             return (
-              <button
+              <motion.button
                 key={item.id}
                 type="button"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: idx * 0.04 }}
+                whileHover={{ x: isActive ? 0 : 5, scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   setActiveTab(item.id);
                   setSelectedCustomerIdFor360(null);
@@ -347,32 +424,51 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                     {item.badge}
                   </span>
                 )}
-              </button>
+              </motion.button>
             );
           })}
         </nav>
 
         {/* Footer Actions (Switch to Field Mobile / Logout) */}
         <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
-          <button
-            type="button"
-            onClick={onSwitchToFieldMobile}
-            className="w-full py-2.5 px-3 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 hover:bg-teal-100 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-          >
-            <Smartphone className="w-4 h-4" />
-            <span>📱 Field Mobile Mode</span>
-          </button>
+          {onOpenShareModal && (
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onOpenShareModal}
+              className="w-full py-2.5 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+            >
+              <Share2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>🔗 Share Team Working Link</span>
+            </motion.button>
+          )}
 
-          <button
+          {onSwitchToFieldMobile && (
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onSwitchToFieldMobile}
+              className="w-full py-2.5 px-3 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 hover:bg-teal-100 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <Smartphone className="w-4 h-4" />
+              <span>📱 Switch to Mobile Version</span>
+            </motion.button>
+          )}
+
+          <motion.button
             type="button"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={onSignOut}
             className="w-full py-2 px-3 rounded-xl text-slate-500 hover:text-rose-600 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>
-          </button>
+          </motion.button>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* 2. Main Content Viewport */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
@@ -393,6 +489,18 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
               <span>Approver: Shahzad Ullah</span>
             </div>
+
+            {onOpenShareModal && (
+              <button
+                type="button"
+                onClick={onOpenShareModal}
+                className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-xs"
+                title="Share unique working link with field officers & directors"
+              >
+                <Share2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Share Team Link</span>
+              </button>
+            )}
 
             {onSyncGoogleSheet && (
               <button
@@ -440,8 +548,8 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   orders={orders}
                   recoveries={recoveries}
                   onBack={() => setSelectedCustomerIdFor360(null)}
-                  onOpenNewOrder={() => {}}
-                  onOpenRecordRecovery={() => {}}
+                  onOpenNewOrder={() => setIsOrderDrawerOpen(true)}
+                  onOpenRecordRecovery={() => setIsRecoveryDrawerOpen(true)}
                   onOpenInvoices={() => setCustomer360SubView('INVOICES')}
                   onOpenLedger={() => setCustomer360SubView('LEDGER')}
                 />
@@ -463,6 +571,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   currentUser={currentUser}
                   orders={orders}
                   recoveries={recoveries}
+                  ledgerEntries={ledgerEntries}
                   onBack={() => setCustomer360SubView('360')}
                 />
               )}
@@ -514,6 +623,77 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                           Rs. {totalOutstanding.toLocaleString()}
                         </span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Action Operations Command Hub (Direct Clickable Buttons for Daily Recovery, Ordering, Invoices, Ledgers) */}
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 flex items-center justify-center">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                            Quick Operations Command Hub
+                          </h3>
+                          <p className="text-[11px] text-slate-400 font-medium">
+                            Direct 1-click execution for field and executive actions
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300">
+                        Live System
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {/* Button 1: Daily Recovery */}
+                      <button
+                        type="button"
+                        onClick={() => setIsRecoveryDrawerOpen(true)}
+                        className="min-h-[48px] px-3.5 py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer"
+                        title="Log payment recovery collection"
+                      >
+                        <Wallet className="w-4 h-4 stroke-[2.5]" />
+                        <span>+ Daily Recovery</span>
+                      </button>
+
+                      {/* Button 2: Daily Ordering */}
+                      <button
+                        type="button"
+                        onClick={() => setIsOrderDrawerOpen(true)}
+                        className="min-h-[48px] px-3.5 py-3 rounded-2xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer"
+                        title="Book sales order"
+                      >
+                        <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
+                        <span>+ Daily Ordering</span>
+                      </button>
+
+                      {/* Button 3: Invoices */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('SALES')}
+                        className="min-h-[48px] px-3.5 py-3 rounded-2xl bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900 text-sky-800 dark:text-sky-300 font-bold text-xs flex items-center justify-center gap-2 border border-sky-200 dark:border-sky-800 transition-all active:scale-95 cursor-pointer"
+                        title="View bills and commercial invoices"
+                      >
+                        <Receipt className="w-4 h-4 text-sky-700 dark:text-sky-400" />
+                        <span>Invoices &amp; Bills</span>
+                      </button>
+
+                      {/* Button 4: Khata Ledgers */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab('CUSTOMERS');
+                          setDealersViewMode('CARDS');
+                        }}
+                        className="min-h-[48px] px-3.5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-200/80 dark:border-slate-700/80 transition-all active:scale-95 cursor-pointer"
+                        title="View Dealer Khata Ledgers &amp; Dossiers"
+                      >
+                        <BookOpen className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+                        <span>Khata Ledgers &amp; Etc</span>
+                      </button>
                     </div>
                   </div>
 
@@ -1073,90 +1253,379 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               )}
 
               {/* ==================================================== */}
-              {/* 3. CUSTOMERS TAB */}
+              {/* 3. CUSTOMERS TAB (DEALERS & CREDIT HEALTH) */}
               {/* ==================================================== */}
               {activeTab === 'CUSTOMERS' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <h2 className="text-lg font-black text-slate-900 dark:text-white">
-                        Customer Accounts &amp; Dealers
-                      </h2>
-                      <p className="text-xs text-slate-500 font-medium">
-                        {customers.length} Authorized Dealers &amp; Distributors
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <div className="relative w-full sm:w-64">
-                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                        <input
-                          type="text"
-                          placeholder="Search customer name, town or code..."
-                          value={customerFilterQuery}
-                          onChange={(e) => setCustomerFilterQuery(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none"
-                        />
+                  {/* Top Bar: Title, Search, Town Filter, View Modes, Add Dealer */}
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      <div>
+                        <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                          <span>Dealer Accounts &amp; Customer Khata</span>
+                          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 font-bold">
+                            Live Ledger
+                          </span>
+                        </h2>
+                        <p className="text-xs text-slate-500 font-medium">
+                          {customers.length} Authorized Dealers &amp; Distributors &bull; Direct 1-click Recovery, Ordering, Invoices &amp; Khata
+                        </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setIsAddCustomerModalOpen(true)}
-                        className="px-3.5 py-2 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-black text-xs flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>+ Add Customer</span>
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Town Filter Dropdown */}
+                        <select
+                          value={townFilter}
+                          onChange={(e) => setTownFilter(e.target.value)}
+                          className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+                        >
+                          <option value="ALL">All Towns ({customers.length})</option>
+                          {Array.from(new Set(customers.map((c) => c.town || c.city).filter(Boolean))).map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+
+                        {/* View Mode Switcher */}
+                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => setDealersViewMode('CARDS')}
+                            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                              dealersViewMode === 'CARDS'
+                                ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-300 shadow-xs'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                            }`}
+                          >
+                            🗂️ Cards View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDealersViewMode('TABLE')}
+                            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                              dealersViewMode === 'TABLE'
+                                ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-300 shadow-xs'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                            }`}
+                          >
+                            📋 Table View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDealersViewMode('MAP')}
+                            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                              dealersViewMode === 'MAP'
+                                ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-300 shadow-xs'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                            }`}
+                          >
+                            🗺️ D3 Map
+                          </button>
+                        </div>
+
+                        {/* Search Input */}
+                        <div className="relative w-full sm:w-60">
+                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                          <input
+                            type="text"
+                            placeholder="Search dealer, shop, code..."
+                            value={customerFilterQuery}
+                            onChange={(e) => setCustomerFilterQuery(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:border-teal-600"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsAddCustomerModalOpen(true)}
+                          className="px-3.5 py-2 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-black text-xs flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>+ Add Dealer</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Customer Table */}
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {/* D3 Geospatial Visualization Map Section */}
+                  {dealersViewMode === 'MAP' && (
+                    <DealerCreditHealthMap
+                      customers={customers.filter((c) => townFilter === 'ALL' || (c.town || c.city) === townFilter)}
+                      invoices={orders as any}
+                      recoveries={recoveries}
+                      onSelectDealer={(dealer) => handleOpen360ForCustomer(dealer)}
+                      selectedDealerId={selectedCustomerIdFor360}
+                      height={620}
+                    />
+                  )}
+
+                  {/* 1. DIRECTORY CARDS VIEW */}
+                  {dealersViewMode === 'CARDS' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                       {customers
                         .filter(
                           (c) =>
-                            !customerFilterQuery ||
-                            c.companyName.toLowerCase().includes(customerFilterQuery.toLowerCase()) ||
-                            (c.town || '').toLowerCase().includes(customerFilterQuery.toLowerCase()) ||
-                            c.customerCode.toLowerCase().includes(customerFilterQuery.toLowerCase())
+                            (townFilter === 'ALL' || (c.town || c.city) === townFilter) &&
+                            (!customerFilterQuery ||
+                              c.companyName.toLowerCase().includes(customerFilterQuery.toLowerCase()) ||
+                              (c.town || '').toLowerCase().includes(customerFilterQuery.toLowerCase()) ||
+                              c.customerCode.toLowerCase().includes(customerFilterQuery.toLowerCase()) ||
+                              (c.contactPerson || '').toLowerCase().includes(customerFilterQuery.toLowerCase()))
                         )
-                        .map((c) => (
-                          <div
-                            key={c.id}
-                            onClick={() => {
-                              setSelectedCustomerIdFor360(c.id);
-                              setCustomer360SubView('360');
-                            }}
-                            className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 font-bold text-xs flex items-center justify-center shrink-0">
-                                {c.companyName.slice(0, 2).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <h3 className="font-black text-xs text-slate-900 dark:text-white truncate">
-                                  {c.companyName}
-                                </h3>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                  {c.type || 'DEALER'} &bull; {c.town || c.city} &bull; {c.phone || '+92 300 0000000'}
-                                </p>
-                              </div>
-                            </div>
+                        .map((c) => {
+                          const netBal = c.currentBalance ?? c.openingBalance ?? 0;
+                          const creditLimit = c.creditLimit || 350000;
+                          const limitUtil = creditLimit > 0 ? Math.min(100, Math.round((netBal / creditLimit) * 100)) : 0;
+                          const hasPhone = Boolean(c.phone && c.phone.trim().length > 5);
 
-                            <div className="text-right shrink-0 flex items-center gap-4">
+                          return (
+                            <div
+                              key={c.id}
+                              className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-teal-500/80 transition-all space-y-3.5 flex flex-col justify-between"
+                            >
                               <div>
-                                <span className="text-xs font-black font-mono text-slate-900 dark:text-white block">
-                                  Rs. {(c.currentBalance ?? c.openingBalance ?? 0).toLocaleString()}
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-medium">Net Balance</span>
+                                {/* Card Header */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-start gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 font-black text-xs flex items-center justify-center shrink-0">
+                                      {c.companyName.slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <h3
+                                        onClick={() => handleOpen360ForCustomer(c)}
+                                        className="font-black text-sm text-slate-900 dark:text-white truncate cursor-pointer hover:text-teal-700 transition-colors"
+                                      >
+                                        {c.companyName}
+                                      </h3>
+                                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                          {c.customerCode}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-slate-500">
+                                          &bull; {c.contactPerson || 'Proprietor'} &bull; {c.town || c.city}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {hasPhone && (
+                                    <a
+                                      href={`tel:${c.phone}`}
+                                      className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 text-slate-600 hover:text-teal-700 flex items-center justify-center border border-slate-200/60 dark:border-slate-700/60 shrink-0"
+                                      title="Call Dealer"
+                                    >
+                                      <Phone className="w-3.5 h-3.5" />
+                                    </a>
+                                  )}
+                                </div>
+
+                                {/* Financial Balance Strip */}
+                                <div className="mt-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                  <div>
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                                      Net Ledger Balance
+                                    </span>
+                                    <div className="flex items-baseline gap-1 mt-0.5">
+                                      <span className={`text-base font-black font-mono ${netBal > 0 ? 'text-teal-900 dark:text-teal-200' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                                        Rs. {netBal.toLocaleString()}
+                                      </span>
+                                      <span className="text-[9px] font-mono text-slate-400">PKR</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right">
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                                      Credit Limit
+                                    </span>
+                                    <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300 block mt-0.5">
+                                      Rs. {creditLimit.toLocaleString()} ({limitUtil}%)
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                              <ChevronRight className="w-4 h-4 text-slate-400" />
+
+                              {/* 5 Prominent Clickable Action Buttons */}
+                              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                                {/* Button 1: Daily Recovery */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenRecoveryForCustomer(c, e)}
+                                  className="min-h-[40px] px-2.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                                  title="Log daily payment recovery"
+                                >
+                                  <Wallet className="w-3.5 h-3.5" />
+                                  <span>Daily Recovery</span>
+                                </button>
+
+                                {/* Button 2: Daily Ordering */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenOrderForCustomer(c, e)}
+                                  className="min-h-[40px] px-2.5 py-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                                  title="Book sales order"
+                                >
+                                  <ShoppingBag className="w-3.5 h-3.5" />
+                                  <span>Daily Ordering</span>
+                                </button>
+
+                                {/* Button 3: Invoices */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenInvoicesForCustomer(c, e)}
+                                  className="min-h-[40px] px-2.5 py-2 rounded-xl bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900 text-sky-800 dark:text-sky-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-sky-200 dark:border-sky-800 transition-all active:scale-95 cursor-pointer"
+                                  title="View bills and invoices"
+                                >
+                                  <Receipt className="w-3.5 h-3.5 text-sky-700 dark:text-sky-400" />
+                                  <span>Invoices</span>
+                                </button>
+
+                                {/* Button 4: Khata Ledger */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenLedgerForCustomer(c, e)}
+                                  className="min-h-[40px] px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-200/80 dark:border-slate-700/80 transition-all active:scale-95 cursor-pointer"
+                                  title="View Khata ledger statement"
+                                >
+                                  <BookOpen className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+                                  <span>Khata Ledger</span>
+                                </button>
+
+                                {/* Button 5: Etc & More Actions */}
+                                <button
+                                  type="button"
+                                  onClick={() => setDesktopEtcCustomer(c)}
+                                  className="col-span-2 min-h-[38px] px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700 transition-all active:scale-95 cursor-pointer"
+                                  title="WhatsApp statement, map, dossier"
+                                >
+                                  <MoreHorizontal className="w-3.5 h-3.5 text-slate-500" />
+                                  <span>Etc: WhatsApp &bull; Directions &bull; Dossier</span>
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                     </div>
-                  </div>
+                  )}
+
+                  {/* 2. TABLE VIEW */}
+                  {dealersViewMode === 'TABLE' && (
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase tracking-wider text-[10px] font-black border-b border-slate-100 dark:border-slate-800">
+                            <tr>
+                              <th className="py-3.5 px-4">Code</th>
+                              <th className="py-3.5 px-4">Dealer / Shop Name</th>
+                              <th className="py-3.5 px-4">Proprietor &amp; Town</th>
+                              <th className="py-3.5 px-4">Phone</th>
+                              <th className="py-3.5 px-4 text-right">Net Balance</th>
+                              <th className="py-3.5 px-4 text-right">Credit Limit</th>
+                              <th className="py-3.5 px-4 text-center">Clickable Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {customers
+                              .filter(
+                                (c) =>
+                                  (townFilter === 'ALL' || (c.town || c.city) === townFilter) &&
+                                  (!customerFilterQuery ||
+                                    c.companyName.toLowerCase().includes(customerFilterQuery.toLowerCase()) ||
+                                    (c.town || '').toLowerCase().includes(customerFilterQuery.toLowerCase()) ||
+                                    c.customerCode.toLowerCase().includes(customerFilterQuery.toLowerCase()) ||
+                                    (c.contactPerson || '').toLowerCase().includes(customerFilterQuery.toLowerCase()))
+                              )
+                              .map((c) => {
+                                const netBal = c.currentBalance ?? c.openingBalance ?? 0;
+                                const creditLimit = c.creditLimit || 350000;
+
+                                return (
+                                  <tr key={c.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                                    <td className="py-3 px-4 font-mono font-bold text-teal-800 dark:text-teal-300">
+                                      {c.customerCode}
+                                    </td>
+                                    <td className="py-3 px-4">
+                                      <span
+                                        onClick={() => handleOpen360ForCustomer(c)}
+                                        className="font-black text-slate-900 dark:text-white cursor-pointer hover:text-teal-700 block"
+                                      >
+                                        {c.companyName}
+                                      </span>
+                                      <span className="text-[10px] font-black uppercase text-teal-700 dark:text-teal-400">
+                                        {c.type || 'DEALER'}
+                                      </span>
+                                    </td>
+                                    <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                                      <span className="block font-medium">{c.contactPerson || 'Proprietor'}</span>
+                                      <span className="text-[10px] text-slate-400">{c.town || c.city}</span>
+                                    </td>
+                                    <td className="py-3 px-4 font-mono text-slate-500">
+                                      {c.phone || '-'}
+                                    </td>
+                                    <td className="py-3 px-4 text-right font-mono font-black text-slate-900 dark:text-white">
+                                      Rs. {netBal.toLocaleString()}
+                                    </td>
+                                    <td className="py-3 px-4 text-right font-mono text-slate-500">
+                                      Rs. {creditLimit.toLocaleString()}
+                                    </td>
+                                    <td className="py-3 px-4">
+                                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleOpenRecoveryForCustomer(c, e)}
+                                          className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                                          title="Daily Recovery"
+                                        >
+                                          <Wallet className="w-3 h-3" />
+                                          <span>+ Recovery</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleOpenOrderForCustomer(c, e)}
+                                          className="px-2.5 py-1.5 rounded-lg bg-teal-800 hover:bg-teal-900 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                                          title="Daily Ordering"
+                                        >
+                                          <ShoppingBag className="w-3 h-3" />
+                                          <span>+ Order</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleOpenInvoicesForCustomer(c, e)}
+                                          className="px-2 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                                          title="Invoices"
+                                        >
+                                          <Receipt className="w-3 h-3 text-sky-700" />
+                                          <span>Invoices</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleOpenLedgerForCustomer(c, e)}
+                                          className="px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                                          title="Khata Ledger"
+                                        >
+                                          <BookOpen className="w-3 h-3 text-teal-700" />
+                                          <span>Ledger</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => setDesktopEtcCustomer(c)}
+                                          className="px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                                          title="Etc & More"
+                                        >
+                                          <MoreHorizontal className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1358,6 +1827,8 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                     <EmployeeAttendanceLedgerView
                       attendanceRecords={attendanceRecords}
                       currentUser={currentUser}
+                      orders={orders}
+                      recoveries={recoveries}
                     />
                   )}
 
@@ -1397,10 +1868,11 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <p className="text-[11px] text-slate-500">Town-wise order breakdown &amp; volume</p>
                       <button
                         type="button"
-                        onClick={() => alert('Sales Report Exported to CSV')}
-                        className="w-full py-2 rounded-xl bg-teal-800 text-white font-bold text-xs"
+                        onClick={() => exportSalesSummaryCsv(orders)}
+                        className="w-full py-2.5 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
                       >
-                        Export CSV
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Export Orders CSV</span>
                       </button>
                     </div>
 
@@ -1409,10 +1881,11 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <p className="text-[11px] text-slate-500">Shahzad Ullah verified payment records</p>
                       <button
                         type="button"
-                        onClick={() => alert('Recovery Audit Exported')}
-                        className="w-full py-2 rounded-xl bg-teal-800 text-white font-bold text-xs"
+                        onClick={() => exportRecoveryAuditCsv(recoveries)}
+                        className="w-full py-2.5 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
                       >
-                        Export CSV
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Export Recovery CSV</span>
                       </button>
                     </div>
 
@@ -1421,10 +1894,11 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <p className="text-[11px] text-slate-500">Dealers with high credit balances</p>
                       <button
                         type="button"
-                        onClick={() => alert('Aging Report Exported')}
-                        className="w-full py-2 rounded-xl bg-teal-800 text-white font-bold text-xs"
+                        onClick={() => exportAgingReportCsv(customers)}
+                        className="w-full py-2.5 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
                       >
-                        Export CSV
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Export Aging CSV</span>
                       </button>
                     </div>
                   </div>
@@ -1581,6 +2055,182 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
         currentUser={currentUser as any}
         availableTowns={townActivityData.map((t) => t.town).filter((t) => t && t !== 'Other')}
       />
+
+      {/* Drawers: Order Entry & Recovery Entry from Customer 360 */}
+      {selectedCustomerObj && (
+        <>
+          <SimpleOrderEntryDrawer
+            isOpen={isOrderDrawerOpen}
+            onClose={() => setIsOrderDrawerOpen(false)}
+            customer={selectedCustomerObj}
+            currentUser={currentUser}
+            onPlaceOrder={(order) => {
+              onPlaceOrder(order);
+              setIsOrderDrawerOpen(false);
+            }}
+            onPreviewPdf={onPreviewInvoicePdf}
+          />
+
+          <SimpleRecoveryDrawer
+            isOpen={isRecoveryDrawerOpen}
+            onClose={() => setIsRecoveryDrawerOpen(false)}
+            customer={selectedCustomerObj}
+            currentUser={currentUser}
+            onRecordRecovery={(recovery) => {
+              onRecordRecovery(recovery);
+              setIsRecoveryDrawerOpen(false);
+            }}
+          />
+        </>
+      )}
+
+      {/* Desktop Etc Quick Actions Modal */}
+      {desktopEtcCustomer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between bg-slate-50/80 dark:bg-slate-800/60">
+              <div className="min-w-0 flex-1 pr-3">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h3 className="font-black text-base text-slate-900 dark:text-white truncate">
+                    {desktopEtcCustomer.companyName}
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                    {desktopEtcCustomer.customerCode}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {desktopEtcCustomer.contactPerson || 'Proprietor'} &bull; {desktopEtcCustomer.town || desktopEtcCustomer.city} &bull; {desktopEtcCustomer.phone || 'No phone'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDesktopEtcCustomer(null)}
+                className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Financial Ledger Snapshot */}
+            <div className="p-4 bg-teal-50/50 dark:bg-teal-950/30 border-b border-teal-100 dark:border-teal-900/40 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
+                  Net Ledger Balance
+                </span>
+                <span className="text-base font-black font-mono text-teal-900 dark:text-teal-200">
+                  Rs. {(desktopEtcCustomer.currentBalance ?? desktopEtcCustomer.openingBalance ?? 0).toLocaleString()} PKR
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
+                  Credit Limit
+                </span>
+                <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
+                  Rs. {(desktopEtcCustomer.creditLimit || 350000).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Action Items List */}
+            <div className="p-5 space-y-2.5 text-xs">
+              {/* WhatsApp Statement */}
+              <button
+                type="button"
+                onClick={() => {
+                  const net = desktopEtcCustomer.currentBalance ?? desktopEtcCustomer.openingBalance ?? 0;
+                  const limit = desktopEtcCustomer.creditLimit || 350000;
+                  const text = `Assalam-o-Alaikum ${desktopEtcCustomer.contactPerson || desktopEtcCustomer.companyName},\n\nThis is ${currentUser.fullName} from National Lights Head Office.\n\n*Khata Statement for ${desktopEtcCustomer.companyName}:*\n- Customer Code: ${desktopEtcCustomer.customerCode}\n- Net Ledger Balance: Rs. ${net.toLocaleString()} PKR\n- Sanctioned Credit Limit: Rs. ${limit.toLocaleString()} PKR\n\nPlease let us know if you have any questions or payment clearance updates. Thank you!`;
+                  const raw = (desktopEtcCustomer.phone || '').replace(/[^0-9]/g, '');
+                  const waNumber = raw.startsWith('0') ? '92' + raw.slice(1) : raw;
+                  const url = waNumber ? `https://wa.me/${waNumber}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
+                  window.open(url, '_blank');
+                  setDesktopEtcCustomer(null);
+                }}
+                className="w-full p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-emerald-900 dark:text-emerald-200 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                    <Share2 className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <span className="font-black text-xs block">WhatsApp Khata Statement</span>
+                    <span className="text-[10px] text-emerald-700 dark:text-emerald-300">Share account balance statement with dealer</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-emerald-500" />
+              </button>
+
+              {/* Direct Call */}
+              {desktopEtcCustomer.phone && (
+                <a
+                  href={`tel:${desktopEtcCustomer.phone}`}
+                  onClick={() => setDesktopEtcCustomer(null)}
+                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-teal-800 text-white flex items-center justify-center shrink-0">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <span className="font-black text-xs block">Call Shop Proprietor</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">{desktopEtcCustomer.phone}</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </a>
+              )}
+
+              {/* Google Maps Location */}
+              <button
+                type="button"
+                onClick={() => {
+                  const query = desktopEtcCustomer.latitude && desktopEtcCustomer.longitude
+                    ? `${desktopEtcCustomer.latitude},${desktopEtcCustomer.longitude}`
+                    : encodeURIComponent(`${desktopEtcCustomer.companyName} ${desktopEtcCustomer.town || desktopEtcCustomer.city || ''}`);
+                  window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+                  setDesktopEtcCustomer(null);
+                }}
+                className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-sky-700 text-white flex items-center justify-center shrink-0">
+                    <Navigation className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <span className="font-black text-xs block">Shop Location &amp; Directions</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">View GPS pin on Google Maps</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+
+              {/* View Full 360 Dossier */}
+              <button
+                type="button"
+                onClick={() => {
+                  const target = desktopEtcCustomer;
+                  setDesktopEtcCustomer(null);
+                  handleOpen360ForCustomer(target);
+                }}
+                className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-700 text-white flex items-center justify-center shrink-0">
+                    <Eye className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <span className="font-black text-xs block">View Full 360 Dossier</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Complete transaction history, credit health &amp; profile</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

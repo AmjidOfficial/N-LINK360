@@ -59,9 +59,9 @@ export interface EnterpriseDashboardTabProps {
 
 export const EnterpriseDashboardTab: React.FC<EnterpriseDashboardTabProps> = ({
   currentUser,
-  customers,
-  orders,
-  recoveries,
+  customers = [],
+  orders = [],
+  recoveries = [],
   onNavigateTab,
   onOpenAddDealer,
   onOpenRateCard,

@@ -11,6 +11,7 @@ import { Customer, SalesOrder } from '../../types';
 import { NLinkUser, NLINK_TEAM_ROSTER } from '../../data/nlink-users-team';
 import { CreditHealthIndicator } from '../CreditHealthIndicator';
 import { downloadCustomerLedgerPdf } from '../../utils/exportLedgerPdf';
+import { DealerCreditHealthMap } from '../d3/DealerCreditHealthMap';
 import {
   PAKISTAN_REGIONS,
   getCitiesByRegionId,
@@ -31,7 +32,7 @@ export interface EnterpriseDealersTabProps {
 
 export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
   currentUser,
-  customers,
+  customers = [],
   orders = [],
   onAddDealer,
   onEditDealer,
@@ -50,6 +51,7 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
   const [editingDealer, setEditingDealer] = useState<Customer | null>(null);
   const [dealerToDelete, setDealerToDelete] = useState<Customer | null>(null);
   const [selectedNewOfficerId, setSelectedNewOfficerId] = useState<string>('');
+  const [showD3Map, setShowD3Map] = useState(true);
 
   const isExecutive =
     currentUser.role === 'SUPER_ADMIN' ||
@@ -148,7 +150,7 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
       }
 
       if (filterType === 'active') return d.approvalStatus === 'APPROVED' || d.isActive;
-      if (filterType === 'pending') return d.approvalStatus === 'PENDING' || d.status === 'PENDING_APPROVAL';
+      if (filterType === 'pending') return d.approvalStatus === 'PENDING_APPROVAL' || (d.approvalStatus as string) === 'PENDING' || d.status === 'PENDING_APPROVAL';
       if (filterType === 'overdue') return (d.currentBalance || 0) > (d.creditLimit || 1) * 0.7;
       return true;
     });
@@ -156,7 +158,7 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
 
   // Counts
   const activeCount = customers.filter((c) => c.approvalStatus === 'APPROVED' || c.isActive).length;
-  const pendingCount = customers.filter((c) => c.approvalStatus === 'PENDING' || c.status === 'PENDING_APPROVAL').length;
+  const pendingCount = customers.filter((c) => c.approvalStatus === 'PENDING_APPROVAL' || (c.approvalStatus as string) === 'PENDING' || c.status === 'PENDING_APPROVAL').length;
   const highBalanceCount = customers.filter((c) => (c.currentBalance || 0) > (c.creditLimit || 1) * 0.7).length;
 
   const totalOutstanding = customers.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
@@ -381,6 +383,43 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
         ))}
       </div>
 
+      {/* 2.5 D3 Geospatial Dealer Credit Health & Risk Intelligence Map */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[#006b5f] text-[18px]">
+              analytics
+            </span>
+            <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+              D3 Credit Risk Map
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowD3Map(!showD3Map)}
+            className="text-xs font-bold text-[#006b5f] hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <span>{showD3Map ? 'Hide Map' : 'Show Credit Risk Map'}</span>
+            <span className="material-symbols-outlined text-[16px]">
+              {showD3Map ? 'expand_less' : 'expand_more'}
+            </span>
+          </button>
+        </div>
+
+        {showD3Map && (
+          <DealerCreditHealthMap
+            customers={customers}
+            invoices={orders as any}
+            onSelectDealer={(dealer) => {
+              setProfileDealer(dealer);
+            }}
+            selectedDealerId={profileDealer?.id}
+            height={460}
+          />
+        )}
+      </div>
+
       {/* 3. Search Bar with Top Register CTA */}
       <div className="flex items-center gap-2.5 mb-3.5">
         <div className="relative flex-1">
@@ -463,7 +502,7 @@ export const EnterpriseDealersTab: React.FC<EnterpriseDealersTabProps> = ({
             .slice(0, 2)
             .toUpperCase() || 'NL';
 
-          const isPending = dealer.approvalStatus === 'PENDING' || dealer.status === 'PENDING_APPROVAL';
+          const isPending = dealer.approvalStatus === 'PENDING_APPROVAL' || (dealer.approvalStatus as string) === 'PENDING' || dealer.status === 'PENDING_APPROVAL';
 
           return (
             <div

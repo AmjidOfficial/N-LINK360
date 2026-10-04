@@ -34,7 +34,8 @@ import {
 } from './googleSheetsLiveService';
 import { executeGoogleSheetImport, ImportSummary } from './googleSheetImportService';
 import { getAccessToken, ensureFreshGoogleAccessToken } from './googleAuth';
-import { SupabaseAppData } from './supabase-data';
+import type { SupabaseAppData } from './supabase-data';
+import { getGoogleSheetsWebhookUrl, syncToGoogleSheetsWebhook } from './google-sheets';
 import type { Customer, SalesOrder, Recovery } from '../types';
 
 export { TARGET_SPREADSHEET_ID, getActiveSpreadsheetId };
@@ -104,7 +105,15 @@ export function getLocalDatabaseCache(): LocalDatabaseCache {
         lastUpdated: new Date().toISOString(),
       };
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw) || {};
+    return {
+      orders: Array.isArray(parsed.orders) ? parsed.orders : [],
+      recoveries: Array.isArray(parsed.recoveries) ? parsed.recoveries : [],
+      customers: Array.isArray(parsed.customers) ? parsed.customers : [],
+      visits: Array.isArray(parsed.visits) ? parsed.visits : [],
+      attendance: Array.isArray(parsed.attendance) ? parsed.attendance : [],
+      lastUpdated: parsed.lastUpdated || new Date().toISOString(),
+    };
   } catch (err) {
     console.error('Failed to read local database cache:', err);
     return {
@@ -635,13 +644,67 @@ export async function executeTwoWaySync(
   appData: SupabaseAppData,
   token?: string | null
 ): Promise<TwoWaySyncResult> {
-  // Step 1: Ensure active, non-expired OAuth 2.0 access token
-  let effectiveToken = token || (await ensureFreshGoogleAccessToken());
+  const webhookUrl = getGoogleSheetsWebhookUrl();
   const spreadsheetId = getActiveSpreadsheetId() || TARGET_SPREADSHEET_ID;
 
   currentIsSyncing = true;
   currentLastError = null;
   notifyStatusChange();
+
+  // Primary zero-auth Webhook Sync Channel (Always available on all devices at all times with no re-login needed)
+  if (webhookUrl) {
+    try {
+      console.log('[Google Sheets TwoWaySync] Executing zero-auth synchronization via permanent Webhook channel...');
+      const webhookRes = await syncToGoogleSheetsWebhook(webhookUrl, appData);
+      
+      // Flush pending queue since we did a full authoritative database sync
+      const pending = getPendingUploads();
+      if (pending.length > 0) {
+        savePendingUploads([]); // Clear queue since a full sync completely overwrites the sheet with the latest database state
+      }
+
+      currentLastError = null;
+      currentLastMessage = webhookRes.message;
+      
+      const nowIso = new Date().toISOString();
+      localStorage.setItem(LAST_SYNC_KEY, nowIso);
+      const nextSync = Date.now() + AUTO_SYNC_INTERVAL_MS;
+      localStorage.setItem(NEXT_SYNC_KEY, String(nextSync));
+      
+      // Local ERP sync gateway log
+      try {
+        if (typeof window !== 'undefined') {
+          await fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'ENTERPRISE_WEBHOOK_SYNC',
+              timestamp: nowIso,
+              customersCount: appData.customers?.length || 0,
+              ordersCount: appData.salesOrders?.length || 0,
+              recoveriesCount: appData.recoveries?.length || 0,
+            }),
+          }).catch(() => {});
+        }
+      } catch (e) {}
+
+      currentIsSyncing = false;
+      notifyStatusChange();
+
+      return {
+        success: true,
+        flushedUploadsCount: pending.length,
+        message: webhookRes.message,
+        timestamp: nowIso,
+      };
+    } catch (err: any) {
+      console.warn('[Google Sheets TwoWaySync] Webhook sync failed, falling back to OAuth if available:', err);
+      // Fall through to standard OAuth sync if webhook fails
+    }
+  }
+
+  // Step 1: Ensure active, non-expired OAuth 2.0 access token
+  let effectiveToken = token || (await ensureFreshGoogleAccessToken());
 
   const performSyncFlow = async (authToken: string | null) => {
     let flushedCount = 0;

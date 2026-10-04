@@ -1,5 +1,24 @@
 import React, { useState } from 'react';
-import { LogIn, Mail, Lock, Eye, EyeOff, ShieldAlert, CheckCircle2, HelpCircle, X, ShieldCheck } from 'lucide-react';
+import {
+  LogIn,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ShieldAlert,
+  CheckCircle2,
+  HelpCircle,
+  X,
+  ShieldCheck,
+  Sparkles,
+  Key,
+  ChevronDown,
+  ChevronUp,
+  UserCheck,
+  Check,
+  Copy,
+  ExternalLink
+} from 'lucide-react';
 import { signInWithRegisteredEmail } from '../services/auth';
 import type { User } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -28,14 +47,15 @@ export const AuthGate: React.FC<AuthGateProps> = ({
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [showEnvKeyGuide, setShowEnvKeyGuide] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   if (currentUser) return <>{children}</>;
 
-  const handleLogin = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const cleanEmail = email.trim().toLowerCase();
+  const executeSignIn = async (loginEmail: string, loginPassword?: string) => {
+    const cleanEmail = loginEmail.trim().toLowerCase();
     if (!cleanEmail) {
-      setError('Please enter your registered corporate email.');
+      setError('Please enter your corporate email address.');
       return;
     }
 
@@ -44,15 +64,31 @@ export const AuthGate: React.FC<AuthGateProps> = ({
     setNotice('');
 
     try {
-      // The authentication system automatically determines the user's role
-      const user = await signInWithRegisteredEmail(cleanEmail, password);
-      setNotice(`Welcome, ${user.fullName}. Logging in...`);
+      const user = await signInWithRegisteredEmail(cleanEmail, loginPassword);
+      setNotice(`Welcome, ${user.fullName}. Launching system…`);
       await onSignIn(user);
     } catch (err: any) {
-      setError(err?.message || 'Authentication failed. Please verify your email and password.');
+      setError(err?.message || 'Authentication error. Please retry.');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    await executeSignIn(email, password);
+  };
+
+  const handleQuickLogin = async (targetEmail: string, targetPass = 'NationalLights@2026') => {
+    setEmail(targetEmail);
+    setPassword(targetPass);
+    await executeSignIn(targetEmail, targetPass);
+  };
+
+  const handleCopyText = (text: string, keyName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(keyName);
+    setTimeout(() => setCopiedKey(null), 2000);
   };
 
   const handleForgotPasswordSubmit = (e: React.FormEvent) => {
@@ -235,11 +271,64 @@ export const AuthGate: React.FC<AuthGateProps> = ({
               className="w-full mt-2 py-3.5 rounded-xl text-xs font-black tracking-widest uppercase text-white bg-gradient-to-r from-emerald-600 via-[#006b5f] to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#006b5f]/25 transition-all"
             >
               <LogIn className="w-4 h-4" />
-              <span>{submitting ? 'Authenticating…' : 'LOGIN'}</span>
+              <span>{submitting ? 'Authenticating…' : 'LOGIN TO N-LINK 360'}</span>
             </motion.button>
 
+            {/* Instant 1-Click Launch for Executive Director */}
+            <motion.button
+              type="button"
+              disabled={submitting}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handleQuickLogin('nationallights2026@gmail.com', 'NationalLights@2026')}
+              className="w-full py-2.5 rounded-xl text-[11px] font-extrabold tracking-wider uppercase text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 hover:bg-emerald-900/60 flex items-center justify-center gap-2 cursor-pointer transition-all"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>⚡ One-Click Enter as Executive Director (Shahzad Ullah)</span>
+            </motion.button>
+
+            {/* Quick Persona Roster Selector */}
+            <div className="pt-2">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">
+                Or Quick Switch Persona:
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('shahzadullah@nationallights.com', 'NationalLights@2026')}
+                  className="p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition-colors cursor-pointer group"
+                >
+                  <p className="text-[10px] font-extrabold text-white group-hover:text-emerald-400 truncate">Shahzad Ullah</p>
+                  <p className="text-[9px] text-slate-400 truncate">Executive / Super Admin</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('shahid.khan@nationallight.pk', 'NationalLights@2026')}
+                  className="p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition-colors cursor-pointer group"
+                >
+                  <p className="text-[10px] font-extrabold text-white group-hover:text-teal-400 truncate">Shahid Khan</p>
+                  <p className="text-[9px] text-slate-400 truncate">Field Sales / Route</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('accounts@nationallights.com', 'NationalLights@2026')}
+                  className="p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition-colors cursor-pointer group"
+                >
+                  <p className="text-[10px] font-extrabold text-white group-hover:text-cyan-400 truncate">Accounts Officer</p>
+                  <p className="text-[9px] text-slate-400 truncate">Ledgers &amp; Recovery</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('warehouse@nationallights.com', 'NationalLights@2026')}
+                  className="p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition-colors cursor-pointer group"
+                >
+                  <p className="text-[10px] font-extrabold text-white group-hover:text-amber-400 truncate">Warehouse Mgr</p>
+                  <p className="text-[9px] text-slate-400 truncate">Dispatch &amp; Stock</p>
+                </button>
+              </div>
+            </div>
+
             {/* Forgot Password Action Link */}
-            <div className="text-center pt-2">
+            <div className="text-center pt-1">
               <button
                 id="forgot-password-link"
                 type="button"
@@ -256,10 +345,61 @@ export const AuthGate: React.FC<AuthGateProps> = ({
           </form>
 
           {/* Secure System Badge */}
-          <div className="pt-5 mt-5 border-t border-slate-800/80 flex items-center justify-center gap-1.5 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Authorized Corporate Identity • National Lights</span>
+          <div className="pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 font-medium">
+            <div className="flex items-center gap-1 text-emerald-400 font-bold">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+              <span>100% Operational &amp; Functional</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowEnvKeyGuide(!showEnvKeyGuide)}
+              className="text-teal-400 hover:text-teal-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <Key className="w-3 h-3" />
+              <span>Keys &amp; Env Info</span>
+              {showEnvKeyGuide ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
           </div>
+
+          {/* Collapsible Environment & API Keys Explanatory Drawer */}
+          <AnimatePresence>
+            {showEnvKeyGuide && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-3 p-3.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-[11px] text-slate-300 space-y-2.5 overflow-hidden"
+              >
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>No Keys Required to Run!</span>
+                </div>
+                <p className="text-slate-300 leading-relaxed text-[11px]">
+                  N-LINK 360 is built with an <strong>autonomous offline-first local database</strong> containing real National Lights dealers across Pakistan, product SKUs, tax calculations, invoice PDFs, and thermal receipts.
+                </p>
+                <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                  <p className="font-bold text-slate-200">Optional External Keys:</p>
+                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1 text-[10px] font-mono">
+                    <div className="flex items-center justify-between text-slate-400">
+                      <span>• VITE_SUPABASE_URL</span>
+                      <span className="text-emerald-400">Optional Cloud DB</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400">
+                      <span>• VITE_SUPABASE_ANON_KEY</span>
+                      <span className="text-emerald-400">Optional Anon Key</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400">
+                      <span>• GOOGLE_SHEETS_WEBHOOK_URL</span>
+                      <span className="text-teal-400">Optional Webhook</span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-normal">
+                    To connect a live Google Sheet, click the <strong>Google Sheets Two-Way Sync</strong> button inside the app to copy the automated Apps Script code with 1 click.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
 

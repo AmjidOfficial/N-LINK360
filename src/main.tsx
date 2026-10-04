@@ -3,6 +3,18 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { registerSW } from 'virtual:pwa-register';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Safe non-blocking window.alert fallback for iframe sandboxes
+if (typeof window !== 'undefined') {
+  window.alert = function (message?: any) {
+    console.info('[N-LINK 360 Notification]:', message);
+    try {
+      const event = new CustomEvent('nlink:system_toast', { detail: { message: String(message) } });
+      window.dispatchEvent(event);
+    } catch {}
+  };
+}
 
 // Intercept and silence native console.error/warn/log calls originating from Vite HMR/WebSocket
 const originalError = console.error;
@@ -75,20 +87,33 @@ window.addEventListener('error', (event) => {
   }
 });
 
-// Register PWA service worker for offline caching and synchronization
-registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    console.log('[N-LINK 360 PWA] New version available.');
-  },
-  onOfflineReady() {
-    console.log('[N-LINK 360 PWA] Offline capabilities enabled.');
-  },
-});
+// In sandboxed/iframe preview mode (such as AI Studio preview), avoid service worker caching conflicts
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  if (window.self !== window.top) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
+    }).catch(() => {});
+  } else {
+    // Register PWA service worker for offline caching in standalone top-level window
+    registerSW({
+      immediate: true,
+      onNeedRefresh() {
+        console.log('[N-LINK 360 PWA] New version available.');
+      },
+      onOfflineReady() {
+        console.log('[N-LINK 360 PWA] Offline capabilities enabled.');
+      },
+    });
+  }
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
 

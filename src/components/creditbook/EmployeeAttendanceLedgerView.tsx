@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { EmployeeAttendance } from '../../types';
+import { EmployeeAttendance, SalesOrder, Recovery } from '../../types';
 import { NLinkUser, NLINK_TEAM_ROSTER } from '../../data/nlink-users-team';
 import { PAKISTAN_TOWN_COORDINATES } from '../../services/townManagement';
 import {
@@ -34,24 +34,37 @@ import {
   Maximize2,
   Smartphone,
   Globe,
+  Wallet,
+  ShoppingBag,
+  TrendingUp,
 } from 'lucide-react';
 
 export interface EmployeeAttendanceLedgerViewProps {
   attendanceRecords: EmployeeAttendance[];
   currentUser: NLinkUser;
+  orders?: SalesOrder[];
+  recoveries?: Recovery[];
   onBack?: () => void;
 }
 
 export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerViewProps> = ({
   attendanceRecords = [],
   currentUser,
+  orders = [],
+  recoveries = [],
   onBack,
 }) => {
   const [viewMode, setViewMode] = useState<'TABLE' | 'LIVE_GEO_MAP'>('TABLE');
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>('ALL');
+  const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH' | 'CUSTOM'>('ALL');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'IDLE' | 'COMPLETED'>('ALL');
   const [townFilter, setTownFilter] = useState<string>('ALL');
+
+  const safeAttendanceRecords = useMemo(() => {
+    return Array.isArray(attendanceRecords) ? attendanceRecords : [];
+  }, [attendanceRecords]);
 
   // Selected Pin for Geo-Inspector Modal
   const [selectedRecordForPin, setSelectedRecordForPin] = useState<{
@@ -73,10 +86,10 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
   const rosterStatusList = useMemo(() => {
     return NLINK_TEAM_ROSTER.map((officer) => {
       // Find today's attendance record or latest record
-      const todayRecord = attendanceRecords.find(
+      const todayRecord = safeAttendanceRecords.find(
         (r) =>
           r.userId === officer.id ||
-          r.employeeName.toLowerCase() === officer.fullName.toLowerCase()
+          (r.employeeName || '').toLowerCase() === (officer.fullName || '').toLowerCase()
       );
 
       const town = officer.assignedTowns?.[0] || 'Peshawar';
@@ -112,11 +125,11 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
         checkOutTime: todayRecord?.checkOutTime,
       };
     });
-  }, [attendanceRecords]);
+  }, [safeAttendanceRecords]);
 
   // Filter attendance records
   const filteredRecords = useMemo(() => {
-    return attendanceRecords
+    return safeAttendanceRecords
       .filter((rec) => {
         // Search query filter (name, code, location)
         if (searchQuery.trim()) {
@@ -147,7 +160,13 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
           ) {
             return false;
           }
+        } else if (dateFilter === 'CUSTOM') {
+          if (fromDate && rec.date < fromDate) return false;
+          if (toDate && rec.date > toDate) return false;
         }
+
+        if (fromDate && dateFilter !== 'CUSTOM' && rec.date < fromDate) return false;
+        if (toDate && dateFilter !== 'CUSTOM' && rec.date > toDate) return false;
 
         // Status filter
         if (statusFilter === 'ACTIVE') {
@@ -169,7 +188,7 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
           new Date(b.date + 'T' + (b.checkInTime || '00:00')).getTime() -
           new Date(a.date + 'T' + (a.checkInTime || '00:00')).getTime()
       );
-  }, [attendanceRecords, searchQuery, dateFilter, statusFilter, townFilter, todayStr]);
+  }, [safeAttendanceRecords, searchQuery, dateFilter, statusFilter, townFilter, todayStr]);
 
   // KPI Calculations
   const stats = useMemo(() => {
@@ -383,6 +402,7 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
             <option value="TODAY">Today Only</option>
             <option value="WEEK">Last 7 Days</option>
             <option value="MONTH">This Month</option>
+            <option value="CUSTOM">Custom Range (From - To)</option>
           </select>
 
           {/* Real-time Status Filter */}
@@ -397,6 +417,52 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
             <option value="IDLE">○ Idle / Not Checked In</option>
           </select>
         </div>
+
+        {/* Custom Date Range Picker Inputs */}
+        {(dateFilter === 'CUSTOM' || fromDate || toDate) && (
+          <div className="pt-2 flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-[10px] font-black uppercase text-slate-400">From Date:</span>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  if (dateFilter !== 'CUSTOM') setDateFilter('CUSTOM');
+                }}
+                className="bg-transparent font-mono font-bold text-slate-800 dark:text-slate-200 outline-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-[10px] font-black uppercase text-slate-400">To Date:</span>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  if (dateFilter !== 'CUSTOM') setDateFilter('CUSTOM');
+                }}
+                className="bg-transparent font-mono font-bold text-slate-800 dark:text-slate-200 outline-none"
+              />
+            </div>
+
+            {(fromDate || toDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFromDate('');
+                  setToDate('');
+                  setDateFilter('ALL');
+                }}
+                className="px-2.5 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold text-[10px] flex items-center gap-1 border border-rose-200 dark:border-rose-900 cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+                <span>Reset Range</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ==================================================== */}
@@ -414,6 +480,7 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                   <th className="py-3 px-4">Check-In Time</th>
                   <th className="py-3 px-4">Check-In Location (GPS Pin)</th>
                   <th className="py-3 px-4">Check-Out</th>
+                  <th className="py-3 px-4">Day Sales &amp; Recovery</th>
                   <th className="py-3 px-4">Shift Duration</th>
                   <th className="py-3 px-4 text-right">Map Pin Action</th>
                 </tr>
@@ -421,7 +488,7 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <td colSpan={9} className="py-12 text-center text-slate-400">
                       <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
                       <p className="font-bold">No attendance records found matching filters.</p>
                       <p className="text-[11px] text-slate-400 mt-0.5">
@@ -439,6 +506,13 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                         lat: 34.0151,
                         lng: 71.5249,
                       };
+
+                    // Compute day-wise sales & recovery
+                    const dayOrders = orders.filter((o) => (o.orderDate || o.createdAt || '').slice(0, 10) === rec.date);
+                    const daySalesTotal = dayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+                    const dayRecs = recoveries.filter((r) => (r.recordedAt || r.createdAt || '').slice(0, 10) === rec.date);
+                    const dayRecoveryTotal = dayRecs.reduce((sum, r) => sum + (r.amount || 0), 0);
 
                     return (
                       <tr
@@ -500,12 +574,29 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                         {/* Check Out Time */}
                         <td className="py-3.5 px-4">
                           {rec.checkOutTime ? (
-                            <span className="font-mono font-black text-rose-700 dark:text-rose-400">
-                              {rec.checkOutTime}
-                            </span>
+                            <div>
+                              <span className="font-mono font-black text-rose-700 dark:text-rose-400 block">
+                                {rec.checkOutTime}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block truncate max-w-[120px]" title={outLoc}>
+                                {outLoc}
+                              </span>
+                            </div>
                           ) : (
                             <span className="text-slate-400 text-[11px]">— On-Duty —</span>
                           )}
+                        </td>
+
+                        {/* Day Sales & Recovery */}
+                        <td className="py-3.5 px-4 font-mono text-[11px]">
+                          <div className="space-y-0.5">
+                            <span className="font-black text-teal-800 dark:text-teal-300 block">
+                              Sales: {daySalesTotal > 0 ? `Rs. ${daySalesTotal.toLocaleString()}` : 'Rs. 0'}
+                            </span>
+                            <span className="font-bold text-emerald-700 dark:text-emerald-400 block">
+                              Rec: {dayRecoveryTotal > 0 ? `Rs. ${dayRecoveryTotal.toLocaleString()}` : 'Rs. 0'}
+                            </span>
+                          </div>
                         </td>
 
                         {/* Shift Duration */}

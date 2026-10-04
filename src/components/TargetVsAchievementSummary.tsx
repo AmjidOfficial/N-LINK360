@@ -81,10 +81,11 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
       if (!inCurrentMonth) return false;
       if (isExecutive) return true;
       return (
-        o.salesOfficerId === currentUser.id ||
-        o.salesRepId === currentUser.id ||
+        (o as any).salesOfficerId === currentUser.id ||
+        (o as any).salesRepId === currentUser.id ||
         o.salesUserId === currentUser.id ||
-        o.salesOfficerName === currentUser.fullName
+        (o as any).salesOfficerName === currentUser.fullName ||
+        o.salesUserName === currentUser.fullName
       );
     });
 
@@ -95,10 +96,11 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
       if (!inCurrentMonth) return false;
       if (isExecutive) return true;
       return (
-        r.collectorId === currentUser.id ||
-        r.collectorName === currentUser.fullName ||
-        r.salesOfficerId === currentUser.id ||
-        r.salesUserId === currentUser.id
+        (r as any).collectorId === currentUser.id ||
+        (r as any).collectorName === currentUser.fullName ||
+        (r as any).salesOfficerId === currentUser.id ||
+        r.salesUserId === currentUser.id ||
+        r.salesUserName === currentUser.fullName
       );
     });
 

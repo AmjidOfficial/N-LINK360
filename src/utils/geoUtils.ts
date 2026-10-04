@@ -251,3 +251,19 @@ export function computeOfficerToCustomerRoute(
     googleMapsNavUrl,
   };
 }
+
+/**
+ * Find the nearest Pakistan town based on current GPS coordinates.
+ */
+export function findNearestTown(lat: number, lng: number): string {
+  let nearestTown = 'Abbottabad';
+  let minDistance = Infinity;
+  for (const [townName, coords] of Object.entries(PAKISTAN_TOWN_COORDINATES)) {
+    const dist = calculateHaversineDistance(lat, lng, coords.lat, coords.lng);
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearestTown = townName.charAt(0).toUpperCase() + townName.slice(1);
+    }
+  }
+  return nearestTown;
+}

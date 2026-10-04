@@ -182,6 +182,7 @@ export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'ON_LEAVE' | 'HAL
 
 export interface EmployeeAttendance {
   id: string;
+  userId?: string;
   employeeId: string;
   employeeCode: string;
   employeeName: string;
@@ -220,11 +221,13 @@ export interface UserProfileUpdateRequest {
   requestedEmergencyContact?: string;
   requestedAddress?: string;
   reason?: string;
-  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   requestedAt: string;
   reviewedBy?: string;
   reviewedAt?: string;
   rejectionReason?: string;
+  currentInfo?: any;
+  requestedChanges?: any;
 }
 
 export type TargetType = 'SALES' | 'RECOVERY';
@@ -389,6 +392,8 @@ export interface Customer {
   id: string;
   customerCode: string;
   companyName: string;
+  name?: string;
+  customerType?: string;
   contactPerson: string;
   phone: string;
   email?: string;
@@ -590,6 +595,11 @@ export interface SalesOrderItem {
   unitPrice: number;
   discountPercent: number;
   lineTotal: number;
+  cartons?: number;
+  piecesPerCarton?: number;
+  looseQuantity?: number;
+  quantity?: number;
+  totalAmount?: number;
 }
 
 export type DualApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -609,6 +619,9 @@ export interface SalesOrder {
   discountAmount: number;
   taxAmount: number;
   totalAmount: number;
+  netAmount?: number;
+  customerTown?: string;
+  town?: string;
   creditCheckStatus: CreditCheckStatus;
   creditCheckNotes?: string;
   notes?: string;
@@ -737,6 +750,7 @@ export interface Recovery {
   salesUserId: string;
   salesUserName: string;
   collectionDate: string;
+  paymentDate?: string;
   amount: number;
   paymentMode: PaymentMode;
   instrumentNumber?: string;
@@ -753,6 +767,7 @@ export interface Recovery {
   shahzadApproval?: DualApprovalStatus;
   shahzadApprovedAt?: string;
   shahzadRejectionReason?: string;
+  recordedAt?: string;
   remarks?: string;
   createdAt: string;
 }

@@ -127,9 +127,9 @@ export const EnterpriseLedgersTab: React.FC<EnterpriseLedgersTabProps> = ({
         address: 'Please add a dealer in Dealers tab or sync from Google Sheet',
         city: 'N/A',
         creditDays: 30,
-        status: 'NORMAL',
+        status: 'NORMAL' as const,
         isActive: false,
-        approvalStatus: 'APPROVED',
+        approvalStatus: 'APPROVED' as const,
         accountNumber: 'N/A',
         isDistributor: false,
         createdDate: '2026-01-01',
@@ -206,12 +206,21 @@ export const EnterpriseLedgersTab: React.FC<EnterpriseLedgersTabProps> = ({
 
     // Append dynamic recoveries for this customer
     const userRecoveries: LedgerEntry[] = recoveries
-      .filter((r) => r.customerId === selectedCustomerId)
+      .filter((r) => {
+        if (!r) return false;
+        return (
+          r.customerId === selectedCustomerId ||
+          r.customerId === activeCustomer.id ||
+          r.customerId === activeCustomer.customerCode ||
+          r.customerCode === activeCustomer.customerCode ||
+          (r.customerName && activeCustomer.companyName && r.customerName.toLowerCase().trim() === activeCustomer.companyName.toLowerCase().trim())
+        );
+      })
       .map((r, i) => ({
         id: `rec-${r.id || i}`,
-        date: r.collectionDate || 'Today',
-        referenceNo: `#${r.recoveryNumber || 'REC-9901'}`,
-        particulars: `${r.paymentMode} Collection (${r.instrumentNumber || 'Direct'})${r.bankName ? ` - ${r.bankName}` : ''}`,
+        date: r.collectionDate || (r as any).paymentDate || 'Today',
+        referenceNo: `#${r.recoveryNumber || r.id || 'REC-9901'}`,
+        particulars: `${r.paymentMode === 'ONLINE_TRANSFER' ? 'Online Transfer' : 'Cash'} Collection (${r.instrumentNumber || 'Direct'})${r.bankName ? ` - ${r.bankName}` : ''}`,
         type: 'COLLECTION' as const,
         debit: null,
         credit: r.amount,

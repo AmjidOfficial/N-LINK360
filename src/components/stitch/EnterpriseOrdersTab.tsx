@@ -67,9 +67,9 @@ const PAKISTAN_BANKS = [
 
 export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
   currentUser,
-  customers,
-  orders,
-  recoveries,
+  customers = [],
+  orders = [],
+  recoveries = [],
   onPlaceOrder,
   onRecordRecovery,
   onOpenRateCard,
@@ -160,7 +160,7 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
       filteredCustomers.find((c) => c.id === selectedCustomerId) ||
       customers.find((c) => c.id === selectedCustomerId) ||
       filteredCustomers[0] ||
-      customers[0] || {
+      customers[0] || ({
         id: '',
         customerCode: 'N/A',
         companyName: 'No Dealer Selected',
@@ -168,11 +168,17 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
         phone: 'N/A',
         address: 'Please add a dealer from the Dealers tab or sync from Google Sheet',
         city: 'N/A',
+        type: 'DEALER',
+        region: 'National',
+        creditDays: 30,
+        openingBalance: 0,
         creditLimit: 0,
         currentBalance: 0,
         status: 'NORMAL',
         isActive: false,
-      }
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      } as Customer)
     );
   }, [filteredCustomers, customers, selectedCustomerId]);
 
@@ -1058,19 +1064,19 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
         customer: activeDealer,
         order: {
           id: inv.id,
-          orderNumber: inv.invoiceNo || inv.orderNumber,
+          orderNumber: inv.invoiceNo || (inv as any).orderNumber || inv.id,
           customerId: activeDealer.id,
           customerName: activeDealer.companyName,
           customerCode: activeDealer.customerCode,
           orderDate: inv.date || new Date().toISOString().split('T')[0],
-          salesUserName: currentUser.fullName || currentUser.name,
-          paymentMode: inv.paymentMode || 'CREDIT (30 DAYS)',
+          salesUserName: currentUser.fullName || (currentUser as any).name || 'Sales Officer',
+          paymentMode: (inv as any).paymentMode || 'CREDIT (30 DAYS)',
           status: inv.status || 'PENDING',
           totalAmount: inv.amount,
           items: inv.items,
         },
         previousBalance: activeDealer.currentBalance || 0,
-        preparedByName: `${currentUser.fullName || currentUser.name} (${currentUser.roleTitle || currentUser.role})`,
+        preparedByName: `${currentUser.fullName || (currentUser as any).name || 'Sales Officer'} (${currentUser.roleTitle || currentUser.role})`,
       }));
 
       const result = await generateBulkSalesInvoicesPdfDoc(
@@ -1114,19 +1120,19 @@ export const EnterpriseOrdersTab: React.FC<EnterpriseOrdersTabProps> = ({
         customer: activeDealer,
         order: {
           id: inv.id,
-          orderNumber: inv.invoiceNo || inv.orderNumber,
+          orderNumber: inv.invoiceNo || (inv as any).orderNumber || inv.id,
           customerId: activeDealer.id,
           customerName: activeDealer.companyName,
           customerCode: activeDealer.customerCode,
           orderDate: inv.date || new Date().toISOString().split('T')[0],
-          salesUserName: currentUser.fullName || currentUser.name,
-          paymentMode: inv.paymentMode || 'CREDIT (30 DAYS)',
+          salesUserName: currentUser.fullName || (currentUser as any).name || 'Sales Officer',
+          paymentMode: (inv as any).paymentMode || 'CREDIT (30 DAYS)',
           status: inv.status || 'PENDING',
           totalAmount: inv.amount,
           items: inv.items,
         },
         previousBalance: activeDealer.currentBalance || 0,
-        preparedByName: `${currentUser.fullName || currentUser.name} (${currentUser.roleTitle || currentUser.role})`,
+        preparedByName: `${currentUser.fullName || (currentUser as any).name || 'Sales Officer'} (${currentUser.roleTitle || currentUser.role})`,
       }));
 
       const res = await downloadBulkSalesInvoicesPdf(

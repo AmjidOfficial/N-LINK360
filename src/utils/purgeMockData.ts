@@ -133,7 +133,10 @@ export function purgeMockDataFromState(currentState?: {
     try {
       const raw = localStorage.getItem(USERS_STORAGE_KEY);
       if (raw) {
-        storedUsers = JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          storedUsers = parsed;
+        }
       }
     } catch {
       storedUsers = [];
@@ -141,12 +144,13 @@ export function purgeMockDataFromState(currentState?: {
   }
 
   // Filter existing users to keep verified production users
-  const filteredUsers = storedUsers.filter((u) => isProductionUser(u));
+  const safeStoredUsers = Array.isArray(storedUsers) ? storedUsers : [];
+  const filteredUsers = safeStoredUsers.filter((u) => isProductionUser(u));
 
   // Ensure both production users are present in the final roster
   const finalUsers: NLinkUser[] = [...NLINK_TEAM_ROSTER];
   filteredUsers.forEach((fu) => {
-    if (!finalUsers.some((u) => u.id === fu.id)) {
+    if (fu && !finalUsers.some((u) => u.id === fu.id)) {
       finalUsers.push(fu);
     }
   });
@@ -169,16 +173,28 @@ export function purgeMockDataFromState(currentState?: {
 
   // 3. Clean Dealers / Customers & Transactions from cache
   const cache = getLocalDatabaseCache();
-  const inputCustomers = currentState?.customers || cache.customers || [];
-  const inputOrders = currentState?.orders || cache.orders || [];
-  const inputRecoveries = currentState?.recoveries || cache.recoveries || [];
+  const inputCustomers = Array.isArray(currentState?.customers)
+    ? currentState.customers
+    : Array.isArray(cache?.customers)
+    ? cache.customers
+    : [];
+  const inputOrders = Array.isArray(currentState?.orders)
+    ? currentState.orders
+    : Array.isArray(cache?.orders)
+    ? cache.orders
+    : [];
+  const inputRecoveries = Array.isArray(currentState?.recoveries)
+    ? currentState.recoveries
+    : Array.isArray(cache?.recoveries)
+    ? cache.recoveries
+    : [];
 
   const initialCustCount = inputCustomers.length;
   const initialOrdCount = inputOrders.length;
   const initialRecCount = inputRecoveries.length;
 
   // Filter out mock dealers
-  const cleanCustomers = inputCustomers.filter((c) => !isMockDealer(c));
+  const cleanCustomers = inputCustomers.filter((c) => c && !isMockDealer(c));
 
   // Merge Seed Customers if not already present
   SEED_CUSTOMERS.forEach((sc) => {

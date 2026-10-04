@@ -20,7 +20,7 @@ function getGenAI(): GoogleGenAI | null {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   // Support base64 image uploads up to 20MB
   app.use(express.json({ limit: "20mb" }));
@@ -166,26 +166,94 @@ Return valid JSON adhering strictly to the schema.`,
     });
   });
 
+  // Google Sheets Server-Side Sync Proxy
+  app.post("/api/sync-google-sheets", async (req, res) => {
+    try {
+      const payload = req.body;
+      const clientWebhookUrl = req.headers["x-google-sheets-webhook"] as string;
+      const serverWebhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL || process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+      
+      const webhookUrl = serverWebhookUrl || clientWebhookUrl;
+
+      if (!webhookUrl) {
+        return res.status(400).json({
+          success: false,
+          error: "Google Sheets Webhook URL is not configured. Please define GOOGLE_SHEETS_WEBHOOK_URL on the server or provide it in settings."
+        });
+      }
+
+      if (!webhookUrl.startsWith("https://script.google.com")) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid Google Apps Script Webhook URL. It must start with https://script.google.com/macros/s/.../exec"
+        });
+      }
+
+      console.log(`[Proxy] Syncing to Google Sheets Webhook: ${webhookUrl.slice(0, 45)}...`);
+
+      // Execute server-side fetch to bypass browser CORS and provide a reliable response
+      const googleResponse = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await googleResponse.text();
+      const isHtml = responseText.includes("<!DOCTYPE") || responseText.includes("<html") || responseText.includes("<head>");
+      
+      if (isHtml || !googleResponse.ok) {
+        console.warn(`[Proxy] Google Webhook returned ${isHtml ? 'HTML page instead of JSON' : `HTTP ${googleResponse.status}`}. Ensure the Apps Script is deployed as a Web App with access set to 'Anyone'.`);
+        return res.status(200).json({
+          success: false,
+          error: "Google Webhook returned an error page or was not found. Please verify that your Google Apps Script is deployed as a Web App with 'Who has access' set to 'Anyone'.",
+          statusCode: googleResponse.status,
+        });
+      }
+
+      let googleData: any = { status: "success" };
+      try {
+        if (responseText) {
+          googleData = JSON.parse(responseText);
+        }
+      } catch {
+        googleData = { status: "success", raw: responseText.slice(0, 100) };
+      }
+
+      res.json({
+        success: true,
+        status: googleResponse.status,
+        googleData,
+      });
+    } catch (err: any) {
+      console.error("[Proxy] Google Sheets Sync Proxy error:", err);
+      res.status(500).json({
+        success: false,
+        error: err.message || "Failed to proxy Google Sheets webhook request",
+      });
+    }
+  });
+
   // Vite middleware for development or static serving for production
   const isProduction =
     process.env.NODE_ENV === "production" ||
     (typeof __filename !== "undefined" && __filename.endsWith(".cjs")) ||
-    (process.argv[1] && process.argv[1].endsWith(".cjs"));
+    Boolean(process.argv[1] && process.argv[1].endsWith(".cjs"));
 
   if (!isProduction) {
+    console.log("[N-LINK 360] Starting in Vite dynamic development mode with middlewares...");
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { 
         middlewareMode: true,
-        hmr: process.env.DISABLE_HMR === 'true' ? false : {
-          port: 3000,
-          host: '0.0.0.0'
-        }
+        hmr: false,
       },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
+    console.log("[N-LINK 360] Starting in production static serving mode from dist...");
     const distPath = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'))
       ? path.join(process.cwd(), 'dist')
       : fs.existsSync(path.join(__dirname, 'index.html'))
@@ -208,4 +276,7 @@ Return valid JSON adhering strictly to the schema.`,
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error("FATAL ERROR during server startup:", err);
+  process.exit(1);
+});

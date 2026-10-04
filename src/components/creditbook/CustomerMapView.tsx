@@ -47,12 +47,15 @@ export const CustomerMapView: React.FC<CustomerMapViewProps> = ({
 }) => {
   // Default officer initial coordinate (derived from officer's assigned town or default base)
   const defaultOfficerPos = useMemo<GeoLocationPoint>(() => {
-    const userTown = (currentUser.assignedTowns?.[0] || 'Abbottabad').toLowerCase().trim();
-    const townCoord = PAKISTAN_TOWN_COORDINATES[userTown] || PAKISTAN_TOWN_COORDINATES['abbottabad'];
+    const userTown = (currentUser?.assignedTowns?.[0] || 'Abbottabad').trim();
+    const townEntry = Object.entries(PAKISTAN_TOWN_COORDINATES).find(
+      ([k]) => k.toLowerCase() === userTown.toLowerCase()
+    );
+    const townCoord = townEntry ? townEntry[1] : (PAKISTAN_TOWN_COORDINATES['Abbottabad'] || { lat: 34.1688, lng: 73.2215 });
     return {
-      lat: townCoord.lat + 0.012, // slightly offset to show realistic route
-      lng: townCoord.lng + 0.015,
-      label: `${currentUser.fullName} (Field Base)`,
+      lat: (townCoord?.lat ?? 34.1688) + 0.012, // slightly offset to show realistic route
+      lng: (townCoord?.lng ?? 73.2215) + 0.015,
+      label: `${currentUser?.fullName || 'Field Officer'} (Field Base)`,
     };
   }, [currentUser]);
 

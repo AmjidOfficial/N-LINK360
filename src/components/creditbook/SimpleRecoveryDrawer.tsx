@@ -23,6 +23,7 @@ import {
   Building2,
   TrendingDown,
 } from 'lucide-react';
+import { triggerHaptic } from '../../utils/haptics';
 
 export interface SimpleRecoveryDrawerProps {
   isOpen: boolean;
@@ -81,6 +82,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
       dualApprovalStatus: 'PENDING_DUAL_APPROVAL',
     };
 
+    triggerHaptic('success');
     onRecordRecovery(newRec);
     setSubmittedRecovery(newRec);
   };
@@ -88,6 +90,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      triggerHaptic('light');
       const reader = new FileReader();
       reader.onloadend = () => {
         setSlipImage(reader.result as string);
@@ -97,6 +100,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
   };
 
   const handleResetAndClose = () => {
+    triggerHaptic('light');
     setAmountStr('');
     setPaymentMode('CASH');
     setInstrumentNumber('');
@@ -211,12 +215,15 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                   />
                 </div>
 
-                {/* Quick Amount Suggestion Buttons */}
-                <div className="flex items-center gap-2 pt-1">
+                {/* Quick Amount Suggestion Buttons (Easypaisa style quick fill) */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => setAmountStr(previousBalance.toString())}
-                    className="px-2.5 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 font-bold text-[11px] cursor-pointer hover:bg-emerald-200"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setAmountStr(previousBalance.toString());
+                    }}
+                    className="min-h-[44px] px-3.5 py-2 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-200 font-bold text-xs cursor-pointer hover:bg-emerald-200 active:scale-95 transition-all border border-emerald-300 dark:border-emerald-800"
                   >
                     Full Balance (Rs. {previousBalance.toLocaleString()})
                   </button>
@@ -224,8 +231,11 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                   {previousBalance > 50000 && (
                     <button
                       type="button"
-                      onClick={() => setAmountStr(Math.round(previousBalance / 2).toString())}
-                      className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] cursor-pointer hover:bg-slate-200"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setAmountStr(Math.round(previousBalance / 2).toString());
+                      }}
+                      className="min-h-[44px] px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer hover:bg-slate-200 active:scale-95 transition-all border border-slate-200 dark:border-slate-700"
                     >
                       50% (Rs. {Math.round(previousBalance / 2).toLocaleString()})
                     </button>
@@ -244,10 +254,13 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                     <button
                       key={mode}
                       type="button"
-                      onClick={() => setPaymentMode(mode)}
-                      className={`p-2.5 rounded-xl font-bold text-xs border text-center transition-all cursor-pointer ${
+                      onClick={() => {
+                        triggerHaptic('selection');
+                        setPaymentMode(mode);
+                      }}
+                      className={`min-h-[46px] p-2.5 rounded-xl font-bold text-xs border text-center transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
                         paymentMode === mode
-                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs font-black'
                           : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
                       }`}
                     >
@@ -362,7 +375,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                 type="button"
                 onClick={handleSubmitRecovery}
                 disabled={paymentAmount <= 0}
-                className={`w-full py-3.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
+                className={`w-full min-h-[50px] py-3.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer touch-manipulation ${
                   paymentAmount <= 0
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                     : 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-98 shadow-emerald-950/20'

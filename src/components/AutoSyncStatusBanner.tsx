@@ -16,6 +16,7 @@ import {
   TARGET_SPREADSHEET_ID,
 } from '../services/googleSheetsTwoWaySyncService';
 import { getAccessToken, googleSignIn, getCurrentGoogleUser } from '../services/googleAuth';
+import { getGoogleSheetsWebhookUrl } from '../services/google-sheets';
 import { SupabaseAppData } from '../services/supabase-data';
 
 interface AutoSyncStatusBannerProps {
@@ -63,15 +64,20 @@ export const AutoSyncStatusBanner: React.FC<AutoSyncStatusBannerProps> = ({
     setIsManualSubmitting(true);
     setToastMessage(null);
 
-    let token = getAccessToken();
-    if (!token) {
-      try {
-        const signinResult = await googleSignIn();
-        token = signinResult?.accessToken || null;
-      } catch (err: any) {
-        setToastMessage('Google authorization needed to upload directly to spreadsheet.');
-        setIsManualSubmitting(false);
-        return;
+    const hasWebhook = Boolean(getGoogleSheetsWebhookUrl());
+    let token = null;
+
+    if (!hasWebhook) {
+      token = getAccessToken();
+      if (!token) {
+        try {
+          const signinResult = await googleSignIn();
+          token = signinResult?.accessToken || null;
+        } catch (err: any) {
+          setToastMessage('Google authorization needed to upload directly to spreadsheet.');
+          setIsManualSubmitting(false);
+          return;
+        }
       }
     }
 

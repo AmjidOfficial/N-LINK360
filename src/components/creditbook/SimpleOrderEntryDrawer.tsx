@@ -13,6 +13,7 @@ import React, { useState, useMemo } from 'react';
 import { Customer, SalesOrder, SalesOrderItem } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import { NLINK_OFFICIAL_PRODUCTS, NLinkSKU } from '../../data/nlink-products';
+import { triggerHaptic } from '../../utils/haptics';
 import {
   X,
   Plus,
@@ -93,6 +94,7 @@ export const SimpleOrderEntryDrawer: React.FC<SimpleOrderEntryDrawerProps> = ({
 
   // Add SKU to order
   const handleAddSku = (sku: NLinkSKU) => {
+    triggerHaptic('light');
     const existingIndex = items.findIndex((i) => i.skuCode === sku.skuCode);
     if (existingIndex >= 0) {
       // Increment cartons by 1
@@ -166,10 +168,15 @@ export const SimpleOrderEntryDrawer: React.FC<SimpleOrderEntryDrawerProps> = ({
     const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
     const nowIso = new Date().toISOString();
 
-    const orderItems: SalesOrderItem[] = items.map((i) => ({
+    const orderItems: SalesOrderItem[] = items.map((i, idx) => ({
+      id: `item-${Date.now()}-${idx}`,
+      orderId: orderNumber,
       skuId: i.skuId,
       skuCode: i.skuCode,
       skuName: i.skuName,
+      orderedQuantity: i.totalPieces,
+      discountPercent: 0,
+      lineTotal: i.lineTotal,
       cartons: i.cartons,
       piecesPerCarton: i.piecesPerCarton,
       looseQuantity: i.loosePieces,
@@ -200,11 +207,13 @@ export const SimpleOrderEntryDrawer: React.FC<SimpleOrderEntryDrawerProps> = ({
       dualApprovalStatus: 'PENDING_DUAL_APPROVAL',
     };
 
+    triggerHaptic('success');
     onPlaceOrder(newOrder);
     setBookedOrder(newOrder);
   };
 
   const handleResetAndClose = () => {
+    triggerHaptic('light');
     setItems([]);
     setOrderNotes('');
     setBookedOrder(null);
@@ -536,7 +545,7 @@ export const SimpleOrderEntryDrawer: React.FC<SimpleOrderEntryDrawerProps> = ({
                 type="button"
                 onClick={handleBookOrder}
                 disabled={items.length === 0}
-                className={`w-full py-3.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
+                className={`w-full min-h-[50px] py-3.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer touch-manipulation ${
                   items.length === 0
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                     : 'bg-teal-800 hover:bg-teal-900 text-white active:scale-98 shadow-teal-950/20'

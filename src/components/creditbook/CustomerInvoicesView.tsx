@@ -31,27 +31,46 @@ import { downloadSalesInvoicePdf, buildInvoiceWhatsAppText } from '../../utils/e
 
 export interface CustomerInvoicesViewProps {
   customer: Customer;
-  currentUser: NLinkUser;
-  orders: SalesOrder[];
+  currentUser?: NLinkUser;
+  orders?: SalesOrder[];
+  invoices?: SalesOrder[];
   onBack: () => void;
   onPreviewPdf?: (order: SalesOrder, customer: Customer) => void;
+  onPreviewInvoicePdf?: (order: SalesOrder, customer: Customer) => void;
+  onOpenNewOrder?: () => void;
+  onDownloadInvoicePdf?: (order: SalesOrder, customer: Customer) => void;
+  onWhatsAppShareInvoice?: (order: SalesOrder, customer: Customer) => void;
 }
 
 export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
   customer,
   currentUser,
   orders,
+  invoices,
   onBack,
   onPreviewPdf,
+  onPreviewInvoicePdf,
+  onOpenNewOrder,
+  onDownloadInvoicePdf,
+  onWhatsAppShareInvoice,
 }) => {
+  const triggerPreview = onPreviewInvoicePdf || onPreviewPdf;
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [selectedInvoice, setSelectedInvoice] = useState<SalesOrder | null>(null);
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
-  // Filter orders for this customer
-  const customerOrders = orders
-    .filter((o) => o.customerId === customer.id || o.customerName === customer.companyName)
+  // Safe fallback list of orders / invoices
+  const safeOrdersList = orders || invoices || [];
+
+  // Filter orders for this customer safely
+  const customerOrders = (safeOrdersList || [])
+    .filter((o) => o && (
+      o.customerId === customer?.id ||
+      o.customerId === customer?.customerCode ||
+      o.customerCode === customer?.customerCode ||
+      (o.customerName && customer?.companyName && o.customerName.toLowerCase().trim() === customer.companyName.toLowerCase().trim())
+    ))
     .sort((a, b) => new Date(b.orderDate || b.createdAt || '').getTime() - new Date(a.orderDate || a.createdAt || '').getTime());
 
   // Status counts
@@ -91,13 +110,17 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
   });
 
   const handleDownload = async (order: SalesOrder) => {
+    if (onDownloadInvoicePdf) {
+      onDownloadInvoicePdf(order, customer);
+      return;
+    }
     setIsDownloading(order.id || order.orderNumber);
     try {
       await downloadSalesInvoicePdf({
         customer,
         order,
-        previousBalance: customer.currentBalance ?? customer.openingBalance ?? 0,
-        preparedByName: currentUser.fullName,
+        previousBalance: customer?.currentBalance ?? customer?.openingBalance ?? 0,
+        preparedByName: currentUser?.fullName || 'Field Officer',
       });
     } finally {
       setIsDownloading(null);
@@ -105,9 +128,13 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
   };
 
   const handleWhatsApp = (order: SalesOrder) => {
+    if (onWhatsAppShareInvoice) {
+      onWhatsAppShareInvoice(order, customer);
+      return;
+    }
     const text = buildInvoiceWhatsAppText(customer, order, {
-      officerName: currentUser.fullName,
-      officerPhone: currentUser.phone,
+      officerName: currentUser?.fullName || 'Field Officer',
+      officerPhone: currentUser?.phone || '',
     });
     const cleanPhone = (customer.phone || '').replace(/[^0-9]/g, '');
     const url = cleanPhone
@@ -380,10 +407,10 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                       <span>WhatsApp</span>
                     </button>
 
-                    {onPreviewPdf && (
+                    {triggerPreview && (
                       <button
                         type="button"
-                        onClick={() => onPreviewPdf(order, customer)}
+                        onClick={() => triggerPreview(order, customer)}
                         className="px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border border-teal-200 hover:bg-teal-100 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <FileText className="w-3.5 h-3.5" />

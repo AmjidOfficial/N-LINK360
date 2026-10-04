@@ -63,9 +63,9 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
   const customersOverLimit = customers.filter(
     (c) => (c.currentBalance || 0) > (c.creditLimit || 0) * 1.15 && (c.creditLimit || 0) > 0
   );
-  const unassignedCustomers = customers.filter((c) => !c.assignedEmployeeId);
+  const unassignedCustomers = customers.filter((c) => !c.assignedEmployee && !(c as any).assignedEmployeeId);
 
-  const totalStockValuation = skus.reduce((acc, s) => acc + (s.stockQty || 0) * (s.tradePrice || 0), 0);
+  const totalStockValuation = skus.reduce((acc, s) => acc + ((s as any).stockInHand || (s as any).stockQty || 0) * (s.tradePrice || 0), 0);
   const totalReceivables = customers.reduce((acc, c) => acc + (c.currentBalance || 0), 0);
 
   return (
@@ -373,41 +373,45 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
                 {skus
                   .filter(
                     (s) =>
-                      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      s.category.toLowerCase().includes(searchQuery.toLowerCase())
+                      (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      (s.skuCode || (s as any).code || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      ((s as any).category || '').toLowerCase().includes(searchQuery.toLowerCase())
                   )
-                  .map((sku) => (
-                    <tr key={sku.id} className="hover:bg-bg-secondary/80 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-text-primary">{sku.code}</td>
-                      <td className="py-3 px-4 font-bold text-deep-green">{sku.name}</td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[11px]">
-                          {sku.category}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono">{sku.cartonQty || 50} pcs</td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-text-primary">
-                        PKR {(sku.tradePrice || 0).toLocaleString()}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono">
-                        <span
-                          className={`font-bold ${
-                            (sku.stockQty || 0) <= (sku.reorderLevel || 10)
-                              ? 'text-rose-600'
-                              : 'text-emerald-700'
-                          }`}
-                        >
-                          {(sku.stockQty || 0).toLocaleString()} pcs
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <StatusBadge variant="emerald" dot>
-                          Active
-                        </StatusBadge>
-                      </td>
-                    </tr>
-                  ))}
+                  .map((sku) => {
+                    const skuCode = sku.skuCode || (sku as any).code || sku.id;
+                    const stock = (sku as any).stockInHand ?? (sku as any).stockQty ?? 0;
+                    return (
+                      <tr key={sku.id} className="hover:bg-bg-secondary/80 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-text-primary">{skuCode}</td>
+                        <td className="py-3 px-4 font-bold text-deep-green">{sku.name}</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[11px]">
+                            {(sku as any).category || 'Standard SKU'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono">{sku.cartonQuantity || (sku as any).cartonQty || 50} pcs</td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-text-primary">
+                          PKR {(sku.tradePrice || 0).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono">
+                          <span
+                            className={`font-bold ${
+                              stock <= (sku.reorderLevel || 10)
+                                ? 'text-rose-600'
+                                : 'text-emerald-700'
+                            }`}
+                          >
+                            {stock.toLocaleString()} pcs
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <StatusBadge variant="emerald" dot>
+                            Active
+                          </StatusBadge>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>

@@ -102,7 +102,7 @@ export const WarehouseOperationsTab: React.FC<WarehouseOperationsTabProps> = ({
 
     skuTxs.forEach(tx => {
       const q = tx.quantity;
-      switch (tx.transactionType) {
+      switch (tx.transactionType as string) {
         case 'OPENING_STOCK':
           opening = q;
           break;
@@ -456,7 +456,7 @@ export const WarehouseOperationsTab: React.FC<WarehouseOperationsTabProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-bold text-indigo-700 text-xs block">{sku?.skuCode || 'Unknown SKU'}</span>
-                      <span className="text-[10px] text-slate-400 block">{new Date(tx.createdAt || Date.now()).toLocaleDateString() || tx.date} &bull; {selectedWarehouse}</span>
+                      <span className="text-[10px] text-slate-400 block">{new Date(tx.createdAt || Date.now()).toLocaleDateString() || (tx as any).date} &bull; {selectedWarehouse}</span>
                     </div>
                     <span className={`font-mono font-bold text-sm ${isDeduction ? 'text-rose-600' : 'text-emerald-700'}`}>
                       {isDeduction ? '-' : '+'}{tx.quantity.toLocaleString()} Pcs
@@ -498,7 +498,7 @@ export const WarehouseOperationsTab: React.FC<WarehouseOperationsTabProps> = ({
                 return (
                   <tr key={tx.id} className="hover:bg-bg-secondary/50">
                     <td className="py-2 px-3 font-mono font-bold text-text-primary">{tx.transactionNumber || 'TX-NEW'}</td>
-                    <td className="py-2 px-3 text-slate-500">{new Date(tx.createdAt || Date.now()).toLocaleDateString() || tx.date}</td>
+                    <td className="py-2 px-3 text-slate-500">{new Date(tx.createdAt || Date.now()).toLocaleDateString() || (tx as any).date}</td>
                     <td className="py-2 px-3">
                       <span className="font-bold text-indigo-700">{sku?.skuCode || 'Unknown SKU'}</span>
                     </td>

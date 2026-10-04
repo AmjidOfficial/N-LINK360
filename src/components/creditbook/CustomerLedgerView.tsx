@@ -30,28 +30,50 @@ import { downloadCustomerLedgerPdf } from '../../utils/exportLedgerPdf';
 
 export interface CustomerLedgerViewProps {
   customer: Customer;
-  currentUser: NLinkUser;
-  orders: SalesOrder[];
-  recoveries: Recovery[];
+  currentUser?: NLinkUser;
+  orders?: SalesOrder[];
+  invoices?: SalesOrder[];
+  recoveries?: Recovery[];
+  ledgerEntries?: any[];
   onBack: () => void;
+  onOpenNewOrder?: () => void;
+  onOpenRecoveryDrawer?: () => void;
 }
 
 export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
   customer,
   currentUser,
   orders,
-  recoveries,
+  invoices,
+  recoveries = [],
   onBack,
+  onOpenNewOrder,
+  onOpenRecoveryDrawer,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
 
+  // Safe fallback list of orders / invoices
+  const safeOrdersList = orders || invoices || [];
+  const safeRecoveriesList = recoveries || [];
+
   // Filter orders & recoveries for this customer
-  const customerOrders = orders.filter(
-    (o) => (o.customerId === customer.id || o.customerName === customer.companyName) && o.status !== 'REJECTED'
-  );
-  const customerRecoveries = recoveries.filter(
-    (r) => (r.customerId === customer.id || r.customerName === customer.companyName) && r.status !== 'REJECTED'
-  );
+  const customerOrders = safeOrdersList.filter((o) => {
+    if (!o || o.status === 'REJECTED') return false;
+    const matchId = (customer?.id && (o.customerId === customer.id || o.customerId === customer.customerCode)) ||
+      (customer?.customerCode && (o.customerCode === customer.customerCode || o.customerId === customer.customerCode));
+    const matchName = customer?.companyName && o.customerName &&
+      o.customerName.toLowerCase().trim() === customer.companyName.toLowerCase().trim();
+    return matchId || matchName;
+  });
+
+  const customerRecoveries = safeRecoveriesList.filter((r) => {
+    if (!r || r.status === 'REJECTED') return false;
+    const matchId = (customer?.id && (r.customerId === customer.id || r.customerId === customer.customerCode)) ||
+      (customer?.customerCode && (r.customerCode === customer.customerCode || r.customerId === customer.customerCode));
+    const matchName = customer?.companyName && r.customerName &&
+      r.customerName.toLowerCase().trim() === customer.companyName.toLowerCase().trim();
+    return matchId || matchName;
+  });
 
   const openingBalance = customer.openingBalance ?? 0;
 
@@ -70,11 +92,12 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
 
     // Invoices are DEBITS (Customer owes more)
     customerOrders.forEach((o) => {
+      const orderRef = o.orderNumber || o.id || 'SO-NEW';
       rawEvents.push({
-        id: o.id || o.orderNumber,
+        id: o.id || orderRef,
         date: o.orderDate || o.createdAt || '',
         type: 'INVOICE',
-        reference: `INV #${o.orderNumber || o.id?.slice(-5)}`,
+        reference: orderRef.startsWith('INV') || orderRef.startsWith('SO') ? orderRef : `INV #${orderRef}`,
         description: `Sales Order (${o.items?.length || 1} SKUs)`,
         debit: o.totalAmount || 0,
         credit: 0,
@@ -84,15 +107,21 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
 
     // Recoveries are CREDITS (Customer pays, reducing debt)
     customerRecoveries.forEach((r) => {
+      const recRef = r.recoveryNumber || r.id || 'RC-NEW';
+      const cleanRef = recRef.startsWith('RC') ? recRef : `REC #${recRef}`;
+      const channelDesc = r.paymentMode === 'ONLINE_TRANSFER' ? 'Online Transfer' : 'Cash';
+      const bankDesc = r.bankName && r.bankName !== 'Direct Cash Collection' ? ` (${r.bankName})` : '';
+      const instDesc = r.instrumentNumber && r.instrumentNumber !== 'N/A' ? ` [${r.instrumentNumber}]` : '';
+
       rawEvents.push({
         id: r.id,
-        date: r.recordedAt || r.createdAt || '',
+        date: r.collectionDate || (r as any).paymentDate || r.recordedAt || r.createdAt || '',
         type: 'RECOVERY',
-        reference: `REC #${r.id?.slice(-5)}`,
-        description: `Payment Received (${r.paymentMode || 'CASH'})`,
+        reference: cleanRef,
+        description: `Payment Received via ${channelDesc}${bankDesc}${instDesc}`,
         debit: 0,
         credit: r.amount || 0,
-        status: r.status || 'PENDING_VERIFICATION',
+        status: r.status || 'VERIFIED',
       });
     });
 
@@ -142,7 +171,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
         closingBalance: netBalance,
         startDate: '2026-01-01',
         endDate: new Date().toISOString().slice(0, 10),
-        preparedByName: currentUser.fullName,
+        preparedByName: currentUser?.fullName || 'Field Officer',
       });
     } finally {
       setIsExporting(false);

@@ -35,6 +35,8 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Building2,
+  Wallet,
+  BookOpen,
 } from 'lucide-react';
 
 export interface FieldOfficerActivityDashboardProps {
@@ -45,6 +47,8 @@ export interface FieldOfficerActivityDashboardProps {
   onSelectCustomer?: (customerId: string) => void;
   onOpenNewOrder?: () => void;
   onOpenRecordRecovery?: () => void;
+  onOpenInvoices?: () => void;
+  onOpenLedger?: () => void;
 }
 
 export type TimePeriod = 'DAILY' | 'MONTHLY' | 'YTD' | 'ALL';
@@ -57,6 +61,8 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
   onSelectCustomer,
   onOpenNewOrder,
   onOpenRecordRecovery,
+  onOpenInvoices,
+  onOpenLedger,
 }) => {
   const [period, setPeriod] = useState<TimePeriod>('MONTHLY');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -112,7 +118,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
 
   const approvedSales = useMemo(() => {
     return filteredOrders
-      .filter((o) => o.status === 'APPROVED' || o.status === 'VERIFIED')
+      .filter((o) => (o.status as string) === 'APPROVED' || (o.status as string) === 'VERIFIED' || o.shahzadApproval === 'APPROVED')
       .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
   }, [filteredOrders]);
 
@@ -230,6 +236,53 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
               );
             })}
           </div>
+        </div>
+
+        {/* 4 PROMINENT CLICKABLE ACTION BUTTONS (Daily Recovery, Daily Ordering, Invoices, Ledgers) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+          {/* Button 1: Daily Recovery */}
+          <button
+            type="button"
+            onClick={onOpenRecordRecovery}
+            className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer touch-manipulation"
+            title="Log daily payment recovery"
+          >
+            <Wallet className="w-4 h-4 stroke-[2.5]" />
+            <span>+ Daily Recovery</span>
+          </button>
+
+          {/* Button 2: Daily Ordering */}
+          <button
+            type="button"
+            onClick={onOpenNewOrder}
+            className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer touch-manipulation"
+            title="Book sales order"
+          >
+            <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
+            <span>+ Daily Ordering</span>
+          </button>
+
+          {/* Button 3: Invoices */}
+          <button
+            type="button"
+            onClick={onOpenInvoices}
+            className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900 text-sky-800 dark:text-sky-300 font-bold text-xs flex items-center justify-center gap-2 border border-sky-200 dark:border-sky-800 transition-all active:scale-95 cursor-pointer touch-manipulation"
+            title="View bills and invoices"
+          >
+            <Receipt className="w-4 h-4 text-sky-700 dark:text-sky-400" />
+            <span>Invoices &amp; Bills</span>
+          </button>
+
+          {/* Button 4: Khata Ledgers */}
+          <button
+            type="button"
+            onClick={onOpenLedger}
+            className="min-h-[46px] px-3 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-200/80 dark:border-slate-700/80 transition-all active:scale-95 cursor-pointer touch-manipulation"
+            title="View Khata Ledgers"
+          >
+            <BookOpen className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+            <span>Khata Ledgers &amp; Etc</span>
+          </button>
         </div>
 
         {/* 4-Card Primary KPI Deck */}

@@ -47,9 +47,11 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
   if (!isOpen) return null;
 
   const isShahzadOrAdmin =
-    currentUser.fullName?.toLowerCase().includes('shahzad') ||
-    currentUser.role === 'SUPER_ADMIN' ||
-    currentUser.role === 'MANAGING_DIRECTOR';
+    Boolean(currentUser.fullName?.toLowerCase().includes('shahzad')) ||
+    (currentUser.role as string) === 'SUPER_ADMIN' ||
+    (currentUser.role as string) === 'MANAGING_DIRECTOR' ||
+    (currentUser.role as string) === 'EXECUTIVE_DIRECTOR' ||
+    (currentUser.role as string) === 'MANAGEMENT';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
