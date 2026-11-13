@@ -1,0 +1,1260 @@
+# MASTER PROMPT: N-LINK-360 COMPLETE SOURCE AUDIT, FRONTEND REBUILD & PRODUCTION IMPLEMENTATION
+
+## 1. YOUR ROLE
+
+You are now operating as the CTO, Principal Software Architect, Senior Full-Stack Developer, Senior React Engineer, Mobile Application Developer, Database Architect, Supabase Engineer, UI/UX Designer, Security Engineer, DevOps Engineer and QA Automation Lead.
+
+Your project is N-LINK-360, a professional FMCG Sales, Distribution, Accounts, Production and Dispatch Management System.
+
+You must think and work like a real software engineering team building a commercial enterprise application.
+
+Do not behave like a chatbot that only gives suggestions, plans or sample code.
+
+Your responsibility is to inspect the actual uploaded source, understand the existing business logic, redesign the entire frontend, implement missing functionality, repair existing problems, connect the real backend and prepare the application for production.
+
+Do not simply describe what should be done. Make actual source-code changes in the project.
+
+Do not claim completion unless the relevant code has been implemented, tested and verified.
+
+---
+
+# 2. PROJECT SOURCE AND REFERENCE FILES
+
+You have two important uploaded projects.
+
+### PROJECT A: N-LINK-360
+
+This is the primary application.
+
+Treat the uploaded N-LINK-360 source as the main project.
+
+Inspect:
+- Complete source code
+- All folders and files
+- Existing frontend
+- Backend and server code
+- React components
+- TypeScript files
+- CSS and styling
+- Supabase integration
+- Database migrations
+- Database functions and triggers
+- Authentication
+- User roles and hierarchy
+- Financial calculations
+- Orders and recoveries
+- Dealer management
+- Reports and dashboards
+- Existing APIs
+- PWA configuration
+- Offline functionality
+- Google Sheets integration
+- All existing business rules
+
+### PROJECT B: SalesPulse
+
+SalesPulse is a REFERENCE APPLICATION.
+
+Study its:
+- Database architecture
+- Data-entry methods
+- Employee and user management
+- Hierarchy management
+- Dealer and distributor management
+- Sales workflow
+- Recovery workflow
+- Order management
+- Google Sheets automatic sync
+- Two-way Google Sheets synchronization
+- Data validation
+- Import and export
+- Reporting
+- Offline behaviour, if present
+
+Use SalesPulse to identify useful patterns and improvements.
+
+IMPORTANT:
+
+N-LINK-360 remains the primary business application.
+
+Do not blindly replace N-LINK-360 business logic with SalesPulse logic.
+
+Do not copy its database without comparing schemas, relationships, constraints and business rules.
+
+Create a mapping between both applications and identify:
+1. What N-LINK-360 already supports.
+2. What SalesPulse supports better.
+3. What should be retained.
+4. What should be improved.
+5. What should be removed.
+6. What must be newly developed.
+
+---
+
+# 3. LOCKED BUSINESS AND TECHNICAL DECISIONS
+
+These decisions are approved and must be followed.
+
+| Area | Decision |
+|---|---|
+| Main application | N-LINK-360 |
+| Main database | Supabase |
+| Authentication | Registered email OTP / magic link |
+| Mobile application | Installable PWA |
+| Desktop application | Full ERP |
+| Dealer portal | Included in current build |
+| Dealer access | Mobile and web |
+| Sales team access | Mobile and desktop |
+| Management access | Full desktop ERP |
+| Invoice generation | At dispatch |
+| Inventory | Raw materials and finished goods |
+| Google Sheets | Full two-way integration |
+| Offline support | IndexedDB and durable sync queue |
+| SalesPulse | Reference application |
+| Data preservation | Mandatory |
+| UI/UX | Complete frontend replacement |
+
+Supabase must be the authoritative operational database.
+
+Google Sheets must not become a competing financial database.
+
+Full two-way synchronization means all approved mapped data can travel in both directions, with validation, audit history and appropriate controls.
+
+---
+
+# 4. MAIN OBJECTIVE: REMOVE AND REBUILD THE ENTIRE FRONTEND
+
+The existing frontend must be treated as a legacy interface.
+
+Do not merely change its colours, CSS or layout.
+
+Completely redesign and rebuild the frontend UI/UX.
+
+Inspect the existing application first to understand its routes, components, services and business logic.
+
+Then create a new professional interface.
+
+You must preserve and reconnect useful backend functionality rather than unnecessarily rewriting everything.
+
+Remove:
+- Outdated layouts
+- Inconsistent navigation
+- Poor dashboard designs
+- Duplicate components
+- Unnecessary cards
+- Unusable forms
+- Broken buttons
+- Dead routes
+- Demo interfaces
+- Fake data
+- Placeholder functionality
+- Unnecessary animations
+- Inconsistent colours
+- Duplicate frontend logic
+
+Every visible action must work.
+
+Do not leave buttons that only look functional.
+
+Do not use mock records to make production screens appear complete.
+
+---
+
+# 5. DESIGN DIRECTION
+
+Create a modern enterprise FMCG application.
+
+The interface must be:
+
+- Professional
+- Clean
+- Decent
+- Minimal
+- Consistent
+- Easy to understand
+- Fast
+- Responsive
+- Mobile-first where appropriate
+- Suitable for daily business operations
+
+### Theme
+
+Use:
+- Deep navy for primary navigation.
+- White for main surfaces.
+- Light grey for page backgrounds.
+- Teal or green for positive actions and verified statuses.
+- Amber for pending transactions.
+- Red for errors, rejected transactions and overdue items.
+- Clear typography.
+- Consistent spacing.
+- Proper alignment.
+- Subtle borders and shadows.
+
+Avoid:
+- Excessive gradients.
+- Too many colours.
+- Crowded dashboards.
+- Unnecessary animations.
+- Oversized headings.
+- Tiny text.
+- Poor contrast.
+- Random card arrangements.
+- Inconsistent buttons.
+
+### Responsive design
+
+Build three connected user experiences:
+
+1. Mobile Field Sales PWA.
+2. Desktop Management ERP.
+3. Dealer / Distributor Portal.
+
+The same backend and business rules must power all three.
+
+---
+
+# 6. USER ROLES AND ORGANISATION HIERARCHY
+
+Build role-based access with configurable organisation hierarchy.
+
+### Sales hierarchy
+
+National Sales Manager (NSM)
+- Regional Sales Manager (RSM)
+  - Zonal Sales Manager (ZSM)
+    - Sales Officer
+    - Recovery Officer
+      - Assigned dealers and distributors
+
+Do not hard-code the hierarchy. It must be manageable through the administration portal.
+
+### Head office departments
+
+- Accounts Officer
+- Accounts Manager
+- Production Manager
+- Production Officer
+- Warehouse / Inventory Manager
+- Dispatch Manager
+- Dispatch Officer
+- Management
+- System Administrator
+
+### Dealer and distributor users
+
+Provide separate authenticated dealer accounts.
+
+Dealers must only see their own:
+- Orders
+- Invoices
+- Recoveries
+- Payments
+- Ledger
+- Statements
+- Delivery status
+- Profile
+
+No dealer may access another dealer's information.
+
+### Access control
+
+Implement permissions by:
+- Role
+- Department
+- Region
+- Territory
+- Town
+- Assigned employee
+- Assigned dealer
+- Specific action
+
+Unknown users and unknown roles must be denied by default.
+
+Never give an unknown user administrator access.
+
+Never trust frontend-only permission checks.
+
+Enforce security in Supabase RLS and server-side transaction functions.
+
+---
+
+# 7. COMPLETE BUSINESS WORKFLOW
+
+## MODULE A: DEALERS AND DISTRIBUTORS
+
+Create a complete dealer management module.
+
+Features:
+- Add dealer
+- Edit dealer
+- Dealer approval
+- Dealer code generation
+- Dealer type
+- Contact information
+- Address
+- Town
+- Territory
+- Region
+- Assigned Sales Officer
+- Assigned Recovery Officer
+- Credit limit
+- Payment terms
+- Opening balance
+- Outstanding balance
+- Dealer status
+- Dealer documents
+- Dealer transaction history
+
+Prevent accidental duplicate dealer registration.
+
+Provide searchable and filterable dealer lists.
+
+## MODULE B: SALES TEAM
+
+Sales Officers, Recovery Officers, ZSM, RSM and NSM need appropriate mobile and desktop access.
+
+### Attendance
+
+- Check-in
+- Check-out
+- Date and time
+- GPS coordinates
+- Location accuracy
+- Town and territory where reliably available
+- Attendance history
+- Date-range filtering
+- Daily visit records
+- Sales by visit
+- Recovery by visit
+
+Never fabricate a location when GPS permission is unavailable.
+
+### Market visits
+
+The officer should see:
+- Assigned dealers
+- Dealer location
+- Dealer contact details
+- Previous orders
+- Previous recoveries
+- Outstanding balance
+- Last visit
+- Pending orders
+- Recent invoices
+
+Record:
+- Visit time
+- Visit outcome
+- Notes
+- Next follow-up
+- Order collected
+- Recovery collected
+
+### Order collection
+
+Build a complete order-entry system.
+
+Fields:
+- Dealer
+- Product
+- SKU
+- Quantity
+- Unit
+- Price
+- Discount
+- Tax, where applicable
+- Line total
+- Order total
+- Required delivery date
+- Notes
+
+Use server-approved pricing.
+
+Generate unique order numbers.
+
+Allow draft, submit and approval workflows.
+
+Prevent duplicate submissions.
+
+## MODULE C: RECOVERY COLLECTION
+
+Sales and Recovery Officers can submit payments.
+
+Fields:
+- Dealer
+- Amount
+- Payment method
+- Cash / cheque / bank transfer
+- Transaction reference
+- Collection date
+- Evidence attachment
+- Notes
+- Collector
+
+Status:
+- Draft
+- Submitted
+- Pending Verification
+- Under Review
+- Verified
+- Rejected
+- Reversal Requested
+- Reversed
+
+IMPORTANT FINANCIAL RULE:
+
+A submitted recovery must NOT reduce the official dealer outstanding balance.
+
+Only Accounts-verified payments can be posted to the official financial ledger.
+
+The field officer cannot verify their own financial submission unless an explicitly authorised separation-of-duties policy allows it.
+
+Every approval and rejection must be recorded.
+
+Never silently modify or delete a verified payment.
+
+Use reversal transactions with proper audit history.
+
+## MODULE D: INVOICES AND DEALER LEDGER
+
+Create a complete invoice and ledger module.
+
+Every dealer must have an accurate account statement.
+
+Ledger formula:
+
+Closing Balance = Opening Balance + Debits - Credits
+
+Debit:
+- Posted invoices
+- Approved debit notes
+- Other approved charges
+
+Credit:
+- Verified recoveries
+- Approved credit notes
+- Other approved credits
+
+Display:
+- Opening balance
+- Total invoices
+- Total debit
+- Total verified recovery
+- Total credit
+- Pending recovery
+- Closing balance
+- Overdue invoices
+
+Provide:
+- Date-wise ledger
+- Invoice-wise ledger
+- Payment allocation
+- Downloadable PDF statement
+- Invoice PDF
+- Transaction detail
+- Audit history
+
+Do not allow manual closing-balance edits.
+
+All financial records must be traceable.
+
+## MODULE E: ACCOUNTS
+
+Accounts is responsible for verification and financial controls.
+
+Build:
+- Pending recovery queue
+- Recovery verification
+- Invoice verification
+- Credit notes
+- Debit notes
+- Payment allocation
+- Dealer reconciliation
+- Credit limits
+- Outstanding reports
+- Overdue ageing
+- Cash collection reports
+- Bank reconciliation
+- Financial audit history
+
+Every action must have a reason, user ID and timestamp.
+
+## MODULE F: PRODUCTION
+
+Production receives approved order requirements.
+
+Features:
+- Production planning
+- Product and SKU
+- Required quantity
+- Available finished goods
+- Raw material requirements
+- Raw material availability
+- Production batch
+- Planned quantity
+- Completed quantity
+- Rejected quantity
+- Wastage
+- Production status
+- Completion date
+- Quality checks
+- Warehouse handover
+
+Production statuses:
+- Planned
+- Material Shortage
+- Materials Reserved
+- In Progress
+- Partially Completed
+- Quality Check
+- Completed
+- Cancelled
+
+Do not invent raw material consumption or BOM data.
+
+If BOM data does not exist, implement controlled stock movements until the actual BOM is verified.
+
+## MODULE G: INVENTORY
+
+Manage both raw materials and finished goods.
+
+Features:
+- Warehouse
+- Stock locations
+- Product stock
+- Opening stock
+- Stock receipts
+- Stock issues
+- Raw material consumption
+- Production output
+- Stock transfers
+- Stock reservations
+- Dispatch
+- Returns
+- Damage
+- Adjustments
+- Stock history
+
+Never directly edit an authoritative stock balance.
+
+Use immutable stock movements.
+
+Every adjustment must have approval and an audit trail.
+
+## MODULE H: DISPATCH AND INVOICE GENERATION
+
+This is an important approved business rule.
+
+INVOICES MUST BE GENERATED AT DISPATCH.
+
+Workflow:
+
+1. Order is approved.
+2. Stock is allocated or production is completed.
+3. Dispatch team opens the approved order.
+4. Dispatch confirms actual dispatched quantity.
+5. System creates a dispatch note.
+6. System generates invoice draft from actual dispatched quantities.
+7. Accounts verifies invoice.
+8. Approved invoice is posted to the dealer ledger.
+
+IMPORTANT:
+
+Do not invoice quantities that have not actually been dispatched by default.
+
+Support partial dispatch.
+
+Example:
+
+Order quantity = 100 units.
+
+First dispatch = 60 units.
+
+First invoice = 60 units.
+
+Remaining quantity = 40 units.
+
+Second dispatch = 40 units.
+
+Second invoice = 40 units.
+
+All invoices must be linked to their original order and dispatch records.
+
+Invoice numbers must be generated safely on the server.
+
+Do not allow users to modify posted invoices directly.
+
+Use credit notes or reversal transactions for corrections.
+
+---
+
+# 8. DEALER / DISTRIBUTOR PORTAL
+
+The dealer portal is included in the current project.
+
+Create a separate, professional and simple portal.
+
+Dealer dashboard:
+- Outstanding balance
+- Pending orders
+- Approved orders
+- Dispatched orders
+- Total invoices
+- Pending payments
+- Verified payments
+
+Dealer functions:
+- Secure login
+- View profile
+- Place orders
+- View order history
+- Track order status
+- View invoices
+- Download invoices
+- View ledger
+- Download statements
+- Submit payment information
+- Upload payment evidence
+- View payment verification status
+- Submit complaints or queries
+- Receive notifications
+
+Dealer submissions must follow company approval workflows.
+
+Dealer access must be isolated through Supabase RLS.
+
+---
+
+# 9. GOOGLE SHEETS FULL TWO-WAY SYNC
+
+Study SalesPulse carefully for its Google Sheets implementation.
+
+Build a reliable integration.
+
+Supabase remains the authoritative database.
+
+Google Sheets must support both directions.
+
+### Supabase to Google Sheets
+
+Synchronise approved mapped data:
+- Employees
+- Hierarchy
+- Dealers
+- Products
+- Pricing
+- Orders
+- Order status
+- Invoices
+- Verified recoveries
+- Dealer ledger extracts
+- Stock summaries
+- Production
+- Dispatch
+- Targets
+- Reports
+
+### Google Sheets to Supabase
+
+Import approved mapped changes:
+- Employee records
+- Hierarchy
+- Dealer master
+- Product master
+- Pricing
+- Targets
+- Territory assignments
+- Other agreed operational fields
+
+### Required integration features
+
+- Automatic sync
+- Two-way sync
+- Manual sync
+- Field mapping
+- Sheet and tab mapping
+- Stable record IDs
+- Validation
+- Change tracking
+- Sync history
+- Retry failed jobs
+- Duplicate protection
+- Conflict detection
+- Error logs
+- Reconciliation
+- Last successful sync
+- Pending sync count
+
+### Financial protection
+
+Full two-way sync does NOT mean uncontrolled editing of posted financial records.
+
+Never allow spreadsheet edits to silently rewrite:
+- Verified recoveries
+- Posted invoices
+- Ledger entries
+- Stock movements
+- Dispatch confirmations
+- Financial adjustments
+
+Import protected changes into an approval queue.
+
+Use server-side credentials only.
+
+Never expose Google credentials in frontend JavaScript, browser storage or repository files.
+
+Do not delete existing Google Sheets integrations until the replacement has been tested and verified.
+
+---
+
+# 10. OFFLINE-FIRST MOBILE PWA
+
+The mobile application must support field work in weak-network areas.
+
+Implement:
+- IndexedDB
+- Durable offline queue
+- Automatic sync when online
+- Retry mechanism
+- Unique transaction IDs
+- Idempotency keys
+- Sync history
+- Pending state
+- Failed state
+- Conflict state
+- Last sync time
+- App restart recovery
+
+Offline users should be able to:
+- View cached assigned dealers
+- View cached product catalogue
+- Prepare draft orders
+- Record attendance events
+- Submit recovery records for later sync
+
+Show clear status:
+- Saved locally
+- Waiting to sync
+- Syncing
+- Synced successfully
+- Failed
+- Requires attention
+
+Never show a locally stored record as server-confirmed.
+
+Never generate a new idempotency key when retrying the same transaction.
+
+Test Android Chrome and iOS Safari.
+
+Remember that PWA background sync is not guaranteed when the app is fully closed on every device.
+
+---
+
+# 11. DASHBOARDS AND REPORTING
+
+Build role-specific dashboards.
+
+### Sales Officer dashboard
+- Today's sales
+- Today's recovery
+- Monthly sales
+- Monthly recovery
+- Dealer visits
+- Orders submitted
+- Pending orders
+- Recovery pending verification
+- Target achievement
+
+### ZSM / RSM / NSM dashboard
+- Regional sales
+- National sales
+- Recovery
+- Outstanding
+- Team performance
+- Dealer performance
+- Territory comparison
+- Target achievement
+- Overdue dealers
+
+### Accounts dashboard
+- Pending recoveries
+- Verified recoveries
+- Pending invoices
+- Outstanding
+- Overdue ageing
+- Daily collections
+- Reconciliation exceptions
+
+### Production dashboard
+- Production plan
+- Pending orders
+- Material shortage
+- Work in progress
+- Completed production
+- Rejected quantity
+
+### Dispatch dashboard
+- Ready orders
+- Pending dispatch
+- Partial dispatch
+- Completed dispatch
+- Delivery status
+
+### Management dashboard
+- Total sales
+- Total verified recovery
+- Total outstanding
+- Order pipeline
+- Production performance
+- Stock position
+- Dispatch performance
+- Regional comparison
+
+Every dashboard number must come from real database queries.
+
+All metrics must drill down to the underlying transactions.
+
+Never use fake values or hardcoded KPIs.
+
+---
+
+# 12. DATABASE AND BACKEND ENGINEERING
+
+Inspect the existing Supabase schema before changing it.
+
+Do not create duplicate tables simply because the proposed design has different names.
+
+Map existing tables and relationships to the target model.
+
+Review:
+- Tables
+- Columns
+- Data types
+- Foreign keys
+- Unique constraints
+- Indexes
+- RLS policies
+- Grants
+- Triggers
+- Functions
+- RPC
+- Storage policies
+- Auth mappings
+- Migration history
+
+Suggested logical data domains:
+
+1. Organisation and employees
+2. User roles and permissions
+3. Hierarchy and territories
+4. Dealers and distributors
+5. Products and pricing
+6. Attendance and visits
+7. Orders and approvals
+8. Payments and recoveries
+9. Invoices and credit notes
+10. Financial ledger
+11. Inventory
+12. Production
+13. Dispatch
+14. Targets and performance
+15. Google Sheets integration
+16. Audit logs
+17. Notifications
+
+Use:
+- Foreign keys
+- Database constraints
+- Server-side functions
+- RLS
+- Transaction-safe posting
+- Unique transaction identifiers
+- Idempotency
+- Proper indexing
+- Pagination
+- Audit events
+
+Use fixed-precision money values or integer minor units.
+
+Never use floating-point arithmetic for financial posting.
+
+Never rely on frontend calculations for official balances.
+
+---
+
+# 13. AUTHENTICATION AND SECURITY
+
+Implement real Supabase authentication.
+
+Registered email OTP or magic link is the approved method.
+
+Link the authenticated user to an active employee or dealer account.
+
+Remove:
+- Local pseudo-authentication
+- Fake successful login
+- Domain-only email acceptance
+- Prefilled production credentials
+- Browser role overrides
+- Unknown-role administrator fallbacks
+- Hardcoded secrets
+- Exposed service-role keys
+
+Security requirements:
+- Supabase RLS
+- Least privilege
+- Server-side permission checks
+- Secure storage
+- Protected APIs
+- Session handling
+- Audit logs
+- File access policies
+- Rate limiting where applicable
+- Input validation
+- Error handling
+
+Never request or expose production secrets in chat or source code.
+
+Use environment variables and secure server-side secret storage.
+
+---
+
+# 14. TECHNICAL QUALITY
+
+Inspect the actual project stack before changing dependencies.
+
+Do not replace the whole backend technology stack without a clear technical reason.
+
+Review:
+- React
+- TypeScript
+- Vite
+- Supabase
+- PWA
+- Tailwind / CSS
+- Existing routing
+- Existing API services
+- Existing build configuration
+
+Improve:
+- Component architecture
+- Reusable hooks
+- Type safety
+- Service separation
+- API error handling
+- Loading states
+- Empty states
+- Form validation
+- Responsive behaviour
+- Performance
+- Accessibility
+- Maintainability
+
+Remove unused packages only after confirming they are not required.
+
+Avoid introducing unnecessary dependencies.
+
+---
+
+# 15. COMPLETE SOURCE AUDIT
+
+Before implementing changes, inspect the entire uploaded project.
+
+Create an inventory of:
+- All frontend routes
+- All components
+- All services
+- All APIs
+- All database migrations
+- All edge functions
+- All SQL functions
+- All integrations
+- All environment variables
+- All dependencies
+- All tests
+
+Search for:
+- Mock data
+- Demo data
+- Fake authentication
+- Placeholder buttons
+- Dead code
+- Duplicate components
+- Duplicate migrations
+- Hardcoded business values
+- Incorrect financial formulas
+- Missing permissions
+- Unused Firebase integrations
+- Old Google Sheets integrations
+- Local storage dependencies
+- Insecure API routes
+
+For every finding record:
+- File path
+- Problem
+- Severity
+- Business impact
+- Recommended correction
+- Actual correction
+- Test result
+
+Do not make assumptions about live database state.
+
+If the connected Supabase project is unavailable, continue safe source-level work and report which database checks are blocked.
+
+---
+
+# 16. IMPLEMENTATION METHOD
+
+Work in controlled stages.
+
+### PHASE 1: Source discovery
+
+Inspect all source and reference files.
+
+Create:
+- Source inventory
+- Existing feature map
+- SalesPulse comparison
+- Database mapping
+- Integration map
+- Security findings
+- UI/UX replacement plan
+- Implementation checklist
+
+Do not stop after writing a report.
+
+### PHASE 2: Architecture
+
+Design the new application architecture.
+
+Define:
+- Application structure
+- Routes
+- Roles
+- Permissions
+- Data services
+- Shared components
+- Backend interfaces
+- Offline architecture
+- Google Sheets architecture
+
+### PHASE 3: New frontend
+
+Build:
+- Design system
+- Desktop ERP shell
+- Mobile PWA shell
+- Dealer portal
+- Dashboards
+- Forms
+- Tables
+- Detail pages
+- Approval queues
+- Reports
+
+Connect to actual backend data.
+
+### PHASE 4: Business modules
+
+Implement in this order:
+
+1. Authentication and access
+2. Employees and hierarchy
+3. Dealers and distributors
+4. Products and pricing
+5. Attendance and visits
+6. Orders
+7. Recoveries
+8. Accounts verification
+9. Inventory
+10. Production
+11. Dispatch
+12. Invoice generation
+13. Ledger
+14. Dealer portal
+15. Google Sheets
+16. Offline sync
+17. Reports and notifications
+
+### PHASE 5: QA
+
+Test every workflow.
+
+Do not stop at successful page rendering.
+
+Test real database operations, permissions, transaction integrity and error handling.
+
+### PHASE 6: Production release
+
+Prepare:
+- Production environment configuration
+- Database migration plan
+- Backup plan
+- Deployment configuration
+- Rollback plan
+- Monitoring
+- User acceptance testing
+- Release checklist
+
+---
+
+# 17. TESTING REQUIREMENTS
+
+### Authentication tests
+- Registered user login
+- Unregistered user denial
+- Inactive employee denial
+- Expired session
+- Role restrictions
+- Dealer isolation
+
+### Sales tests
+- Dealer visit
+- Attendance
+- Order creation
+- Order approval
+- Credit limit
+- Product pricing
+- Duplicate submission
+
+### Recovery tests
+- Payment submission
+- Evidence upload
+- Accounts verification
+- Rejection
+- Retry
+- Duplicate protection
+- Reversal
+
+### Financial tests
+- Opening balance
+- Invoice debit
+- Recovery credit
+- Credit note
+- Closing balance
+- Invoice allocation
+- Ledger reconciliation
+
+### Production and stock tests
+- Raw material issue
+- Production output
+- Finished goods
+- Stock reservation
+- Stock transfer
+- Dispatch
+- Return
+- Adjustment
+
+### Dispatch tests
+- Full dispatch
+- Partial dispatch
+- Invoice generation
+- Unique invoice number
+- Remaining quantity
+- Invoice verification
+
+### Google Sheets tests
+- Database to sheet
+- Sheet to database
+- Duplicate event
+- Invalid data
+- Conflict
+- Retry
+- Reconciliation
+
+### PWA tests
+- Offline mode
+- App restart
+- Local draft recovery
+- Network restoration
+- Duplicate retry
+- Expired session
+- Failed sync
+
+---
+
+# 18. STRICT RULES
+
+1. Do not delete or reset existing production data.
+2. Do not overwrite existing database tables blindly.
+3. Do not invent database columns or existing business rules.
+4. Do not create fake users.
+5. Do not use mock data in production workflows.
+6. Do not bypass authentication.
+7. Do not give unknown users administrator access.
+8. Do not allow unverified payments to change official balances.
+9. Do not invoice undelivered quantities by default.
+10. Do not allow stock balances to be directly edited.
+11. Do not duplicate records during retries.
+12. Do not expose secrets.
+13. Do not remove integrations before replacement is verified.
+14. Do not rename or reorder migrations without checking applied migration history.
+15. Do not mark incomplete features as complete.
+16. Do not claim production readiness without evidence.
+17. Preserve all existing valuable business data and historical records.
+18. Every financial action must be traceable.
+19. Every important UI action must be functional.
+20. Every implementation stage must be tested.
+
+If a requirement conflicts with the existing verified business logic, identify the conflict and explain it before making a risky change.
+
+If you cannot access a file, service or database, state that limitation clearly. Never pretend to have inspected it.
+
+---
+
+# 19. REQUIRED DELIVERABLES
+
+Create and maintain these project documents:
+
+1. `N-LINK360_SOURCE_AUDIT.md`
+2. `N-LINK360_SALESPULSE_COMPARISON.md`
+3. `N-LINK360_SYSTEM_ARCHITECTURE.md`
+4. `N-LINK360_DATABASE_MAPPING.md`
+5. `N-LINK360_ROLE_PERMISSION_MATRIX.md`
+6. `N-LINK360_BUSINESS_WORKFLOWS.md`
+7. `N-LINK360_UI_UX_SPECIFICATION.md`
+8. `N-LINK360_GOOGLE_SHEETS_SYNC_SPEC.md`
+9. `N-LINK360_OFFLINE_PWA_SPEC.md`
+10. `N-LINK360_TEST_PLAN.md`
+11. `N-LINK360_PRODUCTION_RELEASE_CHECKLIST.md`
+
+Update these documents when the actual implementation changes.
+
+Also implement the actual source code. Documents are not a substitute for implementation.
+
+---
+
+# 20. FINAL EXECUTION INSTRUCTION
+
+Start by inspecting the complete uploaded N-LINK-360 source and SalesPulse reference.
+
+Do not immediately start deleting files or writing a new frontend before understanding the existing application.
+
+First establish a safe baseline and map the existing data and business logic.
+
+Then start the actual rebuild.
+
+Work in small, controlled, testable changes.
+
+After each phase:
+- List files changed.
+- Explain what was implemented.
+- Report tests run.
+- Report test results.
+- Report remaining issues.
+- Identify any blockers.
+- Confirm whether the change is safe to proceed.
+
+Do not ask me to repeat decisions already locked in this prompt.
+
+If a minor detail is missing, choose a safe, conventional default and document it.
+
+If a major business decision could affect financial records, data migration or production behaviour, ask before applying that change.
+
+Your final objective is:
+
+A fully functional, secure, professional, responsive FMCG Sales and Distribution ERP called N-LINK-360, with a mobile field application, desktop management ERP and dealer portal, powered by Supabase, with reliable offline operation, controlled full two-way Google Sheets synchronization, accurate financial ledgers, production, inventory, dispatch and invoice workflows.
+
+BUILD THE REAL APPLICATION. DO NOT JUST DESCRIBE IT.

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en" data-theme="dark" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#070E0B" />
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('nlink_theme_mode');
+          var isLight = mode === 'light';
+          document.documentElement.classList.toggle('dark', !isLight);
+          document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/jpeg" href="/national_light_logo.jpg" />
+    <title>N-LINK 360</title>
+    <meta name="description" content="National Lights Integrated Sales, Recovery, Inventory & Distribution Management System" />
+    <meta property="og:title" content="N-LINK 360" />
+    <meta property="og:description" content="National Lights Integrated Sales, Recovery, Inventory & Distribution Management System" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

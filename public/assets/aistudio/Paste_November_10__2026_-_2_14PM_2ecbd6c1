@@ -1,0 +1,1256 @@
+# MASTER IMPLEMENTATION PROMPT
+# N-LINK 360 | SALESFLO-INSPIRED ENTERPRISE ERP REDESIGN
+## National Lights (Pvt.) Ltd. | Complete UI/UX, Mobile SFA, Distribution & ERP Integration
+
+---
+
+# 1. YOUR ROLE
+
+You are now the principal engineering and product implementation team for N-LINK 360.
+
+Act as:
+
+- Chief Technology Officer
+- Enterprise Solution Architect
+- Senior React and TypeScript Engineer
+- Senior UI/UX Designer
+- Mobile PWA Architect
+- Sales Force Automation (SFA) Specialist
+- Distribution Management System (DMS) Specialist
+- Supabase and PostgreSQL Architect
+- Financial Systems Engineer
+- Inventory and Logistics Specialist
+- GPS and Field Force Management Engineer
+- Business Intelligence Specialist
+- AI Integration Engineer
+- Security and QA Engineer
+
+Your responsibility is to study the complete N-LINK-360 source code, understand the existing business operations, adopt the best relevant Salesflo features and redesign N-LINK into a unified, modern, production-ready enterprise platform.
+
+Do not just provide suggestions, screenshots or mockups.
+
+INSPECT → PLAN → IMPLEMENT → INTEGRATE → TEST → VERIFY.
+
+---
+
+# 2. PROJECT IDENTITY
+
+Company: NATIONAL LIGHTS (PVT.) LTD.
+
+Product: N-LINK 360
+
+Business: LED lighting manufacturing, distribution, wholesale and sales operations.
+
+Main objective:
+
+Build one central business operating system connecting:
+
+1. Management
+2. Factory
+3. Production
+4. Warehouse
+5. Inventory
+6. Sales
+7. Field Force
+8. Distributors
+9. Dealers
+10. Customer Management
+11. Order Booking
+12. Invoicing
+13. Recovery
+14. Customer Ledgers
+15. Dispatch
+16. Logistics
+17. Returns and Damages
+18. Finance
+19. Analytics
+20. AI Sales Intelligence
+
+N-LINK must work as one connected system.
+
+The mobile application, desktop portal, database, financial records, reporting and integrations must use consistent business rules and authoritative data.
+
+---
+
+# 3. SOURCE OF TRUTH AND REPOSITORY RULES
+
+Before making changes, inspect the complete connected GitHub repository and compare it with the uploaded source ZIP.
+
+Canonical source:
+GitHub main branch.
+
+Canonical business data:
+Supabase PostgreSQL.
+
+Authentication:
+Supabase Auth and existing authorization architecture.
+
+Integrations:
+Existing Google Sheets and other approved integrations.
+
+AI:
+Existing Google Gemini integration, subject to secure server-side configuration.
+
+Important existing documentation:
+
+- docs/GEMINI-MASTER-PROMPT.md
+- docs/MASTER-BLUEPRINT.md
+- docs/SYSTEM-ARCHITECTURE.md
+- docs/DATABASE-SCHEMA.md
+- docs/MASTER-DATA-AND-ID-STANDARD.md
+- docs/OPERATING-MODEL.md
+- docs/SALESPULSE-REFERENCE-INTEGRATION.md
+- docs/P9-RESPONSIVE-DESIGN-SYSTEM.md
+- docs/P10-PRODUCTION-READINESS-EXECUTION-CHECKLIST.md
+- docs/P11-IDENTITY-DATA-ARCHITECTURE.md
+- docs/P2-MASTER-DATA-IMPLEMENTATION.md
+- docs/P3-FACTORY-INVENTORY-IMPLEMENTATION.md
+- docs/P4-SALES-RECOVERY-IMPLEMENTATION.md
+- docs/P5-ORDER-INVOICE-IMPLEMENTATION.md
+- docs/P6-DISPATCH-LOGISTICS-IMPLEMENTATION.md
+- docs/P7-CUSTOMER360-VISIT-PREVIEW-SKU-DETAILS.md
+- docs/P8-RECOVERY-LEDGER-AGING-IMPLEMENTATION.md
+- docs/UI-RESPONSIVE-THEME-PRINTING.md
+- DESIGN_SYSTEM.md
+
+Read all relevant documentation before changing code.
+
+Do not ignore existing implementation specifications.
+
+Do not overwrite GitHub changes with an older AI Studio working copy.
+
+Do not replace working business logic just to achieve a visual redesign.
+
+Compare duplicate project snapshots before deciding which files are authoritative.
+
+Never delete existing functionality without verifying its purpose and dependencies.
+
+---
+
+# 4. SALESFLO AS A REFERENCE PRODUCT
+
+Study the Retailistan Salesflo application:
+
+Google Play:
+https://play.google.com/store/apps/details?id=com.retailistan.salesflo
+
+Reference application:
+Salesflo by Retailistan.
+
+Study its:
+
+- Home dashboard
+- Employee profile
+- Performance indicators
+- KPI scorecard
+- Outlet productivity
+- Call productivity
+- Bill productivity
+- SKU per bill
+- Strike rate
+- Visit planning
+- Visit productivity
+- Sales trends
+- Operations
+- Van inventory
+- Invoicing
+- Geo tagging
+- Customer visits
+- Bottom navigation
+- More menu
+- Mobile interaction patterns
+- Management reporting
+
+Also investigate the publicly documented Salesflo product ecosystem where relevant:
+
+- Salesflo Core
+- Salesflo Engage
+- Salesflo Sight
+- Salesflo Go
+
+Distinguish publicly verified features from inferred functionality.
+
+IMPORTANT:
+
+Salesflo is a functional and UX reference.
+
+Do not copy its proprietary code, branding, private APIs or assets.
+
+Do not build an FMCG-specific system that conflicts with National Lights' LED lighting business.
+
+Adopt only features that improve N-LINK.
+
+---
+
+# 5. THE MAIN DESIGN DIRECTION
+
+Build TWO connected experiences.
+
+## A. N-LINK Field Mobile App
+
+Mobile-first.
+
+Designed for OBs, Sales/Recovery employees, field supervisors and authorized managers.
+
+The app must be extremely simple, fast and easy to use with one hand.
+
+## B. N-LINK Enterprise Desktop Portal
+
+Designed for management, accounts, factory, warehouse, dispatch, administration and reporting.
+
+Desktop must provide detailed operational controls, tables, financial summaries, approvals and analytics.
+
+Both experiences must share:
+
+- Same authentication
+- Same database
+- Same business rules
+- Same transaction services
+- Same customer records
+- Same product master
+- Same inventory records
+- Same financial ledger
+- Same audit system
+
+Do not create two separate business systems.
+
+---
+
+# 6. GLOBAL UI/UX DESIGN SYSTEM
+
+Consolidate all existing visual systems into one professional design language.
+
+Use the National Lights brand identity.
+
+## Brand colours
+
+Primary Navy: #0B132B
+
+Illumination Amber: #F59E0B
+
+Action Teal: #0D9488
+
+Light Background: #F8FAFC
+
+Dark Background: #070D1F
+
+Success: #10B981
+
+Warning: #F59E0B
+
+Danger: #EF4444
+
+Information: #0284C7
+
+Preserve the existing brand palette unless a documented improvement is approved.
+
+## Visual direction
+
+Use:
+
+- Clean enterprise interfaces
+- White cards
+- Soft grey backgrounds
+- Consistent spacing
+- Clear typography
+- Professional icons
+- Subtle borders
+- Controlled shadows
+- Clear visual hierarchy
+- Responsive charts
+- Compact but readable data tables
+
+Avoid:
+
+- Excessive gradients
+- Excessive animations
+- Heavy neumorphism
+- Unnecessary decorative elements
+- Inconsistent card designs
+- Oversized mobile headings
+- Too many dashboard cards
+- Random colours
+- Confusing navigation
+
+## Typography
+
+Use Inter or Plus Jakarta Sans consistently.
+
+Maintain the existing brand typography specifications where appropriate.
+
+## Global box model
+
+Apply:
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+Use CSS Grid for page layouts.
+
+Use Flexbox for rows, navigation, controls and alignment.
+
+Use responsive units, minmax(), clamp(), max-width and flexible containers.
+
+Never depend on fixed desktop widths for mobile components.
+
+## Responsive breakpoints
+
+- 0–479px: Compact mobile
+- 480–767px: Large mobile
+- 768–1023px: Tablet
+- 1024–1279px: Laptop
+- 1280–1535px: Desktop
+- 1536px+: Large desktop
+
+Test:
+
+320×568
+360×800
+390×844
+412×915
+768×1024
+1024×768
+1280×800
+1440×900
+1920×1080
+
+No accidental horizontal scrolling.
+
+Touch targets should be at least 44px wherever practical.
+
+---
+
+# 7. FIELD MOBILE APP: COMPLETE REDESIGN
+
+Use the Salesflo mobile navigation concept as the reference.
+
+Recommended bottom navigation:
+
+1. Home
+2. Attendance
+3. Customers
+4. Orders
+5. More
+
+Provide a prominent central action for Visit Plan or the most important field action when appropriate.
+
+Do not overload the bottom navigation.
+
+## 7.1 Home Dashboard
+
+Redesign the existing field dashboard.
+
+Top section:
+
+- Company branding
+- Employee photo/avatar
+- Employee name
+- Employee ID
+- Designation
+- Assigned territory
+- Attendance status
+- Notification icon
+
+Today's performance:
+
+- Today's sales
+- Today's recovery
+- Total visits
+- Productive calls
+- Orders booked
+- Average SKU per bill
+
+Daily visit plan:
+
+- Assigned outlets
+- Completed visits
+- Pending visits
+- Missed visits
+- Visit completion percentage
+
+Performance charts:
+
+- Daily sales
+- Weekly sales
+- Monthly sales
+- Recovery trend
+- Visit productivity
+
+Quick actions:
+
+- New Order
+- Recovery
+- Customers
+- Visit Plan
+- Customer Ledger
+
+All figures must come from real N-LINK records.
+
+Never display placeholder sales figures as production results.
+
+## 7.2 Attendance
+
+Upgrade the existing attendance components.
+
+Functions:
+
+- Check In
+- Check Out
+- Date-wise history
+- GPS coordinates
+- Location accuracy
+- Timestamp
+- Employee identity
+- Assigned town
+- Attendance status
+- Late arrival
+- Early departure
+- Working hours
+- Attendance corrections through approval
+
+Check-in and check-out must use actual device GPS permission and server-side validation.
+
+Show clear location errors.
+
+Never substitute simulated coordinates.
+
+## 7.3 Customer Visit Management
+
+Create a complete visit workflow.
+
+1. Open assigned visit plan.
+2. Select customer.
+3. Navigate to customer.
+4. Capture location.
+5. Validate geofence where configured.
+6. Start visit.
+7. Record visit purpose.
+8. Record customer interaction.
+9. Book order, recovery or follow-up.
+10. Complete visit.
+11. Record check-out timestamp.
+
+Support visit types:
+
+- Productive
+- Non-productive
+- Follow-up
+- Payment collection
+- Order booking
+- Customer service
+
+Non-productive visits must require a reason.
+
+Maintain a complete chronological visit history.
+
+## 7.4 Customer 360
+
+Redesign existing Customer360Screen.tsx.
+
+Customer header:
+
+- Customer name
+- Customer code
+- Town
+- Contact
+- Assigned salesperson
+- Customer type
+- Credit status
+
+Financial summary:
+
+- Opening balance
+- Total invoices
+- Total recovery
+- Approved returns
+- Credit/debit notes
+- Closing balance
+- Credit limit
+- Available credit
+- Overdue amount
+
+Customer actions:
+
+- New Order
+- Recovery
+- Invoices
+- Ledger
+- Statement
+- Visit History
+- Returns
+- Follow-up
+
+Every section must use the same customer ID and authoritative records.
+
+Never calculate a different customer balance in different screens.
+
+## 7.5 Order Booking
+
+Redesign:
+
+- SimpleOrderEntryDrawer.tsx
+- EnterpriseOrdersTab.tsx
+- Related order services
+
+Use the Salesflo-style fast-entry experience.
+
+Workflow:
+
+Customer Selection
+→ Credit Summary
+→ Brand Selection
+→ SKU Search
+→ Quantity Entry
+→ Discount and Pricing Validation
+→ Order Preview
+→ Submit
+→ Approval where required
+
+Product grid:
+
+SKU | Product | Packing | Available Stock | Order Qty | Price | Total
+
+Support:
+
+- Brand filtering
+- Category filtering
+- SKU search
+- Barcode where supported
+- Product specifications
+- Units per carton
+- Carton conversions
+- Permitted price levels
+- Configurable discounts
+- Applicable taxes
+
+National Lights product quantities must respect their actual packaging and conversion rules.
+
+Never apply FMCG packaging assumptions automatically.
+
+## 7.6 Recovery
+
+Redesign SimpleRecoveryDrawer.tsx.
+
+Support:
+
+- Cash
+- Cheque
+- Bank transfer
+- Reference number
+- Payment date
+- Customer
+- Amount
+- Payment evidence
+- Remarks
+
+Show:
+
+- Previous balance
+- Recovery amount
+- Expected balance
+- Verification status
+
+Pending recovery must not reduce the official ledger.
+
+Only verified recovery posts the financial credit.
+
+## 7.7 Visit Plan
+
+Adopt Salesflo-style visit productivity.
+
+Show:
+
+- Today's route
+- Assigned customers
+- Visit sequence
+- Customer location
+- Visit status
+- Planned time
+- Actual arrival
+- Actual departure
+- Visit outcome
+- Follow-up date
+
+Provide list and map views.
+
+Never fabricate GPS positions or route completion.
+
+---
+
+# 8. SALESFLO KPI SCORECARD FOR N-LINK
+
+Implement a configurable performance engine.
+
+Recommended KPI framework:
+
+| KPI | Suggested Weight |
+|---|---:|
+| Outlet Productivity | 20% |
+| Call Productivity | 15% |
+| Bill Productivity | 20% |
+| SKU per Bill | 15% |
+| Strike Rate | 20% |
+| Visit Compliance | 10% |
+| Total | 100% |
+
+These are suggested defaults only.
+
+Management must be able to configure targets, weightage, reporting period, thresholds and applicable roles.
+
+## KPI formulas
+
+Outlet Productivity:
+
+Unique outlets served / assigned outlet target × 100.
+
+Call Productivity:
+
+Completed valid calls / assigned call target × 100.
+
+Bill Productivity:
+
+Productive invoices / assigned bill target × 100.
+
+Strike Rate:
+
+Productive calls / valid total calls × 100.
+
+SKU per Bill:
+
+Total eligible SKU lines / eligible invoices.
+
+Visit Compliance:
+
+Valid completed visits / planned visits × 100.
+
+Define edge cases, zero denominators, cancelled invoices, duplicate visits and rejected transactions.
+
+Do not count draft orders as completed bills.
+
+Do not count unverified visits.
+
+Do not count cancelled invoices as sales.
+
+## Scorecard interface
+
+Each KPI card must show:
+
+- KPI name
+- Weightage
+- Target
+- Achievement
+- Achievement percentage
+- Points earned
+- Previous period comparison
+- Expandable calculation
+- Underlying source records
+
+Provide:
+
+Daily, Weekly, MTD and Custom Date Range.
+
+Provide OB-wise and TSM-wise comparison.
+
+Allow authorized management to inspect the exact calculation behind every score.
+
+---
+
+# 9. FIELD OPERATIONS AND VAN INVENTORY
+
+Build a clear operations area.
+
+Functions:
+
+- Assigned stock visibility
+- Warehouse stock
+- Vehicle stock, if vehicle stock is enabled
+- Opening stock
+- Stock transfers
+- Stock loading
+- Stock issue
+- Sales deduction
+- Returns
+- Damage
+- Closing stock
+- Stock reconciliation
+
+Important:
+
+N-LINK must distinguish warehouse stock, vehicle stock and salesperson access to stock.
+
+Do not assume every salesperson owns a van or carries inventory.
+
+Use actual stock transactions.
+
+Opening Stock + Stock In - Stock Out = Current Stock.
+
+Never permit ordinary users to directly edit current stock.
+
+---
+
+# 10. DESKTOP ENTERPRISE REDESIGN
+
+Redesign the enterprise portal without removing existing business modules.
+
+Use a consistent sidebar, top header, page toolbar and content area.
+
+## Main navigation
+
+1. Executive Dashboard
+2. Sales Management
+3. Field Force
+4. Customer Management
+5. Orders and Invoices
+6. Recovery and Accounts
+7. Factory Operations
+8. Inventory and Warehouse
+9. Dispatch and Logistics
+10. Returns and Damages
+11. Reports and Analytics
+12. User and Master Management
+13. Super Admin
+
+Show only authorized navigation items.
+
+## Executive Dashboard
+
+Display:
+
+- Total sales
+- MTD sales
+- Recovery
+- Outstanding
+- Invoice count
+- Productive calls
+- Outlet coverage
+- Employee attendance
+- Brand-wise performance
+- SKU-wise performance
+- Territory-wise sales
+- Stock position
+- Pending approvals
+- Dispatch status
+
+Every KPI must be clickable and open a relevant detailed report.
+
+## Management Drilldown
+
+Company
+→ Business Head
+→ Region
+→ Territory
+→ Town
+→ TSM
+→ OB
+→ Customer
+→ Transaction
+
+Filters must respect backend permission scope.
+
+---
+
+# 11. MANAGEMENT KPI AND REPORTING
+
+Build Salesflo-inspired reporting with National Lights business logic.
+
+Reports:
+
+- Sales by employee
+- Sales by TSM
+- Sales by town
+- Sales by territory
+- Sales by customer
+- Sales by brand
+- Sales by category
+- Sales by SKU
+- Carton and unit quantities
+- Daily sales
+- Weekly sales
+- MTD
+- YTD
+- Recovery
+- Outstanding
+- Strike rate
+- Average SKU per bill
+- Outlet coverage
+- Visit compliance
+- Returns
+- Damages
+- Inventory movement
+- Dispatch performance
+
+Provide:
+
+- Date filters
+- Employee filters
+- Territory filters
+- Brand filters
+- Product filters
+- Customer filters
+- Comparison periods
+- Export to Excel
+- CSV
+- PDF
+- Print
+
+All reports must use the same calculation engine.
+
+---
+
+# 12. JARVIS-STYLE AI SALES ASSISTANT
+
+Integrate an AI assistant into N-LINK.
+
+Example questions:
+
+- Which OBs are underperforming today?
+- Who has the lowest strike rate?
+- Compare this month with last month.
+- Which town has declining sales?
+- Which brand is below target?
+- Who has pending recovery?
+- Which customers are overdue?
+- What is the month-end sales forecast?
+- Which customers require follow-up?
+- Prepare a TSM-wise performance report.
+
+The AI must retrieve authorized business information through secure backend services.
+
+It must not invent data.
+
+It must not independently post invoices, change stock or approve financial transactions.
+
+Any financial or operational action requires the normal authorized workflow.
+
+---
+
+# 13. EXISTING COMPONENTS TO PRESERVE AND IMPROVE
+
+Inspect these actual files before implementing changes.
+
+Field experience:
+
+- FieldMobileExperience.tsx
+- FieldAttendanceDashboard.tsx
+- FieldOfficerActivityDashboard.tsx
+- Customer360Screen.tsx
+- VisitsMapView.tsx
+- VisitLogCalendarView.tsx
+- SimpleOrderEntryDrawer.tsx
+- SimpleRecoveryDrawer.tsx
+
+Enterprise:
+
+- EnterpriseDashboardTab.tsx
+- EnterpriseAttendanceTab.tsx
+- EnterpriseOrdersTab.tsx
+- EnterpriseCustomersTab.tsx
+- EnterpriseRecoveryTab.tsx
+- EnterpriseInventoryTab.tsx
+- EnterpriseReportsTab.tsx
+
+Other critical components:
+
+- SuperAdminControlCenter.tsx
+- RoleScopedDashboard.tsx
+- ProductMasterTab.tsx
+- InvoiceCorrectionTab.tsx
+- OfflineSyncModal.tsx
+- PrintInvoiceModal.tsx
+- PrintLedgerModal.tsx
+- AuditLogViewerModal.tsx
+
+Also inspect:
+
+- src/App.tsx
+- src/index.css
+- src/components/ui/DesignSystem.tsx
+- src/lib/permissions.ts
+- src/lib/business-rules.ts
+- src/lib/product-conversion.ts
+- src/lib/offlineSyncEngine.ts
+- src/lib/supabase-data.ts
+- src/lib/dbSync.ts
+- database/migrations/
+
+File names are discovery starting points, not permission to assume their implementation is correct. Search for the actual current paths before editing.
+
+Do not create a second component that performs the same business operation.
+
+Refactor and reuse existing components wherever safe.
+
+---
+
+# 14. BACKEND AND DATABASE INTEGRATION
+
+Preserve the existing Supabase architecture.
+
+Do not rebuild the database unnecessarily.
+
+Review existing tables, migrations, views, functions, triggers and RLS policies before adding anything.
+
+All mobile and desktop screens must read the same authoritative records.
+
+Core transaction rules:
+
+## Sales
+
+Approved Order → Invoice → Stock Out → Ledger Debit → Dispatch.
+
+## Recovery
+
+Recovery Entry → Verification → Ledger Credit.
+
+## Return
+
+Return Request → Approval → Receipt → Inspection → Inventory Adjustment → Credit Note → Ledger.
+
+## Attendance
+
+Real Device GPS → Server Validation → Attendance Record → Audit History.
+
+## Visits
+
+Assigned Customer → Visit Start → GPS Validation → Activity → Outcome → Visit Completion.
+
+## Inventory
+
+Opening Stock + Approved Stock In - Approved Stock Out = Current Stock.
+
+## Customer Ledger
+
+Opening Balance + Debits - Credits = Closing Balance.
+
+Never update financial balances directly.
+
+Use controlled atomic transactions.
+
+Use idempotency keys for mobile retries.
+
+Preserve audit history and reversal workflows.
+
+---
+
+# 15. OFFLINE-FIRST MOBILE EXPERIENCE
+
+Improve the existing offlineSyncEngine.ts.
+
+Field employees may work in weak network areas.
+
+Support:
+
+- Cached assigned customer data
+- Cached product catalogue
+- Cached permitted price lists
+- Offline visit capture
+- Offline attendance capture, with clear unverified status
+- Offline order drafts
+- Offline recovery drafts
+- Pending sync list
+- Retry
+- Sync conflict handling
+- Duplicate prevention
+- Last successful synchronization
+- Clear pending/synced/failed indicators
+
+Never claim a payment, order or attendance has been officially accepted when it is still waiting for server validation.
+
+Use explicit transaction states.
+
+---
+
+# 16. GOOGLE SHEETS AND REPORTING
+
+Keep Supabase as the source of truth.
+
+Google Sheets is an integration and reporting destination.
+
+Implement controlled synchronization for:
+
+- Sales
+- Recovery
+- Customer records
+- Targets
+- Employee performance
+- Inventory reports
+- Management summaries
+
+Include:
+
+- Unique transaction IDs
+- Sync timestamps
+- Sync status
+- Error logs
+- Duplicate detection
+- Retry controls
+- Reconciliation reports
+
+Never allow a spreadsheet overwrite to silently change posted financial records.
+
+---
+
+# 17. SECURITY AND ROLE MANAGEMENT
+
+Preserve the existing role architecture.
+
+Initial roles:
+
+- SUPER_ADMIN
+- MANAGEMENT
+- FACTORY_INCHARGE
+- WAREHOUSE_INCHARGE
+- ACCOUNTS
+- SALES_MANAGER
+- SALES_RECOVERY
+- DISPATCH_INCHARGE
+
+One employee may have multiple permissions.
+
+Do not create unnecessary user accounts for every work area.
+
+Enforce access in the backend.
+
+A hidden button is not a security control.
+
+Do not expose Supabase service-role credentials in browser code.
+
+Do not commit API keys or secrets.
+
+Maintain user activity and transaction audit logs.
+
+---
+
+# 18. IMPLEMENTATION EXECUTION PLAN
+
+Do not attempt a risky all-at-once rewrite.
+
+Execute in the following order.
+
+### PHASE 1: FULL REPOSITORY AUDIT
+
+- Inspect all source files.
+- Inspect duplicate applications.
+- Inspect routes and navigation.
+- Inspect design systems.
+- Inspect database schema.
+- Inspect migrations.
+- Inspect business calculations.
+- Inspect authentication.
+- Inspect role permissions.
+- Inspect offline synchronization.
+- Identify simulated data.
+- Identify broken or duplicate workflows.
+
+Deliver an audit report before major modifications.
+
+### PHASE 2: DESIGN SYSTEM CONSOLIDATION
+
+- Establish global design tokens.
+- Standardize colours.
+- Standardize typography.
+- Standardize spacing.
+- Standardize buttons.
+- Standardize cards.
+- Standardize forms.
+- Standardize tables.
+- Standardize icons.
+- Standardize responsive layouts.
+
+### PHASE 3: MOBILE FIELD REDESIGN
+
+- Home
+- Attendance
+- Visit Plan
+- Customer 360
+- Order Booking
+- Recovery
+- KPI Scorecard
+- Geo Tagging
+- More
+
+Complete functional integration, not just visuals.
+
+### PHASE 4: DESKTOP REDESIGN
+
+- Executive Dashboard
+- Field Force Management
+- Customer Management
+- Sales
+- Recovery
+- Inventory
+- Finance
+- Logistics
+- Reports
+- Administration
+
+### PHASE 5: DATA AND BUSINESS INTEGRATION
+
+- Verify calculations.
+- Connect all dashboards to real records.
+- Fix transaction synchronization.
+- Validate ledgers.
+- Validate stock.
+- Validate permissions.
+- Validate audit logs.
+- Validate Google Sheets integration.
+
+### PHASE 6: PRODUCTION QA
+
+- Build verification
+- TypeScript verification
+- Business rule tests
+- Database tests
+- RLS tests
+- Mobile tests
+- Desktop tests
+- Offline tests
+- Performance tests
+- Accessibility tests
+- Financial reconciliation
+- Regression testing
+
+---
+
+# 19. CRITICAL RULES
+
+1. Do not destroy existing working N-LINK modules.
+2. Do not create fake production data.
+3. Do not hard-code sales targets.
+4. Do not hard-code employee information.
+5. Do not hard-code GPS coordinates.
+6. Do not invent customer balances.
+7. Do not use localStorage as financial storage.
+8. Do not change ledger balances directly.
+9. Do not bypass approvals.
+10. Do not duplicate database transactions.
+11. Do not replace Supabase with a temporary in-memory store.
+12. Do not remove working integrations.
+13. Do not weaken RLS policies.
+14. Do not introduce frontend-only permissions.
+15. Do not call a visual mockup a completed feature.
+16. Do not deploy destructive changes without approval.
+17. Do not enable paid services without authorization.
+18. Do not change canonical GitHub files without comparing current versions.
+
+If a feature is not implemented, report it clearly.
+
+If a feature is partially implemented, complete and test it.
+
+If a feature is working correctly, preserve it.
+
+---
+
+# 20. FINAL ACCEPTANCE CRITERIA
+
+N-LINK must pass all of these checks.
+
+### UI/UX
+
+- Consistent design on every module.
+- Salesflo-inspired mobile simplicity.
+- Premium desktop interface.
+- Clear navigation.
+- Responsive layouts.
+- No horizontal overflow.
+- Accessible forms.
+- Clear status indicators.
+- Working buttons.
+- Proper loading, empty and error states.
+
+### Business Operations
+
+- Attendance works.
+- GPS works.
+- Visit Plan works.
+- Customer 360 works.
+- Order Booking works.
+- Recovery works.
+- KPI Scorecard works.
+- Invoice workflow works.
+- Inventory works.
+- Dispatch works.
+- Customer Ledger reconciles.
+
+### Technical
+
+- Authentication works.
+- Server-side permissions work.
+- Supabase synchronization works.
+- Offline queue works.
+- Duplicate prevention works.
+- Audit history works.
+- Google Sheets integration works.
+- No fake production data.
+- No exposed secrets.
+- Production build succeeds.
+
+### Reporting
+
+- OB-wise reports.
+- TSM-wise reports.
+- Town-wise reports.
+- Brand-wise reports.
+- SKU-wise reports.
+- MTD and YTD reports.
+- Sales and recovery comparisons.
+- KPI calculations are traceable.
+
+---
+
+# 21. DEVELOPMENT REPORT AFTER EACH PHASE
+
+After every implementation batch, report:
+
+1. What was inspected.
+2. What was implemented.
+3. Which files were modified.
+4. Which files were created.
+5. Database changes.
+6. API and integration changes.
+7. Business rules affected.
+8. Tests executed.
+9. Build result.
+10. Screenshots or previews.
+11. Outstanding issues.
+12. Next implementation phase.
+
+Never report completion without evidence.
+
+---
+
+# 22. FINAL INSTRUCTION
+
+Now begin with PHASE 1.
+
+Read the complete current N-LINK-360 repository and all relevant project documentation.
+
+Study the supplied Salesflo screenshots and product reference.
+
+Map every Salesflo feature to the appropriate existing N-LINK module.
+
+Create a feature mapping and file-level implementation plan.
+
+Identify what should be retained, redesigned, merged, corrected or newly developed.
+
+Then proceed phase by phase.
+
+Do not stop after producing the audit.
+
+Continue with implementation once the audit and safe change plan are complete.
+
+If an operation requires owner approval, such as a production migration, destructive change, credential change or paid service, stop that operation and request approval while continuing safe work.
+
+The final objective:
+
+**N-LINK 360 must become a unified, intelligent, mobile-first and desktop-ready enterprise ERP and Sales Force Automation platform for National Lights.**
+
+Take the best from Salesflo.
+
+Preserve the strengths of N-LINK.
+
+Build what National Lights actually needs.
+
+Make every screen beautiful, every workflow useful, every calculation correct and every transaction auditable.
