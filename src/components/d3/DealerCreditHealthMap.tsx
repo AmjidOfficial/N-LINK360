@@ -577,7 +577,11 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
 
             <div className="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700/60">
               <span className="text-[10px] text-slate-400 uppercase font-bold block">Over-Limit Risk</span>
+<<<<<<< HEAD
               <span className={`font-mono font-black text-sm sm:text-base ${portfolioStats.highCount > 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+=======
+              <span className={`font-mono font-black text-sm sm:text-base ${portfolioStats.highCount > 0 ? 'text-rose-400 animate-pulse' : 'text-slate-300'}`}>
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 {portfolioStats.highCount} {portfolioStats.highCount === 1 ? 'Shop' : 'Shops'}
               </span>
             </div>

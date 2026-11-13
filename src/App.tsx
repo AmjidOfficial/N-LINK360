@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { NLinkUser, TEAM_USERS, getStoredUsers, NLINK_TEAM_ROSTER } from './data/nlink-users-team';
+<<<<<<< HEAD
 import { Customer, SalesOrder, Recovery, User, EmployeeAttendance, UserProfileUpdateRequest, TownNode, LedgerEntry, InventoryBalance, InventoryTransaction, InventoryTransactionType, LeaveRequest } from './types';
 import { AuthGate } from './components/AuthGate';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
@@ -28,6 +29,18 @@ import { fallbackAppData, SupabaseAppData, loadSupabaseAppData } from './service
 import { SEED_LEDGER_ENTRIES } from './data/seed-ledger-data';
 import { initialInventoryBalances, initialInventoryTransactions } from './services/store';
 import { logAuditEvent } from './services/auditLog';
+=======
+import { Customer, SalesOrder, Recovery, User, EmployeeAttendance, UserProfileUpdateRequest, TownNode } from './types';
+import { AuthGate } from './components/AuthGate';
+import { FieldMobileExperience } from './components/creditbook/FieldMobileExperience';
+import { HeadOfficeExperience } from './components/headoffice/HeadOfficeExperience';
+import { NationalLightRateListModal } from './components/stitch/NationalLightRateListModal';
+import { GoogleSheetSyncModal } from './components/GoogleSheetSyncModal';
+import { InvoicePdfPreviewModal } from './components/stitch/InvoicePdfPreviewModal';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { fallbackAppData, SupabaseAppData, loadSupabaseAppData } from './services/supabase-data';
+import { SEED_LEDGER_ENTRIES } from './data/seed-ledger-data';
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 import {
   syncOrderToSupabase,
   syncRecoveryToSupabase,
@@ -44,6 +57,7 @@ import {
 import { purgeMockDataFromState, isProductionUser } from './utils/purgeMockData';
 import { generateSalesInvoicePdfBlob, downloadSalesInvoicePdf, buildInvoiceWhatsAppText } from './utils/exportInvoicePdf';
 import { fetchLiveGoogleSheetData } from './services/liveGoogleSheetSync';
+<<<<<<< HEAD
 import { reconcileUsersWithGoogleSheet } from './services/googleSheetsSync';
 import { syncToGoogleSheetsWebhook, getGoogleSheetsWebhookUrl } from './services/google-sheets';
 import { assertAuthorizedApprover, isAuthorizedApproverEmail, invalidateAllSessionsGlobally } from './services/production-users';
@@ -62,18 +76,47 @@ import {
 import { syncManager, getOfflineQueue } from './services/offlineSyncEngine';
 
 export default function App() {
+=======
+import { assertAuthorizedApprover, invalidateAllSessionsGlobally } from './services/production-users';
+import { getStoredTownNodes, saveTownNodes, PAKISTAN_TOWN_COORDINATES } from './services/townManagement';
+import { persistAttendanceRecord } from './services/attendance';
+import { TeamShareModal } from './components/TeamShareModal';
+import { detectDeviceExperience, isMobileDevice } from './utils/deviceDetection';
+
+export default function App() {
+  // User Pinned Mode (True if user explicitly clicked "Switch to..." in this session, or URL provided ?mode=)
+  const [isUserPinnedExperience, setIsUserPinnedExperience] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      return Boolean(p.get('mode') || p.get('view') || p.get('app'));
+    }
+    return false;
+  });
+
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   // Experience Mode: 'FIELD_MOBILE' | 'HEAD_OFFICE'
   // Auto-detect device: Phones & Tablets (< 1024px) -> Mobile Version; Laptops & Desktops -> Head Office Web Portal
   const [experienceMode, setExperienceMode] = useState<'FIELD_MOBILE' | 'HEAD_OFFICE'>(() => {
     return detectDeviceExperience();
   });
 
+<<<<<<< HEAD
   // Responsive device auto-detection on resize / orientation change
+=======
+  // Responsive device auto-detection on resize / orientation change (unless manually pinned by user)
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const handleResize = () => {
+<<<<<<< HEAD
       setExperienceMode(detectDeviceExperience());
+=======
+      if (!isUserPinnedExperience) {
+        const detected = detectDeviceExperience();
+        setExperienceMode(detected);
+      }
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     };
 
     window.addEventListener('resize', handleResize);
@@ -82,11 +125,16 @@ export default function App() {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
+<<<<<<< HEAD
   }, []);
+=======
+  }, [isUserPinnedExperience]);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
   // Team Share Working Link Modal State
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
+<<<<<<< HEAD
   // Ledger Live Toast Message (Auto-dismisses after 5 seconds)
   const [ledgerToastMessage, setLedgerToastMessage] = useState<string | null>(null);
 
@@ -98,6 +146,11 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [ledgerToastMessage]);
 
+=======
+  // Ledger Live Toast Message
+  const [ledgerToastMessage, setLedgerToastMessage] = useState<string | null>(null);
+
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   // Active User Persona
   const [currentUser, setCurrentUser] = useState<NLinkUser | null>(() => {
     try {
@@ -109,7 +162,11 @@ export default function App() {
   });
 
   // Login handler with automatic role-based home screen routing
+<<<<<<< HEAD
   const handleSignIn = async (signedInUser: User & { mustChangePassword?: boolean }) => {
+=======
+  const handleSignIn = async (signedInUser: User) => {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     const storedUsers = getStoredUsers();
     const allAvailable = storedUsers && storedUsers.length > 0 ? storedUsers : (TEAM_USERS || []);
 
@@ -121,7 +178,11 @@ export default function App() {
       signedInUser.role || ''
     );
 
+<<<<<<< HEAD
     const basePersona: NLinkUser = matched || {
+=======
+    const userPersona: NLinkUser = matched || {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       id: signedInUser.id || `USR-${Date.now()}`,
       employeeCode: 'EMP-001',
       fullName: signedInUser.fullName || signedInUser.email?.split('@')[0] || 'National Lights Personnel',
@@ -145,6 +206,7 @@ export default function App() {
       avatarInitials: signedInUser.fullName?.slice(0, 2).toUpperCase() || 'NL',
     };
 
+<<<<<<< HEAD
     const isMustChange =
       signedInUser.mustChangePassword !== undefined
         ? Boolean(signedInUser.mustChangePassword)
@@ -159,11 +221,17 @@ export default function App() {
     try {
       localStorage.setItem('nlink_active_logged_user', JSON.stringify(userPersona));
       localStorage.setItem('nlink_active_user_session', JSON.stringify(userPersona));
+=======
+    setCurrentUser(userPersona);
+    try {
+      localStorage.setItem('nlink_active_logged_user', JSON.stringify(userPersona));
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     } catch (e) {}
 
     // AUTOMATIC DEVICE-AWARE & ROLE-BASED ROUTING:
     // 1. Mobile Phone / Tablet -> Automatically routes to Field Mobile Experience
     // 2. Laptop / Desktop -> Routes to Head Office Command Center (or Field Mobile if field role)
+<<<<<<< HEAD
     const isFieldRole = ['SALES_RECOVERY', 'ORDER_BOOKER', 'RECOVERY_OFFICER', 'TSM', 'ASM', 'OB', 'SS'].includes(
       userPersona.role || ''
     );
@@ -175,6 +243,12 @@ export default function App() {
       setExperienceMode('FIELD_MOBILE');
     } else {
       if (isFieldRole && !isHeadOfficeRole) {
+=======
+    if (isMobileDevice()) {
+      setExperienceMode('FIELD_MOBILE');
+    } else {
+      if (isFieldRole && !isHeadOfficeRole && !isUserPinnedExperience) {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         setExperienceMode('FIELD_MOBILE');
       } else {
         setExperienceMode('HEAD_OFFICE');
@@ -183,6 +257,7 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
+<<<<<<< HEAD
     if (currentUser) {
       logAuditEvent({
         userId: currentUser.id,
@@ -194,6 +269,8 @@ export default function App() {
         details: `${currentUser.fullName} signed out.`,
       });
     }
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     setCurrentUser(null);
     try {
       localStorage.removeItem('nlink_active_logged_user');
@@ -231,7 +308,124 @@ export default function App() {
       if (saved) return JSON.parse(saved);
     } catch (e) {}
 
+<<<<<<< HEAD
     return [];
+=======
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const twoDaysAgoStr = new Date(Date.now() - 172800000).toISOString().slice(0, 10);
+
+    return [
+      {
+        id: 'att-today-1',
+        employeeId: 'usr-hashir',
+        employeeCode: 'EMP-001',
+        employeeName: 'Muhammad Hashir',
+        designation: 'Sales & Recovery Executive',
+        department: 'SALES_FIELD',
+        date: todayStr,
+        checkInTime: '09:12 AM',
+        checkInLocation: 'Abbottabad (Main Commercial Beat)',
+        checkOutTime: undefined,
+        checkOutLocation: undefined,
+        status: 'PRESENT',
+        workingHours: 4.5,
+        isVerified: true,
+        verifiedBy: 'Shahzad Ullah',
+        createdAt: `${todayStr}T09:12:00Z`,
+      },
+      {
+        id: 'att-today-2',
+        employeeId: 'usr-shahzad',
+        employeeCode: 'EMP-002',
+        employeeName: 'Shahzad Ullah',
+        designation: 'Executive Director (Sole Authority)',
+        department: 'EXECUTIVE',
+        date: todayStr,
+        checkInTime: '08:45 AM',
+        checkInLocation: 'Head Office (Executive Suite)',
+        checkOutTime: undefined,
+        checkOutLocation: undefined,
+        status: 'PRESENT',
+        workingHours: 5.0,
+        isVerified: true,
+        verifiedBy: 'System Auto-Audit',
+        createdAt: `${todayStr}T08:45:00Z`,
+      },
+      {
+        id: 'att-today-3',
+        employeeId: 'usr-abid',
+        employeeCode: 'EMP-003',
+        employeeName: 'Abid Ali',
+        designation: 'Order Booker & Field Executive',
+        department: 'SALES_FIELD',
+        date: todayStr,
+        checkInTime: '09:05 AM',
+        checkInLocation: 'Peshawar (Duran Pur Route & Beat)',
+        checkOutTime: undefined,
+        checkOutLocation: undefined,
+        status: 'PRESENT',
+        workingHours: 4.6,
+        isVerified: true,
+        verifiedBy: 'Shahzad Ullah',
+        createdAt: `${todayStr}T09:05:00Z`,
+      },
+      {
+        id: 'att-yest-1',
+        employeeId: 'usr-hashir',
+        employeeCode: 'EMP-001',
+        employeeName: 'Muhammad Hashir',
+        designation: 'Sales & Recovery Executive',
+        department: 'SALES_FIELD',
+        date: yesterdayStr,
+        checkInTime: '09:00 AM',
+        checkInLocation: 'Mansehra (Karakoram Highway Market)',
+        checkOutTime: '05:45 PM',
+        checkOutLocation: 'Mansehra (City Commercial Beat)',
+        status: 'PRESENT',
+        workingHours: 8.75,
+        isVerified: true,
+        verifiedBy: 'Shahzad Ullah',
+        createdAt: `${yesterdayStr}T09:00:00Z`,
+      },
+      {
+        id: 'att-yest-2',
+        employeeId: 'usr-abid',
+        employeeCode: 'EMP-003',
+        employeeName: 'Abid Ali',
+        designation: 'Order Booker & Field Executive',
+        department: 'SALES_FIELD',
+        date: yesterdayStr,
+        checkInTime: '09:15 AM',
+        checkInLocation: 'Peshawar (Karkhano Market Beat)',
+        checkOutTime: '06:00 PM',
+        checkOutLocation: 'Peshawar (Saddar Road)',
+        status: 'PRESENT',
+        workingHours: 8.75,
+        isVerified: true,
+        verifiedBy: 'Shahzad Ullah',
+        createdAt: `${yesterdayStr}T09:15:00Z`,
+      },
+      {
+        id: 'att-2ago-1',
+        employeeId: 'usr-hashir',
+        employeeCode: 'EMP-001',
+        employeeName: 'Muhammad Hashir',
+        designation: 'Sales & Recovery Executive',
+        department: 'SALES_FIELD',
+        date: twoDaysAgoStr,
+        checkInTime: '08:50 AM',
+        checkInLocation: 'Haripur (GT Road Commercial Hub)',
+        checkOutTime: '05:30 PM',
+        checkOutLocation: 'Haripur (Main Bazaar Beat)',
+        status: 'PRESENT',
+        workingHours: 8.65,
+        isVerified: true,
+        verifiedBy: 'Shahzad Ullah',
+        createdAt: `${twoDaysAgoStr}T08:50:00Z`,
+      },
+    ];
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   });
 
   // Profile Update Requests State (Awaiting Shahzad Ullah's Approval)
@@ -241,7 +435,39 @@ export default function App() {
       if (saved) return JSON.parse(saved);
     } catch (e) {}
 
+<<<<<<< HEAD
     return [];
+=======
+    return [
+      {
+        id: 'req-prof-101',
+        userId: 'usr-abid',
+        userEmail: 'abid@nationallight.pk',
+        currentFullName: 'Abid Ali',
+        currentRole: 'ORDER_BOOKER',
+        requestedFullName: 'Abid Ali Khan',
+        requestedPhone: '+92 300 9876543',
+        requestedTowns: ['Peshawar', 'Duran Pur Route', 'Nowshera'],
+        requestedRouteBeat: 'Duran Pur Commercial Route',
+        reason: 'Adding Duran Pur commercial route coverage and updating official mobile contact number.',
+        status: 'PENDING_APPROVAL',
+        requestedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+        currentInfo: {
+          fullName: 'Abid Ali',
+          phone: '+92 301 2345678',
+          roleTitle: 'Order Booker',
+          assignedTowns: ['Peshawar'],
+        },
+        requestedChanges: {
+          fullName: 'Abid Ali Khan',
+          phone: '+92 300 9876543',
+          roleTitle: 'Senior Field Officer & Order Booker',
+          assignedTowns: ['Peshawar', 'Nowshera'],
+          reason: 'Adding Duran Pur commercial route coverage and updating official mobile contact number.',
+        },
+      } as any,
+    ];
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   });
 
   // Save attendance & profile requests to local storage
@@ -370,11 +596,15 @@ export default function App() {
 
   // Approve Profile Update Request
   const handleApproveProfileRequest = (requestId: string) => {
+<<<<<<< HEAD
     try {
       assertAuthorizedApprover(currentUser?.email, currentUser);
     } catch (e: any) {
       console.warn('Approver assertion note:', e.message);
     }
+=======
+    assertAuthorizedApprover(currentUser?.email);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
     setProfileUpdateRequests((prev) =>
       prev.map((r) => {
@@ -411,11 +641,15 @@ export default function App() {
 
   // Reject Profile Update Request
   const handleRejectProfileRequest = (requestId: string, reason?: string) => {
+<<<<<<< HEAD
     try {
       assertAuthorizedApprover(currentUser?.email, currentUser);
     } catch (e: any) {
       console.warn('Approver assertion note:', e.message);
     }
+=======
+    assertAuthorizedApprover(currentUser?.email);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
     setProfileUpdateRequests((prev) =>
       prev.map((r) => {
@@ -443,11 +677,17 @@ export default function App() {
     }
   }, [currentUser]);
 
+<<<<<<< HEAD
   // Rate Card, Sync, Preview, Password & Sales Audit Modals State
   const [isRateCardOpen, setIsRateCardOpen] = useState<boolean>(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState<boolean>(false);
   const [isSalesAuditModalOpen, setIsSalesAuditModalOpen] = useState<boolean>(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
+=======
+  // Rate Card, Sync & Preview Modals State
+  const [isRateCardOpen, setIsRateCardOpen] = useState<boolean>(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState<boolean>(false);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
   // PDF Preview Modal State
   const [previewPdfData, setPreviewPdfData] = useState<{
@@ -470,6 +710,7 @@ export default function App() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(() => SEED_LEDGER_ENTRIES || []);
+<<<<<<< HEAD
   const [inventoryBalances, setInventoryBalances] = useState<InventoryBalance[]>(() => {
     try {
       const saved = localStorage.getItem('nlink_inventory_balances');
@@ -491,6 +732,8 @@ export default function App() {
     } catch {}
     return [];
   });
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
   // Load cached database on mount & purge all mock/dummy data
   useEffect(() => {
@@ -519,6 +762,7 @@ export default function App() {
       setCustomers(localCusts);
       setOrders(localOrders);
       setRecoveries(localRecs);
+<<<<<<< HEAD
       console.log('--- Data Restoration Summary ---');
       console.log('Customers restored:', localCusts.length);
       console.log('Orders restored:', localOrders.length);
@@ -591,10 +835,44 @@ export default function App() {
         });
         localList.forEach((o) => {
           const key = getOrderKey(o);
+=======
+
+      // Helper merger to preserve user-entered data
+      const mergeCustomers = (localList: Customer[], remoteList: Customer[]): Customer[] => {
+        const map = new Map<string, Customer>();
+        remoteList.forEach((c) => {
+          const key = c.id || c.customerCode || c.companyName;
+          if (key) map.set(key.toLowerCase(), c);
+        });
+        localList.forEach((c) => {
+          const key = c.id || c.customerCode || c.companyName;
+          if (key) {
+            const lower = key.toLowerCase();
+            if (!map.has(lower)) {
+              map.set(lower, c);
+            } else {
+              const existing = map.get(lower)!;
+              map.set(lower, { ...existing, ...c });
+            }
+          }
+        });
+        return Array.from(map.values());
+      };
+
+      const mergeOrders = (localList: SalesOrder[], remoteList: SalesOrder[]): SalesOrder[] => {
+        const map = new Map<string, SalesOrder>();
+        remoteList.forEach((o) => {
+          const key = o.id || o.orderNumber;
+          if (key) map.set(key, o);
+        });
+        localList.forEach((o) => {
+          const key = o.id || o.orderNumber;
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           if (key) {
             if (!map.has(key)) {
               map.set(key, o);
             } else {
+<<<<<<< HEAD
               const remote = map.get(key)!;
               const isApproved =
                 o.status === 'APPROVED' ||
@@ -612,6 +890,10 @@ export default function App() {
                 dualApprovalStatus: isApproved ? 'DUAL_APPROVED' : (o.dualApprovalStatus || remote.dualApprovalStatus),
                 approvedBy: isApproved ? 'Shahzad Ullah' : (o.approvedBy || remote.approvedBy),
               });
+=======
+              const existing = map.get(key)!;
+              map.set(key, { ...existing, ...o });
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             }
           }
         });
@@ -619,6 +901,7 @@ export default function App() {
       };
 
       const mergeRecoveries = (localList: Recovery[], remoteList: Recovery[]): Recovery[] => {
+<<<<<<< HEAD
         const getRecKey = (r: Recovery) => {
           const num = (r as any).recoveryNumber ? String((r as any).recoveryNumber) : String(r.id || '');
           return num
@@ -635,10 +918,20 @@ export default function App() {
         });
         localList.forEach((r) => {
           const key = getRecKey(r);
+=======
+        const map = new Map<string, Recovery>();
+        remoteList.forEach((r) => {
+          const key = r.id || (r as any).recoveryNumber;
+          if (key) map.set(key, r);
+        });
+        localList.forEach((r) => {
+          const key = r.id || (r as any).recoveryNumber;
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           if (key) {
             if (!map.has(key)) {
               map.set(key, r);
             } else {
+<<<<<<< HEAD
               const remote = map.get(key)!;
               const isApproved =
                 r.status === 'VERIFIED' ||
@@ -658,12 +951,17 @@ export default function App() {
                 dualApprovalStatus: isApproved ? 'DUAL_APPROVED' : (r.dualApprovalStatus || remote.dualApprovalStatus),
                 verifiedBy: isApproved ? 'Shahzad Ullah' : (r.verifiedBy || remote.verifiedBy),
               });
+=======
+              const existing = map.get(key)!;
+              map.set(key, { ...existing, ...r });
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             }
           }
         });
         return Array.from(map.values());
       };
 
+<<<<<<< HEAD
       // Non-blocking deferred background remote sync (Instant UI mounting first)
       setTimeout(async () => {
         try {
@@ -704,6 +1002,51 @@ export default function App() {
           console.warn('Google Sheet auto-load error:', sheetErr.message || sheetErr);
         }
       }, 100);
+=======
+      // Fetch live Supabase database content
+      try {
+        const liveData = await loadSupabaseAppData(currentUser);
+        if (liveData && (liveData.customers.length > 0 || liveData.salesOrders.length > 0 || liveData.recoveries.length > 0)) {
+          const mergedC = mergeCustomers(localCusts, liveData.customers);
+          const mergedO = mergeOrders(localOrders, liveData.salesOrders);
+          const mergedR = mergeRecoveries(localRecs, liveData.recoveries);
+          setCustomers(mergedC);
+          setOrders(mergedO);
+          setRecoveries(mergedR);
+          if (liveData.ledgerEntries && liveData.ledgerEntries.length > 0) {
+            setLedgerEntries(liveData.ledgerEntries);
+          }
+          syncToCache(mergedC, mergedO, mergedR);
+        }
+      } catch (err: any) {
+        console.warn('Supabase remote load bypassed, operating on local sync:', err.message || err);
+      }
+
+      // Live Google Sheets direct GViz sync on launch
+      try {
+        const sheetData = await fetchLiveGoogleSheetData();
+        if (sheetData && sheetData.customersCount > 0) {
+          console.log(`✓ Auto-loaded ${sheetData.customersCount} dealers from Google Sheets`);
+          setCustomers((prevCusts) => {
+            const merged = mergeCustomers(prevCusts, sheetData.customers);
+            return merged;
+          });
+          setOrders((prevOrds) => {
+            const merged = mergeOrders(prevOrds, sheetData.orders);
+            return merged;
+          });
+          setRecoveries((prevRecs) => {
+            const merged = mergeRecoveries(prevRecs, sheetData.recoveries);
+            return merged;
+          });
+          if (sheetData.ledgerEntries && sheetData.ledgerEntries.length > 0) {
+            setLedgerEntries(sheetData.ledgerEntries);
+          }
+        }
+      } catch (sheetErr: any) {
+        console.warn('Google Sheet auto-load error:', sheetErr.message || sheetErr);
+      }
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     };
 
     initData();
@@ -725,7 +1068,11 @@ export default function App() {
   const currentAppData: SupabaseAppData = {
     customers,
     skus: NLINK_OFFICIAL_PRODUCTS as any,
+<<<<<<< HEAD
     inventoryBalances,
+=======
+    inventoryBalances: fallbackAppData.inventoryBalances,
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     salesOrders: orders,
     invoices: fallbackAppData.invoices,
     recoveries,
@@ -737,6 +1084,7 @@ export default function App() {
 
   useEffect(() => {
     registerAppDataProvider(() => currentAppData);
+<<<<<<< HEAD
   }, [customers, orders, recoveries, inventoryBalances]);
 
   // Ensure M. Ghaffar Tool Center is permanently assigned to Syed Zain (USR-002)
@@ -891,16 +1239,28 @@ export default function App() {
     };
 
     const updatedOrders = [effectiveOrder, ...orders];
+=======
+  }, [customers, orders, recoveries]);
+
+  // Order Placement Handler
+  const handlePlaceOrder = (newOrder: SalesOrder) => {
+    const updatedOrders = [newOrder, ...orders];
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     setOrders(updatedOrders);
     syncToCache(customers, updatedOrders, recoveries);
 
     if (isOnline) {
+<<<<<<< HEAD
       syncOrderToSupabase(effectiveOrder).catch((err) => {
+=======
+      syncOrderToSupabase(newOrder).catch((err) => {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         console.warn('Supabase order upload failed:', err);
       });
     }
 
     setLedgerToastMessage(
+<<<<<<< HEAD
       `✓ Order #${effectiveOrder.orderNumber} booked. Awaiting Shahzad Ullah's executive review.`
     );
   };
@@ -927,22 +1287,40 @@ export default function App() {
     };
 
     const updatedRecoveries = [effectiveRecovery, ...recoveries];
+=======
+      `✓ Order #${newOrder.orderNumber} booked. Awaiting Shahzad Ullah's executive review.`
+    );
+  };
+
+  // Recovery Logging Handler
+  const handleRecordRecovery = (newRecovery: Recovery) => {
+    const updatedRecoveries = [newRecovery, ...recoveries];
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     setRecoveries(updatedRecoveries);
     syncToCache(customers, orders, updatedRecoveries);
 
     if (isOnline) {
+<<<<<<< HEAD
       syncRecoveryToSupabase(effectiveRecovery).catch((err) => {
+=======
+      syncRecoveryToSupabase(newRecovery).catch((err) => {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         console.warn('Supabase recovery upload failed:', err);
       });
     }
 
     setLedgerToastMessage(
+<<<<<<< HEAD
       `✓ Recovery #${effectiveRecovery.id} logged (Status: PENDING). Awaiting Shahzad Ullah's confirmation before adding to Ledger.`
+=======
+      `✓ Recovery #${newRecovery.id} submitted. Awaiting Shahzad Ullah's confirmation.`
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     );
   };
 
   // Executive Approval Handlers: Shahzad Ullah sole executive signing authority
   const handleApproveOrder = (orderId: string, _approver?: string) => {
+<<<<<<< HEAD
     // Validate signing authority
     if (!isAuthorizedApproverEmail(currentUser?.email, currentUser)) {
       setLedgerToastMessage('⛔ Access Denied: Only Shahzad Ullah holds authorized executive signing authority.');
@@ -1011,17 +1389,34 @@ export default function App() {
           totalAmount: netInvoiceTotal,
           netAmount: netInvoiceTotal,
           netTotal: netInvoiceTotal,
+=======
+    let approvedTotal = 0;
+    let targetCustomerId = '';
+    let targetCustomerName = '';
+
+    const updatedOrders = orders.map((o) => {
+      if (o.id === orderId || o.orderNumber === orderId) {
+        approvedTotal = o.totalAmount || 0;
+        targetCustomerId = o.customerId;
+        targetCustomerName = o.customerName;
+        return {
+          ...o,
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           shahzadApproval: 'APPROVED' as const,
           shahzadApprovedAt: new Date().toISOString(),
           status: 'APPROVED' as const,
           dualApprovalStatus: 'DUAL_APPROVED' as const,
           approvedBy: 'Shahzad Ullah',
         };
+<<<<<<< HEAD
         return targetOrd;
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       }
       return o;
     });
 
+<<<<<<< HEAD
     if (!matchedAny) {
       console.warn(`[Approval] No pending order found matching identifier: ${orderId}`);
       setLedgerToastMessage(`⚠️ Order #${orderId} was not found in pending list or is already posted.`);
@@ -1071,12 +1466,30 @@ export default function App() {
         currentBalance: Math.max(0, (c.openingBalance ?? 0) + debits - credits),
         updatedAt: new Date().toISOString(),
       };
+=======
+    // Immediate ledger posting upon Shahzad Ullah's approval
+    const updatedCustomers = customers.map((c) => {
+      const isTarget =
+        (targetCustomerId && (c.id === targetCustomerId || c.customerCode === targetCustomerId)) ||
+        (targetCustomerName && c.companyName && c.companyName.toLowerCase().trim() === targetCustomerName.toLowerCase().trim());
+
+      if (isTarget) {
+        const newBal = (c.currentBalance ?? c.openingBalance ?? 0) + approvedTotal;
+        return {
+          ...c,
+          currentBalance: newBal,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return c;
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     });
 
     setOrders(updatedOrders);
     setCustomers(updatedCustomers);
     syncToCache(updatedCustomers, updatedOrders, recoveries);
 
+<<<<<<< HEAD
     if (targetOrd) {
       const effectiveOrd = targetOrd as SalesOrder;
       logAuditEvent({
@@ -1089,12 +1502,17 @@ export default function App() {
         recordId: effectiveOrd.orderNumber || effectiveOrd.id,
         details: `Order #${effectiveOrd.orderNumber} approved for ${effectiveOrd.customerName} (Net Rs. ${(effectiveOrd.totalAmount || 0).toLocaleString()})`,
       });
+=======
+    const targetOrd = updatedOrders.find((o) => o.id === orderId || o.orderNumber === orderId);
+    if (targetOrd) {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       const updatedAppData: SupabaseAppData = {
         ...currentAppData,
         customers: updatedCustomers,
         salesOrders: updatedOrders,
         recoveries: recoveries,
       };
+<<<<<<< HEAD
 
       // 1. Immediately push approval to Google Sheets Webhook
       syncToGoogleSheetsWebhook(getGoogleSheetsWebhookUrl(), updatedAppData).catch((err) => {
@@ -1300,10 +1718,17 @@ export default function App() {
     setLedgerToastMessage(
       `✓ 5-Step Fulfillment Completed: Dispatch Note #${payload.dispatchNoteNumber} generated, Stocks deducted, and Invoice #${payload.orderId} (15% Less: Rs. ${payload.discount15.toLocaleString()}) posted to ledger.`
     );
+=======
+      triggerLedgerApprovalSync('INVOICE_APPROVED', targetOrd.orderNumber || targetOrd.id, targetOrd.customerId, updatedAppData);
+    }
+
+    setLedgerToastMessage(`✓ Order approved by Shahzad Ullah. Official ledger updated.`);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   };
 
   const handleRejectOrder = (orderId: string, _approver: string, reason?: string) => {
     const finalReason = reason || 'Declined by Shahzad Ullah';
+<<<<<<< HEAD
     const isOrderMatch = (o: SalesOrder) => {
       const q = String(orderId || '').trim().toUpperCase();
       const oId = String(o.id || '').trim().toUpperCase();
@@ -1315,6 +1740,10 @@ export default function App() {
 
     const updatedOrders = orders.map((o) => {
       if (isOrderMatch(o)) {
+=======
+    const updatedOrders = orders.map((o) => {
+      if (o.id === orderId || o.orderNumber === orderId) {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         return {
           ...o,
           shahzadApproval: 'REJECTED' as const,
@@ -1330,6 +1759,7 @@ export default function App() {
 
     setOrders(updatedOrders);
     syncToCache(customers, updatedOrders, recoveries);
+<<<<<<< HEAD
 
     const updatedAppData: SupabaseAppData = {
       ...currentAppData,
@@ -1352,10 +1782,13 @@ export default function App() {
       details: `Order ${orderId} rejected: ${finalReason}`,
     });
 
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     setLedgerToastMessage(`✓ Order declined by Shahzad Ullah.`);
   };
 
   const handleApproveRecovery = (recoveryId: string, _approver?: string) => {
+<<<<<<< HEAD
     // Validate signing authority
     if (!isAuthorizedApproverEmail(currentUser?.email, currentUser)) {
       setLedgerToastMessage('⛔ Access Denied: Only Shahzad Ullah holds authorized confirmation authority.');
@@ -1402,6 +1835,18 @@ export default function App() {
       if (isRecoveryMatch(r)) {
         matchedAny = true;
         targetRec = {
+=======
+    let confirmedAmount = 0;
+    let targetCustomerId = '';
+    let targetCustomerName = '';
+
+    const updatedRecoveries = recoveries.map((r) => {
+      if (r.id === recoveryId || (r as any).recoveryNumber === recoveryId) {
+        confirmedAmount = r.amount || 0;
+        targetCustomerId = r.customerId;
+        targetCustomerName = r.customerName;
+        return {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           ...r,
           shahzadApproval: 'APPROVED' as const,
           shahzadApprovedAt: new Date().toISOString(),
@@ -1409,11 +1854,15 @@ export default function App() {
           dualApprovalStatus: 'DUAL_APPROVED' as const,
           verifiedBy: 'Shahzad Ullah',
         };
+<<<<<<< HEAD
         return targetRec;
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       }
       return r;
     });
 
+<<<<<<< HEAD
     if (!matchedAny) {
       console.warn(`[Approval] No pending recovery found matching identifier: ${recoveryId}`);
       setLedgerToastMessage(`⚠️ Recovery #${recoveryId} was not found in pending list or is already confirmed.`);
@@ -1461,20 +1910,43 @@ export default function App() {
         currentBalance: Math.max(0, (c.openingBalance ?? 0) + debits - credits),
         updatedAt: new Date().toISOString(),
       };
+=======
+    // Immediate ledger credit upon Shahzad Ullah's confirmation
+    const updatedCustomers = customers.map((c) => {
+      const isTarget =
+        (targetCustomerId && (c.id === targetCustomerId || c.customerCode === targetCustomerId)) ||
+        (targetCustomerName && c.companyName && c.companyName.toLowerCase().trim() === targetCustomerName.toLowerCase().trim());
+
+      if (isTarget) {
+        const newBal = Math.max(0, (c.currentBalance ?? c.openingBalance ?? 0) - confirmedAmount);
+        return {
+          ...c,
+          currentBalance: newBal,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return c;
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     });
 
     setRecoveries(updatedRecoveries);
     setCustomers(updatedCustomers);
     syncToCache(updatedCustomers, orders, updatedRecoveries);
 
+<<<<<<< HEAD
     if (targetRec) {
       const effectiveRec = targetRec as Recovery;
+=======
+    const targetRec = updatedRecoveries.find((r) => r.id === recoveryId);
+    if (targetRec) {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       const updatedAppData: SupabaseAppData = {
         ...currentAppData,
         customers: updatedCustomers,
         salesOrders: orders,
         recoveries: updatedRecoveries,
       };
+<<<<<<< HEAD
 
       // 1. Immediately push verified recovery to Google Sheets Webhook
       syncToGoogleSheetsWebhook(getGoogleSheetsWebhookUrl(), updatedAppData).catch((err) => {
@@ -1504,10 +1976,17 @@ export default function App() {
     }
 
     setLedgerToastMessage(`✓ Payment confirmed by Shahzad Ullah. Customer ledger credited & synced.`);
+=======
+      triggerLedgerApprovalSync('RECOVERY_VERIFIED', targetRec.id, targetRec.customerId, updatedAppData);
+    }
+
+    setLedgerToastMessage(`✓ Payment confirmed by Shahzad Ullah. Customer ledger credited.`);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   };
 
   const handleRejectRecovery = (recoveryId: string, _approver: string, reason?: string) => {
     const finalReason = reason || 'Declined by Shahzad Ullah';
+<<<<<<< HEAD
     const isRecoveryMatch = (r: Recovery) => {
       const q = String(recoveryId || '').trim().toUpperCase();
       const rId = String(r.id || '').trim().toUpperCase();
@@ -1519,6 +1998,10 @@ export default function App() {
 
     const updatedRecoveries = recoveries.map((r) => {
       if (isRecoveryMatch(r)) {
+=======
+    const updatedRecoveries = recoveries.map((r) => {
+      if (r.id === recoveryId) {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         return {
           ...r,
           shahzadApproval: 'REJECTED' as const,
@@ -1534,6 +2017,7 @@ export default function App() {
 
     setRecoveries(updatedRecoveries);
     syncToCache(customers, orders, updatedRecoveries);
+<<<<<<< HEAD
 
     const updatedAppData: SupabaseAppData = {
       ...currentAppData,
@@ -2210,12 +2694,18 @@ export default function App() {
     setLedgerToastMessage(`✓ Leave application ${decision.toLowerCase()}.`);
   };
 
+=======
+    setLedgerToastMessage(`✓ Payment declined by Shahzad Ullah.`);
+  };
+
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   // Google Sheet manual sync handler
   const [isSyncingSheet, setIsSyncingSheet] = useState(false);
 
   const handleSyncGoogleSheet = async () => {
     setIsSyncingSheet(true);
     try {
+<<<<<<< HEAD
       // 1. First push latest state to Google Sheets Webhook so sheet is current
       const currentFullData: SupabaseAppData = {
         ...currentAppData,
@@ -2371,6 +2861,22 @@ export default function App() {
         );
       } else {
         setLedgerToastMessage('ℹ️ Google Sheet verified: Synchronized successfully.');
+=======
+      const sheetData = await fetchLiveGoogleSheetData();
+      if (sheetData && sheetData.customersCount > 0) {
+        setCustomers(sheetData.customers);
+        setOrders(sheetData.orders);
+        setRecoveries(sheetData.recoveries);
+        if (sheetData.ledgerEntries && sheetData.ledgerEntries.length > 0) {
+          setLedgerEntries(sheetData.ledgerEntries);
+        }
+        syncToCache(sheetData.customers, sheetData.orders, sheetData.recoveries);
+        setLedgerToastMessage(
+          `✓ Google Sheet live sync complete! Loaded ${sheetData.customersCount} dealers, ${sheetData.ordersCount} invoices/orders, and ${sheetData.recoveriesCount} recoveries.`
+        );
+      } else {
+        setLedgerToastMessage('ℹ️ Sheet checked: No records found.');
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       }
     } catch (err: any) {
       console.error('Google sheet sync failed:', err);
@@ -2400,6 +2906,7 @@ export default function App() {
       });
     }
 
+<<<<<<< HEAD
     logAuditEvent({
       userId: currentUser?.id,
       userName: currentUser?.fullName,
@@ -2411,6 +2918,8 @@ export default function App() {
       details: `Registered dealer "${customerRecord.companyName}" (${customerRecord.town}) pending executive approval`,
     });
 
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     setLedgerToastMessage(
       `✓ Dealer "${customerRecord.companyName}" registered. Awaiting Shahzad Ullah's approval.`
     );
@@ -2431,6 +2940,7 @@ export default function App() {
   };
 
   const handleApproveCustomer = (customerId: string) => {
+<<<<<<< HEAD
     try {
       assertAuthorizedApprover(currentUser?.email, currentUser);
     } catch (e: any) {
@@ -2454,20 +2964,32 @@ export default function App() {
     const updated = customers.map((c) => {
       if (isCustomerMatch(c)) {
         approvedTarget = {
+=======
+    assertAuthorizedApprover(currentUser?.email);
+
+    const updated = customers.map((c) => {
+      if (c.id === customerId) {
+        return {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           ...c,
           status: 'ACTIVE' as const,
           approvalStatus: 'APPROVED' as const,
           approvedBy: 'Shahzad Ullah',
           approvedAt: new Date().toISOString(),
+<<<<<<< HEAD
           isActive: true,
         };
         return approvedTarget;
+=======
+        };
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       }
       return c;
     });
 
     setCustomers(updated);
     syncToCache(updated, orders, recoveries);
+<<<<<<< HEAD
 
     if (approvedTarget) {
       const effectiveCust = approvedTarget as Customer;
@@ -2522,13 +3044,26 @@ export default function App() {
 
     const updated = customers.map((c) => {
       if (isCustomerMatch(c)) {
+=======
+    setLedgerToastMessage(`✓ Dealer account approved by Shahzad Ullah. Dealer is now active.`);
+  };
+
+  const handleRejectCustomer = (customerId: string, reason?: string) => {
+    assertAuthorizedApprover(currentUser?.email);
+
+    const updated = customers.map((c) => {
+      if (c.id === customerId) {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         return {
           ...c,
           status: 'INACTIVE' as const,
           approvalStatus: 'REJECTED' as const,
           rejectionReason: reason || 'Declined by Shahzad Ullah',
           rejectedAt: new Date().toISOString(),
+<<<<<<< HEAD
           isActive: false,
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         };
       }
       return c;
@@ -2536,6 +3071,7 @@ export default function App() {
 
     setCustomers(updated);
     syncToCache(updated, orders, recoveries);
+<<<<<<< HEAD
 
     const updatedAppData: SupabaseAppData = {
       ...currentAppData,
@@ -2558,6 +3094,8 @@ export default function App() {
       details: `Rejected dealer ${customerId}: ${reason || 'Declined by Shahzad Ullah'}`,
     });
 
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     setLedgerToastMessage(`✓ Dealer application declined by Shahzad Ullah.`);
   };
 
@@ -2634,6 +3172,7 @@ export default function App() {
     }
   };
 
+<<<<<<< HEAD
   const handleApplySalesAudit = (
     updatedOrders: SalesOrder[],
     updatedLedgerEntries: LedgerEntry[],
@@ -2646,6 +3185,8 @@ export default function App() {
     setLedgerToastMessage('✓ Sales Audit Complete: Re-calculated entries to Net TP (@15% Less) & synchronized ledgers.');
   };
 
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   if (!currentUser) {
     return (
       <AuthGate
@@ -2659,11 +3200,19 @@ export default function App() {
   }
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased max-w-full overflow-x-hidden relative">
       {/* Live Toast Message */}
       {ledgerToastMessage && (
         <div
           className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#1B5E3A] text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-xs sm:text-sm font-semibold animate-in fade-in duration-200 border border-[#4CAF50]/60 max-w-lg w-[calc(100%-2rem)] mx-auto"
+=======
+    <div className="min-h-screen bg-[#f8f9fb] dark:bg-[#070c14] text-slate-900 dark:text-slate-100 font-sans antialiased">
+      {/* Live Toast Message */}
+      {ledgerToastMessage && (
+        <div
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-teal-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs sm:text-sm font-bold animate-in fade-in duration-200 border border-teal-500/30 max-w-lg mx-auto"
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         >
           <span className="flex-1">{ledgerToastMessage}</span>
           <button
@@ -2688,6 +3237,7 @@ export default function App() {
         </div>
       )}
 
+<<<<<<< HEAD
       {/* Top-Level Official National Light BrandHeader (Head Office Desktop Portal) */}
       {experienceMode === 'HEAD_OFFICE' && (
         <BrandHeader
@@ -2822,6 +3372,80 @@ export default function App() {
             setIsChangePasswordOpen(false);
             setLedgerToastMessage('✓ Password updated successfully.');
           }}
+=======
+      {/* Render Experience Based on Selected Mode */}
+      {experienceMode === 'FIELD_MOBILE' ? (
+        <FieldMobileExperience
+          currentUser={currentUser}
+          customers={customers}
+          orders={orders}
+          recoveries={recoveries}
+          attendanceRecords={attendanceRecords}
+          isCheckedIn={isCheckedIn}
+          onCheckIn={handleCheckIn}
+          onCheckOut={handleCheckOut}
+          checkedInTime={checkedInTime}
+          checkedOutTime={checkedOutTime}
+          selectedTown={selectedAttendanceTown}
+          onSelectTown={setSelectedAttendanceTown}
+          onPlaceOrder={handlePlaceOrder}
+          onRecordRecovery={handleRecordRecovery}
+          onOpenRateCard={() => setIsRateCardOpen(true)}
+          onOpenSyncModal={() => setIsSyncModalOpen(true)}
+          onSwitchToHeadOffice={() => {
+            setIsUserPinnedExperience(true);
+            setExperienceMode('HEAD_OFFICE');
+          }}
+          onSignOut={handleSignOut}
+          onDownloadInvoicePdf={handleDownloadInvoicePdf}
+          onPreviewInvoicePdf={handlePreviewInvoicePdf}
+          onWhatsAppShareInvoice={handleWhatsAppShareInvoice}
+          onAddCustomer={handleAddCustomer}
+          onUpdateCustomerCoordinates={handleUpdateCustomerCoordinates}
+          onSyncGoogleSheet={handleSyncGoogleSheet}
+          isSyncingSheet={isSyncingSheet}
+          onSubmitProfileUpdateRequest={handleSubmitProfileUpdateRequest}
+          pendingProfileRequest={profileUpdateRequests.find((r) => r.userId === currentUser.id && r.status === 'PENDING') || null}
+          townNodes={townNodes}
+          ledgerEntries={ledgerEntries}
+          onOpenShareModal={() => setIsShareModalOpen(true)}
+        />
+      ) : (
+        <HeadOfficeExperience
+          currentUser={currentUser}
+          customers={customers}
+          orders={orders}
+          recoveries={recoveries}
+          ledgerEntries={ledgerEntries}
+          attendanceRecords={attendanceRecords}
+          profileUpdateRequests={profileUpdateRequests}
+          townNodes={townNodes}
+          onUpdateTownNodes={handleUpdateTownNodes}
+          onApproveOrder={handleApproveOrder}
+          onRejectOrder={handleRejectOrder}
+          onApproveRecovery={handleApproveRecovery}
+          onRejectRecovery={handleRejectRecovery}
+          onApproveCustomer={handleApproveCustomer}
+          onRejectCustomer={handleRejectCustomer}
+          onApproveProfileRequest={handleApproveProfileRequest}
+          onRejectProfileRequest={handleRejectProfileRequest}
+          onAddCustomer={handleAddCustomer}
+          onSyncGoogleSheet={handleSyncGoogleSheet}
+          isSyncingSheet={isSyncingSheet}
+          onPlaceOrder={handlePlaceOrder}
+          onRecordRecovery={handleRecordRecovery}
+          onOpenRateCard={() => setIsRateCardOpen(true)}
+          onOpenSyncModal={() => setIsSyncModalOpen(true)}
+          onSwitchToFieldMobile={() => {
+            setIsUserPinnedExperience(true);
+            setExperienceMode('FIELD_MOBILE');
+          }}
+          onSignOut={handleSignOut}
+          onPurgeMockData={handlePurgeMockData}
+          onPreviewInvoicePdf={handlePreviewInvoicePdf}
+          onOpenShareModal={() => setIsShareModalOpen(true)}
+          isOnline={isOnline}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         />
       )}
 
@@ -2846,6 +3470,7 @@ export default function App() {
         onSyncComplete={(msg) => setLedgerToastMessage(msg)}
       />
 
+<<<<<<< HEAD
       {/* Today's Sales Audit Modal */}
       <TodaySalesAuditModal
         isOpen={isSalesAuditModalOpen}
@@ -2856,6 +3481,8 @@ export default function App() {
         onApplyAuditResult={handleApplySalesAudit}
       />
 
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       {/* Live PDF Preview Modal */}
       <InvoicePdfPreviewModal
         isOpen={previewPdfData.isOpen}

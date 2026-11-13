@@ -59,7 +59,11 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
 
     const cleanName = businessName.trim();
     if (!cleanName) {
+<<<<<<< HEAD
       setError('Please enter the Dealer / Distributor Name.');
+=======
+      setError('Please enter the Business / Shop Name.');
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       return;
     }
 
@@ -115,6 +119,7 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
+<<<<<<< HEAD
         <div className="p-4 sm:p-5 border-b border-[#E2E8F0] dark:border-slate-800 flex items-center justify-between bg-[#1B5E3A] text-white">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-[#0D9488]/25 text-[#F59E0B] font-bold flex items-center justify-center text-sm">
@@ -123,6 +128,16 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
             <div>
               <h2 className="text-base font-bold text-white">Add New Dealer / Distributor</h2>
               <p className="text-[11px] text-slate-300">
+=======
+        <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 text-white">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-emerald-400 text-slate-950 font-black flex items-center justify-center text-sm">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-white">Add New Customer / Dealer</h2>
+              <p className="text-[11px] text-teal-100/80">
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 {isShahzadOrAdmin
                   ? 'Immediate registration with executive approval'
                   : 'Requires final sign-off from Shahzad Ullah'}

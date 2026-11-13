@@ -2,26 +2,37 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { sendFirebasePasswordReset } from '../lib/firebase';
 import type { User, UserRole } from '../types';
 import { isMultiRoleEligibleEmail, isAuthorizedApproverEmail, getCentralEmployees } from './production-users';
+<<<<<<< HEAD
 import { getStoredUsers, saveStoredUsers, NLinkUser } from '../data/nlink-users-team';
 import { fetchLiveGoogleSheetUsers } from './liveGoogleSheetSync';
 import { logAuditEvent, submitPasswordRecoveryRequest } from './auditLog';
+=======
+import { getStoredUsers } from '../data/nlink-users-team';
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 const roleMap: Record<string, UserRole> = {
   SUPER_ADMIN: 'SUPER_ADMIN',
   MANAGEMENT: 'MANAGEMENT',
+<<<<<<< HEAD
   NATIONAL_MANAGER: 'NATIONAL_MANAGER',
   FIELD_SALES_USER: 'FIELD_SALES_USER',
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   FACTORY_MANAGER: 'FACTORY_MANAGER',
   WAREHOUSE_MANAGER: 'WAREHOUSE_MANAGER',
   ACCOUNTS: 'ACCOUNTS',
   SALES_MANAGER: 'SALES_MANAGER',
   SALES_RECOVERY: 'SALES_RECOVERY',
   DISPATCH_OFFICER: 'DISPATCH_OFFICER',
+<<<<<<< HEAD
   HR_ADMIN: 'HR_ADMIN',
   DISTRIBUTOR: 'DISTRIBUTOR',
   DEALER: 'DEALER',
   RSM: 'RSM',
   ZSM: 'ZSM',
+=======
+  RSM: 'RSM',
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   ASM: 'ASM',
   TSM: 'TSM',
   SS: 'SS',
@@ -32,6 +43,7 @@ const roleMap: Record<string, UserRole> = {
 };
 
 export const REGISTERED_CORPORATE_EMAILS: readonly string[] = [
+<<<<<<< HEAD
   'shahzadullah@nationallight.pk',
   'syedzain@nationallight.pk',
   'amjid@nationallight.pk',
@@ -53,6 +65,24 @@ export async function verifyPasswordlessOtp(_email: string, _code: string): Prom
   throw new Error('Passwordless OTP login has been disabled. Please sign in with your corporate Email and Password.');
 }
 
+=======
+  'nationallights2026@gmail.com',
+  'shahzadullah@nationallights.com',
+  'shahzadullah@nationallight.pk',
+  'shahid.khan@nationallight.pk',
+  'admin@nationallights.com',
+  'superadmin@nationallights.com',
+  'management@nationallights.com',
+  'director@nationallights.com',
+  'accounts@nationallights.com',
+  'sales@nationallights.com',
+  'recovery@nationallights.com',
+  'warehouse@nationallights.com',
+  'factory@nationallights.com',
+  'dispatch@nationallights.com',
+];
+
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 export async function isRegisteredEmail(email: string): Promise<{ isRegistered: boolean; employeeData?: any }> {
   const clean = String(email || '').trim().toLowerCase();
   if (!clean) return { isRegistered: false };
@@ -68,11 +98,19 @@ export async function isRegisteredEmail(email: string): Promise<{ isRegistered: 
     }
   } catch {}
 
+<<<<<<< HEAD
   // 2. Authorized active corporate accounts
+=======
+  // 2. Executive list & recognized corporate domains
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   if (
     isMultiRoleEligibleEmail(clean) ||
     isAuthorizedApproverEmail(clean) ||
     REGISTERED_CORPORATE_EMAILS.includes(clean) ||
+<<<<<<< HEAD
+=======
+    clean.endsWith('@nationallights.com') ||
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     clean.endsWith('@nationallight.pk')
   ) {
     return { isRegistered: true };
@@ -150,6 +188,7 @@ export async function signInWithRegisteredEmail(
   let userRole: UserRole = roleOverride || 'SUPER_ADMIN';
 
   if (!roleOverride) {
+<<<<<<< HEAD
     if (cleanEmail === 'amjid.bisconni@gmail.com') {
       userRole = 'SUPER_ADMIN';
     } else if (cleanEmail === 'amjid@nationallight.pk') {
@@ -159,6 +198,9 @@ export async function signInWithRegisteredEmail(
     } else if (cleanEmail.includes('shahzad') || cleanEmail === 'nationallights2026@gmail.com') {
       userRole = 'SUPER_ADMIN';
     } else if (emp?.role && roleMap[emp.role]) {
+=======
+    if (emp?.role && roleMap[emp.role]) {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       userRole = roleMap[emp.role];
     } else if (cleanEmail.includes('accounts')) {
       userRole = 'ACCOUNTS';
@@ -176,12 +218,20 @@ export async function signInWithRegisteredEmail(
       userRole = 'ASM';
     } else if (cleanEmail.includes('tsm') || cleanEmail.includes('shahid')) {
       userRole = 'TSM';
+<<<<<<< HEAD
     } else {
       userRole = 'SALES_RECOVERY';
+=======
+    } else if (cleanEmail.includes('shahzadullah') || cleanEmail === 'nationallights2026@gmail.com' || cleanEmail.includes('admin') || cleanEmail.includes('director')) {
+      userRole = 'SUPER_ADMIN';
+    } else {
+      userRole = 'SUPER_ADMIN';
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     }
   }
 
   const displayName =
+<<<<<<< HEAD
     (cleanEmail === 'amjid.bisconni@gmail.com' ? 'Amjid (Admin & Developer)' :
      cleanEmail === 'amjid@nationallight.pk' ? 'Amjid Khan' :
      cleanEmail.includes('zain') ? 'Syed Zain' :
@@ -190,6 +240,13 @@ export async function signInWithRegisteredEmail(
      cleanEmail === 'nationallights2026@gmail.com' ? 'Shahzad Ullah' :
      emp?.fullName ||
      emp?.full_name ||
+=======
+    emp?.fullName ||
+    emp?.full_name ||
+    (cleanEmail.includes('shahzad') ? 'Shahzad Ullah' :
+     cleanEmail.includes('shahid') ? 'Shahid Khan' :
+     cleanEmail === 'nationallights2026@gmail.com' ? 'Shahzad Ullah (Executive)' :
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
      cleanEmail.split('@')[0].replace(/[\._]/g, ' ').toUpperCase());
 
   const authenticatedUser: User = {
@@ -212,6 +269,7 @@ export async function signInWithRegisteredEmail(
   return authenticatedUser;
 }
 
+<<<<<<< HEAD
 /**
  * Strict Email + Password Login (Section 4.1 & 4.3):
  * Verifies Email and Password via Server Cryptographic Auth API (scrypt) or Supabase Auth.
@@ -545,6 +603,8 @@ export async function signInWithGoogleSheetEmailAndPhone(
   return authenticatedUser;
 }
 
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 function requireAuthBackend() {
   if (!isSupabaseConfigured || !supabase) {
     throw new Error('Production login is unavailable because the Supabase backend is not configured.');
@@ -554,10 +614,19 @@ function requireAuthBackend() {
 
 export async function signIn(email: string, password: string) {
   const cleanEmail = email.trim().toLowerCase();
+<<<<<<< HEAD
   if (!cleanEmail || !cleanEmail.includes('@') || !password) {
     throw new Error('Corporate email and password are required.');
   }
   const client = requireAuthBackend();
+=======
+  // Support passwordless registered email directly
+  if (cleanEmail && (!password || password === 'SKIP_PASSWORD')) {
+    return signInWithRegisteredEmail(cleanEmail);
+  }
+  const client = requireAuthBackend();
+  if (!cleanEmail || !password) throw new Error('Corporate email and password are required.');
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   const { data, error } = await client.auth.signInWithPassword({ email: cleanEmail, password });
   if (error) throw error;
   if (!data.session) throw new Error('Login succeeded but no authenticated session was returned.');
@@ -787,7 +856,11 @@ export async function resetPassword(email: string): Promise<void> {
         if (/rate limit/i.test(lastErrorMessage)) {
           throw new Error('Too many password reset requests. Please wait a few minutes before trying again.');
         } else if (/smtp|mail|network/i.test(lastErrorMessage)) {
+<<<<<<< HEAD
           throw new Error('Password reset email could not be delivered. Please contact your system administrator at nationallights2026@gmail.com.');
+=======
+          throw new Error('Password reset email could not be delivered. Please contact your system administrator at info@nationallights.com.');
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         }
         throw new Error('Password reset email could not be sent. Please check the email address or contact your administrator.');
       }

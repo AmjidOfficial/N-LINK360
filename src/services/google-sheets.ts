@@ -10,6 +10,7 @@ import { SupabaseAppData } from './supabase-data';
 const GOOGLE_SHEETS_WEBHOOK_KEY = 'nlink_google_sheets_webhook_url';
 const LAST_SYNC_KEY = 'nlink_google_sheets_last_sync';
 
+<<<<<<< HEAD
 export const DEFAULT_GOOGLE_SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyH0eZXxZDJ_Xfvgq2O817NUBJ-AFs7xesSq3kwET6ZpRwXTcSQMv8QLajGN5GQrjO0Aw/exec';
 
 export function getGoogleSheetsWebhookUrl(): string {
@@ -18,6 +19,12 @@ export function getGoogleSheetsWebhookUrl(): string {
   const stored = localStorage.getItem(GOOGLE_SHEETS_WEBHOOK_KEY);
   if (stored) return stored;
   return DEFAULT_GOOGLE_SHEETS_WEBHOOK_URL;
+=======
+export function getGoogleSheetsWebhookUrl(): string {
+  const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL : undefined;
+  if (envUrl) return envUrl;
+  return localStorage.getItem(GOOGLE_SHEETS_WEBHOOK_KEY) || '';
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 }
 
 export function setGoogleSheetsWebhookUrl(url: string): void {
@@ -131,6 +138,7 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
       inventoryCount: appData.skus.length,
       invoicesCount: appData.invoices.length,
     },
+<<<<<<< HEAD
     customers: appData.customers.map((c: any) => {
       const cId = String(c.id || '').toLowerCase().trim();
       const cCode = String(c.customerCode || c.code || '').toLowerCase().trim();
@@ -173,21 +181,49 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
     salesOrders: appData.salesOrders.map((o: any) => {
       const cust = appData.customers.find((c) => c.id === o.customerId || c.customerCode === o.customerCode || c.companyName === o.customerName);
       const isApproved = o.status === 'APPROVED' || o.dualApprovalStatus === 'DUAL_APPROVED' || o.shahzadApproval === 'APPROVED';
+=======
+    customers: appData.customers.map((c: any) => ({
+      code: c.customerCode || c.code || c.id,
+      name: c.companyName || c.businessName || 'Customer',
+      type: c.type || c.channelType || 'DEALER',
+      town: c.city || c.town || '',
+      route: c.route || c.territory || '',
+      contactPerson: c.contactPerson || c.ownerName || '',
+      phone: c.phone || c.contactNumber || c.mobile || '',
+      creditLimit: Number(c.creditLimit || 0),
+      currentBalance: Number(c.currentBalance || 0),
+      status: c.isActive ? 'ACTIVE' : 'INACTIVE',
+    })),
+    salesOrders: appData.salesOrders.map((o: any) => {
+      const cust = appData.customers.find((c) => c.id === o.customerId);
+      const isApproved = o.status === 'APPROVED' || o.dualApprovalStatus === 'DUAL_APPROVED';
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       return {
         orderId: o.orderNumber || o.orderCode || o.id,
         customerName: o.customerName || cust?.companyName || (cust as any)?.businessName || o.customerId,
         salesUserName: o.salesUserName || 'Sales Officer',
         orderDate: o.orderDate || o.createdAt || new Date().toISOString().slice(0, 10),
         totalAmount: o.totalAmount || o.netTotal || 0,
+<<<<<<< HEAD
         status: isApproved ? 'APPROVED' : (o.status || 'SUBMITTED'),
         dualApprovalStatus: isApproved ? 'DUAL_APPROVED' : 'PENDING_APPROVAL',
         shahzadApproval: isApproved ? 'APPROVED' : 'PENDING',
+=======
+        status: o.status,
+        dualApprovalStatus: o.dualApprovalStatus || (isApproved ? 'APPROVED' : 'PENDING_APPROVAL'),
+        shahzadApproval: o.shahzadApproval || (isApproved ? 'APPROVED' : 'PENDING'),
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         itemsCount: (o.items || []).length,
       };
     }),
     recoveries: appData.recoveries.map((r: any) => {
+<<<<<<< HEAD
       const cust = appData.customers.find((c) => c.id === r.customerId || c.customerCode === r.customerCode || c.companyName === r.customerName);
       const isApproved = r.status === 'VERIFIED' || r.status === 'APPROVED' || r.dualApprovalStatus === 'DUAL_APPROVED' || r.shahzadApproval === 'APPROVED';
+=======
+      const cust = appData.customers.find((c) => c.id === r.customerId);
+      const isApproved = r.status === 'VERIFIED' || r.dualApprovalStatus === 'DUAL_APPROVED';
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       return {
         id: r.recoveryNumber || r.recoveryCode || r.id,
         customerName: r.customerName || cust?.companyName || (cust as any)?.businessName || r.customerId,
@@ -196,8 +232,13 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
         paymentMode: r.paymentMode || 'CASH',
         instrumentNumber: r.instrumentNumber || 'N/A',
         bankName: r.bankName || 'Direct Deposit',
+<<<<<<< HEAD
         dualApprovalStatus: isApproved ? 'DUAL_APPROVED' : 'PENDING_APPROVAL',
         shahzadApproval: isApproved ? 'APPROVED' : 'PENDING',
+=======
+        dualApprovalStatus: r.dualApprovalStatus || (isApproved ? 'CONFIRMED' : 'PENDING_CONFIRMATION'),
+        shahzadApproval: r.shahzadApproval || (isApproved ? 'APPROVED' : 'PENDING'),
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         recordedAt: r.collectionDate || r.recordedAt || r.createdAt || new Date().toISOString(),
       };
     }),
@@ -218,9 +259,12 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
         let runningBal = Number(c.openingBalance || 0);
         const cCode = c.customerCode || c.code || c.id;
         const cName = c.companyName || c.businessName || 'Customer';
+<<<<<<< HEAD
         const cId = String(c.id || '').toLowerCase().trim();
         const cCodeLower = String(cCode).toLowerCase().trim();
         const cNameLower = String(cName).toLowerCase().trim();
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
         // Opening Balance Row
         if (runningBal > 0) {
@@ -237,6 +281,7 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
           });
         }
 
+<<<<<<< HEAD
         // Transactions: Include salesOrders as invoices and recoveries with flexible matching
         const custOrders = (appData.salesOrders || []).filter((o: any) => {
           if (!o || o.status === 'REJECTED') return false;
@@ -259,6 +304,11 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
           const rCustName = String(rec.customerName || '').toLowerCase().trim();
           return (cId && rCustId === cId) || (cCodeLower && (rCustId === cCodeLower || rCustCode === cCodeLower)) || (cNameLower && rCustName === cNameLower);
         });
+=======
+        // Transactions: Invoices & Recoveries
+        const custInvoices = (appData.invoices || []).filter((inv: any) => inv.customerId === c.id);
+        const custRecoveries = (appData.recoveries || []).filter((rec: any) => rec.customerId === c.id);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
         const txs: Array<{
           date: string;
@@ -268,6 +318,7 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
           dualApproved: boolean;
         }> = [];
 
+<<<<<<< HEAD
         // Add sales orders
         custOrders.forEach((o: any) => {
           const isDual = o.status === 'APPROVED' || o.shahzadApproval === 'APPROVED' || o.dualApprovalStatus === 'DUAL_APPROVED';
@@ -276,10 +327,20 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
             type: 'INVOICE',
             ref: o.orderNumber || o.orderCode || o.id,
             amount: Number(o.totalAmount || 0),
+=======
+        custInvoices.forEach((inv: any) => {
+          const isDual = inv.status === 'POSTED' || inv.status === 'PAID';
+          txs.push({
+            date: inv.invoiceDate || inv.createdAt || '2026-01-01',
+            type: 'INVOICE',
+            ref: inv.invoiceNumber || inv.invoiceCode || inv.id,
+            amount: Number(inv.totalAmount || 0),
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             dualApproved: isDual,
           });
         });
 
+<<<<<<< HEAD
         // Add separate invoice records if any
         custInvoicesList.forEach((inv: any) => {
           const isDual = inv.status === 'POSTED' || inv.status === 'PAID' || inv.status === 'APPROVED';
@@ -298,6 +359,10 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
         // Add recoveries
         custRecoveries.forEach((rec: any) => {
           const isDual = rec.dualApprovalStatus === 'DUAL_APPROVED' || rec.status === 'VERIFIED' || rec.shahzadApproval === 'APPROVED';
+=======
+        custRecoveries.forEach((rec: any) => {
+          const isDual = rec.dualApprovalStatus === 'DUAL_APPROVED' || rec.status === 'VERIFIED';
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           txs.push({
             date: rec.collectionDate || rec.recordedAt || rec.createdAt || '2026-01-01',
             type: 'RECOVERY',
@@ -311,8 +376,15 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
         txs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
         txs.forEach((tx) => {
+<<<<<<< HEAD
           if (tx.type === 'INVOICE') runningBal += tx.amount;
           if (tx.type === 'RECOVERY') runningBal -= tx.amount;
+=======
+          if (tx.dualApproved) {
+            if (tx.type === 'INVOICE') runningBal += tx.amount;
+            if (tx.type === 'RECOVERY') runningBal -= tx.amount;
+          }
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
           entries.push({
             customerCode: cCode,
@@ -323,7 +395,11 @@ export function formatAppDataForGoogleSheets(appData: SupabaseAppData): GoogleSh
             debit: tx.type === 'INVOICE' ? tx.amount : 0,
             credit: tx.type === 'RECOVERY' ? tx.amount : 0,
             runningBalance: runningBal,
+<<<<<<< HEAD
             dualApprovalStatus: tx.dualApproved ? 'DUAL_APPROVED' : 'PENDING_APPROVAL',
+=======
+            dualApprovalStatus: tx.dualApproved ? 'DUAL_APPROVED' : 'PENDING_DUAL_APPROVAL',
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           });
         });
       });
@@ -418,17 +494,27 @@ export async function syncToGoogleSheetsWebhook(
     try {
       await fetch(finalWebhookUrl, {
         method: 'POST',
+<<<<<<< HEAD
         mode: 'no-cors',
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         headers: {
           'Content-Type': 'text/plain;charset=utf-8',
         },
         body: JSON.stringify(payload),
       });
+<<<<<<< HEAD
       success = true; // Google Apps Script redirects with no-cors allow the background execution to complete cleanly
     } catch (directErr: any) {
       console.warn('[Google Sheet Webhook] Direct browser sync note:', directErr);
       // In browser no-cors mode, even if opaque, the payload was transmitted
       success = true;
+=======
+      success = true; // Google Apps Script redirects usually mean the write succeeded even if browser preflight block occurs
+    } catch (directErr: any) {
+      console.error('[Google Sheet Webhook] Direct browser sync failed:', directErr);
+      throw new Error(`Google Sheets Webhook Sync failed. Server proxy error: ${errMsg}. Direct error: ${directErr.message || directErr}`);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     }
   } else if (!success) {
     throw new Error(`Google Sheets Webhook Sync failed: ${errMsg || 'Webhook URL is not configured'}`);

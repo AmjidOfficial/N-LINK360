@@ -15,6 +15,7 @@ import {
   roundTo2,
   validateRecoverySubmission,
 } from '../src/lib/business-rules';
+<<<<<<< HEAD
 import {
   ROLE_PERMISSIONS,
   FIELD_SALES_USER_PERMISSIONS,
@@ -59,6 +60,15 @@ import {
 } from '../src/lib/dashboard';
 import type {
   CreditNote,
+=======
+import { ROLE_PERMISSIONS, hasPermission, workspaceForRole } from '../src/lib/permissions';
+import {
+  AUTHORIZED_APPROVER_EMAILS,
+  isAuthorizedApproverEmail,
+  assertAuthorizedApprover,
+} from '../src/services/production-users';
+import type {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   Customer,
   CustomerVisit,
   Dispatch,
@@ -794,6 +804,7 @@ console.log('🏛️ [17/17] Testing Critical Executive Approval Authorization (
   );
 
   assert(
+<<<<<<< HEAD
     ADMIN_ROLE_EMAILS.includes('amjid.bisconni@gmail.com'),
     'Amjid (Admin & Developer) is included in authorized ADMIN_ROLE_EMAILS whitelist'
   );
@@ -809,6 +820,8 @@ console.log('🏛️ [17/17] Testing Critical Executive Approval Authorization (
   );
 
   assert(
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     isAuthorizedApproverEmail('accounts@nationallights.com') === false,
     'Accounts staff cannot bypass executive two-person approval rule'
   );
@@ -912,6 +925,7 @@ console.log('🌙 [18/18] Testing Daily 11:59 PM Midnight Cutoff & Google Sheets
   assert(GOOGLE_APPS_SCRIPT_CODE.includes('function doPost(e)'), 'Google Apps Script template code is validated');
 }
 
+<<<<<<< HEAD
 // -------------------------------------------------------------
 // MODULE 19: 15% INVOICE DISCOUNT & 5-STEP ENTRY & FULFILLMENT PIPELINE
 // -------------------------------------------------------------
@@ -2554,6 +2568,8 @@ console.log('\n🔐 [26/26] Testing First-Time Login Password Change & Credentia
   assert(isStillForced === false, 'Subsequent logins recognize changed password and do not re-force modal');
 }
 
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 console.log('\n================================================================');
 console.log(`🎉 TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log('================================================================\n');
@@ -2561,6 +2577,10 @@ console.log('================================================================\n'
 if (failed > 0) {
   process.exit(1);
 } else {
+<<<<<<< HEAD
   console.log('🚀 ALL 26 MODULES PASSED VERIFICATION!');
+=======
+  console.log('🚀 ALL 17 MODULES & 30 BUSINESS TRANSACTION STEPS PASSED VERIFICATION!');
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   process.exit(0);
 }

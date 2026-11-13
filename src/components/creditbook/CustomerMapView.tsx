@@ -245,7 +245,11 @@ export const CustomerMapView: React.FC<CustomerMapViewProps> = ({
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${
+<<<<<<< HEAD
                 gpsStatus === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'
+=======
+                gpsStatus === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               }`}
             />
             {gpsStatus === 'ACTIVE' ? 'Live GPS Active' : 'Town Position'}

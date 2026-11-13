@@ -55,12 +55,21 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
+<<<<<<< HEAD
+=======
+        {/* 3D Sun Sphere Gradient */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         <radialGradient id="nlSunGrad" cx="35%" cy="35%" r="65%">
           <stop offset="0%" stopColor="#FEF08A" />
           <stop offset="25%" stopColor="#F97316" />
           <stop offset="85%" stopColor="#DC2626" />
           <stop offset="100%" stopColor="#991B1B" />
         </radialGradient>
+<<<<<<< HEAD
+=======
+
+        {/* Lightning Bolt Gradient */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         <linearGradient id="nlBoltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#FACC15" />
           <stop offset="50%" stopColor="#EF4444" />
@@ -68,10 +77,26 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
         </linearGradient>
       </defs>
 
+<<<<<<< HEAD
       <circle cx="200" cy="200" r="198" fill="#FFFFFF" />
       <circle cx="200" cy="200" r="186" fill="none" stroke="#F37021" strokeWidth="9" />
       <path d="M 142 165 C 130 90 270 90 258 165 C 248 110 152 110 142 165 Z" fill="#00873D" />
 
+=======
+      {/* White Circular Card Background */}
+      <circle cx="200" cy="200" r="198" fill="#FFFFFF" />
+
+      {/* Orange Inner Accent Ring as seen in the official logo frame */}
+      <circle cx="200" cy="200" r="186" fill="none" stroke="#F37021" strokeWidth="9" />
+
+      {/* Top Green Crescent Arch */}
+      <path
+        d="M 142 165 C 130 90 270 90 258 165 C 248 110 152 110 142 165 Z"
+        fill="#00873D"
+      />
+
+      {/* Sun Ray Spikes (Green triangular blades surrounding sun) */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       <g fill="#00873D">
         <polygon points="200,68 194,86 206,86" />
         <polygon points="200,162 194,144 206,144" />
@@ -83,14 +108,25 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
         <polygon points="233,148 219,136 228,127" />
       </g>
 
+<<<<<<< HEAD
       <circle cx="200" cy="115" r="28" fill="url(#nlSunGrad)" />
 
+=======
+      {/* 3D Glowing Red/Orange Sun Sphere */}
+      <circle cx="200" cy="115" r="28" fill="url(#nlSunGrad)" />
+
+      {/* Filament Rings (3 Green Ellipses) */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       <g fill="none" stroke="#00873D" strokeWidth="5.5">
         <ellipse cx="200" cy="160" rx="22" ry="7" />
         <ellipse cx="200" cy="178" rx="23" ry="7" />
         <ellipse cx="200" cy="196" rx="24" ry="7" />
       </g>
 
+<<<<<<< HEAD
+=======
+      {/* Lamp Base Steps & Plug Contacts */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       <g fill="#00873D">
         <rect x="168" y="210" width="64" height="12" rx="6" />
         <rect x="172" y="226" width="56" height="10" rx="5" />
@@ -98,6 +134,10 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
         <rect x="204" y="240" width="10" height="14" rx="2" />
       </g>
 
+<<<<<<< HEAD
+=======
+      {/* Typography: NATIONAL */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       <g
         fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         fontWeight="900"
@@ -107,6 +147,10 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
       >
         <text x="56" y="306">NATI</text>
 
+<<<<<<< HEAD
+=======
+        {/* Letter O with Lightning Bolt Cutout & Overlay */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         <g>
           <circle cx="200" cy="290" r="20" fill="none" stroke="#000000" strokeWidth="11" />
           <polygon
@@ -120,6 +164,10 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
         <text x="232" y="306">NAL</text>
       </g>
 
+<<<<<<< HEAD
+=======
+      {/* Typography: LIGHT */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       <text
         x="200"
         y="354"
@@ -142,6 +190,10 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
       title="National Light - Enlightening The Nation"
       id="national-light-logo-container"
     >
+<<<<<<< HEAD
+=======
+      {/* Outer frame matching circular badge with green glow and crisp border */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       <div
         className={`w-full h-full rounded-full overflow-hidden p-[1.5px] bg-gradient-to-tr from-emerald-600 via-green-500 to-teal-500 ${glowEffect} ring-1 ring-emerald-500/30 flex items-center justify-center`}
       >
@@ -162,6 +214,7 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
     </div>
   );
 };
+<<<<<<< HEAD
 
 /**
  * Top Header Brand Combination (Logo + Wordmark)
@@ -205,3 +258,5 @@ export const DocumentCenterWatermark: React.FC<{ title?: string; className?: str
     </div>
   </div>
 );
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a

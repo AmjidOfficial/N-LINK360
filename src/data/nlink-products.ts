@@ -25,8 +25,11 @@ export interface NLinkSKU {
   specification: string;
   iconName: string;
   isActive: boolean;
+<<<<<<< HEAD
   voltageRange?: string;
   warrantyMonths?: number;
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 }
 
 export const NLINK_OFFICIAL_PRODUCTS: NLinkSKU[] = NATIONAL_LIGHT_OFFICIAL_CATALOG.map((item: NationalLightItem) => {

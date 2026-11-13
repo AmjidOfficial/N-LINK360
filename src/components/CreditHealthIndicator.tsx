@@ -61,11 +61,16 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
           isPrompt
             ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
             : isHighDelay
+<<<<<<< HEAD
             ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+=======
+            ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 animate-pulse'
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
         } ${className}`}
         title={`Average Payment Delay: ${health.averagePaymentDelayDays} Days | Health Score: ${health.score}/100`}
       >
+<<<<<<< HEAD
         {isPrompt ? (
           <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
         ) : isHighDelay ? (
@@ -73,6 +78,11 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
         ) : (
           <Clock className="w-3.5 h-3.5 shrink-0" />
         )}
+=======
+        <span className="material-symbols-outlined text-[14px]">
+          {isPrompt ? 'verified_user' : isHighDelay ? 'warning' : 'schedule'}
+        </span>
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         <span className="font-mono">
           {health.averagePaymentDelayDays === 0
             ? '0d Delay (Prompt)'
@@ -232,7 +242,11 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
         <div className="bg-gradient-to-br from-slate-50 to-slate-100/60 dark:from-slate-800/60 dark:to-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between relative overflow-hidden">
           <div className="flex justify-between items-start">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+<<<<<<< HEAD
               <Clock className="w-3.5 h-3.5 text-[#0052FF]" />
+=======
+              <Clock className="w-3.5 h-3.5 text-indigo-500" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               Average Payment Delay
             </span>
             <span
@@ -357,7 +371,11 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
 
             <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
               <span className="text-xs text-slate-600 dark:text-slate-400">Actual Turnaround:</span>
+<<<<<<< HEAD
               <span className="font-mono font-bold text-[#0052FF] dark:text-blue-400">
+=======
+              <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 {health.avgPaymentTurnaroundDays} Days
               </span>
             </div>
@@ -392,6 +410,7 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
             : 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/80 text-rose-900 dark:text-rose-200'
         }`}
       >
+<<<<<<< HEAD
         {health.tier === 'EXCELLENT' ? (
           <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
         ) : health.tier === 'GOOD' ? (
@@ -401,6 +420,17 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
         ) : (
           <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
         )}
+=======
+        <span className="material-symbols-outlined text-[20px] shrink-0 mt-0.5">
+          {health.tier === 'EXCELLENT'
+            ? 'verified'
+            : health.tier === 'GOOD'
+            ? 'info'
+            : health.tier === 'MODERATE_RISK'
+            ? 'schedule'
+            : 'gpp_maybe'}
+        </span>
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         <div className="flex-1 text-xs">
           <div className="font-bold flex items-center gap-1.5">
             <span>Credit Policy Directive &amp; Action Recommendation</span>

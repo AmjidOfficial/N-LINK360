@@ -11,15 +11,23 @@
  */
 
 import React, { useState, useMemo } from 'react';
+<<<<<<< HEAD
 import { Customer, SalesOrder, Recovery, LedgerEntry } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import { isAuthorizedApproverEmail } from '../../services/production-users';
+=======
+import { Customer, SalesOrder, Recovery } from '../../types';
+import { NLinkUser } from '../../data/nlink-users-team';
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 import {
   ArrowLeft,
   FileText,
   Download,
   MessageCircle,
+<<<<<<< HEAD
   MessageSquare,
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   TrendingDown,
   TrendingUp,
   Receipt,
@@ -27,6 +35,7 @@ import {
   Building2,
   Calendar,
   Wallet,
+<<<<<<< HEAD
   Check,
   CheckCircle2,
   Edit3,
@@ -44,6 +53,10 @@ import { exportCustomerLedgerToExcel } from '../../services/exportEngine';
 import { EditOrDeleteEntryModal } from './EditOrDeleteEntryModal';
 import { NationalLightHeaderBrand, DocumentCenterWatermark } from '../NationalLightLogo';
 import { canUserEditEntry, canUserDeleteEntry } from '../../utils/entryManagement';
+=======
+} from 'lucide-react';
+import { downloadCustomerLedgerPdf } from '../../utils/exportLedgerPdf';
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 export interface CustomerLedgerViewProps {
   customer: Customer;
@@ -55,6 +68,7 @@ export interface CustomerLedgerViewProps {
   onBack: () => void;
   onOpenNewOrder?: () => void;
   onOpenRecoveryDrawer?: () => void;
+<<<<<<< HEAD
   onApproveOrder?: (orderId: string, approver?: any) => void;
   onApproveRecovery?: (recoveryId: string, approver?: any) => void;
   onCancelOrReverseOrder?: (orderId: string, reason: string) => void;
@@ -62,6 +76,8 @@ export interface CustomerLedgerViewProps {
   onCancelOrReverseRecovery?: (recoveryId: string, reason: string) => void;
   onSaveRecoveryEdit?: (recoveryId: string, updates: Partial<Recovery>) => void;
   onOpenSalesAuditModal?: () => void;
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 }
 
 export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
@@ -70,6 +86,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
   orders,
   invoices,
   recoveries = [],
+<<<<<<< HEAD
   ledgerEntries = [],
   onBack,
   onOpenNewOrder,
@@ -111,6 +128,13 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
     }
     return o.totalAmount || 0;
   };
+=======
+  onBack,
+  onOpenNewOrder,
+  onOpenRecoveryDrawer,
+}) => {
+  const [isExporting, setIsExporting] = useState(false);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
   // Safe fallback list of orders / invoices
   const safeOrdersList = orders || invoices || [];
@@ -137,6 +161,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
 
   const openingBalance = customer.openingBalance ?? 0;
 
+<<<<<<< HEAD
   // Check authorized executive approver status (Shahzad Ullah)
   const isApprover = isAuthorizedApproverEmail(currentUser?.email, currentUser);
 
@@ -187,11 +212,16 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
     return 'Overdue (>30 Days)';
   }, [outstandingBalance, recoveryDays]);
 
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   // Build sorted timeline of transactions
   const timelineEntries = useMemo(() => {
     const rawEvents: Array<{
       id: string;
+<<<<<<< HEAD
       rawId: string;
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       date: string;
       type: 'INVOICE' | 'RECOVERY';
       reference: string;
@@ -199,6 +229,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
       debit: number;
       credit: number;
       status: string;
+<<<<<<< HEAD
       isPending: boolean;
     }> = [];
 
@@ -217,6 +248,22 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
         credit: 0,
         status: isApproved ? 'APPROVED' : (o.status || 'SUBMITTED'),
         isPending: !isApproved,
+=======
+    }> = [];
+
+    // Invoices are DEBITS (Customer owes more)
+    customerOrders.forEach((o) => {
+      const orderRef = o.orderNumber || o.id || 'SO-NEW';
+      rawEvents.push({
+        id: o.id || orderRef,
+        date: o.orderDate || o.createdAt || '',
+        type: 'INVOICE',
+        reference: orderRef.startsWith('INV') || orderRef.startsWith('SO') ? orderRef : `INV #${orderRef}`,
+        description: `Sales Order (${o.items?.length || 1} SKUs)`,
+        debit: o.totalAmount || 0,
+        credit: 0,
+        status: o.status || 'SUBMITTED',
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       });
     });
 
@@ -227,6 +274,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
       const channelDesc = r.paymentMode === 'ONLINE_TRANSFER' ? 'Online Transfer' : 'Cash';
       const bankDesc = r.bankName && r.bankName !== 'Direct Cash Collection' ? ` (${r.bankName})` : '';
       const instDesc = r.instrumentNumber && r.instrumentNumber !== 'N/A' ? ` [${r.instrumentNumber}]` : '';
+<<<<<<< HEAD
       const isConfirmed = r.status === 'VERIFIED' || r.status === 'APPROVED' || r.shahzadApproval === 'APPROVED' || r.dualApprovalStatus === 'DUAL_APPROVED';
 
       rawEvents.push({
@@ -283,12 +331,35 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
       if (!ev.isPending) {
         running = running + ev.debit - ev.credit;
       }
+=======
+
+      rawEvents.push({
+        id: r.id,
+        date: r.collectionDate || (r as any).paymentDate || r.recordedAt || r.createdAt || '',
+        type: 'RECOVERY',
+        reference: cleanRef,
+        description: `Payment Received via ${channelDesc}${bankDesc}${instDesc}`,
+        debit: 0,
+        credit: r.amount || 0,
+        status: r.status || 'VERIFIED',
+      });
+    });
+
+    // Sort chronologically (oldest to newest for running balance computation)
+    rawEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Calculate running balance
+    let running = openingBalance;
+    const withRunning = rawEvents.map((ev) => {
+      running = running + ev.debit - ev.credit;
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       return {
         ...ev,
         runningBalance: running,
       };
     });
 
+<<<<<<< HEAD
     // Display Oldest to Newest by default, or Newest First if selected
     return sortOrder === 'NEWEST_FIRST' ? [...withRunning].reverse() : withRunning;
   }, [customerOrders, customerRecoveries, ledgerEntries, openingBalance, sortOrder]);
@@ -318,11 +389,27 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
       return true;
     });
   }, [timelineEntries, fromDate, toDate, directionFilter, searchQuery]);
+=======
+    // Reverse to display newest first in UI table
+    return withRunning.reverse();
+  }, [customerOrders, customerRecoveries, openingBalance]);
+
+  // Current Net Balance
+  const netBalance = customer.currentBalance ?? (timelineEntries[0]?.runningBalance ?? openingBalance);
+
+  // Total Invoiced & Total Recovered
+  const totalInvoiced = customerOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  const totalRecovered = customerRecoveries.reduce((sum, r) => sum + (r.amount || 0), 0);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
   const handleExportPdf = async () => {
     setIsExporting(true);
     try {
+<<<<<<< HEAD
       const pdfEntries = filteredTimelineEntries.map((e) => ({
+=======
+      const pdfEntries = timelineEntries.map((e) => ({
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         id: e.id,
         date: e.date,
         reference: e.reference,
@@ -336,11 +423,19 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
         customer,
         entries: pdfEntries,
         openingBalance,
+<<<<<<< HEAD
         totalDebits: postedInvoicesTotal,
         totalCredits: confirmedRecoveriesTotal,
         closingBalance,
         startDate: fromDate || '2026-01-01',
         endDate: toDate || new Date().toISOString().slice(0, 10),
+=======
+        totalDebits: totalInvoiced,
+        totalCredits: totalRecovered,
+        closingBalance: netBalance,
+        startDate: '2026-01-01',
+        endDate: new Date().toISOString().slice(0, 10),
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         preparedByName: currentUser?.fullName || 'Field Officer',
       });
     } finally {
@@ -348,11 +443,16 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
     }
   };
 
+<<<<<<< HEAD
   const buildLedgerShareText = () =>
     `*NATIONAL LIGHTS - AUTHORIZED KHATA STATEMENT*\n\n*Dealer:* ${customer.companyName}\n*Dealer Code:* ${customer.customerCode}\n*Town:* ${customer.town || customer.city}\n*Period:* ${fromDate || 'Start'} to ${toDate || 'Today'}\n\n*Opening Balance:* Rs. ${openingBalance.toLocaleString()}\n*Posted Invoices (${invoiceCount}):* Rs. ${postedInvoicesTotal.toLocaleString()}\n*Confirmed Recovery:* Rs. ${confirmedRecoveriesTotal.toLocaleString()}\n------------------------------\n*CLOSING BALANCE:* Rs. ${closingBalance.toLocaleString()} PKR\n*OUTSTANDING BALANCE:* Rs. ${outstandingBalance.toLocaleString()} PKR\n*Invoice Aging:* ${invoiceAging}\n\n_Authorized Executive: Shahzad Ullah (Managing Director)_`;
 
   const handleWhatsAppStatement = () => {
     const text = buildLedgerShareText();
+=======
+  const handleWhatsAppStatement = () => {
+    const text = `*NATIONAL LIGHTS - ACCOUNT STATEMENT*\n\n*Customer:* ${customer.companyName}\n*Town:* ${customer.town || customer.city}\n*Date:* ${new Date().toLocaleDateString('en-PK')}\n\n*Opening Balance:* Rs. ${openingBalance.toLocaleString()}\n*Total Invoiced:* Rs. ${totalInvoiced.toLocaleString()}\n*Total Recovered:* Rs. ${totalRecovered.toLocaleString()}\n------------------------------\n*NET OUTSTANDING BALANCE:* Rs. ${netBalance.toLocaleString()} PKR\n\n_Prepared by: ${currentUser.fullName} (${currentUser.phone || ''})_`;
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     const cleanPhone = (customer.phone || '').replace(/[^0-9]/g, '');
     const url = cleanPhone
       ? `https://wa.me/${cleanPhone.startsWith('0') ? '92' + cleanPhone.slice(1) : cleanPhone}?text=${encodeURIComponent(text)}`
@@ -360,6 +460,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
     window.open(url, '_blank');
   };
 
+<<<<<<< HEAD
   const handleSmsStatement = () => {
     const text = buildLedgerShareText().replace(/\*/g, '');
     const cleanPhone = (customer.phone || '').replace(/[^0-9+]/g, '');
@@ -392,11 +493,17 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
     window.print();
   };
 
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   return (
     <div className="w-full max-w-3xl mx-auto space-y-4 pb-12 animate-in fade-in duration-200">
       {/* Header Card */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+<<<<<<< HEAD
         <div className="flex items-center justify-between gap-3 flex-wrap">
+=======
+        <div className="flex items-center justify-between gap-3">
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           <button
             type="button"
             onClick={onBack}
@@ -406,6 +513,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
             <span>Back to Customer 360</span>
           </button>
 
+<<<<<<< HEAD
           <div className="flex flex-wrap items-center gap-1.5">
             {onOpenSalesAuditModal && (
               <button
@@ -424,6 +532,13 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
               onClick={handleWhatsAppStatement}
               className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
               title="Share statement on WhatsApp"
+=======
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleWhatsAppStatement}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             >
               <MessageCircle className="w-3.5 h-3.5" />
               <span>WhatsApp</span>
@@ -431,6 +546,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
 
             <button
               type="button"
+<<<<<<< HEAD
               onClick={handleExportExcel}
               className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
               title="Export to Excel Spreadsheet"
@@ -458,6 +574,14 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print</span>
+=======
+              onClick={handleExportPdf}
+              disabled={isExporting}
+              className="px-3.5 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+            >
+              <Download className={`w-3.5 h-3.5 ${isExporting ? 'animate-bounce' : ''}`} />
+              <span>{isExporting ? 'Exporting...' : 'Export Statement PDF'}</span>
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             </button>
           </div>
         </div>
@@ -473,6 +597,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
           </p>
         </div>
 
+<<<<<<< HEAD
         {/* Search & Filter Control Bar */}
         <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
           <div className="flex items-center gap-2">
@@ -573,6 +698,9 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
         </div>
 
         {/* Financial Overview Grid strictly complying with Section 2 Financial Terminology */}
+=======
+        {/* Financial Overview Grid */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
           <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Opening Balance</span>
@@ -581,16 +709,24 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
             </span>
           </div>
 
+<<<<<<< HEAD
           <div className="bg-teal-50 dark:bg-teal-950/30 p-3 rounded-2xl border border-teal-200 dark:border-teal-900">
             <span className="text-[10px] font-extrabold uppercase text-teal-800 dark:text-teal-300 block">
               Invoices ({invoiceCount} Posted)
             </span>
             <span className="text-sm font-black font-mono text-teal-900 dark:text-teal-200 mt-0.5 block truncate">
               Rs. {postedInvoicesTotal.toLocaleString()}
+=======
+          <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-2xl border border-amber-200 dark:border-amber-900">
+            <span className="text-[10px] font-extrabold uppercase text-amber-800 dark:text-amber-300 block">Total Debits (Maal)</span>
+            <span className="text-sm font-black font-mono text-amber-900 dark:text-amber-200 mt-0.5 block truncate">
+              Rs. {totalInvoiced.toLocaleString()}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             </span>
           </div>
 
           <div className="bg-emerald-50 dark:bg-emerald-950/30 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-900">
+<<<<<<< HEAD
             <span className="text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-300 block">
               Recovery ({confirmedRecoveries.length} Confirmed)
             </span>
@@ -666,10 +802,42 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
         {filteredTimelineEntries.length === 0 ? (
           <div className="p-8 text-center text-slate-400 text-xs">
             <FileText className="w-10 h-10 mx-auto mb-2 opacity-40 text-[#0D9488]" />
+=======
+            <span className="text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-300 block">Total Credits (Paisa)</span>
+            <span className="text-sm font-black font-mono text-emerald-900 dark:text-emerald-200 mt-0.5 block truncate">
+              Rs. {totalRecovered.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-teal-900 p-3 rounded-2xl text-white shadow-xs">
+            <span className="text-[10px] font-extrabold uppercase text-teal-300 block">Closing Net Balance</span>
+            <span className="text-sm font-black font-mono text-white mt-0.5 block truncate">
+              Rs. {netBalance.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Ledger Transactions Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            Account Statement History ({timelineEntries.length} Transactions)
+          </span>
+          <span className="text-[11px] font-bold text-slate-400">
+            Debits (+), Credits (-), Balance
+          </span>
+        </div>
+
+        {timelineEntries.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 text-xs">
+            <FileText className="w-10 h-10 mx-auto mb-2 opacity-40" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No Ledger Entries</p>
             <p className="mt-1">Only the opening balance of Rs. {openingBalance.toLocaleString()} is currently on file.</p>
           </div>
         ) : (
+<<<<<<< HEAD
           <div className="w-full">
             {/* Desktop Table View (>= md) */}
             <div className="hidden md:block overflow-x-auto">
@@ -946,6 +1114,67 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
           </div>
         </div>
       )}
+=======
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {timelineEntries.map((item) => {
+              const isDebit = item.debit > 0;
+              const dateObj = new Date(item.date);
+
+              return (
+                <div key={item.id} className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  {/* Left: Icon & Ref */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        isDebit
+                          ? 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400'
+                          : 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400'
+                      }`}
+                    >
+                      {isDebit ? <Receipt className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-black text-xs text-slate-900 dark:text-white">
+                          {item.reference}
+                        </span>
+                        <span
+                          className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full ${
+                            isDebit
+                              ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
+                              : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
+                          }`}
+                        >
+                          {isDebit ? 'Debit / Sale' : 'Credit / Recovery'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                        {dateObj.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })} &bull; {item.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right: Amounts & Running Balance */}
+                  <div className="text-right shrink-0">
+                    <span
+                      className={`text-xs font-black font-mono block ${
+                        isDebit ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'
+                      }`}
+                    >
+                      {isDebit ? `+ Rs. ${item.debit.toLocaleString()}` : `- Rs. ${item.credit.toLocaleString()}`}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 font-bold block">
+                      Bal: Rs. {item.runningBalance?.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     </div>
   );
 };

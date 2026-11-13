@@ -6,6 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+<<<<<<< HEAD
 .aistudio/artifacts/
 .nlink-auth-store.json
 
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a

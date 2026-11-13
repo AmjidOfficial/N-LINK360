@@ -57,8 +57,11 @@ export interface Customer360ScreenProps {
   onViewInvoices?: () => void;
   onOpenLedger?: () => void;
   onViewLedger?: () => void;
+<<<<<<< HEAD
   onViewOrderHistory?: () => void;
   onOpenOrderHistory?: () => void;
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   onUpdateCustomerCoordinates?: (updatedCustomer: Customer) => void;
 }
 
@@ -76,15 +79,21 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
   onViewInvoices,
   onOpenLedger,
   onViewLedger,
+<<<<<<< HEAD
   onViewOrderHistory,
   onOpenOrderHistory,
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   onUpdateCustomerCoordinates,
 }) => {
   const triggerOrder = onOpenNewOrder || onOpenOrderDrawer || (() => {});
   const triggerRecovery = onOpenRecordRecovery || onOpenRecoveryDrawer || (() => {});
   const triggerInvoices = onOpenInvoices || onViewInvoices || (() => {});
   const triggerLedger = onOpenLedger || onViewLedger || (() => {});
+<<<<<<< HEAD
   const triggerOrderHistory = onViewOrderHistory || onOpenOrderHistory || triggerInvoices;
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   const [profileViewMode, setProfileViewMode] = useState<'FINANCIAL' | 'LEDGER' | 'MAP'>('FINANCIAL');
 
   // Filter orders & recoveries for this customer
@@ -231,11 +240,17 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
       .reduce((sum, r) => sum + (r.amount || 0), 0);
   }, [customerRecoveries, todayDateString]);
 
+<<<<<<< HEAD
   // Net Balance Metrics: Opening Balance + Total Invoices - Total Recoveries
   const openingBalance = customer.openingBalance ?? 0;
   const totalInvoiced = customerOrders.filter((o) => o.status !== 'REJECTED').reduce((sum, o) => sum + (o.totalAmount || 0), 0);
   const totalRecovered = customerRecoveries.filter((r) => r.status !== 'REJECTED').reduce((sum, r) => sum + (r.amount || 0), 0);
   const netBalance = openingBalance + totalInvoiced - totalRecovered;
+=======
+  // Net Balance Metrics
+  const netBalance = customer.currentBalance ?? customer.openingBalance ?? 0;
+  const openingBalance = customer.openingBalance ?? 0;
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   const creditLimit = customer.creditLimit ?? 250000;
   const isOverCredit = netBalance > creditLimit;
 
@@ -386,8 +401,13 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* 5 PROMINENT CLICKABLE ACTION BUTTONS (2x2 Grid on Mobile, 5-col on Desktop) */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2">
+=======
+        {/* 4 PROMINENT CLICKABLE ACTION BUTTONS (Daily Recovery, Daily Ordering, Invoices, Ledgers) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           {/* 1. Daily Recovery Button */}
           <button
             type="button"
@@ -395,11 +415,19 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
               triggerHaptic('medium');
               triggerRecovery();
             }}
+<<<<<<< HEAD
             className="min-h-[44px] px-2.5 py-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white font-black text-[11px] flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer touch-manipulation whitespace-nowrap"
             title="Record cash or cheque recovery"
           >
             <Wallet className="w-4 h-4 shrink-0" />
             <span>Recovery</span>
+=======
+            className="min-h-[46px] px-3 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer touch-manipulation"
+            title="Record cash or cheque recovery"
+          >
+            <Wallet className="w-4 h-4 stroke-[2.5]" />
+            <span>Daily Recovery</span>
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           </button>
 
           {/* 2. Daily Ordering Button */}
@@ -409,6 +437,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
               triggerHaptic('medium');
               triggerOrder();
             }}
+<<<<<<< HEAD
             className="min-h-[44px] px-2.5 py-2.5 rounded-xl bg-[#1B5E3A] hover:bg-[#16213E] text-white font-black text-[11px] flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer touch-manipulation whitespace-nowrap"
             title="Book sales order for this dealer"
           >
@@ -431,12 +460,23 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
           </button>
 
           {/* 4. Invoices Button */}
+=======
+            className="min-h-[46px] px-3 py-2.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer touch-manipulation"
+            title="Book sales order for this dealer"
+          >
+            <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
+            <span>Daily Ordering</span>
+          </button>
+
+          {/* 3. Invoices Button */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           <button
             type="button"
             onClick={() => {
               triggerHaptic('selection');
               triggerInvoices();
             }}
+<<<<<<< HEAD
             className="min-h-[44px] px-2.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-[#F8FAFC] dark:hover:bg-slate-700 text-[#0F172A] dark:text-white font-bold text-[11px] flex items-center justify-center gap-1.5 border border-[#E2E8F0] dark:border-slate-700 transition-all active:scale-95 cursor-pointer touch-manipulation whitespace-nowrap"
             title="View bills and commercial invoices"
           >
@@ -445,17 +485,35 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
           </button>
 
           {/* 5. Khata Ledger Button */}
+=======
+            className="min-h-[46px] px-3 py-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900 text-sky-800 dark:text-sky-300 font-bold text-xs flex items-center justify-center gap-2 border border-sky-200 dark:border-sky-800 transition-all active:scale-95 cursor-pointer touch-manipulation"
+            title="View bills and commercial invoices"
+          >
+            <Receipt className="w-4 h-4 text-sky-700 dark:text-sky-400" />
+            <span>Invoices</span>
+          </button>
+
+          {/* 4. Khata Ledger Button */}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           <button
             type="button"
             onClick={() => {
               triggerHaptic('selection');
               triggerLedger();
             }}
+<<<<<<< HEAD
             className="min-h-[44px] px-2.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-[#F8FAFC] dark:hover:bg-slate-700 text-[#0F172A] dark:text-white font-bold text-[11px] flex items-center justify-center gap-1.5 border border-[#E2E8F0] dark:border-slate-700 transition-all active:scale-95 cursor-pointer touch-manipulation whitespace-nowrap"
             title="View running balance Khata ledger"
           >
             <BookOpen className="w-4 h-4 text-[#0D9488]" />
             <span>Khata</span>
+=======
+            className="min-h-[46px] px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-200/80 dark:border-slate-700/80 transition-all active:scale-95 cursor-pointer touch-manipulation"
+            title="View running balance Khata ledger"
+          >
+            <BookOpen className="w-4 h-4 text-teal-700 dark:text-teal-400" />
+            <span>Khata Ledger</span>
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           </button>
         </div>
 
@@ -536,6 +594,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             </span>
           </div>
 
+<<<<<<< HEAD
           <div className="space-y-3">
             {/* Mobile Card View (< md) */}
             <div className="md:hidden space-y-3">
@@ -543,11 +602,29 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                 <div className="py-8 text-center text-slate-400">No transactions.</div>
               ) : (
                 derivedLedger.map((item, idx) => {
+=======
+          <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+            <table className="w-full min-w-[650px] border-collapse text-xs text-left">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  <th className="pb-3 pl-2">Date</th>
+                  <th className="pb-3">Type</th>
+                  <th className="pb-3">Ref Code</th>
+                  <th className="pb-3">Description / Event</th>
+                  <th className="pb-3 text-right">Debit (Rs.)</th>
+                  <th className="pb-3 text-right">Credit (Rs.)</th>
+                  <th className="pb-3 text-right pr-2">Balance (Rs.)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-700 dark:text-slate-300">
+                {derivedLedger.map((item, idx) => {
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                   const isOpening = item.type === 'OPENING';
                   const isDebit = item.type === 'DEBIT';
                   const isCredit = item.type === 'CREDIT';
 
                   return (
+<<<<<<< HEAD
                     <div key={idx} className="bg-[#F8FAFC] dark:bg-[#070D1F]/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/60 space-y-2">
                       <div className="flex justify-between items-start">
                         <div>
@@ -628,6 +705,43 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                 </tbody>
               </table>
             </div>
+=======
+                    <tr key={idx} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/10 transition-colors">
+                      <td className="py-3.5 pl-2 font-mono text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                        {item.date}
+                      </td>
+                      <td className="py-3.5">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wide border ${
+                          isOpening 
+                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/50'
+                            : isDebit
+                              ? 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-900/50'
+                              : 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50'
+                        }`}>
+                          {item.type}
+                        </span>
+                      </td>
+                      <td className="py-3.5 font-mono text-[11px] font-bold text-slate-900 dark:text-white">
+                        {item.ref}
+                      </td>
+                      <td className="py-3.5 max-w-[220px] truncate text-slate-500 dark:text-slate-400" title={item.description}>
+                        {item.description}
+                      </td>
+                      <td className="py-3.5 text-right font-mono font-bold text-teal-700 dark:text-teal-400">
+                        {item.debit > 0 ? `Rs. ${item.debit.toLocaleString()}` : '-'}
+                      </td>
+                      <td className="py-3.5 text-right font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                        {item.credit > 0 ? `Rs. ${item.credit.toLocaleString()}` : '-'}
+                      </td>
+                      <td className="py-3.5 text-right font-mono font-black text-slate-900 dark:text-white pr-2">
+                        Rs. {item.runningBalance.toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           </div>
 
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-slate-400 text-[10px] font-semibold text-center italic">
@@ -667,11 +781,16 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                     <span className="text-xs font-sans font-black text-teal-400 uppercase tracking-widest">PKR</span>
                   </div>
                   <p className="text-xs text-slate-300 font-medium max-w-lg">
+<<<<<<< HEAD
                     Authoritative Ledger Rule: Opening Balance (Rs. {openingBalance.toLocaleString()}) + Posted Invoices (Rs. {totalInvoiced.toLocaleString()}) - Confirmed Recovery (Rs. {totalRecovered.toLocaleString()}) = Closing Balance (Rs. {netBalance.toLocaleString()})
+=======
+                    Real-Time Ledger Audit Rule: Opening Balance (Rs. {openingBalance.toLocaleString()}) + MTD Invoices (Rs. {mtdInvoicesTotal.toLocaleString()}) - Total MTD Recovery (Rs. {mtdRecoveryTotal.toLocaleString()})
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                   </p>
                 </div>
 
                 <div className="lg:text-right border-t lg:border-t-0 lg:border-l border-slate-700/50 pt-4 lg:pt-0 lg:pl-6 shrink-0 space-y-1">
+<<<<<<< HEAD
                   <span className="text-[10px] font-bold text-teal-400 block uppercase tracking-wider">Available Credit Line</span>
                   <span className="text-lg font-black font-mono text-emerald-400">
                     Rs. {Math.max(0, creditLimit - netBalance).toLocaleString()}
@@ -751,10 +870,52 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                   <span className="text-[10px] font-bold text-slate-400 block">Approved Term</span>
                   <span className="text-sm font-bold font-mono text-slate-800 dark:text-slate-200 mt-0.5 block">
                     {customer.creditDays || 30} Days
+=======
+                  <span className="text-[10px] font-bold text-teal-400 block uppercase tracking-wider">Today&apos;s recovery collection</span>
+                  <span className="text-lg font-black font-mono text-emerald-400">
+                    Rs. {todayRecoveryTotal.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    Sanctioned Credit: Rs. {creditLimit.toLocaleString()}
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                   </span>
                 </div>
               </div>
             </div>
+<<<<<<< HEAD
+=======
+
+            {/* 4-Column Balanced Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/80">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Opening Balance</span>
+                <span className="text-base font-black font-mono text-slate-800 dark:text-slate-100 mt-1 block">
+                  Rs. {openingBalance.toLocaleString()}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/80">
+                <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-400 block">MTD Invoices</span>
+                <span className="text-base font-black font-mono text-teal-900 dark:text-teal-300 mt-1 block">
+                  Rs. {mtdInvoicesTotal.toLocaleString()}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/80">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">MTD Recovery</span>
+                <span className="text-base font-black font-mono text-emerald-900 dark:text-emerald-300 mt-1 block">
+                  Rs. {mtdRecoveryTotal.toLocaleString()}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/80">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Today&apos;s Recovery</span>
+                <span className="text-base font-black font-mono text-amber-900 dark:text-amber-300 mt-1 block">
+                  Rs. {todayRecoveryTotal.toLocaleString()}
+                </span>
+              </div>
+            </div>
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           </div>
 
           {/* Credit Health Risk Intelligence Panel (Corresponds to D3 Map Pin) */}

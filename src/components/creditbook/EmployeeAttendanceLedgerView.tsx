@@ -37,10 +37,14 @@ import {
   Wallet,
   ShoppingBag,
   TrendingUp,
+<<<<<<< HEAD
   Edit3,
 } from 'lucide-react';
 import { EditOrDeleteEntryModal } from './EditOrDeleteEntryModal';
 import { canUserEditEntry, canUserDeleteEntry } from '../../utils/entryManagement';
+=======
+} from 'lucide-react';
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 export interface EmployeeAttendanceLedgerViewProps {
   attendanceRecords: EmployeeAttendance[];
@@ -48,8 +52,11 @@ export interface EmployeeAttendanceLedgerViewProps {
   orders?: SalesOrder[];
   recoveries?: Recovery[];
   onBack?: () => void;
+<<<<<<< HEAD
   onSaveAttendanceEdit?: (recordId: string, updates: Partial<EmployeeAttendance>) => void;
   onDeleteAttendance?: (recordId: string, reason?: string) => void;
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 }
 
 export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerViewProps> = ({
@@ -58,12 +65,18 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
   orders = [],
   recoveries = [],
   onBack,
+<<<<<<< HEAD
   onSaveAttendanceEdit,
   onDeleteAttendance,
 }) => {
   const [viewMode, setViewMode] = useState<'TABLE' | 'LIVE_GEO_MAP'>('TABLE');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRecordForManage, setSelectedRecordForManage] = useState<EmployeeAttendance | null>(null);
+=======
+}) => {
+  const [viewMode, setViewMode] = useState<'TABLE' | 'LIVE_GEO_MAP'>('TABLE');
+  const [searchQuery, setSearchQuery] = useState('');
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH' | 'CUSTOM'>('ALL');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
@@ -330,7 +343,11 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
+<<<<<<< HEAD
                 <Radio className="w-3.5 h-3.5 text-emerald-400" />
+=======
+                <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 <span>Live Map Radar</span>
               </button>
             </div>
@@ -359,7 +376,11 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
 
           <div className="bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl p-3.5 border border-emerald-200 dark:border-emerald-800/40">
             <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-700 dark:text-emerald-300 block flex items-center gap-1">
+<<<<<<< HEAD
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
+=======
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               Active (On Duty Now)
             </span>
             <span className="text-xl font-black text-emerald-700 dark:text-emerald-300 mt-0.5 block">
@@ -477,6 +498,7 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
       {/* 1. TABLE VIEW WITH REAL-TIME STATUS & MAP PINS */}
       {/* ==================================================== */}
       {viewMode === 'TABLE' && (
+<<<<<<< HEAD
         <div className="space-y-3">
           {/* Mobile Card View (< lg) */}
           <div className="lg:hidden space-y-3">
@@ -670,6 +692,160 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                 </tbody>
               </table>
             </div>
+=======
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Field Officer</th>
+                  <th className="py-3 px-4">Real-Time Status</th>
+                  <th className="py-3 px-4">Check-In Time</th>
+                  <th className="py-3 px-4">Check-In Location (GPS Pin)</th>
+                  <th className="py-3 px-4">Check-Out</th>
+                  <th className="py-3 px-4">Day Sales &amp; Recovery</th>
+                  <th className="py-3 px-4">Shift Duration</th>
+                  <th className="py-3 px-4 text-right">Map Pin Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-12 text-center text-slate-400">
+                      <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                      <p className="font-bold">No attendance records found matching filters.</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Check-in using the Mobile Attendance button to record your shift.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRecords.map((rec) => {
+                    const isOnDuty = !rec.checkOutTime;
+                    const inLoc = rec.checkInLocation || rec.location || 'Assigned Territory';
+                    const outLoc = rec.checkOutLocation || (rec.checkOutTime ? inLoc : '—');
+                    const coords =
+                      rec.gpsCoordinates || {
+                        lat: 34.0151,
+                        lng: 71.5249,
+                      };
+
+                    // Compute day-wise sales & recovery
+                    const dayOrders = orders.filter((o) => (o.orderDate || o.createdAt || '').slice(0, 10) === rec.date);
+                    const daySalesTotal = dayOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+                    const dayRecs = recoveries.filter((r) => (r.recordedAt || r.createdAt || '').slice(0, 10) === rec.date);
+                    const dayRecoveryTotal = dayRecs.reduce((sum, r) => sum + (r.amount || 0), 0);
+
+                    return (
+                      <tr
+                        key={rec.id}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                      >
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                          {rec.date}
+                        </td>
+
+                        {/* Officer Info */}
+                        <td className="py-3.5 px-4">
+                          <span className="font-black text-slate-900 dark:text-white block">
+                            {rec.employeeName}
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {rec.employeeCode || 'NL-STAFF'} &bull; {rec.designation || 'Sales Officer'}
+                          </span>
+                        </td>
+
+                        {/* Real-time Status Indicator */}
+                        <td className="py-3.5 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase shadow-2xs ${
+                              isOnDuty
+                                ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                            }`}
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                isOnDuty ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                              }`}
+                            />
+                            <span>{isOnDuty ? 'Active (On Duty)' : 'Completed'}</span>
+                          </span>
+                        </td>
+
+                        {/* Check In Time */}
+                        <td className="py-3.5 px-4">
+                          <span className="font-mono font-black text-emerald-700 dark:text-emerald-400">
+                            {rec.checkInTime || '09:00 AM'}
+                          </span>
+                        </td>
+
+                        {/* Check In Location & GPS coordinates */}
+                        <td className="py-3.5 px-4 max-w-[200px]">
+                          <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                            <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                            <span className="truncate font-bold" title={inLoc}>
+                              {inLoc}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                            {coords.lat.toFixed(4)}°N, {coords.lng.toFixed(4)}°E (±4m)
+                          </span>
+                        </td>
+
+                        {/* Check Out Time */}
+                        <td className="py-3.5 px-4">
+                          {rec.checkOutTime ? (
+                            <div>
+                              <span className="font-mono font-black text-rose-700 dark:text-rose-400 block">
+                                {rec.checkOutTime}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block truncate max-w-[120px]" title={outLoc}>
+                                {outLoc}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-[11px]">— On-Duty —</span>
+                          )}
+                        </td>
+
+                        {/* Day Sales & Recovery */}
+                        <td className="py-3.5 px-4 font-mono text-[11px]">
+                          <div className="space-y-0.5">
+                            <span className="font-black text-teal-800 dark:text-teal-300 block">
+                              Sales: {daySalesTotal > 0 ? `Rs. ${daySalesTotal.toLocaleString()}` : 'Rs. 0'}
+                            </span>
+                            <span className="font-bold text-emerald-700 dark:text-emerald-400 block">
+                              Rec: {dayRecoveryTotal > 0 ? `Rs. ${dayRecoveryTotal.toLocaleString()}` : 'Rs. 0'}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Shift Duration */}
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-700 dark:text-slate-300">
+                          {rec.workingHours ? `${rec.workingHours} hrs` : isOnDuty ? 'Active' : '8.0 hrs'}
+                        </td>
+
+                        {/* Visual Map Pin CTA Button */}
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPinModalForRecord(rec)}
+                            className="px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950 hover:bg-teal-100 dark:hover:bg-teal-900 text-teal-800 dark:text-teal-300 font-bold text-[11px] inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs border border-teal-200 dark:border-teal-800"
+                          >
+                            <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-300" />
+                            <span>View Map Pin</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           </div>
         </div>
       )}
@@ -683,7 +859,11 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
             <div>
               <div className="flex items-center gap-2">
                 <span className="p-1.5 rounded-xl bg-teal-800 text-emerald-300">
+<<<<<<< HEAD
                   <Radio className="w-4 h-4" />
+=======
+                  <Radio className="w-4 h-4 animate-pulse" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 </span>
                 <h3 className="text-sm font-black text-white">
                   Live Field Force GPS Radar &amp; Check-In Pins
@@ -696,7 +876,11 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
 
             <div className="flex items-center gap-2 text-xs">
               <span className="px-3 py-1 rounded-xl bg-emerald-950 border border-emerald-500/50 text-emerald-300 font-bold flex items-center gap-1.5">
+<<<<<<< HEAD
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
+=======
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 {stats.activeOnDuty} Active Pins Live
               </span>
             </div>
@@ -734,7 +918,11 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                   >
                     <span
                       className={`w-1.5 h-1.5 rounded-full ${
+<<<<<<< HEAD
                         item.status === 'ACTIVE' ? 'bg-emerald-400' : 'bg-slate-400'
+=======
+                        item.status === 'ACTIVE' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                       }`}
                     />
                     <span>{item.status}</span>
@@ -817,7 +1005,11 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
                     selectedRecordForPin.status === 'ACTIVE'
+<<<<<<< HEAD
                       ? 'bg-emerald-400'
+=======
+                      ? 'bg-emerald-400 animate-pulse'
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                       : 'bg-slate-400'
                   }`}
                 />
@@ -872,7 +1064,11 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
 
               {/* Accuracy Overlay */}
               <div className="absolute top-2.5 right-3 bg-teal-950/90 border border-teal-700/60 px-2 py-0.5 rounded-lg text-[10px] font-bold text-teal-300 flex items-center gap-1 z-20">
+<<<<<<< HEAD
                 <Radio className="w-3 h-3 text-emerald-400" />
+=======
+                <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 <span>GPS Accuracy: ±4m Locked</span>
               </div>
             </div>
@@ -921,6 +1117,7 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
           </div>
         </div>
       )}
+<<<<<<< HEAD
 
       {/* Edit or Delete Daily Attendance Record Modal */}
       {selectedRecordForManage && (
@@ -942,6 +1139,8 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
           }}
         />
       )}
+=======
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     </div>
   );
 };

@@ -474,7 +474,11 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
           <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
+<<<<<<< HEAD
                 <div className={`w-2.5 h-2.5 rounded-full ${user ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+=======
+                <div className={`w-2.5 h-2.5 rounded-full ${user ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 <span className="text-xs font-black text-emerald-900">
                   {user ? 'Google Account Connected' : 'Google Authentication Required'}
                 </span>
@@ -540,7 +544,11 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                           Auto-Sync Engine (Every 30 Minutes)
                         </h4>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 flex items-center gap-1">
+<<<<<<< HEAD
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+=======
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                           {autoSyncStatus.isEnabled ? 'Active' : 'Paused'}
                         </span>
                       </div>
@@ -816,7 +824,11 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                   </div>
                   <div className="p-2 rounded-xl bg-white border border-slate-200 shadow-2xs">
                     <span className="text-[10px] text-slate-500 block font-bold">Dealers</span>
+<<<<<<< HEAD
                     <span className="font-mono font-black text-[#003ECC] text-sm">
+=======
+                    <span className="font-mono font-black text-indigo-700 text-sm">
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                       {importSummary?.dealersCount ?? 0}
                     </span>
                   </div>
@@ -980,7 +992,11 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                 </div>
                 <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
+<<<<<<< HEAD
                     <DollarSign className="w-3 h-3 text-[#0052FF]" />
+=======
+                    <DollarSign className="w-3 h-3 text-indigo-600" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                     <span>Recovery</span>
                   </div>
                   <div className="text-sm font-black text-slate-900 mt-1">
@@ -1235,7 +1251,11 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                 
                 {import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL && (
                   <div className="p-2.5 bg-emerald-50 text-emerald-900 rounded-xl border border-emerald-200 text-xs flex items-center gap-2 font-medium">
+<<<<<<< HEAD
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+=======
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                     <span>Server-Attached Webhook Active: <strong className="font-mono text-[10px] break-all">{import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL.slice(0, 50)}...</strong></span>
                   </div>
                 )}

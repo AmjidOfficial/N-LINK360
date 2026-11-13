@@ -113,7 +113,11 @@ export const GeofencePerimeterMap: React.FC<GeofencePerimeterMapProps> = ({
     if (onUpdateGeofenceRadius) {
       onUpdateGeofenceRadius(selectedTown, activeRadius);
       setIsSavedToast(true);
+<<<<<<< HEAD
       setTimeout(() => setIsSavedToast(false), 5000);
+=======
+      setTimeout(() => setIsSavedToast(false), 2500);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     }
   };
 
@@ -169,7 +173,11 @@ export const GeofencePerimeterMap: React.FC<GeofencePerimeterMapProps> = ({
           >
             <span
               className={`w-2 h-2 rounded-full ${
+<<<<<<< HEAD
                 isInsideGeofence ? 'bg-emerald-400' : 'bg-rose-400'
+=======
+                isInsideGeofence ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               }`}
             />
             <span>
@@ -344,8 +352,13 @@ export const GeofencePerimeterMap: React.FC<GeofencePerimeterMapProps> = ({
         </div>
 
         {/* Accuracy Tag */}
+<<<<<<< HEAD
         <div className="absolute top-2.5 right-3 bg-slate-900/90 border border-slate-700 px-2.5 py-1 rounded-lg text-[10px] font-semibold text-blue-300 flex items-center gap-1 z-20">
           <Radio className="w-3 h-3 text-blue-400" />
+=======
+        <div className="absolute top-2.5 right-3 bg-teal-950/90 border border-teal-700/60 px-2.5 py-1 rounded-xl text-[10px] font-bold text-teal-300 flex items-center gap-1 z-20">
+          <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           <span>GPS Accuracy: ±4m Locked</span>
         </div>
       </div>

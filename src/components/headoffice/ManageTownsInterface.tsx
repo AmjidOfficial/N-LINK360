@@ -121,7 +121,11 @@ export const ManageTownsInterface: React.FC<ManageTownsInterfaceProps> = ({
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
+<<<<<<< HEAD
     setTimeout(() => setToastMessage(null), 5000);
+=======
+    setTimeout(() => setToastMessage(null), 3500);
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   };
 
   // KPIs
@@ -648,7 +652,11 @@ export const ManageTownsInterface: React.FC<ManageTownsInterfaceProps> = ({
                     >
                       {node.isActive ? (
                         <>
+<<<<<<< HEAD
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+=======
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+>>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                           <span>Active</span>
                         </>
                       ) : (
