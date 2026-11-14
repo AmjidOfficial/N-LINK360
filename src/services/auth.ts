@@ -252,7 +252,16 @@ export async function authenticateWithCredentials(
       body: JSON.stringify({ email: cleanEmail, identifier: cleanEmail, password: cleanPass }),
     });
     serverAttempted = true;
-    const data = await res.json();
+    const text = await res.text();
+    if (text.trim().startsWith('<')) {
+      throw new Error('API server route unavailable on static hosting. Falling back to client authentication.');
+    }
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { error: text || 'Server error or invalid response format' };
+    }
     if (res.ok && data?.success && data?.user) {
       const u = data.user;
       const resolvedUser: User & { mustChangePassword?: boolean } = {
@@ -332,7 +341,16 @@ export async function submitForgotPasswordRequest(identifier: string): Promise<{
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier: cleanId }),
     });
-    const data = await res.json();
+    const text = await res.text();
+    if (text.trim().startsWith('<')) {
+      throw new Error('Static hosting fallback');
+    }
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = {};
+    }
     if (res.ok && data?.success) {
       return {
         success: true,

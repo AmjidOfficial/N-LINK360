@@ -49,7 +49,7 @@ export async function fetchRoleDashboardConfig(
       headers: getAuthHeaders(),
     });
     if (res.ok) {
-      const data = await res.json();
+        const data = await res.json().catch(() => null);
       if (data?.success && data?.config) {
         return { config: data.config, override: data.override || localOverride };
       }
@@ -76,7 +76,7 @@ export async function saveRoleDashboardConfigOverride(
       body: JSON.stringify(override),
     });
     if (res.ok) {
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (data?.success && data?.config) {
         return { success: true, config: data.config };
       }
