@@ -11,6 +11,7 @@
 import { NLinkUser, getStoredUsers, saveStoredUsers } from '../data/nlink-users-team';
 import { fetchLiveGoogleSheetUsers } from './liveGoogleSheetSync';
 import { getGoogleSheetsWebhookUrl } from './google-sheets';
+import { parseJsonResponse } from '../lib/safeFetch';
 
 export interface GoogleSheetUserRecord {
   email: string;
@@ -56,7 +57,7 @@ export async function fetchAuthorizedUsersFromGoogleSheet(): Promise<GoogleSheet
         mode: 'cors',
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await parseJsonResponse(res).catch(() => null);
         if (data && Array.isArray(data.users)) {
           return data.users.map((r: any) => ({
             email: String(r.email || r.Email || '').trim().toLowerCase(),

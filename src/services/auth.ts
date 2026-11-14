@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import { sendFirebasePasswordReset } from '../lib/firebase';
+import { safeApiFetch } from '../lib/safeFetch';
 import type { User, UserRole } from '../types';
 import { isMultiRoleEligibleEmail, isAuthorizedApproverEmail, getCentralEmployees } from './production-users';
 import { getStoredUsers, saveStoredUsers, NLinkUser } from '../data/nlink-users-team';
@@ -115,7 +115,8 @@ export async function isRegisteredEmail(email: string): Promise<{ isRegistered: 
 export async function signInWithRegisteredEmail(
   email: string,
   password?: string,
-  roleOverride?: UserRole
+  roleOverride?: UserRole,
+  skipSupabaseAuth = false
 ): Promise<User> {
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail) {
@@ -123,7 +124,7 @@ export async function signInWithRegisteredEmail(
   }
 
   // If password provided and Supabase is configured with active credentials, attempt Supabase Auth
-  if (password && password.trim().length > 0 && isSupabaseConfigured && supabase) {
+  if (!skipSupabaseAuth && password && password.trim().length > 0 && isSupabaseConfigured && supabase) {
     try {
       const { data: authData } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
@@ -212,10 +213,180 @@ export async function signInWithRegisteredEmail(
   return authenticatedUser;
 }
 
+const CLIENT_CRED_STORAGE_KEY = 'nlink_client_cred_store_v1';
+
+interface ClientCredEntry {
+  salt: string;
+  hash: string;
+  mustChangePassword?: boolean;
+}
+
+const PRE_SEEDED_CLIENT_CREDS: Record<string, ClientCredEntry> = {
+  'amjid.bisconni@gmail.com': {
+    salt: 'nlink_salt_usr003',
+    hash: 'a775b83dcd320446f65e6cc185156130fe218cf8dc6730d4fa13e061823e5286',
+    mustChangePassword: false,
+  },
+  'amjid@nationallight.pk': {
+    salt: 'nlink_salt_usr003nl',
+    hash: 'fa9db484282c95e48803d503d3cadf5f98d297218ad5a83d0509cd8324b33429',
+    mustChangePassword: false,
+  },
+  'nationallights2026@gmail.com': {
+    salt: 'nlink_salt_usr000',
+    hash: 'f05454903e4b93135a1cfab355f6e033cbfa9e2313922c56ad9fe4464c729dbb',
+    mustChangePassword: true,
+  },
+  'shahzadullah@nationallight.pk': {
+    salt: 'nlink_salt_usr001',
+    hash: '612aafa1f8255874132972ec36c58eee49cc5ffb7e24af3ae0426de92b3368e3',
+    mustChangePassword: true,
+  },
+  'syedzain@nationallight.pk': {
+    salt: 'nlink_salt_usr002',
+    hash: '011e3c790d5a9b19f5c9d0cce9b78e8abdf42a5e3938e263a1a7b28014b90f33',
+    mustChangePassword: true,
+  },
+  'arshadkhan@nationallight.pk': {
+    salt: 'nlink_salt_arshad',
+    hash: 'b8eb913a5c25d21c63427d706860de8ea570b810484006065add8e33fe93f01e',
+    mustChangePassword: true,
+  },
+};
+
+function sha256FallbackHex(ascii: string): string {
+  const rightRotate = (value: number, amount: number) => (value >>> amount) | (value << (32 - amount));
+  const mathPow = Math.pow;
+  const maxWord = mathPow(2, 32);
+  let result = '';
+  const words: number[] = [];
+  const asciiBitLength = ascii.length * 8;
+  const hash: number[] = [];
+  const k: number[] = [];
+  let primeCounter = 0;
+  const isComposite: Record<number, number> = {};
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (let i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+  ascii += '\x80';
+  while ((ascii.length % 64) - 56) ascii += '\x00';
+  for (let i = 0; i < ascii.length; i++) {
+    const j = ascii.charCodeAt(i);
+    words[i >> 2] |= j << (((3 - i) % 4) * 8);
+  }
+  words[words.length] = (asciiBitLength / maxWord) | 0;
+  words[words.length] = asciiBitLength;
+  for (let j = 0; j < words.length; ) {
+    const w = words.slice(j, (j += 16));
+    const oldHash = hash.slice(0);
+    for (let i = 0; i < 64; i++) {
+      const w15 = w[i - 15];
+      const w2 = w[i - 2];
+      const a = hash[0];
+      const e = hash[4];
+      const temp1 =
+        hash[7] +
+        (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) +
+        ((e & hash[5]) ^ (~e & hash[6])) +
+        k[i] +
+        (w[i] =
+          i < 16
+            ? w[i]
+            : (w[i - 16] +
+                (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) +
+                w[i - 7] +
+                (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) |
+              0);
+      const temp2 =
+        (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) +
+        ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash[7] = hash[6];
+      hash[6] = hash[5];
+      hash[5] = hash[4];
+      hash[4] = (hash[3] + temp1) | 0;
+      hash[3] = hash[2];
+      hash[2] = hash[1];
+      hash[1] = hash[0];
+      hash[0] = (temp1 + temp2) | 0;
+    }
+    for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+  }
+  for (let i = 0; i < 8; i++) {
+    for (let j = 3; j + 1; j--) {
+      const b = (hash[i] >> (j * 8)) & 255;
+      result += (b < 16 ? '0' : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+async function hashClientCredential(salt: string, password: string): Promise<string> {
+  const input = `${salt}:${password}`;
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.crypto?.subtle && typeof TextEncoder !== 'undefined') {
+      const encoded = new TextEncoder().encode(input);
+      const digest = await globalThis.crypto.subtle.digest('SHA-256', encoded);
+      return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+  } catch {}
+  return sha256FallbackHex(input);
+}
+
+function getClientCredStore(): Record<string, ClientCredEntry> {
+  try {
+    if (typeof localStorage === 'undefined') return { ...PRE_SEEDED_CLIENT_CREDS };
+    const raw = localStorage.getItem(CLIENT_CRED_STORAGE_KEY);
+    if (!raw) return { ...PRE_SEEDED_CLIENT_CREDS };
+    const parsed = JSON.parse(raw);
+    return { ...PRE_SEEDED_CLIENT_CREDS, ...(parsed || {}) };
+  } catch {
+    return { ...PRE_SEEDED_CLIENT_CREDS };
+  }
+}
+
+export async function setClientCredentialHash(
+  email: string,
+  plainPassword: string,
+  mustChangePassword = false
+): Promise<void> {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail || !plainPassword) return;
+  const salt = `nl_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const hash = await hashClientCredential(salt, plainPassword);
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const raw = localStorage.getItem(CLIENT_CRED_STORAGE_KEY);
+    const existing = raw ? JSON.parse(raw) : {};
+    existing[cleanEmail] = { salt, hash, mustChangePassword };
+    localStorage.setItem(CLIENT_CRED_STORAGE_KEY, JSON.stringify(existing));
+  } catch {}
+}
+
+async function verifyClientCredential(
+  email: string,
+  plainPassword: string
+): Promise<{ valid: boolean; mustChangePassword: boolean }> {
+  const cleanEmail = email.trim().toLowerCase();
+  const store = getClientCredStore();
+  const entry = store[cleanEmail];
+  if (!entry) return { valid: false, mustChangePassword: false };
+  const computed = await hashClientCredential(entry.salt, plainPassword);
+  return {
+    valid: computed === entry.hash,
+    mustChangePassword: Boolean(entry.mustChangePassword),
+  };
+}
+
 /**
  * Strict Email + Password Login (Section 4.1 & 4.3):
- * Verifies Email and Password via Server Cryptographic Auth API (scrypt) or Supabase Auth.
- * Passwordless / dummy fallback logins are strictly disabled.
+ * Verifies Email and Password via Server Cryptographic Auth API (scrypt), Supabase Auth,
+ * or pre-seeded Client Cryptographic Store when running on static hosting (Netlify).
  */
 export async function authenticateWithCredentials(
   emailInput: string,
@@ -243,27 +414,16 @@ export async function authenticateWithCredentials(
     throw new Error('This account has been deactivated by Head Office Administration.');
   }
 
-  // 2. Server-side cryptographic verification (mandatory when backend is reachable)
-  let serverAttempted = false;
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, identifier: cleanEmail, password: cleanPass }),
-    });
-    serverAttempted = true;
-    const text = await res.text();
-    if (text.trim().startsWith('<')) {
-      throw new Error('API server route unavailable on static hosting. Falling back to client authentication.');
-    }
-    let data: any = {};
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      data = { error: text || 'Server error or invalid response format' };
-    }
-    if (res.ok && data?.success && data?.user) {
-      const u = data.user;
+  // 2. Server-side cryptographic verification (when Express backend API is active)
+  const apiRes = await safeApiFetch<any>('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: cleanEmail, identifier: cleanEmail, password: cleanPass }),
+  });
+
+  if (!apiRes.isStaticFallback) {
+    if (apiRes.ok && apiRes.data?.success && apiRes.data?.user) {
+      const u = apiRes.data.user;
       const resolvedUser: User & { mustChangePassword?: boolean } = {
         id: localMatch?.id || u.id,
         email: u.email,
@@ -279,7 +439,7 @@ export async function authenticateWithCredentials(
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('nlink_registered_email_session', resolvedUser.email);
         localStorage.setItem('nlink_active_user_session', JSON.stringify(resolvedUser));
-        localStorage.setItem('nlink_sec_token', data.sessionToken || '');
+        localStorage.setItem('nlink_sec_token', apiRes.data.sessionToken || '');
       }
       logAuditEvent({
         userId: resolvedUser.id,
@@ -293,25 +453,62 @@ export async function authenticateWithCredentials(
       return resolvedUser;
     }
 
-    if (res.status === 400 || res.status === 401 || res.status === 403 || res.status === 429) {
-      throw new Error(data?.error || 'Invalid email address or password.');
-    }
-  } catch (apiErr: any) {
-    if (serverAttempted) {
-      throw apiErr;
+    if ([400, 401, 403, 429].includes(apiRes.status)) {
+      throw new Error(apiRes.data?.error || 'Invalid email address or password.');
     }
   }
 
   // 3. Supabase Auth verification if configured
   if (isSupabaseConfigured && supabase) {
-    const { data: sbData, error: sbErr } = await supabase.auth.signInWithPassword({
-      email: cleanEmail,
-      password: cleanPass,
-    });
-    if (!sbErr && sbData?.user) {
-      const user = await signInWithRegisteredEmail(cleanEmail, cleanPass);
-      return { ...user, mustChangePassword: Boolean(localMatch?.mustChangePassword) };
+    try {
+      const { data: sbData, error: sbErr } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: cleanPass,
+      });
+      if (!sbErr && sbData?.user) {
+        const user = await signInWithRegisteredEmail(cleanEmail, cleanPass);
+        const mustChange =
+          localMatch?.mustChangePassword !== undefined && localMatch?.initialPasswordStatus !== 'CHANGED'
+            ? Boolean(localMatch.mustChangePassword)
+            : false;
+        return { ...user, mustChangePassword: mustChange };
+      }
+    } catch {}
+  }
+
+  // 4. Static Hosting (Netlify) Client-Side Cryptographic Fallback Store
+  const clientVerify = await verifyClientCredential(cleanEmail, cleanPass);
+  if (clientVerify.valid) {
+    const user = await signInWithRegisteredEmail(cleanEmail, cleanPass, undefined, true);
+    const mustChange =
+      localMatch?.initialPasswordStatus === 'CHANGED'
+        ? false
+        : localMatch?.mustChangePassword !== undefined
+        ? Boolean(localMatch.mustChangePassword)
+        : clientVerify.mustChangePassword;
+
+    const resolvedUser: User & { mustChangePassword?: boolean } = {
+      ...user,
+      role: (localMatch?.role || user.role) as UserRole,
+      fullName: localMatch?.fullName || user.fullName,
+      phone: localMatch?.phone || user.phone,
+      mustChangePassword: mustChange,
+    };
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('nlink_registered_email_session', resolvedUser.email);
+      localStorage.setItem('nlink_active_user_session', JSON.stringify(resolvedUser));
     }
+    logAuditEvent({
+      userId: resolvedUser.id,
+      userName: resolvedUser.fullName,
+      userEmail: resolvedUser.email,
+      action: 'USER_LOGIN',
+      module: 'AUTH',
+      recordId: resolvedUser.id,
+      details: `Authenticated via Hybrid Cryptographic Store (${resolvedUser.role})`,
+    });
+    return resolvedUser;
   }
 
   throw new Error('Invalid email address or password.');
@@ -335,30 +532,19 @@ export async function submitForgotPasswordRequest(identifier: string): Promise<{
 
   const localReq = submitPasswordRecoveryRequest(cleanId, matched?.fullName, matched?.id);
 
-  try {
-    const res = await fetch('/api/auth/forgot-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: cleanId }),
-    });
-    const text = await res.text();
-    if (text.trim().startsWith('<')) {
-      throw new Error('Static hosting fallback');
-    }
-    let data: any = {};
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      data = {};
-    }
-    if (res.ok && data?.success) {
-      return {
-        success: true,
-        requestId: data.request?.id || localReq.id,
-        message: data.message,
-      };
-    }
-  } catch {}
+  const apiRes = await safeApiFetch<any>('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: cleanId }),
+  });
+
+  if (!apiRes.isStaticFallback && apiRes.ok && apiRes.data?.success) {
+    return {
+      success: true,
+      requestId: apiRes.data.request?.id || localReq.id,
+      message: apiRes.data.message,
+    };
+  }
 
   return {
     success: true,
@@ -386,32 +572,31 @@ export async function changeUserPassword(
     throw new Error('Password must include uppercase letters, lowercase letters, numbers, and special characters.');
   }
 
-  // 1. Mandatory server update
-  let serverUpdated = false;
-  try {
-    const res = await fetch('/api/auth/change-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: cleanEmail,
-        currentPassword: currentPassword ? currentPassword.trim() : undefined,
-        newPassword: nextPass,
-        forced: Boolean(forced),
-      }),
-    });
-    const data = await res.json().catch(() => null);
-    if (!res.ok) {
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-      throw new Error(`Password update failed with status ${res.status}`);
-    }
-    serverUpdated = true;
-  } catch (err: any) {
-    if (err?.message && !err.message.includes('fetch') && !err.message.includes('network') && !err.message.includes('Failed to fetch')) {
-      throw err;
+  // 1. Server update when Express backend is reachable
+  const apiRes = await safeApiFetch<any>('/api/auth/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: cleanEmail,
+      currentPassword: currentPassword ? currentPassword.trim() : undefined,
+      newPassword: nextPass,
+      forced: Boolean(forced),
+    }),
+  });
+
+  if (!apiRes.isStaticFallback && !apiRes.ok) {
+    throw new Error(apiRes.data?.error || `Password update failed with status ${apiRes.status}`);
+  }
+
+  // Verify current password in static mode if not forced
+  if (apiRes.isStaticFallback && !forced) {
+    const check = await verifyClientCredential(cleanEmail, currentPassword ? currentPassword.trim() : '');
+    if (!check.valid) {
+      throw new Error('Current password is incorrect.');
     }
   }
+
+  await setClientCredentialHash(cleanEmail, nextPass, false);
 
   if (isSupabaseConfigured && supabase) {
     try {
@@ -586,6 +771,7 @@ export async function signOut() {
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem('nlink_registered_email_session');
     localStorage.removeItem('nlink_active_user_session');
+    localStorage.removeItem('nlink_sec_token');
   }
   if (typeof sessionStorage !== 'undefined') {
     sessionStorage.removeItem('nlink_active_role_override');
@@ -771,48 +957,27 @@ export function clearRecoveryHash(): void {
 
 export async function resetPassword(email: string): Promise<void> {
   const cleanEmail = email.trim().toLowerCase();
-  let firebaseSuccess = false;
-  let supabaseSuccess = false;
-  let lastErrorMessage = '';
 
-  // 1. Firebase Password Reset Flow
-  try {
-    await sendFirebasePasswordReset(cleanEmail);
-    firebaseSuccess = true;
-  } catch (fbErr: any) {
-    console.info('Firebase auth reset notice:', fbErr?.message || fbErr);
-    lastErrorMessage = fbErr?.message || '';
-  }
-
-  // 2. Supabase Password Reset Flow
   if (isSupabaseConfigured && supabase) {
     try {
       const redirectUrl = getProductionRedirectUrl();
-      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, { 
-        redirectTo: redirectUrl 
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: redirectUrl,
       });
       if (error) {
-        lastErrorMessage = error.message;
-        if (!firebaseSuccess) throw error;
-      } else {
-        supabaseSuccess = true;
-      }
-    } catch (sbErr: any) {
-      lastErrorMessage = sbErr?.message || lastErrorMessage;
-      if (!firebaseSuccess) {
-        console.error('Supabase password reset error:', sbErr);
-        // Handle common email provider / rate limit / config errors with friendly explanation
-        if (/rate limit/i.test(lastErrorMessage)) {
+        const msg = error.message || '';
+        if (/rate limit/i.test(msg)) {
           throw new Error('Too many password reset requests. Please wait a few minutes before trying again.');
-        } else if (/smtp|mail|network/i.test(lastErrorMessage)) {
-          throw new Error('Password reset email could not be delivered. Please contact your system administrator at nationallights2026@gmail.com.');
         }
         throw new Error('Password reset email could not be sent. Please check the email address or contact your administrator.');
       }
+      return;
+    } catch (sbErr: any) {
+      if (sbErr?.message) throw sbErr;
     }
-  } else if (!firebaseSuccess) {
-    throw new Error('Password reset email could not be sent. Please contact your administrator.');
   }
+
+  await submitForgotPasswordRequest(cleanEmail);
 }
 
 export async function updatePassword(password: string): Promise<void> {

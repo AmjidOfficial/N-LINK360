@@ -2554,6 +2554,100 @@ console.log('\n🔐 [26/26] Testing First-Time Login Password Change & Credentia
   assert(isStillForced === false, 'Subsequent logins recognize changed password and do not re-force modal');
 }
 
+// =========================================================================
+// [27/27] NETLIFY STATIC HOSTING HTML FALLBACK & CLIENT AUTH VERIFICATION
+// =========================================================================
+console.log('\n🌐 [27/27] Testing Netlify Static HTML Fallback & Client Auth Store...');
+{
+  const originalFetch = globalThis.fetch;
+  // Simulate Netlify SPA catch-all returning HTTP 200 text/html <!DOCTYPE html> for all /api/* routes
+  globalThis.fetch = (async () => {
+    return new Response('<!DOCTYPE html><html lang="en"><head><title>N-LINK 360</title></head><body></body></html>', {
+      status: 200,
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    });
+  }) as typeof fetch;
+
+  try {
+    const { safeApiFetch, parseJsonResponse } = await import('../src/lib/safeFetch');
+    const { authenticateWithCredentials, changeUserPassword } = await import('../src/services/auth');
+
+    const htmlRes = await fetch('/api/auth/login');
+    const parsedNull = await parseJsonResponse(htmlRes);
+    assert(parsedNull === null, 'parseJsonResponse safely returns null on HTTP 200 HTML without SyntaxError');
+
+    const apiResult = await safeApiFetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'amjid.bisconni@gmail.com', password: 'test' }),
+    });
+    assert(
+      apiResult.isStaticFallback === true && apiResult.ok === false && apiResult.data === null,
+      'safeApiFetch intercepts Netlify HTTP 200 HTML response and marks isStaticFallback=true'
+    );
+
+    const amjidUser = await authenticateWithCredentials('amjid.bisconni@gmail.com', 'Amjid@1947');
+    assert(
+      amjidUser.email === 'amjid.bisconni@gmail.com' &&
+        amjidUser.role === 'SUPER_ADMIN' &&
+        amjidUser.mustChangePassword === false,
+      'amjid.bisconni@gmail.com authenticates cleanly in Netlify static mode with zero JSON parse errors'
+    );
+
+    const amjidNlUser = await authenticateWithCredentials('amjid@nationallight.pk', 'Amjid@1947');
+    assert(
+      amjidNlUser.email === 'amjid@nationallight.pk' && amjidNlUser.role === 'SUPER_ADMIN',
+      'amjid@nationallight.pk authenticates cleanly in Netlify static mode'
+    );
+
+    const centralUser = await authenticateWithCredentials('nationallights2026@gmail.com', 'Amjid@1947');
+    assert(
+      centralUser.email === 'nationallights2026@gmail.com' && centralUser.mustChangePassword === true,
+      'nationallights2026@gmail.com authenticates cleanly in Netlify static mode'
+    );
+
+    const shahzadUser = await authenticateWithCredentials('shahzadullah@nationallight.pk', 'N@link360');
+    assert(
+      shahzadUser.email === 'shahzadullah@nationallight.pk' && shahzadUser.mustChangePassword === true,
+      'shahzadullah@nationallight.pk authenticates with N@link360 temp password and flags mustChangePassword=true'
+    );
+
+    const zainUser = await authenticateWithCredentials('syedzain@nationallight.pk', 'N@link360');
+    assert(
+      zainUser.email === 'syedzain@nationallight.pk' && zainUser.mustChangePassword === true,
+      'syedzain@nationallight.pk authenticates with N@link360 temp password and flags mustChangePassword=true'
+    );
+
+    const arshadUser = await authenticateWithCredentials('arshadkhan@nationallight.pk', 'N@link360');
+    assert(
+      arshadUser.email === 'arshadkhan@nationallight.pk' && arshadUser.mustChangePassword === true,
+      'arshadkhan@nationallight.pk authenticates with N@link360 temp password in static mode'
+    );
+
+    let badPassRejected = false;
+    let badPassMessage = '';
+    try {
+      await authenticateWithCredentials('amjid.bisconni@gmail.com', 'WrongPassword123!');
+    } catch (err: any) {
+      badPassRejected = true;
+      badPassMessage = err?.message || '';
+    }
+    assert(
+      badPassRejected && badPassMessage === 'Invalid email address or password.',
+      'Wrong password in static mode throws clean Invalid credentials message (never <!DOCTYPE JSON error)'
+    );
+
+    await changeUserPassword('syedzain@nationallight.pk', 'N@link360', 'Zain@National2026!', true);
+    const zainRotated = await authenticateWithCredentials('syedzain@nationallight.pk', 'Zain@National2026!');
+    assert(
+      zainRotated.email === 'syedzain@nationallight.pk' && zainRotated.mustChangePassword === false,
+      'Static mode password rotation updates hash and clears mustChangePassword=false'
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
 console.log('\n================================================================');
 console.log(`🎉 TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log('================================================================\n');
@@ -2561,6 +2655,6 @@ console.log('================================================================\n'
 if (failed > 0) {
   process.exit(1);
 } else {
-  console.log('🚀 ALL 26 MODULES PASSED VERIFICATION!');
+  console.log('🚀 ALL 27 MODULES PASSED VERIFICATION!');
   process.exit(0);
 }

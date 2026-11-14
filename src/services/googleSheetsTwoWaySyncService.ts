@@ -36,6 +36,7 @@ import { executeGoogleSheetImport, ImportSummary } from './googleSheetImportServ
 import { getAccessToken, ensureFreshGoogleAccessToken } from './googleAuth';
 import type { SupabaseAppData } from './supabase-data';
 import { getGoogleSheetsWebhookUrl, syncToGoogleSheetsWebhook } from './google-sheets';
+import { safeApiFetch } from '../lib/safeFetch';
 import type { Customer, SalesOrder, Recovery } from '../types';
 
 export { TARGET_SPREADSHEET_ID, getActiveSpreadsheetId };
@@ -674,7 +675,7 @@ export async function executeTwoWaySync(
       // Local ERP sync gateway log
       try {
         if (typeof window !== 'undefined') {
-          await fetch('/api/sync', {
+          await safeApiFetch('/api/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -684,7 +685,7 @@ export async function executeTwoWaySync(
               ordersCount: appData.salesOrders?.length || 0,
               recoveriesCount: appData.recoveries?.length || 0,
             }),
-          }).catch(() => {});
+          });
         }
       } catch (e) {}
 
@@ -753,7 +754,7 @@ export async function executeTwoWaySync(
     // Step 4: Local ERP sync gateway
     try {
       if (typeof window !== 'undefined') {
-        await fetch('/api/sync', {
+        await safeApiFetch('/api/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -763,7 +764,7 @@ export async function executeTwoWaySync(
             ordersCount: appData.salesOrders?.length || 0,
             recoveriesCount: appData.recoveries?.length || 0,
           }),
-        }).catch(() => {});
+        });
       }
     } catch (e) {
       console.warn('Backend sync gateway notice:', e);

@@ -42,6 +42,28 @@ async function startServer() {
   app.use(express.json({ limit: "20mb" }));
   app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
+  // CORS middleware for Netlify static SPA and local dev clients using VITE_API_BASE_URL
+  const allowedOrigins = new Set([
+    'https://nlink360.netlify.app',
+    'https://app.nationallight.pk',
+    'http://localhost:3000',
+    'http://localhost:4173',
+    'http://localhost:5173',
+  ]);
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && (allowedOrigins.has(origin) || origin.endsWith('.netlify.app') || origin.endsWith('.run.app'))) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-google-sheets-webhook');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+    next();
+  });
+
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({
@@ -188,6 +210,7 @@ async function startServer() {
 
   function buildInitialAccounts(): Map<string, ServerAuthAccount> {
     const superAdminHash = hashPassword(process.env.NLINK_SUPERADMIN_PASS || 'Amjid@1947');
+    const tempResetHash = hashPassword(process.env.NLINK_TEMP_RESET_PASS || 'N@link360');
     return new Map<string, ServerAuthAccount>([
       ['amjid.bisconni@gmail.com', {
         id: 'USR-003',
@@ -232,7 +255,7 @@ async function startServer() {
         phone: '+92 300 1234567',
         canApprove: true,
         isActive: true,
-        passwordHash: superAdminHash,
+        passwordHash: tempResetHash,
         mustChangePassword: true,
         failedAttempts: 0,
         lockedUntil: 0,
@@ -252,7 +275,27 @@ async function startServer() {
         assignedTowns: ['Mingora (Swat)', 'Mardan'],
         canApprove: false,
         isActive: true,
-        passwordHash: superAdminHash,
+        passwordHash: tempResetHash,
+        mustChangePassword: true,
+        failedAttempts: 0,
+        lockedUntil: 0,
+      }],
+      ['arshadkhan@nationallight.pk', {
+        id: 'USR-005',
+        employeeCode: 'EMP-005',
+        email: 'arshadkhan@nationallight.pk',
+        fullName: 'Arshad Khan',
+        role: 'TSM',
+        roleTitle: 'Territory Sales Manager (TSM)',
+        department: 'SALES_FIELD',
+        phone: '+92 300 5551122',
+        region: 'KPK',
+        zone: 'Peshawar Zone',
+        territory: 'Peshawar City',
+        assignedTowns: ['Peshawar'],
+        canApprove: false,
+        isActive: true,
+        passwordHash: tempResetHash,
         mustChangePassword: true,
         failedAttempts: 0,
         lockedUntil: 0,

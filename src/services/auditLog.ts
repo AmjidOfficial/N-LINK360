@@ -7,6 +7,7 @@
 
 import { AuditLog, PasswordRecoveryRequest } from '../types';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { safeApiFetch } from '../lib/safeFetch';
 
 const AUDIT_STORAGE_KEY = 'nlink_central_audit_logs_v1';
 const RECOVERY_REQ_STORAGE_KEY = 'nlink_password_recovery_requests_v1';
@@ -83,7 +84,7 @@ export function logAuditEvent(input: LogAuditInput): AuditLog {
 
   // Fire-and-forget server API audit sync
   if (typeof fetch !== 'undefined') {
-    fetch('/api/audit-logs', {
+    safeApiFetch('/api/audit-logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(entry),

@@ -38,6 +38,8 @@ import {
   getPasswordRecoveryRequests,
   resolvePasswordRecoveryRequest,
 } from '../../services/auditLog';
+import { safeApiFetch } from '../../lib/safeFetch';
+import { setClientCredentialHash } from '../../services/auth';
 
 interface EmployeeManagementModuleProps {
   currentUser: NLinkUser;
@@ -198,28 +200,26 @@ export const EmployeeManagementModule: React.FC<EmployeeManagementModuleProps> =
 
       let effectivePassword = password;
       // Server provisioning (hashes password cleanly & prevents plaintext storage)
-      try {
-        const res = await fetch('/api/employees/provision', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: newUser.id,
-            employeeCode: newUser.employeeCode,
-            fullName: newUser.fullName,
-            email: newUser.email,
-            role: newUser.role,
-            roleTitle: newUser.roleTitle,
-            department: newUser.department,
-            phone: newUser.phone,
-            initialPassword: password,
-            createdBy: currentUser.fullName,
-          }),
-        });
-        const data = await res.json().catch(() => null);
-        if (data?.oneTimeInitialPassword) {
-          effectivePassword = data.oneTimeInitialPassword;
-        }
-      } catch {}
+      const apiRes = await safeApiFetch<any>('/api/employees/provision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newUser.id,
+          employeeCode: newUser.employeeCode,
+          fullName: newUser.fullName,
+          email: newUser.email,
+          role: newUser.role,
+          roleTitle: newUser.roleTitle,
+          department: newUser.department,
+          phone: newUser.phone,
+          initialPassword: password,
+          createdBy: currentUser.fullName,
+        }),
+      });
+      if (!apiRes.isStaticFallback && apiRes.data?.oneTimeInitialPassword) {
+        effectivePassword = apiRes.data.oneTimeInitialPassword;
+      }
+      await setClientCredentialHash(newUser.email, effectivePassword, true);
 
       const updated = [newUser, ...users];
       setUsers(updated);
@@ -304,23 +304,21 @@ export const EmployeeManagementModule: React.FC<EmployeeManagementModuleProps> =
 
   const handleAdminPasswordReset = async (targetUser: NLinkUser, recoveryReqId?: string) => {
     let tempPassword = generateCryptographicInitialPassword(14);
-    try {
-      const res = await fetch('/api/employees/admin-reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: targetUser.email,
-          fullName: targetUser.fullName,
-          temporaryPassword: tempPassword,
-          resetBy: currentUser.fullName,
-          recoveryRequestId: recoveryReqId,
-        }),
-      });
-      const data = await res.json().catch(() => null);
-      if (data?.oneTimeTemporaryPassword) {
-        tempPassword = data.oneTimeTemporaryPassword;
-      }
-    } catch {}
+    const apiRes = await safeApiFetch<any>('/api/employees/admin-reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: targetUser.email,
+        fullName: targetUser.fullName,
+        temporaryPassword: tempPassword,
+        resetBy: currentUser.fullName,
+        recoveryRequestId: recoveryReqId,
+      }),
+    });
+    if (!apiRes.isStaticFallback && apiRes.data?.oneTimeTemporaryPassword) {
+      tempPassword = apiRes.data.oneTimeTemporaryPassword;
+    }
+    await setClientCredentialHash(targetUser.email, tempPassword, true);
 
     const updatedUsers = users.map((u) =>
       u.id === targetUser.id

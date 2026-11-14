@@ -6,6 +6,7 @@
  */
 
 import { SupabaseAppData } from './supabase-data';
+import { safeApiFetch } from '../lib/safeFetch';
 
 const GOOGLE_SHEETS_WEBHOOK_KEY = 'nlink_google_sheets_webhook_url';
 const LAST_SYNC_KEY = 'nlink_google_sheets_last_sync';
@@ -382,30 +383,23 @@ export async function syncToGoogleSheetsWebhook(
   let errMsg = '';
 
   // 1. First attempt to sync via server proxy (which handles server-side fetch, avoids CORS, and uses server-side secrets)
-  try {
-    const proxyRes = await fetch('/api/sync-google-sheets', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-google-sheets-webhook': finalWebhookUrl || '',
-      },
-      body: JSON.stringify(payload),
-    });
+  const proxyRes = await safeApiFetch<any>('/api/sync-google-sheets', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-google-sheets-webhook': finalWebhookUrl || '',
+    },
+    body: JSON.stringify(payload),
+  });
 
-    if (proxyRes.ok) {
-      const data = await proxyRes.json();
-      if (data.success) {
-        success = true;
-      } else {
-        errMsg = data.error || 'Server proxy returned failure status';
-      }
+  if (!proxyRes.isStaticFallback) {
+    if (proxyRes.ok && proxyRes.data?.success) {
+      success = true;
     } else {
-      const data = await proxyRes.json().catch(() => ({}));
-      errMsg = data.error || `Server proxy returned error status: ${proxyRes.status}`;
+      errMsg = proxyRes.data?.error || proxyRes.error || `Server proxy returned status: ${proxyRes.status}`;
     }
-  } catch (proxyErr: any) {
-    console.warn('[Google Sheet Webhook] Server-side proxy sync attempt failed, attempting direct browser sync:', proxyErr);
-    errMsg = proxyErr.message || 'Server proxy connection error';
+  } else {
+    errMsg = 'Static hosting active — using direct Google Sheets webhook channel';
   }
 
   // 2. Fall back to direct browser fetch if server proxy failed and we have a local webhookUrl

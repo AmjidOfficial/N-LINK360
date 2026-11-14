@@ -26,6 +26,7 @@ import type {
   RoleDashboardConfig,
 } from '../lib/dashboard';
 import type { NLinkUser } from '../data/nlink-users-team';
+import { safeApiFetch } from '../lib/safeFetch';
 
 function getAuthHeaders(): HeadersInit {
   const token =
@@ -43,19 +44,15 @@ export async function fetchRoleDashboardConfig(
   const baseConfig = resolveRoleDashboardConfig(role);
   const localOverride = localOverrides[baseConfig.roleKey] || null;
 
-  try {
-    const res = await fetch(`/api/dashboard/config?roleKey=${encodeURIComponent(baseConfig.roleKey)}`, {
+  const res = await safeApiFetch<any>(
+    `/api/dashboard/config?roleKey=${encodeURIComponent(baseConfig.roleKey)}`,
+    {
       method: 'GET',
       headers: getAuthHeaders(),
-    });
-    if (res.ok) {
-        const data = await res.json().catch(() => null);
-      if (data?.success && data?.config) {
-        return { config: data.config, override: data.override || localOverride };
-      }
     }
-  } catch {
-    // Offline fallback uses local cached overrides
+  );
+  if (!res.isStaticFallback && res.ok && res.data?.success && res.data?.config) {
+    return { config: res.data.config, override: res.data.override || localOverride };
   }
 
   return {
@@ -69,24 +66,17 @@ export async function saveRoleDashboardConfigOverride(
 ): Promise<{ success: boolean; config: RoleDashboardConfig }> {
   saveLocalRoleConfigOverride(override);
 
-  try {
-    const res = await fetch('/api/dashboard/config', {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(override),
-    });
-    if (res.ok) {
-      const data = await res.json().catch(() => null);
-      if (data?.success && data?.config) {
-        return { success: true, config: data.config };
-      }
-    } else if (res.status === 401 || res.status === 403) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData?.error || 'Unauthorized to modify dashboard configuration.');
+  const res = await safeApiFetch<any>('/api/dashboard/config', {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(override),
+  });
+  if (!res.isStaticFallback) {
+    if (res.ok && res.data?.success && res.data?.config) {
+      return { success: true, config: res.data.config };
     }
-  } catch (err: any) {
-    if (err?.message?.includes('Unauthorized')) {
-      throw err;
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(res.data?.error || 'Unauthorized to modify dashboard configuration.');
     }
   }
 
@@ -127,30 +117,24 @@ export async function fetchScopedDashboardSummary(params: {
   // Attempt server-authoritative computation when session token is active
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('nlink_sec_token') : null;
   if (token) {
-    try {
-      const res = await fetch('/api/dashboard/summary', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          preset,
-          customStart,
-          customEnd,
-          filter,
-          dataset,
-        }),
-      });
+    const res = await safeApiFetch<any>('/api/dashboard/summary', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        preset,
+        customStart,
+        customEnd,
+        filter,
+        dataset,
+      }),
+    });
+    if (!res.isStaticFallback) {
       if (res.status === 403) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error || 'Access denied for requested hierarchy scope.');
+        throw new Error(res.data?.error || 'Access denied for requested hierarchy scope.');
       }
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.success && data?.summary) {
-          return data.summary as DashboardComputationResult;
-        }
+      if (res.ok && res.data?.success && res.data?.summary) {
+        return res.data.summary as DashboardComputationResult;
       }
-    } catch (err: any) {
-      if (err?.message?.includes('Access denied')) throw err;
     }
   }
 
