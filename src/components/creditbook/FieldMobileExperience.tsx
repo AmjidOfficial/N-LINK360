@@ -241,6 +241,19 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
   const [visitFilterTab, setVisitFilterTab] = useState<'ALL' | 'PRODUCTIVE' | 'NON_PRODUCTIVE'>('ALL');
   const [notificationLog, setNotificationLog] = useState<{ id: string; message: string; time: string; type: 'info' | 'success' | 'warning' }[]>([]);
   const toastTimerRef = useRef<number | null>(null);
+  const mainScrollRef = useRef<HTMLElement | null>(null);
+
+  const scrollMainToTop = (behavior: ScrollBehavior = 'auto') => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTo({ top: 0, behavior });
+    } else if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior });
+    }
+  };
+
+  useEffect(() => {
+    scrollMainToTop('auto');
+  }, [activeTab, orderingSubTab, activeCustomerId, customerSubView]);
 
   // Customer List Filters
   const [customerSearch, setCustomerSearch] = useState('');
@@ -472,7 +485,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
     setActiveCustomerId(customer.id || customer.customerCode);
     setCustomerSubView('360');
     setActiveTab('CUSTOMERS');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollMainToTop('smooth');
   };
 
   const handleOpenOrderForCustomer = (cust: Customer, e?: React.MouseEvent) => {
@@ -494,7 +507,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
     triggerHaptic('selection');
     setActiveCustomerId(cust.id || cust.customerCode);
     setCustomerSubView('INVOICES');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollMainToTop('smooth');
   };
 
   const handleOpenLedgerForCustomer = (cust: Customer, e?: React.MouseEvent) => {
@@ -502,7 +515,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
     triggerHaptic('selection');
     setActiveCustomerId(cust.id || cust.customerCode);
     setCustomerSubView('LEDGER');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollMainToTop('smooth');
   };
 
   const handleOpenEtcForCustomer = (cust: Customer, e?: React.MouseEvent) => {
@@ -527,16 +540,16 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
   ].includes(currentUser.role || '');
 
   return (
-    <div className="min-h-screen bg-[#F1F8E9] dark:bg-[#070E0B] text-[#1B5E3A] dark:text-emerald-50 flex antialiased overflow-x-clip">
-      {/* Persistent Collapsible Left Side Menu (Desktop / Large Screens lg+) */}
+    <div className="flex-1 min-h-0 h-full bg-[#F1F8E9] dark:bg-[#070E0B] text-[#1B5E3A] dark:text-emerald-50 flex overflow-hidden antialiased">
+      {/* Persistent Frozen Left Side Menu (Desktop / Large Screens lg+) */}
       <aside
-        className={`hidden lg:flex flex-col justify-between sticky top-0 h-screen bg-white dark:bg-[#0B1610] border-r border-[#C8E6C9] dark:border-emerald-900/50 shrink-0 transition-all duration-200 ${
+        className={`hidden lg:flex flex-col h-full bg-white dark:bg-[#0B1610] border-r border-[#C8E6C9] dark:border-emerald-900/50 shrink-0 overflow-hidden transition-all duration-200 ${
           isSidebarCollapsed ? 'w-[72px]' : 'w-64'
         }`}
       >
-        <div>
+        <div className="flex-1 min-h-0 flex flex-col">
           {/* Brand + Collapse Toggle */}
-          <div className="p-4 bg-[#1B5E3A] dark:bg-[#0E1A14] border-b border-[#2E6B46] dark:border-emerald-900/60 text-white flex items-center justify-between gap-2 min-h-[60px]">
+          <div className="p-4 bg-[#1B5E3A] dark:bg-[#0E1A14] border-b border-[#2E6B46] dark:border-emerald-900/60 text-white flex items-center justify-between gap-2 min-h-[60px] shrink-0">
             {!isSidebarCollapsed && (
               <div className="min-w-0">
                 <div className="text-sm font-bold tracking-tight truncate text-[#F1F8E9]">N-LINK 360</div>
@@ -554,7 +567,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             </button>
           </div>
 
-          <nav className="p-2.5 space-y-1">
+          <nav className="flex-1 min-h-0 overflow-y-auto p-2.5 space-y-1">
             {(
               [
                 { id: 'DASHBOARD', label: 'Home Dashboard', icon: LayoutDashboard },
@@ -573,6 +586,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   onClick={() => {
                     setActiveTab(item.id);
                     setActiveCustomerId(null);
+                    scrollMainToTop('smooth');
                   }}
                   title={item.label}
                   className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-3 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
@@ -619,6 +633,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
               onClick={() => {
                 setActiveTab('MORE');
                 setActiveCustomerId(null);
+                scrollMainToTop('smooth');
               }}
               title="Settings & Profile"
               className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-3 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
@@ -633,7 +648,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
           </nav>
         </div>
 
-        <div className="p-2.5 border-t border-[#E2E8F0] dark:border-slate-800">
+        <div className="p-2.5 border-t border-[#E2E8F0] dark:border-slate-800 shrink-0">
           <button
             type="button"
             onClick={onSignOut}
@@ -647,9 +662,9 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
       </aside>
 
       {/* Main Column */}
-      <div className="flex-1 min-w-0 flex flex-col">
-      {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0E1A14]/95 backdrop-blur-md border-b border-[#C8E6C9] dark:border-emerald-900/50 px-4 py-2.5 flex items-center justify-between text-[#1B5E3A] dark:text-emerald-50">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
+      {/* Frozen Top App Bar */}
+      <header className="shrink-0 z-30 bg-white/95 dark:bg-[#0E1A14]/95 backdrop-blur-md border-b border-[#C8E6C9] dark:border-emerald-900/50 px-4 py-2.5 flex items-center justify-between text-[#1B5E3A] dark:text-emerald-50">
         <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
@@ -790,6 +805,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                         setActiveTab(item.id);
                         setActiveCustomerId(null);
                         setIsNavDrawerOpen(false);
+                        scrollMainToTop('smooth');
                       }}
                       className={`w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
                         active
@@ -840,6 +856,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     setActiveTab('MORE');
                     setActiveCustomerId(null);
                     setIsNavDrawerOpen(false);
+                    scrollMainToTop('smooth');
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
                     activeTab === 'MORE'
@@ -884,8 +901,12 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
         </div>
       )}
 
-      {/* Main Content Area (Full-Screen Height — Maximum Width Utilization) */}
-      <main className="flex-1 w-full max-w-full lg:max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 py-2.5 sm:py-4 pb-24 lg:pb-8">
+      {/* Main Scrollable Content Area (Independent of Frozen Drawer & App Bar) */}
+      <main
+        ref={mainScrollRef}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain w-full"
+      >
+        <div className="w-full max-w-full lg:max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 py-2.5 sm:py-4 pb-24 lg:pb-8">
         {/* ==================================================== */}
         {/* 1. ATTENDANCE & RECORD TAB (Unified Segmented View) */}
         {/* ==================================================== */}
@@ -1292,7 +1313,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                               onDownloadPdf={(o, c) => onDownloadInvoicePdf?.(o, c)}
                               onPreviewPdf={onPreviewInvoicePdf}
                               onWhatsAppShare={onWhatsAppShareInvoice}
-                              stickyTopOffsetClass="top-[68px] lg:top-[56px]"
+                              stickyTopOffsetClass="top-0"
                             />
                           </Suspense>
                         </>
@@ -2480,6 +2501,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             </button>
           </div>
         )}
+        </div>
       </main>
       </div>
 
@@ -2823,6 +2845,8 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   triggerHaptic('light');
                   setActiveTab(item.id);
                   setActiveCustomerId(null);
+                  setIsNavDrawerOpen(false);
+                  scrollMainToTop('smooth');
                 }}
                 aria-current={active ? 'page' : undefined}
                 className={`min-h-[48px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${

@@ -2659,7 +2659,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased max-w-full overflow-x-hidden relative">
+    <div className="h-dvh bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased max-w-full overflow-hidden flex flex-col relative">
       {/* Live Toast Message */}
       {ledgerToastMessage && (
         <div
@@ -2676,9 +2676,9 @@ export default function App() {
         </div>
       )}
 
-      {/* Offline Connectivity Notification Banner */}
+      {/* Frozen Offline Connectivity Notification Banner */}
       {!isOnline && (
-        <div className="bg-amber-500 text-slate-950 px-4 py-1.5 text-xs font-bold flex items-center justify-between shadow-xs sticky top-0 z-40">
+        <div className="bg-amber-500 text-slate-950 px-4 py-1.5 text-xs font-bold flex items-center justify-between shadow-xs shrink-0 z-40">
           <span>⚠ Offline Mode Active — Transactions will be saved locally &amp; synced when online.</span>
           {offlineQueue.length > 0 && (
             <span className="px-2 py-0.5 bg-slate-950 text-amber-300 rounded font-mono text-[10px]">
@@ -2688,16 +2688,19 @@ export default function App() {
         </div>
       )}
 
-      {/* Top-Level Official National Light BrandHeader (Head Office Desktop Portal) */}
+      {/* Frozen Top-Level Official National Light BrandHeader (Head Office Desktop Portal) */}
       {experienceMode === 'HEAD_OFFICE' && (
         <BrandHeader
           currentUser={currentUser}
           experienceMode={experienceMode}
           onToggleExperience={() => setExperienceMode('FIELD_MOBILE')}
+          className="shrink-0 z-40"
         />
       )}
 
-      {experienceMode === 'FIELD_MOBILE' ? (
+      {/* Viewport-Locked Experience Workspace Container */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        {experienceMode === 'FIELD_MOBILE' ? (
           <FieldMobileExperience
             currentUser={currentUser}
             customers={customers}
@@ -2798,6 +2801,7 @@ export default function App() {
             onOpenChangePassword={() => setIsChangePasswordOpen(true)}
           />
         )}
+      </div>
 
       {/* Forced First-Login / Reset or Self-Service Change Password Modal */}
       {currentUser && (Boolean(currentUser.mustChangePassword) || isChangePasswordOpen) && (

@@ -16,7 +16,7 @@
  *   8. SETTINGS: Google Sheets Two-Way Sync & System Preferences
  */
 
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { motion } from 'motion/react';
 import {
   CreditNote,
@@ -266,6 +266,19 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const mainScrollRef = useRef<HTMLElement | null>(null);
+
+  const scrollMainToTop = (behavior: ScrollBehavior = 'auto') => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTo({ top: 0, behavior });
+    } else if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior });
+    }
+  };
+
+  useEffect(() => {
+    scrollMainToTop('auto');
+  }, [activeTab, salesSubTab, approvalsSubTab, fieldForceSubTab, selectedCustomerIdFor360, customer360SubView]);
 
   // Dynamic Town Nodes State
   const effectiveTownNodes = townNodes && townNodes.length > 0 ? townNodes : getStoredTownNodes();
@@ -457,21 +470,21 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
     if (e) e.stopPropagation();
     setSelectedCustomerIdFor360(cust.id || cust.customerCode);
     setCustomer360SubView('INVOICES');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollMainToTop('smooth');
   };
 
   const handleOpenLedgerForCustomer = (cust: Customer, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setSelectedCustomerIdFor360(cust.id || cust.customerCode);
     setCustomer360SubView('LEDGER');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollMainToTop('smooth');
   };
 
   const handleOpen360ForCustomer = (cust: Customer, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setSelectedCustomerIdFor360(cust.id || cust.customerCode);
     setCustomer360SubView('360');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollMainToTop('smooth');
   };
 
   const pendingTotalCount = pendingOrders.length + pendingRecoveries.length + pendingCustomers.length;
@@ -546,6 +559,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   const handleSidebarNav = (id: string) => {
     setSelectedCustomerIdFor360(null);
     setIsSidebarOpen(false);
+    scrollMainToTop('smooth');
     if (id === 'SALES_ORDERS') {
       setActiveTab('SALES');
       setSalesSubTab('ORDERS');
@@ -564,7 +578,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#070E0B] text-slate-900 dark:text-emerald-50 flex antialiased">
+    <div className="flex-1 min-h-0 h-full bg-slate-50 dark:bg-[#070E0B] text-slate-900 dark:text-emerald-50 flex overflow-hidden antialiased">
       {/* Tablet / Mobile Drawer Backdrop */}
       {isSidebarOpen && (
         <div
@@ -573,12 +587,12 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
         />
       )}
 
-      {/* 1. RESPONSIVE COLLAPSIBLE SIDEBAR (260px Expanded / 72px Rail on Desktop >=1024px, Drawer on <1024px) */}
+      {/* 1. FROZEN COLLAPSIBLE SIDEBAR (256px Expanded / 72px Rail on Desktop >=1024px, Auto-Closing Drawer on <1024px) */}
       <aside
         aria-label="ERP Sidebar Navigation"
         className={`fixed inset-y-0 left-0 z-50 w-64 ${
           isSidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-64'
-        } bg-white dark:bg-[#0B1610] border-r border-slate-200 dark:border-emerald-900/50 flex flex-col shrink-0 transition-all duration-200 lg:static lg:translate-x-0 ${
+        } bg-white dark:bg-[#0B1610] border-r border-slate-200 dark:border-emerald-900/50 flex flex-col shrink-0 transition-all duration-200 lg:relative lg:h-full lg:translate-x-0 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -709,9 +723,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
       </aside>
 
       {/* 2. MAIN CONTENT VIEWPORT */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Clean 3-Zone Top Header */}
-        <header className="sticky top-0 z-30 h-14 bg-white/95 dark:bg-[#0E1A14]/95 backdrop-blur-md border-b border-slate-200 dark:border-emerald-900/50 px-4 lg:px-6 flex items-center justify-between gap-4">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+        {/* Frozen 3-Zone Top App Bar */}
+        <header className="shrink-0 z-30 h-14 bg-white/95 dark:bg-[#0E1A14]/95 backdrop-blur-md border-b border-slate-200 dark:border-emerald-900/50 px-4 lg:px-6 flex items-center justify-between gap-4">
           {/* Left: Tablet Menu Trigger + Contextual Breadcrumb */}
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -779,8 +793,12 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
           </div>
         </header>
 
-        {/* Dynamic Body Content */}
-        <main className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
+        {/* Independent Scrollable Workspace Body */}
+        <main
+          ref={mainScrollRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain"
+        >
+          <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
           {/* ==================================================== */}
           {/* CUSTOMER 360 OVERLAY IF SELECTED */}
           {/* ==================================================== */}
@@ -2461,6 +2479,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               )}
             </>
           )}
+          </div>
         </main>
       </div>
 
