@@ -355,7 +355,6 @@ export async function loadStateFromSupabase(): Promise<{
   }
 }
 
-<<<<<<< HEAD
 let isSupabaseUnreachable = false;
 
 function handleSupabaseError(actionDescription: string, err: any) {
@@ -370,18 +369,12 @@ function handleSupabaseError(actionDescription: string, err: any) {
   }
 }
 
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 // ==============================================================================
 // Live Mutator Syncing Methods
 // ==============================================================================
 
 export async function syncOrderToSupabase(order: SalesOrder): Promise<boolean> {
-<<<<<<< HEAD
   if (!supabase || !isSupabaseConfigured || isSupabaseUnreachable) return false;
-=======
-  if (!supabase || !isSupabaseConfigured) return false;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   try {
     const oId = order.id;
     const dbOrder = {
@@ -423,11 +416,7 @@ export async function syncOrderToSupabase(order: SalesOrder): Promise<boolean> {
 
     return true;
   } catch (err) {
-<<<<<<< HEAD
     handleSupabaseError(`sales order ${order.orderNumber}`, err);
-=======
-    console.error(`❌ DB Sync: Error uploading sales order ${order.orderNumber} to Supabase:`, err);
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     return false;
   }
 }
@@ -436,11 +425,7 @@ export async function syncRecoveryToSupabase(
   recovery: Recovery,
   updateCustomerBalance?: { customerId: string; balance: number }
 ): Promise<boolean> {
-<<<<<<< HEAD
   if (!supabase || !isSupabaseConfigured || isSupabaseUnreachable) return false;
-=======
-  if (!supabase || !isSupabaseConfigured) return false;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   try {
     const rId = recovery.id;
     const dbRecovery = {
@@ -472,11 +457,7 @@ export async function syncRecoveryToSupabase(
 
     return true;
   } catch (err) {
-<<<<<<< HEAD
     handleSupabaseError(`recovery ${recovery.recoveryNumber}`, err);
-=======
-    console.error(`❌ DB Sync: Error uploading recovery ${recovery.recoveryNumber} to Supabase:`, err);
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     return false;
   }
 }
@@ -489,11 +470,7 @@ export async function syncInvoiceAndLedgerToSupabase(
   inventoryBalances: InventoryBalance[],
   inventoryTransactions: InventoryTransaction[]
 ): Promise<boolean> {
-<<<<<<< HEAD
   if (!supabase || !isSupabaseConfigured || isSupabaseUnreachable) return false;
-=======
-  if (!supabase || !isSupabaseConfigured) return false;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   try {
     // 1. Update order status in Supabase if exists
     if (invoice.orderId) {
@@ -592,21 +569,13 @@ export async function syncInvoiceAndLedgerToSupabase(
 
     return true;
   } catch (err) {
-<<<<<<< HEAD
     handleSupabaseError(`invoice posting`, err);
-=======
-    console.error(`❌ DB Sync: Error uploading invoice posting data to Supabase:`, err);
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     return false;
   }
 }
 
 export async function syncVisitToSupabase(visit: CustomerVisit): Promise<boolean> {
-<<<<<<< HEAD
   if (!supabase || !isSupabaseConfigured || isSupabaseUnreachable) return false;
-=======
-  if (!supabase || !isSupabaseConfigured) return false;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   try {
     const dbVisit = {
       id: visit.id,
@@ -628,21 +597,13 @@ export async function syncVisitToSupabase(visit: CustomerVisit): Promise<boolean
     if (visitErr) throw visitErr;
     return true;
   } catch (err) {
-<<<<<<< HEAD
     handleSupabaseError(`visit log ${visit.id}`, err);
-=======
-    console.error(`❌ DB Sync: Error uploading visit log ${visit.id} to Supabase:`, err);
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     return false;
   }
 }
 
 export async function syncCustomerToSupabase(customer: Customer): Promise<boolean> {
-<<<<<<< HEAD
   if (!supabase || !isSupabaseConfigured || isSupabaseUnreachable) return false;
-=======
-  if (!supabase || !isSupabaseConfigured) return false;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   try {
     const dbCust = {
       id: toUUID(customer.id, 'c'),
@@ -671,11 +632,7 @@ export async function syncCustomerToSupabase(customer: Customer): Promise<boolea
     if (custErr) throw custErr;
     return true;
   } catch (err) {
-<<<<<<< HEAD
     handleSupabaseError(`customer ${customer.companyName}`, err);
-=======
-    console.error(`❌ DB Sync: Error uploading customer ${customer.companyName} to Supabase:`, err);
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     return false;
   }
 }

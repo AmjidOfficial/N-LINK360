@@ -137,7 +137,6 @@ export const saveTownNodes = (nodes: TownNode[]): void => {
 /**
  * Helper to get list of active town names.
  */
-<<<<<<< HEAD
 export const normalizeTownName = (name: string): string => {
   const clean = name.trim();
   const lower = clean.toLowerCase();
@@ -160,10 +159,6 @@ export const getActiveTownNames = (nodes: TownNode[]): string[] => {
     }
   }
   return result;
-=======
-export const getActiveTownNames = (nodes: TownNode[]): string[] => {
-  return nodes.filter((n) => n.isActive).map((n) => n.name);
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 };
 
 /**

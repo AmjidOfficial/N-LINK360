@@ -6,7 +6,6 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-<<<<<<< HEAD
 import {
   Camera,
   Upload,
@@ -18,8 +17,6 @@ import {
   Trash2,
   Receipt,
 } from 'lucide-react';
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 export interface ReceiptCameraCaptureProps {
   receiptImage: string | null;
@@ -166,7 +163,6 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
           <button
             type="button"
             onClick={() => startCamera()}
-<<<<<<< HEAD
             className="flex-1 bg-[#1B5E3A] text-white p-3.5 rounded-2xl flex items-center justify-center gap-2.5 hover:bg-[#14462B] transition-all border border-[#2E6B46] shadow-xs active:scale-98"
           >
             <div className="w-8 h-8 rounded-xl bg-white/15 text-[#D9F99D] flex items-center justify-center">
@@ -175,16 +171,6 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
             <div className="flex flex-col text-left">
               <span className="text-xs sm:text-sm font-bold text-white">Open Camera for Direct Pic</span>
               <span className="text-[10px] text-[#D9F99D]">Snap paper receipt or bank slip</span>
-=======
-            className="flex-1 bg-[#001428] text-white p-3.5 rounded-2xl flex items-center justify-center gap-2.5 hover:bg-[#00284f] transition-all border border-slate-700 shadow-xs active:scale-98"
-          >
-            <div className="w-8 h-8 rounded-xl bg-[#76f4e0]/20 text-[#76f4e0] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">photo_camera</span>
-            </div>
-            <div className="flex flex-col text-left">
-              <span className="text-xs sm:text-sm font-bold text-white">Open Camera for Direct Pic</span>
-              <span className="text-[10px] text-slate-300">Snap paper receipt or bank slip</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             </div>
           </button>
 
@@ -192,7 +178,6 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-<<<<<<< HEAD
             className="flex-1 bg-[#F1F8E9] text-[#1B5E3A] p-3.5 rounded-2xl flex items-center justify-center gap-2.5 hover:bg-[#D9F99D]/50 transition-all border border-[#C8E6C9] shadow-xs active:scale-98"
           >
             <div className="w-8 h-8 rounded-xl bg-white text-[#1B5E3A] border border-[#C8E6C9] flex items-center justify-center">
@@ -201,16 +186,6 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
             <div className="flex flex-col text-left">
               <span className="text-xs sm:text-sm font-bold text-[#1B5E3A]">Upload from Gallery / PDF</span>
               <span className="text-[10px] text-[#5F8564]">Pick image or transaction PDF</span>
-=======
-            className="flex-1 bg-[#f2f4f6] text-[#191c1e] p-3.5 rounded-2xl flex items-center justify-center gap-2.5 hover:bg-[#e0e3e5] transition-all border border-slate-200 shadow-xs active:scale-98"
-          >
-            <div className="w-8 h-8 rounded-xl bg-slate-300 text-slate-700 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">upload_file</span>
-            </div>
-            <div className="flex flex-col text-left">
-              <span className="text-xs sm:text-sm font-bold text-[#191c1e]">Upload from Gallery / PDF</span>
-              <span className="text-[10px] text-slate-500">Pick image or transaction PDF</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             </div>
           </button>
         </div>
@@ -242,11 +217,7 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
               onClick={stopCamera}
               className="text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1"
             >
-<<<<<<< HEAD
               <X className="w-4 h-4" />
-=======
-              <span className="material-symbols-outlined text-[18px]">close</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               <span>Cancel</span>
             </button>
 
@@ -254,15 +225,9 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
             <button
               type="button"
               onClick={capturePhoto}
-<<<<<<< HEAD
               className="w-14 h-14 rounded-full bg-white border-4 border-[#177D81] flex items-center justify-center shadow-lg active:scale-90 transition-transform"
             >
               <div className="w-10 h-10 rounded-full bg-[#177D81]" />
-=======
-              className="w-14 h-14 rounded-full bg-white border-4 border-[#006b5f] flex items-center justify-center shadow-lg active:scale-90 transition-transform"
-            >
-              <div className="w-10 h-10 rounded-full bg-[#006b5f]" />
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             </button>
 
             {/* Flip Camera Button */}
@@ -271,11 +236,7 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
               onClick={toggleFacingMode}
               className="text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1"
             >
-<<<<<<< HEAD
               <RefreshCw className="w-4 h-4" />
-=======
-              <span className="material-symbols-outlined text-[20px]">flip_camera_ios</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               <span className="hidden sm:inline">Flip</span>
             </button>
           </div>
@@ -296,17 +257,12 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
               />
               <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
-<<<<<<< HEAD
                 <Eye className="w-4 h-4" />
-=======
-                <span className="material-symbols-outlined text-[16px]">visibility</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               </div>
             </div>
 
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-<<<<<<< HEAD
                 <CheckCircle2 className="w-4 h-4 text-[#4CAF50] shrink-0" />
                 <span className="text-xs sm:text-sm font-bold text-[#1B5E3A] line-clamp-1">
                   {receiptFileName || 'Receipt Proof Attached'}
@@ -314,17 +270,6 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
               </div>
               <span className="text-[10px] text-[#5F8564]">
                 Captured on {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · Ready to sync
-=======
-                <span className="material-symbols-outlined text-[16px] text-emerald-600">
-                  verified
-                </span>
-                <span className="text-xs sm:text-sm font-bold text-[#191c1e] line-clamp-1">
-                  {receiptFileName || 'Receipt Proof Attached'}
-                </span>
-              </div>
-              <span className="text-[10px] text-[#74777e]">
-                Captured on {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Ready to sync
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               </span>
             </div>
           </div>
@@ -333,17 +278,10 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
             <button
               type="button"
               onClick={() => setIsPreviewModalOpen(true)}
-<<<<<<< HEAD
               className="p-2 text-[#1B5E3A] hover:bg-[#D9F99D]/50 rounded-xl transition-all"
               title="View full image"
             >
               <ZoomIn className="w-4 h-4" />
-=======
-              className="p-2 text-slate-700 hover:bg-slate-200 rounded-xl transition-all"
-              title="View full image"
-            >
-              <span className="material-symbols-outlined text-[18px]">zoom_in</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             </button>
             <button
               type="button"
@@ -351,11 +289,7 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
               className="p-2 text-rose-600 hover:bg-rose-100 rounded-xl transition-all"
               title="Remove receipt"
             >
-<<<<<<< HEAD
               <Trash2 className="w-4 h-4" />
-=======
-              <span className="material-symbols-outlined text-[18px]">delete</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             </button>
           </div>
         </div>
@@ -363,33 +297,19 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
 
       {/* Fullscreen Image Preview Lightbox Modal */}
       {isPreviewModalOpen && receiptImage && (
-<<<<<<< HEAD
         <div className="fixed inset-0 z-60 bg-[#1B5E3A]/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="relative max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#C8E6C9] flex flex-col">
             <div className="p-4 bg-[#1B5E3A] text-white flex items-center justify-between border-b border-[#2E6B46]">
               <span className="text-xs sm:text-sm font-bold flex items-center gap-2">
                 <Receipt className="w-4 h-4 text-[#D9F99D]" />
-=======
-        <div className="fixed inset-0 z-60 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="relative max-w-2xl w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col">
-            <div className="p-4 bg-[#001428] text-white flex items-center justify-between border-b border-slate-700">
-              <span className="text-xs sm:text-sm font-bold flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-[#76f4e0]">receipt</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 Receipt / Collection Proof
               </span>
               <button
                 type="button"
                 onClick={() => setIsPreviewModalOpen(false)}
-<<<<<<< HEAD
                 className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
-=======
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               </button>
             </div>
             <div className="p-4 flex items-center justify-center bg-black max-h-[75vh] overflow-auto">

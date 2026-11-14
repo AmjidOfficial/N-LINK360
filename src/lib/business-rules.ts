@@ -465,7 +465,6 @@ export function calculateCustomerCreditHealth(
 
     if (custInvoices.length > 0) {
       const now = Date.now();
-<<<<<<< HEAD
       // Calculate total confirmed recoveries for this customer
       const custRecoveries = recoveries
         ? recoveries.filter(
@@ -502,29 +501,6 @@ export function calculateCustomerCreditHealth(
           if (delayDays > 0) {
             calculatedDelays.push(delayDays);
             overdueOutstanding += unpaidAmount;
-=======
-      custInvoices.forEach((inv) => {
-        totalCount++;
-        const invDate = new Date(inv.invoiceDate || inv.createdAt || now).getTime();
-        const dueDate = invDate + creditDays * 86400000;
-        
-        if (inv.status === 'PAID') {
-          // Paid invoice - check settlement date or estimate
-          const invAny = inv as any;
-          const paidDate = invAny.updatedAt ? new Date(invAny.updatedAt).getTime() : invDate + (creditDays * 0.9) * 86400000;
-          const delayDays = Math.max(0, Math.round((paidDate - dueDate) / 86400000));
-          calculatedDelays.push(delayDays);
-          if (delayDays <= 0) onTimeCount++;
-          if (delayDays > maxDelay) maxDelay = delayDays;
-        } else {
-          // Unpaid / partial
-          const delayDays = Math.max(0, Math.round((now - dueDate) / 86400000));
-          if (delayDays > 0) {
-            calculatedDelays.push(delayDays);
-            const invAny = inv as any;
-            const outstandingForInv = invAny.balanceAmount ?? (inv.newBalance > inv.previousBalance ? (inv.newBalance - inv.previousBalance) : inv.totalAmount);
-            overdueOutstanding += outstandingForInv || 0;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             if (delayDays > maxDelay) maxDelay = delayDays;
           } else {
             calculatedDelays.push(0);

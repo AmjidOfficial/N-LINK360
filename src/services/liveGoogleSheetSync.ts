@@ -6,12 +6,8 @@
  * using Google's public GViz API without requiring OAuth popups.
  */
 
-<<<<<<< HEAD
 import { Customer, SalesOrder, Recovery, UserRole } from '../types';
 import { NLinkUser, NLINK_TEAM_ROSTER, getStoredUsers, saveStoredUsers } from '../data/nlink-users-team';
-=======
-import { Customer, SalesOrder, Recovery } from '../types';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 export const TARGET_SPREADSHEET_ID = '1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo';
 
@@ -146,7 +142,6 @@ export async function fetchLiveGoogleSheetData(
     .map((r, idx) => {
       const code = String(r['Customer Code'] || `CUST-${idx + 1}`).trim();
       const name = String(r['Business Name'] || 'Commercial Partner').trim();
-<<<<<<< HEAD
       const town = String(r['Town / City'] || r['Town'] || 'Mingora').trim();
       const rawLimit = r['Credit Limit (PKR)'] || r['Credit Limit'];
       const creditLimit = typeof rawLimit === 'number' ? rawLimit : Number(String(rawLimit || '500000').replace(/[^0-9.-]/g, '')) || 500000;
@@ -167,16 +162,6 @@ export async function fetchLiveGoogleSheetData(
           openingBalance = currentBalance;
         }
       }
-=======
-      const town = String(r['Town / City'] || 'Mingora').trim();
-      const rawLimit = r['Credit Limit (PKR)'];
-      const creditLimit = typeof rawLimit === 'number' ? rawLimit : Number(String(rawLimit || '500000').replace(/[^0-9.-]/g, '')) || 500000;
-      const rawBal = r['Current Balance (PKR)'];
-      const currentBalance = typeof rawBal === 'number' ? rawBal : Number(String(rawBal || '0').replace(/[^0-9.-]/g, '')) || 0;
-      const channelType = String(r['Channel Type'] || 'DEALER').toUpperCase().includes('DISTRIBUTOR') ? 'DISTRIBUTOR' : 'DEALER';
-      const phone = r['Phone / WhatsApp'] ? String(r['Phone / WhatsApp']) : '0300-0000000';
-      const contactPerson = r['Contact Person'] ? String(r['Contact Person']) : name;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
       // Match internal ID if known
       const internalIdMap: Record<string, string> = {
@@ -198,19 +183,11 @@ export async function fetchLiveGoogleSheetData(
         town,
         city: town,
         region: 'KPK',
-<<<<<<< HEAD
         address: route,
         creditLimit,
         creditDays: Number(r['Credit Days']) || 30,
         currentBalance,
         openingBalance,
-=======
-        address: r['Route / Market'] ? String(r['Route / Market']) : `${town} Commercial Market`,
-        creditLimit,
-        creditDays: Number(r['Credit Days']) || 30,
-        currentBalance,
-        openingBalance: currentBalance,
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         isCreditLocked: false,
         isActive: true,
         approvalStatus: 'APPROVED',
@@ -224,7 +201,6 @@ export async function fetchLiveGoogleSheetData(
       } as Customer;
     });
 
-<<<<<<< HEAD
   // Map to SalesOrder types, reconciling amounts from Ledger & Webhook headers
   const parsedOrders: SalesOrder[] = ordRows
     .filter((r) => r['Order ID'] || r['Order Number'] || r['Order #'] || r['Customer Code'] || r['Customer Name'] || r['Dealer / Business Name'])
@@ -237,20 +213,6 @@ export async function fetchLiveGoogleSheetData(
       
       // Look up invoice amount from Ledger tab if total in Sales_Orders is missing or 0
       let totalAmount = Number(r['Total Amount (PKR)']) || Number(r['Total Amount']) || 0;
-=======
-  // Map to SalesOrder types, reconciling amounts from Ledger
-  const parsedOrders: SalesOrder[] = ordRows
-    .filter((r) => r['Order Number'] || r['Customer Code'])
-    .map((r, idx) => {
-      const orderNum = String(r['Order Number'] || `SO-${idx + 4001}`).trim();
-      const custCode = String(r['Customer Code'] || '').trim();
-      const custName = String(r['Dealer / Business Name'] || 'Commercial Partner').trim();
-      const town = String(r['Town / Beat'] || 'Mingora').trim();
-      const dateStr = parseGVizDate(r['Order Date']);
-      
-      // Look up invoice amount from Ledger tab if total in Sales_Orders is missing or 0
-      let totalAmount = Number(r['Total Amount (PKR)']) || 0;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       if (totalAmount === 0 && ledgerRows.length > 0) {
         const matchingLedger = ledgerRows.find((l) => l['Reference #'] === orderNum);
         if (matchingLedger && matchingLedger['Debit / Invoice (PKR)']) {
@@ -258,7 +220,6 @@ export async function fetchLiveGoogleSheetData(
         }
       }
 
-<<<<<<< HEAD
       const bookedBy = String(r['Sales Officer'] || r['Booked By (Sales Officer)'] || 'Shahid Khan');
       const rawStatus = String(r['Status'] || '').trim().toUpperCase();
       const rawApproval = String(r['Approval Status'] || '').trim().toUpperCase();
@@ -270,10 +231,6 @@ export async function fetchLiveGoogleSheetData(
         rawApproval === 'DUAL_APPROVED' ||
         rawShahzad === 'APPROVED' ||
         rawShahzad === 'YES';
-=======
-      const bookedBy = String(r['Booked By (Sales Officer)'] || 'Shahid Khan');
-      const isApproved = String(r['Approval Status'] || 'APPROVED').toUpperCase() === 'APPROVED';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
       const internalIdMap: Record<string, string> = {
         'DL-IQBAL': 'cust-iqbal',
@@ -300,11 +257,7 @@ export async function fetchLiveGoogleSheetData(
         totalAmount,
         creditCheckStatus: 'GREEN' as const,
         status: isApproved ? 'APPROVED' : 'PENDING_APPROVAL',
-<<<<<<< HEAD
         dualApprovalStatus: isApproved ? 'DUAL_APPROVED' : 'PENDING_APPROVAL',
-=======
-        dualApprovalStatus: isApproved ? 'APPROVED' : 'PENDING_APPROVAL',
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         shahzadApproval: isApproved ? 'APPROVED' : 'PENDING',
         shahzadApprovedAt: isApproved ? dateStr : undefined,
         approvedBy: isApproved ? 'Shahzad Ullah' : undefined,
@@ -314,7 +267,6 @@ export async function fetchLiveGoogleSheetData(
       } as unknown as SalesOrder;
     });
 
-<<<<<<< HEAD
   // Map to Recovery types with 100% full financial details & Webhook headers
   const parsedRecoveries: Recovery[] = recRows
     .filter((r) => r['Recovery Code'] || r['Recovery Receipt #'] || r['Recovery ID'] || r['Customer Code'] || r['Customer Name'])
@@ -343,25 +295,6 @@ export async function fetchLiveGoogleSheetData(
         rawShahzad === 'APPROVED' ||
         rawShahzad === 'YES' ||
         rawStatus === 'VERIFIED';
-=======
-  // Map to Recovery types with 100% full financial details
-  const parsedRecoveries: Recovery[] = recRows
-    .filter((r) => r['Recovery Receipt #'] || r['Customer Code'])
-    .map((r, idx) => {
-      const id = String(r['Recovery Receipt #'] || `RC-${idx + 1001}`).trim();
-      const custCode = String(r['Customer Code'] || '').trim();
-      const custName = String(r['Dealer / Customer Name'] || 'Commercial Partner').trim();
-      const town = String(r['Town / City'] || 'Mingora').trim();
-      const amount = Number(r['Amount Received (PKR)']) || 0;
-      const rawChannel = String(r['Collection Channel (Cash / Bank Deposit)'] || 'CASH').toUpperCase();
-      const paymentMode = rawChannel.includes('BANK') || rawChannel.includes('ONLINE') || rawChannel.includes('TRANSFER')
-        ? 'ONLINE_TRANSFER'
-        : 'CASH';
-      const instrumentRef = r['Instrument Ref / Cheque # / Deposit Slip'] ? String(r['Instrument Ref / Cheque # / Deposit Slip']) : '';
-      const bankName = r['Bank Name'] ? String(r['Bank Name']) : (paymentMode === 'CASH' ? 'Direct Cash Collection' : 'Online Bank Transfer');
-      const dateStr = parseGVizDate(r['Collection Date']);
-      const isConfirmed = String(r['Confirmation Status'] || 'CONFIRMED').toUpperCase() === 'CONFIRMED' || String(r['Executive Confirmer (Shahzad Ullah)'] || '').toUpperCase() === 'APPROVED';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
       const internalIdMap: Record<string, string> = {
         'DL-IQBAL': 'cust-iqbal',
@@ -379,11 +312,7 @@ export async function fetchLiveGoogleSheetData(
         customerCode: custCode,
         customerName: custName,
         salesUserId: 'USR-002',
-<<<<<<< HEAD
         salesUserName: String(r['Sales Officer'] || r['Collector / Officer'] || 'Shahid Khan'),
-=======
-        salesUserName: String(r['Collector / Officer'] || 'Shahid Khan'),
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         collectionDate: dateStr,
         paymentDate: dateStr,
         amount,
@@ -396,15 +325,11 @@ export async function fetchLiveGoogleSheetData(
         verifiedBy: isConfirmed ? 'Shahzad Ullah' : undefined,
         verifiedAt: isConfirmed ? `${dateStr}T14:30:00.000Z` : undefined,
         shahzadApproval: isConfirmed ? 'APPROVED' : 'PENDING',
-<<<<<<< HEAD
         dualApprovalStatus: isConfirmed ? 'DUAL_APPROVED' : 'PENDING_APPROVAL',
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         remarks: instrumentRef ? `${paymentMode} Ref: ${instrumentRef}` : 'Google Sheet Synced Recovery',
       } as unknown as Recovery;
     });
 
-<<<<<<< HEAD
   // Reconcile customer balances using the standard financial ledger rule:
   // Current Balance = Opening Balance + Total Approved Invoices - Total Confirmed Recoveries
   parsedCustomers.forEach((cust) => {
@@ -428,8 +353,6 @@ export async function fetchLiveGoogleSheetData(
     cust.currentBalance = Math.max(0, (cust.openingBalance ?? 0) + debits - credits);
   });
 
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   return {
     customers: parsedCustomers,
     orders: parsedOrders,
@@ -441,7 +364,6 @@ export async function fetchLiveGoogleSheetData(
     recoveriesCount: parsedRecoveries.length,
   };
 }
-<<<<<<< HEAD
 
 /**
  * Fetches User Management Roster from Google Sheet tabs: Users, Team, Users_Roster, or User_Management
@@ -527,5 +449,3 @@ export async function fetchLiveGoogleSheetUsers(
   return getStoredUsers();
 }
 
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a

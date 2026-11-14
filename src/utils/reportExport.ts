@@ -1,19 +1,11 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-<<<<<<< HEAD
  * N-LINK 360 - Production Enterprise Report Exporter (Formula-Injection Safe)
  */
 
 import { AuditLog, Customer, EmployeeAttendance, InventoryBalance, Recovery, SalesOrder } from '../types';
 import { formatCsvCell } from '../services/security';
-=======
- * N-LINK 360 - Production Enterprise Report Exporter
- * Generates and downloads real CSV reports for Sales, Recoveries, and Dealer Aging.
- */
-
-import { Customer, SalesOrder, Recovery } from '../types';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 function triggerCsvDownload(csvContent: string, fileName: string) {
   const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -27,7 +19,6 @@ function triggerCsvDownload(csvContent: string, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-<<<<<<< HEAD
 function buildCsv(headers: string[], rows: unknown[][]): string {
   const headerLine = headers.map((h) => formatCsvCell(h)).join(',');
   const rowLines = rows.map((row) => row.map((cell) => formatCsvCell(cell)).join(','));
@@ -38,33 +29,20 @@ export function exportSalesSummaryCsv(orders: SalesOrder[] = []): void {
   const headers = [
     'Order #',
     'Invoice #',
-=======
-/**
- * Exports verified Sales Orders to CSV
- */
-export function exportSalesSummaryCsv(orders: SalesOrder[] = []): void {
-  const headers = [
-    'Order #',
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     'Order Date',
     'Customer Code',
     'Customer / Shop Name',
     'Town / Route',
     'Booked By',
     'SKU Count',
-<<<<<<< HEAD
     'Subtotal (PKR)',
     'Discount 15% (PKR)',
     'Net Total (PKR)',
-=======
-    'Gross Total (PKR)',
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     'Status',
     'Approval Authority',
   ];
 
   const rows = orders.map((o) => [
-<<<<<<< HEAD
     o.orderNumber || o.id,
     o.invoiceNumber || '-',
     (o.orderDate || o.createdAt || '').slice(0, 10),
@@ -84,28 +62,6 @@ export function exportSalesSummaryCsv(orders: SalesOrder[] = []): void {
   triggerCsvDownload(buildCsv(headers, rows), `National_Lights_Sales_Summary_${dateStr}.csv`);
 }
 
-=======
-    `"${o.orderNumber || o.id}"`,
-    `"${(o.orderDate || o.createdAt || '').slice(0, 10)}"`,
-    `"${o.customerCode || 'N/A'}"`,
-    `"${(o.customerName || '').replace(/"/g, '""')}"`,
-    `"${o.town || 'National'}"`,
-    `"${(o.salesUserName || 'Sales Officer').replace(/"/g, '""')}"`,
-    o.items?.length || 1,
-    o.totalAmount || 0,
-    `"${o.status || 'SUBMITTED'}"`,
-    `"${o.shahzadApproval === 'APPROVED' ? 'Shahzad Ullah (Approved)' : o.shahzadApproval || 'Pending'}"`,
-  ]);
-
-  const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
-  const dateStr = new Date().toISOString().slice(0, 10);
-  triggerCsvDownload(csv, `National_Lights_Sales_Summary_${dateStr}.csv`);
-}
-
-/**
- * Exports Recovery / Payment Audit records to CSV
- */
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 export function exportRecoveryAuditCsv(recoveries: Recovery[] = []): void {
   const headers = [
     'Recovery Ref',
@@ -122,7 +78,6 @@ export function exportRecoveryAuditCsv(recoveries: Recovery[] = []): void {
   ];
 
   const rows = recoveries.map((r) => [
-<<<<<<< HEAD
     r.recoveryNumber || r.id || 'REC',
     (r.collectionDate || r.recordedAt || r.createdAt || '').slice(0, 10),
     r.customerCode || 'N/A',
@@ -140,29 +95,6 @@ export function exportRecoveryAuditCsv(recoveries: Recovery[] = []): void {
   triggerCsvDownload(buildCsv(headers, rows), `National_Lights_Recovery_Audit_${dateStr}.csv`);
 }
 
-=======
-    `"${r.id || r.recoveryNumber || 'REC'}"`,
-    `"${(r.collectionDate || r.createdAt || '').slice(0, 10)}"`,
-    `"${r.customerCode || 'N/A'}"`,
-    `"${(r.customerName || '').replace(/"/g, '""')}"`,
-    `"${(r.salesUserName || 'Field Officer').replace(/"/g, '""')}"`,
-    r.amount || 0,
-    `"${r.paymentMode || 'CASH'}"`,
-    `"${r.instrumentNumber || 'N/A'}"`,
-    `"${r.bankName || 'N/A'}"`,
-    `"${r.status || 'PENDING'}"`,
-    `"${r.shahzadApproval === 'APPROVED' ? 'Shahzad Ullah (Verified)' : r.shahzadApproval || 'Pending'}"`,
-  ]);
-
-  const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
-  const dateStr = new Date().toISOString().slice(0, 10);
-  triggerCsvDownload(csv, `National_Lights_Recovery_Audit_${dateStr}.csv`);
-}
-
-/**
- * Exports Dealer Accounts & Outstanding Aging to CSV
- */
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 export function exportAgingReportCsv(customers: Customer[] = []): void {
   const headers = [
     'Account Code',
@@ -184,7 +116,6 @@ export function exportAgingReportCsv(customers: Customer[] = []): void {
     const isOver = limit > 0 && balance > limit;
 
     return [
-<<<<<<< HEAD
       c.customerCode || c.id,
       c.companyName || '',
       c.contactPerson || 'Proprietor',
@@ -282,22 +213,4 @@ export function exportAuditLogCsv(logs: AuditLog[] = []): void {
   ]);
   const dateStr = new Date().toISOString().slice(0, 10);
   triggerCsvDownload(buildCsv(headers, rows), `National_Lights_Audit_Trail_${dateStr}.csv`);
-=======
-      `"${c.customerCode || c.id}"`,
-      `"${(c.companyName || '').replace(/"/g, '""')}"`,
-      `"${(c.contactPerson || 'Proprietor').replace(/"/g, '""')}"`,
-      `"${c.town || c.city || 'Commercial Market'}"`,
-      `"${c.phone || ''}"`,
-      limit,
-      balance,
-      `"${util}%"`,
-      `"${isOver ? 'OVER-LIMIT (ALERT)' : util > 80 ? 'HIGH EXPOSURE' : 'NORMAL'}"`,
-      `"${c.approvalStatus || 'APPROVED'}"`,
-    ];
-  });
-
-  const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
-  const dateStr = new Date().toISOString().slice(0, 10);
-  triggerCsvDownload(csv, `National_Lights_Dealer_Aging_${dateStr}.csv`);
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 }

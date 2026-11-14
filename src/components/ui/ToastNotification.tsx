@@ -30,11 +30,7 @@ export interface ToastItem {
 type ToastListener = (toast: ToastItem) => void;
 const listeners = new Set<ToastListener>();
 
-<<<<<<< HEAD
 export function emitToast(type: ToastType, title: string, message?: string, duration = 5000): string {
-=======
-export function emitToast(type: ToastType, title: string, message?: string, duration = 4500): string {
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const item: ToastItem = {
     id,
@@ -63,11 +59,7 @@ export const toast = {
   success: (title: string, message?: string, duration?: number) =>
     emitToast('success', title, message, duration),
   error: (title: string, message?: string, duration?: number) =>
-<<<<<<< HEAD
     emitToast('error', title, message, duration ?? 5000),
-=======
-    emitToast('error', title, message, duration ?? 6000),
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   warning: (title: string, message?: string, duration?: number) =>
     emitToast('warning', title, message, duration ?? 5000),
   info: (title: string, message?: string, duration?: number) =>

@@ -6,10 +6,7 @@
  */
 
 import React, { useState } from 'react';
-<<<<<<< HEAD
 import { Tag, X, Search, Printer } from 'lucide-react';
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 import {
   NATIONAL_LIGHT_OFFICIAL_CATALOG,
   NATIONAL_LIGHT_OFFICE_INFO,
@@ -40,7 +37,6 @@ export const NationalLightRateListModal: React.FC<NationalLightRateListModalProp
   });
 
   return (
-<<<<<<< HEAD
     <div className="fixed inset-0 z-50 bg-[#1B5E3A]/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-fadeIn">
       <div className="bg-white w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#C8E6C9] text-[#1B5E3A]">
         {/* Header */}
@@ -57,58 +53,23 @@ export const NationalLightRateListModal: React.FC<NationalLightRateListModalProp
               </div>
               <p className="text-xs text-[#D9F99D] truncate">
                 Official Rate List · {NATIONAL_LIGHT_OFFICE_INFO.headOffice} · Ph: {NATIONAL_LIGHT_OFFICE_INFO.phone}
-=======
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-fadeIn">
-      <div className="bg-white w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
-        {/* Header */}
-        <div className="bg-[#001428] text-white p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#76f4e0]/20 flex items-center justify-center text-[#76f4e0]">
-              <span className="material-symbols-outlined text-[24px]">price_change</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
-                  NATIONAL LIGHT PAKISTAN
-                </h2>
-                <span className="bg-[#006b5f] text-white text-[10px] font-bold px-2 py-0.5 rounded">
-                  Official Rate List
-                </span>
-              </div>
-              <p className="text-xs text-slate-300">
-                {NATIONAL_LIGHT_OFFICE_INFO.headOffice} • Ph: {NATIONAL_LIGHT_OFFICE_INFO.phone}
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-<<<<<<< HEAD
             className="w-11 h-11 rounded-xl bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-all shrink-0 cursor-pointer"
             aria-label="Close Rate List"
           >
             <X className="w-5 h-5" />
-=======
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all"
-          >
-            <span className="material-symbols-outlined text-[20px]">close</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           </button>
         </div>
 
         {/* Filter Controls */}
-<<<<<<< HEAD
         <div className="p-4 bg-[#F1F8E9] border-b border-[#C8E6C9] flex flex-col sm:flex-row gap-2.5">
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#5F8564]" />
-=======
-        <div className="p-4 bg-[#f8f9fb] border-b border-slate-200 flex flex-col sm:flex-row gap-2.5">
-          <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
-              search
-            </span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             <input
               type="text"
               value={search}
@@ -206,24 +167,14 @@ export const NationalLightRateListModal: React.FC<NationalLightRateListModalProp
           <div className="flex gap-2 shrink-0">
             <button
               onClick={() => window.print()}
-<<<<<<< HEAD
               className="min-h-[44px] px-4 py-2 bg-white/15 hover:bg-white/25 text-white font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-=======
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl flex items-center gap-1.5 transition-all"
-            >
-              <span className="material-symbols-outlined text-[16px]">print</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               <span>Print Rates</span>
             </button>
             <button
               onClick={onClose}
-<<<<<<< HEAD
               className="min-h-[44px] px-5 py-2 bg-[#4CAF50] hover:bg-[#388E3C] text-white font-bold rounded-xl transition-all cursor-pointer"
-=======
-              className="px-5 py-2 bg-[#006b5f] hover:bg-[#005047] text-white font-bold rounded-xl transition-all"
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             >
               Done
             </button>

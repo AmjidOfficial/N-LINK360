@@ -8,10 +8,7 @@
 
 import jsPDF from 'jspdf';
 import { Customer, SalesOrder } from '../types';
-<<<<<<< HEAD
 import { calculateInvoiceMetrics } from '../hooks/useSkuInvoicePricing';
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 export interface InvoicePdfItem {
   skuCode?: string;
@@ -67,7 +64,6 @@ export const extractInvoiceMetrics = (options: InvoicePdfOptions) => {
   const { customer, order, customItems } = options;
   const previousBalance = options.previousBalance ?? (customer.currentBalance || customer.openingBalance || 0);
 
-<<<<<<< HEAD
   const hookCalculations = calculateInvoiceMetrics(order as any);
 
   const items: InvoicePdfItem[] = (customItems || (order.items as any[]) || []).map((item: any, idx: number) => {
@@ -76,13 +72,6 @@ export const extractInvoiceMetrics = (options: InvoicePdfOptions) => {
     const price = Number(calculatedLine?.officialTradePrice || item.unitPrice || item.rate || 0);
     const disc = 15;
     const lineTotal = calculatedLine ? calculatedLine.lineNet : Number(Math.round(qty * price * 0.85));
-=======
-  const items: InvoicePdfItem[] = (customItems || (order.items as any[]) || []).map((item: any) => {
-    const qty = Number(item.quantity || item.orderedQuantity || 0);
-    const price = Number(item.unitPrice || item.rate || 0);
-    const disc = Number(item.discountPercent || 0);
-    const lineTotal = Number(item.lineTotal || (qty * price * (1 - disc / 100)));
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
     const cartons = item.cartons !== undefined 
       ? Number(item.cartons) 
@@ -110,16 +99,10 @@ export const extractInvoiceMetrics = (options: InvoicePdfOptions) => {
     };
   });
 
-<<<<<<< HEAD
   const grossSubtotal = hookCalculations.grossSubtotal;
   const totalDiscount = hookCalculations.discount15;
   const netTotal = hookCalculations.netInvoiceTotal;
 
-=======
-  const grossSubtotal = items.reduce((sum, i) => sum + (i.quantity * i.unitPrice), 0);
-  const netTotal = order.totalAmount || items.reduce((sum, i) => sum + i.lineTotal, 0);
-  const totalDiscount = grossSubtotal > netTotal ? grossSubtotal - netTotal : (order.discountAmount || 0);
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   const totalCartons = items.reduce((sum, i) => sum + (i.cartons || 0), 0);
   const totalPacks = items.reduce((sum, i) => sum + (i.packs || 0), 0);
   const totalQuantityPcs = items.reduce((sum, i) => sum + i.quantity, 0);
@@ -180,7 +163,6 @@ const renderInvoiceOnDoc = (
   let currentY = margin;
   const pageStartDocIndex = doc.getNumberOfPages();
 
-<<<<<<< HEAD
   const drawWatermark = () => {
     try {
       doc.saveGraphicsState();
@@ -217,9 +199,6 @@ const renderInvoiceOnDoc = (
   const drawHeader = () => {
     drawWatermark();
 
-=======
-  const drawHeader = () => {
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     // Top Primary Accent Bar (National Lights Deep Emerald/Teal & Warm Gold)
     doc.setFillColor(0, 107, 95); // #006b5f
     doc.rect(0, 0, pageWidth, 5, 'F');
@@ -564,19 +543,10 @@ const renderInvoiceOnDoc = (
   doc.text(`Rs. ${grossSubtotal.toLocaleString()}`, summaryX + summaryWidth - 3, finY, { align: 'right' });
 
   finY += 4.5;
-<<<<<<< HEAD
   doc.text('Commercial Invoice Discount (Less 15%):', summaryX + 3, finY);
   doc.setTextColor(190, 18, 60);
   doc.text(`- Rs. ${totalDiscount.toLocaleString()}`, summaryX + summaryWidth - 3, finY, { align: 'right' });
   finY += 4.5;
-=======
-  if (totalDiscount > 0) {
-    doc.text('Trade Discounts / Deductions:', summaryX + 3, finY);
-    doc.setTextColor(190, 18, 60);
-    doc.text(`- Rs. ${totalDiscount.toLocaleString()}`, summaryX + summaryWidth - 3, finY, { align: 'right' });
-    finY += 4.5;
-  }
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
   doc.setTextColor(71, 85, 105);
   doc.text('Previous Account Balance:', summaryX + 3, finY);

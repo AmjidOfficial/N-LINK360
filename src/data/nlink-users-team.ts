@@ -26,10 +26,7 @@ export interface NLinkUser {
   assignedBeats: string[];
   reportingManagerId?: string;
   reportingManagerName?: string;
-<<<<<<< HEAD
   reportingTo?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   
   // Targets & Performance (Monthly in PKR)
   monthlySalesTarget: number;
@@ -42,7 +39,6 @@ export interface NLinkUser {
   
   status: 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE';
   avatarInitials: string;
-<<<<<<< HEAD
   zone?: string;
   joiningDate?: string;
   permissionGroup?: string;
@@ -59,12 +55,6 @@ export interface NLinkUser {
 
 export const NLINK_TEAM_ROSTER: NLinkUser[] = [
   // --- 1. NSM & SOLE EXECUTIVE APPROVER ---
-=======
-}
-
-export const NLINK_TEAM_ROSTER: NLinkUser[] = [
-  // --- 1. SUPER ADMIN / MANAGING DIRECTOR ---
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   {
     id: 'USR-001',
     employeeCode: 'EMP-001',
@@ -72,11 +62,7 @@ export const NLINK_TEAM_ROSTER: NLinkUser[] = [
     email: 'shahzadullah@nationallight.pk',
     phone: '+92 300 1234567',
     role: 'SUPER_ADMIN',
-<<<<<<< HEAD
     roleTitle: 'NSM (National Sales Manager) & Sole Approver',
-=======
-    roleTitle: 'MD',
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     department: 'EXECUTIVE',
     region: 'National',
     area: 'National',
@@ -91,7 +77,6 @@ export const NLINK_TEAM_ROSTER: NLinkUser[] = [
     todayRecoveryAchieved: 0,
     status: 'ACTIVE',
     avatarInitials: 'SU',
-<<<<<<< HEAD
     mustChangePassword: true,
     initialPasswordStatus: 'ISSUED_CHANGE_REQUIRED',
   },
@@ -112,32 +97,11 @@ export const NLINK_TEAM_ROSTER: NLinkUser[] = [
     assignedBeats: ['Mingora Electric Market', 'GT Road Swat Beat'],
     monthlySalesTarget: 15000000,
     monthlyRecoveryTarget: 12000000,
-=======
-  },
-  // --- 2. FIELD FORCE / TERRITORY SALES OFFICER ---
-  {
-    id: 'USR-002',
-    employeeCode: 'EMP-002',
-    fullName: 'Shahid Khan',
-    email: 'shahid.khan@nationallight.pk',
-    phone: '+92 321 9876543',
-    role: 'TSM',
-    roleTitle: 'TSM',
-    department: 'SALES_FIELD',
-    region: 'KPK',
-    area: 'Peshawar & Hazara',
-    territory: 'Abbottabad / Peshawar',
-    assignedTowns: ['Abbottabad', 'Peshawar', 'Mardan', 'Swat'],
-    assignedBeats: ['Main Bazaar Beat', 'City Beat #1'],
-    monthlySalesTarget: 5000000,
-    monthlyRecoveryTarget: 4500000,
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     mtdSalesAchieved: 0,
     mtdRecoveryAchieved: 0,
     todaySalesAchieved: 0,
     todayRecoveryAchieved: 0,
     status: 'ACTIVE',
-<<<<<<< HEAD
     avatarInitials: 'SZ',
     mustChangePassword: true,
     initialPasswordStatus: 'ISSUED_CHANGE_REQUIRED',
@@ -223,13 +187,6 @@ export const NLINK_TEAM_ROSTER: NLinkUser[] = [
 ];
 
 export const USERS_STORAGE_KEY = 'nlink_team_roster_v7';
-=======
-    avatarInitials: 'SK',
-  },
-];
-
-export const USERS_STORAGE_KEY = 'nlink_team_roster_v3';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 /**
  * Loads team users from localStorage with fallback to default roster
@@ -241,19 +198,9 @@ export function getStoredUsers(): NLinkUser[] {
     if (!raw) return NLINK_TEAM_ROSTER;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-<<<<<<< HEAD
       return parsed.filter(
         (u: NLinkUser) => u.email && !u.email.toLowerCase().endsWith('@nationallights.com')
       );
-=======
-      // Ensure emails end with @nationallight.pk
-      return parsed.map((u: NLinkUser) => {
-        if (u.email && u.email.includes('@nationallights.com')) {
-          return { ...u, email: u.email.replace('@nationallights.com', '@nationallight.pk') };
-        }
-        return u;
-      });
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     }
     return NLINK_TEAM_ROSTER;
   } catch (e) {
@@ -275,7 +222,6 @@ export function saveStoredUsers(users: NLinkUser[]): void {
 }
 
 /**
-<<<<<<< HEAD
  * Automatically creates the official @nationallight.pk N-LINK login identity.
  * Rule: lowercase, remove spaces & unsupported chars, check uniqueness, add numeric suffix on collision (e.g. ahmedkhan2@nationallight.pk).
  */
@@ -369,42 +315,6 @@ export function generateAutoCredentials(fullName: string, role: UserRole, existi
   const userHandle = email.split('@')[0];
   const username = `nl.${userHandle}`;
   const password = generateCryptographicInitialPassword(14);
-=======
- * Automatically creates the official @nationallight.pk corporate email address
- */
-export function autoCreateNationalLightEmail(fullName: string): string {
-  const parts = fullName.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return 'officer@nationallight.pk';
-  const handle = parts.length > 1
-    ? `${parts[0]}.${parts[parts.length - 1]}`
-    : parts[0];
-  const cleanHandle = handle.replace(/[^a-z0-9.]/g, '');
-  return `${cleanHandle}@nationallight.pk`;
-}
-
-/**
- * Automatically generates unique user credentials, username and secure initial password
- */
-export function generateAutoCredentials(fullName: string, role: UserRole, existingUsers: NLinkUser[] = getStoredUsers()) {
-  const prefix = role === 'TSM' ? 'TSM' : role === 'ZSM' ? 'ZSM' : role === 'RSM' ? 'RSM' : role === 'ACCOUNTS' ? 'ACC' : role === 'MANAGEMENT' ? 'MGT' : 'EMP';
-  
-  // Find highest index
-  const nextNum = existingUsers.length + 1;
-  const employeeCode = `${prefix}-${String(nextNum).padStart(3, '0')}`;
-  
-  // Format username email with official @nationallight.pk domain
-  const email = autoCreateNationalLightEmail(fullName);
-  const userHandle = email.split('@')[0];
-  const username = `nl.${userHandle}`;
-  
-  // Generate random 4-char suffix for security
-  const chars = '23456789abcdefghjkmnpqrstuvwxyz';
-  let randSuffix = '';
-  for (let i = 0; i < 4; i++) {
-    randSuffix += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  const password = `NL@2026#${randSuffix}`;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
   return {
     employeeCode,

@@ -36,20 +36,10 @@ export const AUTHORIZED_APPROVER_EMAILS: readonly string[] = [
 ];
 
 export const ADMIN_ROLE_EMAILS: readonly string[] = [
-<<<<<<< HEAD
   'nationallights2026@gmail.com',
   'shahzadullah@nationallight.pk',
   'amjid@nationallight.pk',
   'amjid.bisconni@gmail.com',
-=======
-  'shahzadullah@nationallights.com',
-  'nationallights2026@gmail.com',
-  'shahzadullah@nationallight.pk',
-  'admin@nationallights.com',
-  'superadmin@nationallights.com',
-  'management@nationallights.com',
-  'director@nationallights.com',
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 ];
 
 export function isAdminUser(user: User | null | undefined): boolean {
@@ -64,7 +54,6 @@ export function isFieldForceUser(user: User | null | undefined): boolean {
 }
 
 /**
-<<<<<<< HEAD
  * Authoritative executive approval authority check.
  * Strictly permits Shahzad Ullah, nationallights2026@gmail.com, Super Admins, and Executive Management.
  * Field sales officers (e.g. Syed Zain, Shahid Khan) have no approval authority.
@@ -92,34 +81,6 @@ export function isAuthorizedApproverEmail(email?: string | null, user?: any): bo
     clean.startsWith('shahzadullah@') ||
     clean.startsWith('shahzad@') ||
     clean === 'nationallights2026@gmail.com'
-=======
- * Hard-coded approval/confirmation authority check.
- * Strictly permits ONLY 'ShahzadUllah' for all financial, invoice, recovery, and customer workflow actions.
- * Syed Zain's approval access is strictly revoked at the database / RLS policy level, while his user account remains active.
- */
-export function isAuthorizedApproverEmail(email?: string | null, user?: any): boolean {
-  const clean = String(email || user?.email || '').trim().toLowerCase();
-  const name = String(user?.fullName || '').trim().toLowerCase();
-  const role = String(user?.role || '').trim().toUpperCase();
-  
-  // Strict Security Rule: Syed Zain is an active sales officer but has NO approval authority
-  if (clean.includes('zain') || clean.includes('syed') || name.includes('zain')) {
-    return false;
-  }
-
-  // Permit Shahzad Ullah, super admins, executive directors, managing directors, and verified official accounts
-  if (
-    role === 'SUPER_ADMIN' ||
-    role === 'MANAGING_DIRECTOR' ||
-    role === 'EXECUTIVE_DIRECTOR' ||
-    role === 'MANAGEMENT' ||
-    name.includes('shahzad') ||
-    clean.includes('shahzad') ||
-    clean.includes('nationallights') ||
-    clean.includes('admin') ||
-    clean.includes('director') ||
-    AUTHORIZED_APPROVER_EMAILS.some((x) => x.toLowerCase() === clean)
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   ) {
     return true;
   }
@@ -129,11 +90,7 @@ export function isAuthorizedApproverEmail(email?: string | null, user?: any): bo
 
 export function assertAuthorizedApprover(email?: string | null, user?: any): void {
   if (!isAuthorizedApproverEmail(email, user)) {
-<<<<<<< HEAD
     throw new Error('Unauthorized Security Restriction: Only ShahzadUllah (Executive Director) is authorized to approve orders, confirm recoveries, or approve new customers.');
-=======
-    throw new Error('Unauthorized Security Restriction: Only Shahzad Ullah (Executive Director) is authorized to approve orders, confirm recoveries, or approve new customers.');
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   }
 }
 
@@ -157,21 +114,11 @@ export function invalidateAllSessionsGlobally(): { success: boolean; timestamp: 
   return { success: true, timestamp: epoch };
 }
 
-<<<<<<< HEAD
 /** Check if user/email is eligible for multiple role switching */
 export function isMultiRoleEligibleEmail(email?: string | null): boolean {
   const clean = String(email || '').trim().toLowerCase();
   if (!clean) return false;
   return ADMIN_ROLE_EMAILS.some((e) => e.toLowerCase() === clean);
-=======
-/** Check if user/email is eligible for multiple role switching & fast login */
-export function isMultiRoleEligibleEmail(email?: string | null): boolean {
-  const clean = String(email || '').trim().toLowerCase();
-  if (!clean) return false;
-  if (ADMIN_ROLE_EMAILS.some((e) => e.toLowerCase() === clean)) return true;
-  if (clean.includes('admin') || clean.includes('nationallights') || clean.includes('management')) return true;
-  return false;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 }
 
 export function getAssignedDealerIds(_user: User | null | undefined): string[] {

@@ -44,11 +44,7 @@ export const emptyData: SupabaseAppData = fallbackAppData;
 
 function money(value: unknown) { return Number(value || 0); }
 
-<<<<<<< HEAD
 export async function loadSupabaseAppData(_currentUser?: any): Promise<SupabaseAppData> {
-=======
-export async function loadSupabaseAppData(_currentUser: User): Promise<SupabaseAppData> {
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   if (!isSupabaseConfigured || !supabase) {
     return fallbackAppData;
   }
@@ -124,7 +120,6 @@ export async function loadSupabaseAppData(_currentUser: User): Promise<SupabaseA
     isActive: Boolean(r.status),
     approvalStatus: r.status ? 'APPROVED' : 'PENDING_APPROVAL',
     status: r.status ? 'NORMAL' : 'PENDING_APPROVAL',
-<<<<<<< HEAD
     assignedOfficerId: /m\.?\s*ghaffar\s*tool\s*center/i.test(String(r.company_name || r.name || ''))
       ? 'USR-002'
       : (r.assigned_employee_id || undefined),
@@ -134,9 +129,6 @@ export async function loadSupabaseAppData(_currentUser: User): Promise<SupabaseA
     assignedEmployee: /m\.?\s*ghaffar\s*tool\s*center/i.test(String(r.company_name || r.name || ''))
       ? 'Syed Zain'
       : undefined,
-=======
-    assignedOfficerId: r.assigned_employee_id || undefined,
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }));

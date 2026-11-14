@@ -11,30 +11,21 @@
 export type UserRole =
   | 'SUPER_ADMIN'
   | 'MANAGEMENT'
-<<<<<<< HEAD
   | 'NATIONAL_MANAGER'
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   | 'RSM'
   | 'ZSM'
   | 'TSM'
   | 'ASM'
-<<<<<<< HEAD
   | 'FIELD_SALES_USER'
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   | 'FACTORY_MANAGER'
   | 'WAREHOUSE_MANAGER'
   | 'ACCOUNTS'
   | 'SALES_MANAGER'
   | 'SALES_RECOVERY'
   | 'DISPATCH_OFFICER'
-<<<<<<< HEAD
   | 'HR_ADMIN'
   | 'DISTRIBUTOR'
   | 'DEALER'
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   | 'SS'
   | 'OB'
   | 'FACTORY'
@@ -56,15 +47,11 @@ export interface User {
   id: string;
   email: string;
   fullName: string;
-<<<<<<< HEAD
   name?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   phone: string;
   role: UserRole;
   branchId: string;
   branchName?: string;
-<<<<<<< HEAD
   region?: string;
   zone?: string;
   territory?: string;
@@ -72,8 +59,6 @@ export interface User {
   team?: string;
   distributorId?: string;
   dealerId?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   isActive: boolean;
   lastLoginAt?: string;
   createdAt: string;
@@ -404,13 +389,9 @@ export interface SKU {
   packsPerCarton?: number;
   weight?: number;
   taxRate?: number;
-<<<<<<< HEAD
   status?: 'ACTIVE' | 'INACTIVE' | 'DISCONTINUED' | 'UPCOMING';
   category?: string;
   currentStock?: number;
-=======
-  status?: 'ACTIVE' | 'DISCONTINUED' | 'UPCOMING';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   // SKU Versioning architecture
   currentVersionId?: string;
   currentVersionNumber?: number;
@@ -420,27 +401,17 @@ export interface SKU {
 // ==============================================================================
 // 4. Customers & Visits
 // ==============================================================================
-<<<<<<< HEAD
 export type CustomerType = 'DISTRIBUTOR' | 'DEALER' | 'CUSTOMER' | 'SHOP';
-=======
-export type CustomerType = 'DISTRIBUTOR' | 'DEALER';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 export interface Customer {
   id: string;
   customerCode: string;
-<<<<<<< HEAD
   code?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   companyName: string;
   name?: string;
   customerType?: string;
   contactPerson: string;
-<<<<<<< HEAD
   proprietorName?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   phone: string;
   email?: string;
   type: CustomerType;
@@ -479,11 +450,8 @@ export interface Customer {
   priceTier?: 'STANDARD' | 'WHOLESALE' | 'DISTRIBUTOR' | 'SPECIAL' | string;
   approvalStatus?: RegistrationRequestStatus | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'NORMAL' | 'PENDING_APPROVAL';
-<<<<<<< HEAD
   approvedBy?: string;
   approvedAt?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   latitude?: number;
   longitude?: number;
   gpsCoordinates?: { lat: number; lng: number };
@@ -502,14 +470,10 @@ export interface CustomerVisit {
   purpose: string;
   notes?: string;
   orderPlaced: boolean;
-<<<<<<< HEAD
   orderBooked?: boolean;
   orderAmount?: number;
   recoveryCollected: boolean;
   townName?: string;
-=======
-  recoveryCollected: boolean;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   nextFollowupDate?: string;
   photoUrl?: string;
 }
@@ -613,11 +577,8 @@ export interface InventoryBalance {
   quantityReserved: number;
   quantityDamaged: number;
   availableQuantity: number;
-<<<<<<< HEAD
   quantity?: number;
   updatedAt?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   lastUpdatedAt: string;
 }
 
@@ -627,10 +588,7 @@ export interface InventoryBalance {
 export type OrderStatus =
   | 'DRAFT'
   | 'SUBMITTED'
-<<<<<<< HEAD
   | 'PENDING_APPROVAL'
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   | 'CREDIT_CHECK'
   | 'UNDER_REVIEW'
   | 'APPROVAL'
@@ -638,18 +596,12 @@ export type OrderStatus =
   | 'PARTIALLY_APPROVED'
   | 'ON_HOLD'
   | 'REJECTED'
-<<<<<<< HEAD
   | 'PACKED'
   | 'INVOICED'
   | 'DISPATCHED'
   | 'IN_TRANSIT'
   | 'DELIVERED'
   | 'PARTIALLY_DELIVERED'
-=======
-  | 'INVOICED'
-  | 'DISPATCHED'
-  | 'DELIVERED'
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   | 'CANCELLED';
 
 export type CreditCheckStatus = 'GREEN' | 'AMBER' | 'RED';
@@ -696,11 +648,8 @@ export interface SalesOrder {
   taxAmount: number;
   totalAmount: number;
   netAmount?: number;
-<<<<<<< HEAD
   netTotal?: number;
   salesPersonName?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   customerTown?: string;
   town?: string;
   creditCheckStatus: CreditCheckStatus;
@@ -714,7 +663,6 @@ export interface SalesOrder {
   shahzadApproval?: DualApprovalStatus;
   shahzadApprovedAt?: string;
   shahzadRejectionReason?: string;
-<<<<<<< HEAD
   dispatchNoteNumber?: string;
   warehouseName?: string;
   transporterName?: string;
@@ -748,8 +696,6 @@ export interface SalesOrder {
       cartons: number;
     }>;
   };
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   createdAt: string;
 }
 
@@ -792,10 +738,7 @@ export interface Invoice {
   previousBalance: number;
   newBalance: number;
   paymentStatus: string;
-<<<<<<< HEAD
   paymentMode?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   printedAt?: string;
   createdBy?: string;
   createdAt: string;
@@ -827,10 +770,7 @@ export interface Dispatch {
   status: DispatchStatus;
   gatePassNumber?: string;
   remarks?: string;
-<<<<<<< HEAD
   destinationCity?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 }
 
 export interface GoodsReceipt {
@@ -883,11 +823,7 @@ export interface Recovery {
   instrumentDate?: string;
   proofAttachmentUrl?: string;
   receiptUrl?: string;
-<<<<<<< HEAD
   status: 'PENDING_VERIFICATION' | 'VERIFIED' | 'APPROVED' | 'POSTED' | 'REJECTED' | 'PENDING';
-=======
-  status: 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   verifiedBy?: string;
   verifiedAt?: string;
   rejectionReason?: string;
@@ -916,15 +852,10 @@ export interface LedgerEntry {
   customerName: string;
   entryDate: string;
   transactionType: LedgerTransactionType;
-<<<<<<< HEAD
   entryType?: string;
   referenceModule: string;
   referenceId: string;
   referenceNumber?: string;
-=======
-  referenceModule: string;
-  referenceId: string;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   debitAmount: number;
   creditAmount: number;
   runningBalance: number;
@@ -978,10 +909,7 @@ export interface StockReturn {
   inspectionResult?: 'SALEABLE' | 'DAMAGED' | 'SCRAP';
   totalClaimedAmount: number;
   totalApprovedAmount: number;
-<<<<<<< HEAD
   totalAmount?: number;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   creditNoteId?: string;
   items: StockReturnItem[];
   createdAt: string;
@@ -1029,10 +957,7 @@ export interface AuditLog {
 export interface SKUVersion {
   id: string;
   skuId: string;
-<<<<<<< HEAD
   name?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   versionNumber: number;
   effectiveFrom: string;
   effectiveTo?: string; // null means currently active
@@ -1040,10 +965,7 @@ export interface SKUVersion {
   unitsPerPack: number;
   packsPerCarton: number;
   unitsPerCarton: number;
-<<<<<<< HEAD
   cartonQuantity?: number;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   cartonRate: number;
   tradePrice: number;
   retailPrice: number;
@@ -1052,10 +974,7 @@ export interface SKUVersion {
   taxRate: number;
   status: 'ACTIVE' | 'INACTIVE' | 'DISCONTINUED' | 'REPLACED';
   changeReason?: string;
-<<<<<<< HEAD
   revisionReason?: string;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   createdBy?: string;
   createdAt: string;
 }
@@ -1130,7 +1049,6 @@ export interface TownNode {
   updatedAt?: string;
 }
 
-<<<<<<< HEAD
 // ==============================================================================
 // 18. Distributor Replacement, Territory Split & Market Handover Domain Models
 // ==============================================================================
@@ -1264,6 +1182,3 @@ export interface PasswordRecoveryRequest {
   resolvedAt?: string;
   notes?: string;
 }
-=======
-
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a

@@ -75,7 +75,6 @@ export const downloadCustomerLedgerPdf = async (
 
   let currentY = margin;
 
-<<<<<<< HEAD
   const drawWatermark = () => {
     try {
       doc.saveGraphicsState();
@@ -113,10 +112,6 @@ export const downloadCustomerLedgerPdf = async (
   const drawHeader = (pageNumber: number) => {
     drawWatermark();
 
-=======
-  // Helper to draw clean header on every page
-  const drawHeader = (pageNumber: number) => {
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     // Top Primary Accent Bar (National Lights Deep Teal & Gold)
     doc.setFillColor(0, 107, 95); // #006b5f
     doc.rect(0, 0, pageWidth, 5, 'F');

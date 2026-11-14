@@ -24,10 +24,7 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
-<<<<<<< HEAD
 import { generateUniqueRecoveryId } from '../../utils/idGenerator';
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 export interface SimpleRecoveryDrawerProps {
   isOpen: boolean;
@@ -62,11 +59,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
       return;
     }
 
-<<<<<<< HEAD
     const recoveryId = generateUniqueRecoveryId();
-=======
-    const recoveryId = `REC-${Date.now().toString().slice(-6)}`;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     const nowIso = new Date().toISOString();
 
     const newRec: Recovery = {
@@ -127,22 +120,14 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/50">
           <div>
-<<<<<<< HEAD
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0052FF] dark:text-blue-400">
-=======
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 dark:text-emerald-400">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               Record Customer Payment / Wasooli
             </span>
             <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
               {customer.companyName}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-<<<<<<< HEAD
               Town: <strong>{customer.town || customer.city}</strong> &bull; Dealer Code: {customer.customerCode || 'NL-DLR'}
-=======
-              Town: <strong>{customer.town || customer.city}</strong> &bull; Total Balance: Rs. {previousBalance.toLocaleString()}
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             </p>
           </div>
 
@@ -155,7 +140,6 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
           </button>
         </div>
 
-<<<<<<< HEAD
         {/* 3-Stat Financial Breakdown Card (mobile_recovery_customer_ledger standard) */}
         <div className="px-4 pt-3">
           <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-[#0F172A] text-white border border-slate-800 text-xs">
@@ -180,8 +164,6 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
           </div>
         </div>
 
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           {submittedRecovery ? (

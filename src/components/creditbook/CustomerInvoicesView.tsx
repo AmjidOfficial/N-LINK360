@@ -18,10 +18,7 @@ import {
   Download,
   Eye,
   MessageCircle,
-<<<<<<< HEAD
   MessageSquare,
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   Printer,
   Calendar,
   Search,
@@ -32,10 +29,7 @@ import {
   X,
 } from 'lucide-react';
 import { downloadSalesInvoicePdf, buildInvoiceWhatsAppText } from '../../utils/exportInvoicePdf';
-<<<<<<< HEAD
 import { NationalLightHeaderBrand, DocumentCenterWatermark } from '../NationalLightLogo';
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 export interface CustomerInvoicesViewProps {
   customer: Customer;
@@ -151,7 +145,6 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
     window.open(url, '_blank');
   };
 
-<<<<<<< HEAD
   const handleSms = (order: SalesOrder) => {
     const text = buildInvoiceWhatsAppText(customer, order, {
       officerName: currentUser?.fullName || 'Field Officer',
@@ -164,8 +157,6 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
     window.location.href = smsUrl;
   };
 
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   return (
     <div className="w-full max-w-3xl mx-auto space-y-4 pb-12 animate-in fade-in duration-200">
       {/* Header Card */}
@@ -209,11 +200,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
         </div>
 
         {/* Status Filter Bar (Specification: All, Pending, Approved, Rejected) */}
-<<<<<<< HEAD
         <div className="flex flex-wrap items-center gap-1.5 pt-3 mt-3 border-t border-slate-100 dark:border-slate-800">
-=======
-        <div className="flex items-center gap-1.5 pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 overflow-x-auto">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           <button
             type="button"
             onClick={() => setStatusFilter('ALL')}
@@ -286,11 +273,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
               statusFilter === 'REJECTED'
                 ? 'bg-rose-700 text-white shadow-xs'
                 : rejectedCount > 0
-<<<<<<< HEAD
                 ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 hover:bg-rose-200 border border-rose-300'
-=======
-                ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 hover:bg-rose-200 border border-rose-300 animate-pulse'
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-900/40'
             }`}
           >
@@ -342,12 +325,8 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
             return (
               <div
                 key={order.id || order.orderNumber}
-<<<<<<< HEAD
                 onClick={() => setSelectedInvoice(order)}
                 className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-teal-300 dark:hover:border-teal-700 transition-all space-y-3 cursor-pointer"
-=======
-                className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-teal-300 dark:hover:border-teal-700 transition-all space-y-3"
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               >
                 {/* Top Row: Invoice #, Date & Status */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -423,7 +402,6 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                 </div>
 
                 {/* Action Buttons */}
-<<<<<<< HEAD
                 <div
                   className="flex items-center justify-between gap-2 pt-1 flex-wrap"
                   onClick={(e) => e.stopPropagation()}
@@ -432,37 +410,21 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                     type="button"
                     onClick={() => setSelectedInvoice(order)}
                     className="min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-=======
-                <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedInvoice(order)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                   >
                     <Eye className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
                     <span>View Bill</span>
                   </button>
 
-<<<<<<< HEAD
                   <div className="flex flex-wrap items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => handleWhatsApp(order)}
                       className="min-h-[40px] px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-=======
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleWhatsApp(order)}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
                       <span>WhatsApp</span>
                     </button>
 
-<<<<<<< HEAD
                     <button
                       type="button"
                       onClick={() => handleSms(order)}
@@ -471,34 +433,15 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                       <MessageSquare className="w-3.5 h-3.5" />
                       <span>Msg</span>
                     </button>
-=======
-                    {triggerPreview && (
-                      <button
-                        type="button"
-                        onClick={() => triggerPreview(order, customer)}
-                        className="px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border border-teal-200 hover:bg-teal-100 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>Preview</span>
-                      </button>
-                    )}
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
                     <button
                       type="button"
                       onClick={() => handleDownload(order)}
                       disabled={isDownloading === (order.id || order.orderNumber)}
-<<<<<<< HEAD
                       className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
                     >
                       <Download className={`w-3.5 h-3.5 ${isDownloading === (order.id || order.orderNumber) ? 'animate-bounce' : ''}`} />
                       <span>{isDownloading === (order.id || order.orderNumber) ? 'Generating...' : 'PDF'}</span>
-=======
-                      className="px-3.5 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
-                    >
-                      <Download className={`w-3.5 h-3.5 ${isDownloading === (order.id || order.orderNumber) ? 'animate-bounce' : ''}`} />
-                      <span>{isDownloading === (order.id || order.orderNumber) ? 'Generating...' : 'Download PDF'}</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                     </button>
                   </div>
                 </div>
@@ -532,7 +475,6 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
               </button>
             </div>
 
-<<<<<<< HEAD
             {/* Modal Body with Centered Watermark */}
             <div className="relative p-5 overflow-y-auto space-y-4 text-xs">
               <DocumentCenterWatermark title="NATIONAL LIGHT INVOICE" />
@@ -543,10 +485,6 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                   OFFICIAL TAX INVOICE
                 </span>
               </div>
-=======
-            {/* Modal Body */}
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl">
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase block">Customer</span>
@@ -588,7 +526,6 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                   </span>
                 </div>
               </div>
-<<<<<<< HEAD
               </div>
             </div>
 
@@ -612,20 +549,6 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                   <span>Msg</span>
                 </button>
               </div>
-=======
-            </div>
-
-            {/* Modal Actions */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => handleWhatsApp(selectedInvoice)}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>WhatsApp</span>
-              </button>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
               <button
                 type="button"
@@ -633,11 +556,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                   handleDownload(selectedInvoice);
                   setSelectedInvoice(null);
                 }}
-<<<<<<< HEAD
                 className="min-h-[44px] px-4 py-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center gap-2 cursor-pointer"
-=======
-                className="px-5 py-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center gap-2"
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               >
                 <Download className="w-4 h-4 text-emerald-300" />
                 <span>Download PDF</span>

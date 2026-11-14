@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-<<<<<<< HEAD
 import crypto from "crypto";
 import { GoogleGenAI, Type } from "@google/genai";
 import {
@@ -19,9 +18,6 @@ import type {
   DashboardRoleKey,
 } from "./src/lib/dashboard";
 import { hasPermission } from "./src/lib/permissions";
-=======
-import { GoogleGenAI, Type } from "@google/genai";
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 let aiClient: GoogleGenAI | null = null;
 function getGenAI(): GoogleGenAI | null {
@@ -40,11 +36,7 @@ function getGenAI(): GoogleGenAI | null {
 
 async function startServer() {
   const app = express();
-<<<<<<< HEAD
   const PORT = parseInt(process.env.DEFAULT_APP_PORT || "3000", 10);
-=======
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
   // Support base64 image uploads up to 20MB
   app.use(express.json({ limit: "20mb" }));
@@ -66,13 +58,8 @@ async function startServer() {
       mode: "Production Backend Gateway",
       supabaseConfigured: Boolean(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL),
       authorizedApprovers: [
-<<<<<<< HEAD
         "shahzadullah@nationallight.pk",
         "nationallights2026@gmail.com"
-=======
-        "shahzadullah@nationallights.com",
-        "syedzain@nationallights.com"
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       ],
       activeModules: [
         "Attendance & 500m Geofence",
@@ -87,7 +74,6 @@ async function startServer() {
     });
   });
 
-<<<<<<< HEAD
   // Cryptographic password hashing & verification helpers (scrypt)
   function hashPassword(plain: string, salt?: string): string {
     const useSalt = salt || crypto.randomBytes(16).toString('hex');
@@ -954,8 +940,6 @@ async function startServer() {
     });
   });
 
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   // AI Payment Slip Scanner
   app.post("/api/scan-payment-slip", async (req, res) => {
     try {
@@ -1070,14 +1054,9 @@ Return valid JSON adhering strictly to the schema.`,
       const payload = req.body;
       const clientWebhookUrl = req.headers["x-google-sheets-webhook"] as string;
       const serverWebhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL || process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
-<<<<<<< HEAD
       const DEFAULT_WEBHOOK = "https://script.google.com/macros/s/AKfycbyH0eZXxZDJ_Xfvgq2O817NUBJ-AFs7xesSq3kwET6ZpRwXTcSQMv8QLajGN5GQrjO0Aw/exec";
       
       const webhookUrl = serverWebhookUrl || clientWebhookUrl || DEFAULT_WEBHOOK;
-=======
-      
-      const webhookUrl = serverWebhookUrl || clientWebhookUrl;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
       if (!webhookUrl) {
         return res.status(400).json({
@@ -1095,16 +1074,10 @@ Return valid JSON adhering strictly to the schema.`,
 
       console.log(`[Proxy] Syncing to Google Sheets Webhook: ${webhookUrl.slice(0, 45)}...`);
 
-<<<<<<< HEAD
       // Execute server-side fetch with redirect follow to bypass browser CORS and provide a reliable response
       const googleResponse = await fetch(webhookUrl, {
         method: "POST",
         redirect: "follow",
-=======
-      // Execute server-side fetch to bypass browser CORS and provide a reliable response
-      const googleResponse = await fetch(webhookUrl, {
-        method: "POST",
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
         headers: {
           "Content-Type": "text/plain;charset=utf-8",
         },
@@ -1114,25 +1087,12 @@ Return valid JSON adhering strictly to the schema.`,
       const responseText = await googleResponse.text();
       const isHtml = responseText.includes("<!DOCTYPE") || responseText.includes("<html") || responseText.includes("<head>");
       
-<<<<<<< HEAD
-=======
-      if (isHtml || !googleResponse.ok) {
-        console.warn(`[Proxy] Google Webhook returned ${isHtml ? 'HTML page instead of JSON' : `HTTP ${googleResponse.status}`}. Ensure the Apps Script is deployed as a Web App with access set to 'Anyone'.`);
-        return res.status(200).json({
-          success: false,
-          error: "Google Webhook returned an error page or was not found. Please verify that your Google Apps Script is deployed as a Web App with 'Who has access' set to 'Anyone'.",
-          statusCode: googleResponse.status,
-        });
-      }
-
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       let googleData: any = { status: "success" };
       try {
         if (responseText) {
           googleData = JSON.parse(responseText);
         }
       } catch {
-<<<<<<< HEAD
         // Many Apps Script deployments return standard text output
         googleData = { status: "success", raw: responseText.slice(0, 100) };
       }
@@ -1146,11 +1106,6 @@ Return valid JSON adhering strictly to the schema.`,
         });
       }
 
-=======
-        googleData = { status: "success", raw: responseText.slice(0, 100) };
-      }
-
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
       res.json({
         success: true,
         status: googleResponse.status,

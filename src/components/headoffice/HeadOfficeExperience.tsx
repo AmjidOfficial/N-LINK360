@@ -16,7 +16,6 @@
  *   8. SETTINGS: Google Sheets Two-Way Sync & System Preferences
  */
 
-<<<<<<< HEAD
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { motion } from 'motion/react';
 import {
@@ -35,18 +34,11 @@ import {
 } from '../../types';
 import { NLinkUser, NLINK_TEAM_ROSTER } from '../../data/nlink-users-team';
 import { hasPermission, Permission } from '../../lib/permissions';
-=======
-import React, { useState, useMemo } from 'react';
-import { motion } from 'motion/react';
-import { Customer, SalesOrder, Recovery, EmployeeAttendance, UserProfileUpdateRequest } from '../../types';
-import { NLinkUser, NLINK_TEAM_ROSTER } from '../../data/nlink-users-team';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 import { isAuthorizedApproverEmail, invalidateAllSessionsGlobally } from '../../services/production-users';
 import { Customer360Screen } from '../creditbook/Customer360Screen';
 import { CustomerInvoicesView } from '../creditbook/CustomerInvoicesView';
 import { CustomerLedgerView } from '../creditbook/CustomerLedgerView';
 import { SimpleOrderEntryDrawer } from '../creditbook/SimpleOrderEntryDrawer';
-<<<<<<< HEAD
 import { BulkSkuOrderForm } from '../creditbook/BulkSkuOrderForm';
 import { SimpleRecoveryDrawer } from '../creditbook/SimpleRecoveryDrawer';
 import { FieldOfficerActivityDashboard } from '../creditbook/FieldOfficerActivityDashboard';
@@ -70,14 +62,6 @@ const ManageTownsInterface = React.lazy(() => import('./ManageTownsInterface').t
 const DistributorTransferModule = React.lazy(() => import('./DistributorTransferModule').then((m) => ({ default: m.DistributorTransferModule })));
 const DealerCreditHealthMap = React.lazy(() => import('../d3/DealerCreditHealthMap').then((m) => ({ default: m.DealerCreditHealthMap })));
 import { exportSalesSummaryCsv } from '../../utils/reportExport';
-=======
-import { SimpleRecoveryDrawer } from '../creditbook/SimpleRecoveryDrawer';
-import { FieldOfficerActivityDashboard } from '../creditbook/FieldOfficerActivityDashboard';
-import { EmployeeAttendanceLedgerView } from '../creditbook/EmployeeAttendanceLedgerView';
-import { DealerCreditHealthMap } from '../d3/DealerCreditHealthMap';
-import { NationalLightLogo } from '../NationalLightLogo';
-import { exportSalesSummaryCsv, exportRecoveryAuditCsv, exportAgingReportCsv } from '../../utils/reportExport';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 import {
   LayoutDashboard,
   CheckSquare,
@@ -101,11 +85,8 @@ import {
   Eye,
   RefreshCw,
   SlidersHorizontal,
-<<<<<<< HEAD
   Sun,
   Moon,
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   ChevronRight,
   LogOut,
   AlertTriangle,
@@ -123,28 +104,19 @@ import {
   Navigation,
   X,
   Sparkles,
-<<<<<<< HEAD
   Truck,
   PackageCheck,
   ArrowRightLeft,
   Edit3,
   KeyRound,
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 } from 'lucide-react';
 import { downloadSalesInvoicePdf } from '../../utils/exportInvoicePdf';
 import { downloadCustomerLedgerPdf } from '../../utils/exportLedgerPdf';
 import { AddNewCustomerModal } from '../creditbook/AddNewCustomerModal';
-<<<<<<< HEAD
 import { EditOrDeleteEntryModal } from '../creditbook/EditOrDeleteEntryModal';
 import { TownNode, InventoryBalance, InventoryTransaction, InventoryTransactionType, LeaveRequest } from '../../types';
 import { getStoredTownNodes, saveTownNodes } from '../../services/townManagement';
 import { OperationalDispatchInvoiceModal, DispatchInvoiceCompletionPayload } from './OperationalDispatchInvoiceModal';
-=======
-import { ManageTownsInterface } from './ManageTownsInterface';
-import { TownNode } from '../../types';
-import { getStoredTownNodes, saveTownNodes } from '../../services/townManagement';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 export type HeadOfficeTab =
   | 'OVERVIEW'
@@ -155,7 +127,6 @@ export type HeadOfficeTab =
   | 'FINANCE'
   | 'REPORTS'
   | 'SETTINGS'
-<<<<<<< HEAD
   | 'MANAGE_TOWNS'
   | 'DISTRIBUTOR_TRANSFER'
   | 'EMPLOYEE_MANAGEMENT'
@@ -164,9 +135,6 @@ export type HeadOfficeTab =
   | 'INVOICE_GENERATION'
   | 'DISPATCH_LOGISTICS'
   | 'HR_ADMIN';
-=======
-  | 'MANAGE_TOWNS';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
 export interface HeadOfficeExperienceProps {
   currentUser: NLinkUser;
@@ -192,17 +160,12 @@ export interface HeadOfficeExperienceProps {
   onRecordRecovery: (recovery: Recovery) => void;
   onOpenRateCard: () => void;
   onOpenSyncModal: () => void;
-<<<<<<< HEAD
-=======
-  onSwitchToFieldMobile: () => void;
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   onSignOut: () => void;
   onPurgeMockData?: () => void;
   onPreviewInvoicePdf?: (order: SalesOrder, customer: Customer) => void;
   onOpenShareModal?: () => void;
   isOnline?: boolean;
   ledgerEntries?: any[];
-<<<<<<< HEAD
   inventoryBalances?: InventoryBalance[];
   inventoryTransactions?: InventoryTransaction[];
   leaveRequests?: LeaveRequest[];
@@ -229,8 +192,6 @@ export interface HeadOfficeExperienceProps {
   onSubmitLeaveRequest?: (req: Omit<LeaveRequest, 'id' | 'status' | 'createdAt'>) => void;
   onReviewLeaveRequest?: (requestId: string, decision: 'APPROVED' | 'REJECTED', notes?: string) => void;
   onOpenChangePassword?: () => void;
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 }
 
 export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
@@ -258,16 +219,11 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   onRecordRecovery,
   onOpenRateCard,
   onOpenSyncModal,
-<<<<<<< HEAD
-=======
-  onSwitchToFieldMobile,
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   onSignOut,
   onPurgeMockData,
   onPreviewInvoicePdf,
   onOpenShareModal,
   isOnline = true,
-<<<<<<< HEAD
   inventoryBalances = [],
   inventoryTransactions = [],
   leaveRequests = [],
@@ -293,31 +249,23 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   onSubmitLeaveRequest,
   onReviewLeaveRequest,
   onOpenChangePassword,
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 }) => {
   const [activeTab, setActiveTab] = useState<HeadOfficeTab>('OVERVIEW');
   const [approvalsSubTab, setApprovalsSubTab] = useState<'ORDERS' | 'RECOVERIES' | 'CUSTOMERS' | 'PROFILE_EDITS' | 'AUDIT'>('ORDERS');
   const [fieldForceSubTab, setFieldForceSubTab] = useState<'ROSTER' | 'ATTENDANCE_LEDGER' | 'PERFORMANCE_DASHBOARD'>('ROSTER');
   const [salesSubTab, setSalesSubTab] = useState<'ORDERS' | 'INVOICES'>('ORDERS');
-<<<<<<< HEAD
   const [entryManageTarget, setEntryManageTarget] = useState<{ type: 'ORDER' | 'RECOVERY' | 'ATTENDANCE'; data: any } | null>(null);
   const [salesOrderView, setSalesOrderView] = useState<'ORDER_FORM' | 'ORDER_LIST'>('ORDER_FORM');
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   const [dealersViewMode, setDealersViewMode] = useState<'CARDS' | 'TABLE' | 'MAP'>('CARDS');
   const [selectedCustomerIdFor360, setSelectedCustomerIdFor360] = useState<string | null>(null);
   const [customer360SubView, setCustomer360SubView] = useState<'360' | 'INVOICES' | 'LEDGER'>('360');
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isOrderDrawerOpen, setIsOrderDrawerOpen] = useState(false);
   const [isRecoveryDrawerOpen, setIsRecoveryDrawerOpen] = useState(false);
-<<<<<<< HEAD
   const [dispatchModalOrder, setDispatchModalOrder] = useState<SalesOrder | null>(null);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
   // Dynamic Town Nodes State
   const effectiveTownNodes = townNodes && townNodes.length > 0 ? townNodes : getStoredTownNodes();
@@ -337,7 +285,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   const [customerFilterQuery, setCustomerFilterQuery] = useState('');
   const [townFilter, setTownFilter] = useState('ALL');
 
-<<<<<<< HEAD
   // Persistent Theme (Industrial Dark & Emerald default + Light mode toggle)
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
@@ -364,24 +311,13 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
     } catch {}
   };
 
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   // Pending profile update requests
   const pendingProfileRequests = useMemo(() => {
     return profileUpdateRequests.filter((r) => r.status === 'PENDING');
   }, [profileUpdateRequests]);
 
-<<<<<<< HEAD
   // Sole Approver Check (Shahzad Ullah verified authorized corporate account)
   const isShahzad = isAuthorizedApproverEmail(currentUser?.email, currentUser);
-=======
-  // Sole Approver Check (Shahzad Ullah)
-  const isShahzad = isAuthorizedApproverEmail(currentUser?.email, currentUser) ||
-    Boolean(currentUser?.fullName?.toLowerCase().includes('shahzad')) ||
-    (currentUser?.role as string) === 'SUPER_ADMIN' ||
-    (currentUser?.role as string) === 'MANAGING_DIRECTOR' ||
-    (currentUser?.role as string) === 'EXECUTIVE_DIRECTOR';
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
   // Core KPI Calculations for Today
   const todayDateStr = new Date().toISOString().slice(0, 10);
@@ -399,7 +335,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   }, [recoveries, todayDateStr]);
 
   const pendingOrders = useMemo(() => {
-<<<<<<< HEAD
     return orders.filter(
       (o) =>
         o.status !== 'APPROVED' &&
@@ -423,25 +358,14 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
         ((r.status as string) === 'PENDING_VERIFICATION' ||
           (r.status as string) === 'PENDING')
     );
-=======
-    return orders.filter((o) => (o.status as string) === 'SUBMITTED' || (o.status as string) === 'PENDING_APPROVAL');
-  }, [orders]);
-
-  const pendingRecoveries = useMemo(() => {
-    return recoveries.filter((r) => r.status === 'PENDING_VERIFICATION');
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
   }, [recoveries]);
 
   const pendingCustomers = useMemo(() => {
     return customers.filter(
-<<<<<<< HEAD
       (c) =>
         c.approvalStatus !== 'APPROVED' &&
         c.status !== 'ACTIVE' &&
         (c.approvalStatus === 'PENDING_APPROVAL' || c.status === 'PENDING_APPROVAL')
-=======
-      (c) => c.approvalStatus === 'PENDING_APPROVAL' || c.status === 'PENDING_APPROVAL'
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     );
   }, [customers]);
 
@@ -550,7 +474,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-<<<<<<< HEAD
   const pendingTotalCount = pendingOrders.length + pendingRecoveries.length + pendingCustomers.length;
 
   const canViewItem = (perms?: Permission[]) => {
@@ -831,233 +754,33 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               {isDarkMode ? <Sun className="w-4 h-4 text-[#F59E0B]" /> : <Moon className="w-4 h-4 text-[#0B132B]" />}
             </button>
 
-=======
-  return (
-    <div className="min-h-screen bg-[#f4f6f8] dark:bg-[#070c14] text-slate-900 dark:text-slate-100 flex flex-col lg:flex-row antialiased">
-      {/* 1. Desktop Modern Sidebar */}
-      <motion.aside
-        initial={{ x: -260, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full lg:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0"
-      >
-        {/* Brand & Platform Header */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <NationalLightLogo size="sm" showGlow={false} />
-            <div>
-              <span className="font-black text-sm tracking-tight text-slate-900 dark:text-white block">
-                N-LINK 360
-              </span>
-              <span className="text-[10px] text-teal-800 dark:text-teal-400 font-extrabold uppercase tracking-wider block">
-                Command Center
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* User Identity Box */}
-        <div className="p-4 mx-3 my-2 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-teal-800 text-white font-bold text-xs flex items-center justify-center shrink-0">
-              {currentUser.avatarInitials || 'NL'}
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-xs font-black text-slate-900 dark:text-white truncate block">
-                {currentUser.fullName}
-              </span>
-              <span className="text-[10px] text-teal-800 dark:text-teal-300 font-bold block truncate">
-                {isShahzad ? '👑 Sole Signing Authority' : currentUser.roleTitle || 'Head Office'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Links */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {[
-            { id: 'OVERVIEW' as const, label: 'Overview', icon: LayoutDashboard },
-            {
-              id: 'APPROVALS' as const,
-              label: 'Approvals',
-              icon: CheckSquare,
-              badge: pendingOrders.length + pendingRecoveries.length + pendingCustomers.length,
-            },
-            { id: 'FIELD_FORCE' as const, label: 'Field Force', icon: Users2 },
-            { id: 'CUSTOMERS' as const, label: 'Dealers', icon: Building2 },
-            { id: 'SALES' as const, label: 'Sales & Invoices', icon: ShoppingBag },
-            { id: 'FINANCE' as const, label: 'Finance & Recovery', icon: CreditCard },
-            { id: 'REPORTS' as const, label: 'Reports', icon: FileBarChart2 },
-            { id: 'MANAGE_TOWNS' as const, label: 'Manage Towns', icon: MapPin },
-            { id: 'SETTINGS' as const, label: 'Settings & Sync', icon: Settings },
-          ].map((item, idx) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-
-            return (
-              <motion.button
-                key={item.id}
-                type="button"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: idx * 0.04 }}
-                whileHover={{ x: isActive ? 0 : 5, scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setSelectedCustomerIdFor360(null);
-                }}
-                className={`w-full px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center justify-between transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-teal-800 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-teal-300' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                </div>
-                {Boolean(item.badge && item.badge > 0) && (
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-black ${
-                      isActive ? 'bg-amber-400 text-slate-950' : 'bg-amber-100 text-amber-900'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </motion.button>
-            );
-          })}
-        </nav>
-
-        {/* Footer Actions (Switch to Field Mobile / Logout) */}
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
-          {onOpenShareModal && (
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onOpenShareModal}
-              className="w-full py-2.5 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
-            >
-              <Share2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>🔗 Share Team Working Link</span>
-            </motion.button>
-          )}
-
-          {onSwitchToFieldMobile && (
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onSwitchToFieldMobile}
-              className="w-full py-2.5 px-3 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 hover:bg-teal-100 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <Smartphone className="w-4 h-4" />
-              <span>📱 Switch to Mobile Version</span>
-            </motion.button>
-          )}
-
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onSignOut}
-            className="w-full py-2 px-3 rounded-xl text-slate-500 hover:text-rose-600 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
-          </motion.button>
-        </div>
-      </motion.aside>
-
-      {/* 2. Main Content Viewport */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        {/* Top Desktop Bar */}
-        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-black text-slate-900 dark:text-white capitalize">
-              {activeTab.replace('_', ' ')}
-            </h1>
-            <span className="text-xs text-slate-400 font-medium">
-              National Lights &bull; Enterprise 360
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            {/* Sole Approver Shield Tag */}
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
-              <span>Approver: Shahzad Ullah</span>
-            </div>
-
-            {onOpenShareModal && (
-              <button
-                type="button"
-                onClick={onOpenShareModal}
-                className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-xs"
-                title="Share unique working link with field officers & directors"
-              >
-                <Share2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Share Team Link</span>
-              </button>
-            )}
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
 
             {onSyncGoogleSheet && (
               <button
                 type="button"
                 onClick={() => onSyncGoogleSheet()}
                 disabled={isSyncingSheet}
-<<<<<<< HEAD
                 className="btn-outline"
                 title="Sync Google Sheets"
               >
                 <RefreshCw className={`w-3.5 h-3.5 text-[#0D9488] dark:text-blue-400 ${isSyncingSheet ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">{isSyncingSheet ? 'Syncing...' : 'Sync'}</span>
-=======
-                className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheet ? 'animate-spin' : ''}`} />
-                <span>{isSyncingSheet ? 'Syncing...' : 'Sync Sheet'}</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               </button>
             )}
 
             <button
               type="button"
               onClick={() => setIsAddCustomerModalOpen(true)}
-<<<<<<< HEAD
               className="btn-primary"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Customer</span>
-=======
-              className="px-3.5 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-700 text-white text-xs font-black flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>+ Add Customer</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenSyncModal}
-              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-teal-700" />
-              <span>Sync Cloud</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
             </button>
           </div>
         </header>
 
         {/* Dynamic Body Content */}
-<<<<<<< HEAD
         <main className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] w-full mx-auto">
-=======
-        <main className="p-6 space-y-6 max-w-7xl">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
           {/* ==================================================== */}
           {/* CUSTOMER 360 OVERLAY IF SELECTED */}
           {/* ==================================================== */}
@@ -1095,22 +818,18 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   recoveries={recoveries}
                   ledgerEntries={ledgerEntries}
                   onBack={() => setCustomer360SubView('360')}
-<<<<<<< HEAD
                   onApproveOrder={onApproveOrder}
                   onApproveRecovery={onApproveRecovery}
                   onCancelOrReverseOrder={onCancelOrReverseOrder}
                   onSaveOrderEdit={onSaveOrderEdit}
                   onCancelOrReverseRecovery={onCancelOrReverseRecovery}
                   onSaveRecoveryEdit={onSaveRecoveryEdit}
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 />
               )}
             </div>
           ) : (
             <>
               {/* ==================================================== */}
-<<<<<<< HEAD
               {/* EMPLOYEE MANAGEMENT TAB (DEPARTMENT 1) */}
               {/* ==================================================== */}
               {activeTab === 'EMPLOYEE_MANAGEMENT' && (
@@ -1226,218 +945,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       }}
                     />
                   </Suspense>
-=======
-              {/* 1. OVERVIEW TAB (COMMAND CENTER) */}
-              {/* ==================================================== */}
-              {activeTab === 'OVERVIEW' && (
-                <div className="space-y-6 animate-in fade-in duration-200">
-                  {/* Top 5 KPI Summary Cards */}
-                  <div>
-                    <span className="text-xs font-black uppercase tracking-wider text-slate-400 block mb-3">
-                      Today&apos;s Operational Snapshot
-                    </span>
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Today&apos;s Sales</span>
-                        <span className="text-lg font-black font-mono text-teal-800 dark:text-teal-300 mt-1 block">
-                          Rs. {todaySales.toLocaleString()}
-                        </span>
-                      </div>
-
-                      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Today&apos;s Recovery</span>
-                        <span className="text-lg font-black font-mono text-emerald-800 dark:text-emerald-300 mt-1 block">
-                          Rs. {todayRecovery.toLocaleString()}
-                        </span>
-                      </div>
-
-                      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-                        <span className="text-[10px] font-extrabold uppercase text-amber-700 dark:text-amber-400 block">Pending Orders</span>
-                        <span className="text-lg font-black font-mono text-amber-800 dark:text-amber-300 mt-1 block">
-                          {pendingOrders.length}
-                        </span>
-                      </div>
-
-                      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-                        <span className="text-[10px] font-extrabold uppercase text-amber-700 dark:text-amber-400 block">Pending Payments</span>
-                        <span className="text-lg font-black font-mono text-amber-800 dark:text-amber-300 mt-1 block">
-                          {pendingRecoveries.length}
-                        </span>
-                      </div>
-
-                      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs col-span-2 lg:col-span-1">
-                        <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Total Outstanding</span>
-                        <span className="text-lg font-black font-mono text-slate-900 dark:text-white mt-1 block">
-                          Rs. {totalOutstanding.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quick Action Operations Command Hub (Direct Clickable Buttons for Daily Recovery, Ordering, Invoices, Ledgers) */}
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 flex items-center justify-center">
-                          <Sparkles className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                            Quick Operations Command Hub
-                          </h3>
-                          <p className="text-[11px] text-slate-400 font-medium">
-                            Direct 1-click execution for field and executive actions
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300">
-                        Live System
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {/* Button 1: Daily Recovery */}
-                      <button
-                        type="button"
-                        onClick={() => setIsRecoveryDrawerOpen(true)}
-                        className="min-h-[48px] px-3.5 py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer"
-                        title="Log payment recovery collection"
-                      >
-                        <Wallet className="w-4 h-4 stroke-[2.5]" />
-                        <span>+ Daily Recovery</span>
-                      </button>
-
-                      {/* Button 2: Daily Ordering */}
-                      <button
-                        type="button"
-                        onClick={() => setIsOrderDrawerOpen(true)}
-                        className="min-h-[48px] px-3.5 py-3 rounded-2xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer"
-                        title="Book sales order"
-                      >
-                        <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
-                        <span>+ Daily Ordering</span>
-                      </button>
-
-                      {/* Button 3: Invoices */}
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('SALES')}
-                        className="min-h-[48px] px-3.5 py-3 rounded-2xl bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900 text-sky-800 dark:text-sky-300 font-bold text-xs flex items-center justify-center gap-2 border border-sky-200 dark:border-sky-800 transition-all active:scale-95 cursor-pointer"
-                        title="View bills and commercial invoices"
-                      >
-                        <Receipt className="w-4 h-4 text-sky-700 dark:text-sky-400" />
-                        <span>Invoices &amp; Bills</span>
-                      </button>
-
-                      {/* Button 4: Khata Ledgers */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveTab('CUSTOMERS');
-                          setDealersViewMode('CARDS');
-                        }}
-                        className="min-h-[48px] px-3.5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-200/80 dark:border-slate-700/80 transition-all active:scale-95 cursor-pointer"
-                        title="View Dealer Khata Ledgers &amp; Dossiers"
-                      >
-                        <BookOpen className="w-4 h-4 text-teal-700 dark:text-teal-400" />
-                        <span>Khata Ledgers &amp; Etc</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Approval Center Callout Banner */}
-                  {(pendingOrders.length > 0 || pendingRecoveries.length > 0) && (
-                    <div className="bg-gradient-to-r from-amber-950/80 via-amber-900/60 to-slate-900 p-5 rounded-3xl border border-amber-700/50 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
-                      <div className="space-y-1">
-                        <span className="text-[11px] font-black uppercase tracking-widest text-amber-300 flex items-center gap-1.5">
-                          <AlertTriangle className="w-4 h-4 text-amber-400" />
-                          Executive Approval Center
-                        </span>
-                        <h2 className="text-base font-black text-white">
-                          {pendingOrders.length} Orders &bull; {pendingRecoveries.length} Payments Awaiting Shahzad Ullah
-                        </h2>
-                        <p className="text-xs text-amber-200/80">
-                          Transactions will post to official customer ledgers only upon executive confirmation.
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('APPROVALS')}
-                        className="px-5 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md cursor-pointer shrink-0"
-                      >
-                        <span>REVIEW APPROVALS</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Two-Column Overview Layout: Town Activity & Field Force Status */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Town Activity Table */}
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                          Town Activity &amp; Balances
-                        </span>
-                        <span className="text-[11px] font-bold text-slate-400">
-                          {townActivityData.length} Active Towns
-                        </span>
-                      </div>
-
-                      <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-80 overflow-y-auto">
-                        {townActivityData.map((t) => (
-                          <div key={t.town} className="py-2.5 flex items-center justify-between text-xs">
-                            <div>
-                              <span className="font-bold text-slate-900 dark:text-white block">{t.town}</span>
-                              <span className="text-[11px] text-slate-400">{t.customerCount} Dealers &bull; Sales: Rs. {t.sales.toLocaleString()}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="font-mono font-bold text-slate-900 dark:text-white block">
-                                Rs. {t.outstanding.toLocaleString()}
-                              </span>
-                              <span className="text-[10px] text-emerald-600 font-bold">
-                                Rec: Rs. {t.recovery.toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Field Force Roster */}
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                          Field Force Attendance ({NLINK_TEAM_ROSTER.length})
-                        </span>
-                        <span className="text-[11px] font-bold text-emerald-700">
-                          Active Shifts
-                        </span>
-                      </div>
-
-                      <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-80 overflow-y-auto">
-                        {NLINK_TEAM_ROSTER.map((officer) => (
-                          <div key={officer.id} className="py-2.5 flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 font-bold text-[11px] flex items-center justify-center">
-                                {officer.avatarInitials}
-                              </div>
-                              <div>
-                                <span className="font-bold text-slate-900 dark:text-white block">{officer.fullName}</span>
-                                <span className="text-[11px] text-slate-400">{officer.roleTitle} &bull; {officer.assignedTowns?.[0] || 'Field'}</span>
-                              </div>
-                            </div>
-
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                              Checked In
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 </div>
               )}
 
@@ -1534,7 +1041,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                                 <div>
                                   <div className="flex items-center gap-2">
-<<<<<<< HEAD
                                     <span className="font-mono tabular-nums font-bold text-sm text-slate-900 dark:text-white">
                                       Order #{ord.orderNumber || ord.id?.slice(-6)}
                                     </span>
@@ -1551,30 +1057,12 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 </div>
 
                                 <span className="text-xs font-mono tabular-nums text-slate-400">
-=======
-                                    <span className="font-mono font-black text-sm text-slate-900 dark:text-white">
-                                      Order #{ord.orderNumber || ord.id?.slice(-6)}
-                                    </span>
-                                    {isWarning && (
-                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-900 border border-amber-300">
-                                        Credit Limit Warning
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-slate-500 mt-0.5">
-                                    Customer: <strong>{ord.customerName}</strong> ({cust?.town || 'Town'}) &bull; Officer: {ord.salesUserName}
-                                  </p>
-                                </div>
-
-                                <span className="text-xs font-mono font-bold text-slate-400">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                   {ord.orderDate || ord.createdAt?.slice(0, 10)}
                                 </span>
                               </div>
 
                               {/* Financial Matrix */}
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-<<<<<<< HEAD
                                 <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
                                   <span className="text-[10px] text-slate-400 block font-medium">Old Balance</span>
                                   <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
@@ -1596,35 +1084,11 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
                                   <span className="text-[10px] text-slate-400 block font-medium">Credit Limit</span>
                                   <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
-=======
-                                <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl">
-                                  <span className="text-[10px] text-slate-400 block font-bold">Old Balance</span>
-                                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                                    Rs. {oldBalance.toLocaleString()}
-                                  </span>
-                                </div>
-                                <div className="bg-teal-50 dark:bg-teal-950/40 p-2.5 rounded-xl">
-                                  <span className="text-[10px] text-teal-800 dark:text-teal-300 block font-bold">Order Amount</span>
-                                  <span className="font-mono font-black text-teal-900 dark:text-teal-200">
-                                    Rs. {ordAmount.toLocaleString()}
-                                  </span>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl">
-                                  <span className="text-[10px] text-slate-400 block font-bold">Projected Balance</span>
-                                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                                    Rs. {projectedBalance.toLocaleString()}
-                                  </span>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl">
-                                  <span className="text-[10px] text-slate-400 block font-bold">Credit Limit</span>
-                                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                     Rs. {creditLimit.toLocaleString()}
                                   </span>
                                 </div>
                               </div>
 
-<<<<<<< HEAD
                               {/* Operational 5-Step Flow Stepper */}
                               <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
                                 <span className="font-semibold text-emerald-700 dark:text-emerald-400">1. Sales Entry</span>
@@ -1642,30 +1106,19 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
                                 <span className="text-[11px] text-slate-500 font-medium">
                                   Items: {ord.items?.length || 1} SKUs <span aria-hidden="true">&middot;</span> Cartons: {ord.items?.reduce((s, i) => s + (i.cartons || 0), 0) || 0}
-=======
-                              {/* Approver Action Bar */}
-                              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                                <span className="text-[11px] text-slate-500 font-medium">
-                                  Items: {ord.items?.length || 1} SKUs &bull; Cartons: {ord.items?.reduce((s, i) => s + (i.cartons || 0), 0) || 0}
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                 </span>
 
                                 <div className="flex items-center gap-2">
                                   <button
                                     type="button"
                                     onClick={() => setRejectionTarget({ id: ord.id || ord.orderNumber, type: 'ORDER', code: ord.orderNumber })}
-<<<<<<< HEAD
                                     className="min-h-[40px] px-3.5 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 font-semibold text-xs hover:bg-rose-100 dark:hover:bg-rose-900 transition-colors cursor-pointer"
-=======
-                                    className="px-3.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 font-bold text-xs hover:bg-rose-100 cursor-pointer"
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                   >
                                     Reject
                                   </button>
 
                                   <button
                                     type="button"
-<<<<<<< HEAD
                                     onClick={() => setDispatchModalOrder(ord)}
                                     className="min-h-[40px] px-4 py-2 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-bold text-xs flex items-center gap-1.5 hover:bg-teal-100 dark:hover:bg-teal-900 transition-colors cursor-pointer shadow-xs active:scale-95"
                                     title="Run 5-Step Operational Flow: Sales Entry -> Dispatch Note -> Stock Availability Check -> Invoice (-15%) -> Ledger"
@@ -1685,13 +1138,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   >
                                     <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
                                     <span>Approve (Shahzad Ullah)</span>
-=======
-                                    onClick={() => onApproveOrder(ord.id || ord.orderNumber, 'SHAHZAD')}
-                                    className="px-4 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
-                                  >
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-                                    <span>Approve (ShahzadUllah)</span>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                   </button>
                                 </div>
                               </div>
@@ -1724,7 +1170,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             >
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                                 <div>
-<<<<<<< HEAD
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="font-mono tabular-nums font-bold text-sm text-slate-900 dark:text-white block">
                                       Recovery #{rec.id}
@@ -1735,67 +1180,36 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   </div>
                                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                     Customer: <strong className="text-slate-800 dark:text-slate-200">{rec.customerName}</strong> <span aria-hidden="true">&middot;</span> Collector: {rec.salesUserName}
-=======
-                                  <span className="font-mono font-black text-sm text-slate-900 dark:text-white block">
-                                    Recovery #{rec.id}
-                                  </span>
-                                  <p className="text-xs text-slate-500 mt-0.5">
-                                    Customer: <strong>{rec.customerName}</strong> &bull; Collector: {rec.salesUserName}
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                   </p>
                                 </div>
 
                                 <div className="text-right">
-<<<<<<< HEAD
                                   <span className="text-base font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-400 block">
                                     Rs. {rec.amount.toLocaleString()} PKR
                                   </span>
                                   <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-=======
-                                  <span className="text-base font-black font-mono text-emerald-700 dark:text-emerald-400 block">
-                                    Rs. {rec.amount.toLocaleString()} PKR
-                                  </span>
-                                  <span className="text-[10px] font-bold text-slate-400 uppercase">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                     {rec.paymentMode} {rec.bankName ? `(${rec.bankName})` : ''}
                                   </span>
                                 </div>
                               </div>
 
-<<<<<<< HEAD
                               <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
                                 <div>
                                   <span className="text-[10px] text-slate-400 block font-medium">Balance Before</span>
                                   <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
-=======
-                              <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl">
-                                <div>
-                                  <span className="text-[10px] text-slate-400 block">Balance Before</span>
-                                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                     Rs. {balBefore.toLocaleString()}
                                   </span>
                                 </div>
                                 <div className="text-right">
-<<<<<<< HEAD
                                   <span className="text-[10px] text-slate-400 block font-medium">Balance After Confirmation</span>
                                   <span className="font-mono tabular-nums font-bold text-emerald-800 dark:text-emerald-300">
-=======
-                                  <span className="text-[10px] text-slate-400 block">Balance After Confirmation</span>
-                                  <span className="font-mono font-black text-teal-800 dark:text-teal-300">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                     Rs. {balAfter.toLocaleString()}
                                   </span>
                                 </div>
                               </div>
 
-<<<<<<< HEAD
                               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
                                 <span className="text-[11px] text-slate-500 font-medium">
-=======
-                              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                                <span className="text-[11px] text-slate-500">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                   Ref: {rec.instrumentNumber || 'Direct Payment'}
                                 </span>
 
@@ -1803,18 +1217,13 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => setRejectionTarget({ id: rec.id, type: 'RECOVERY', code: rec.id })}
-<<<<<<< HEAD
                                     className="min-h-[40px] px-3.5 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 font-semibold text-xs hover:bg-rose-100 dark:hover:bg-rose-900 transition-colors cursor-pointer"
-=======
-                                    className="px-3.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 font-bold text-xs hover:bg-rose-100 cursor-pointer"
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                   >
                                     Reject
                                   </button>
 
                                   <button
                                     type="button"
-<<<<<<< HEAD
                                     disabled={!isShahzad}
                                     onClick={() => onApproveRecovery(rec.id, 'SHAHZAD')}
                                     className={`min-h-[40px] px-4 py-2 rounded-lg bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer active:scale-95 ${
@@ -1823,12 +1232,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                     title={!isShahzad ? 'Confirmation authority strictly restricted to Shahzad Ullah' : 'Confirm Payment & Credit Ledger'}
                                   >
                                     <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
-=======
-                                    onClick={() => onApproveRecovery(rec.id, 'SHAHZAD')}
-                                    className="px-4 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
-                                  >
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                     <span>Confirm (ShahzadUllah)</span>
                                   </button>
                                 </div>
@@ -2300,7 +1703,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   {dealersViewMode === 'TABLE' && (
                     <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                       <div className="overflow-x-auto">
-<<<<<<< HEAD
                         <table className="w-full text-left text-xs border-collapse">
                           <thead className="bg-[#F2F4F6] dark:bg-slate-800/80 text-slate-500 uppercase tracking-wider text-[10px] font-bold border-b border-[#E2E8F0] dark:border-slate-800">
                             <tr>
@@ -2314,21 +1716,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-800">
-=======
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase tracking-wider text-[10px] font-black border-b border-slate-100 dark:border-slate-800">
-                            <tr>
-                              <th className="py-3.5 px-4">Code</th>
-                              <th className="py-3.5 px-4">Dealer / Shop Name</th>
-                              <th className="py-3.5 px-4">Proprietor &amp; Town</th>
-                              <th className="py-3.5 px-4">Phone</th>
-                              <th className="py-3.5 px-4 text-right">Net Balance</th>
-                              <th className="py-3.5 px-4 text-right">Credit Limit</th>
-                              <th className="py-3.5 px-4 text-center">Clickable Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                             {customers
                               .filter(
                                 (c) =>
@@ -2344,7 +1731,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 const creditLimit = c.creditLimit || 350000;
 
                                 return (
-<<<<<<< HEAD
                                   <tr key={c.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                                     <td className="py-2 px-3 font-mono tabular-nums font-bold text-[#0D9488] dark:text-blue-400">
                                       {c.customerCode}
@@ -2417,86 +1803,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                             },
                                           ]}
                                         />
-=======
-                                  <tr key={c.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                                    <td className="py-3 px-4 font-mono font-bold text-teal-800 dark:text-teal-300">
-                                      {c.customerCode}
-                                    </td>
-                                    <td className="py-3 px-4">
-                                      <span
-                                        onClick={() => handleOpen360ForCustomer(c)}
-                                        className="font-black text-slate-900 dark:text-white cursor-pointer hover:text-teal-700 block"
-                                      >
-                                        {c.companyName}
-                                      </span>
-                                      <span className="text-[10px] font-black uppercase text-teal-700 dark:text-teal-400">
-                                        {c.type || 'DEALER'}
-                                      </span>
-                                    </td>
-                                    <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
-                                      <span className="block font-medium">{c.contactPerson || 'Proprietor'}</span>
-                                      <span className="text-[10px] text-slate-400">{c.town || c.city}</span>
-                                    </td>
-                                    <td className="py-3 px-4 font-mono text-slate-500">
-                                      {c.phone || '-'}
-                                    </td>
-                                    <td className="py-3 px-4 text-right font-mono font-black text-slate-900 dark:text-white">
-                                      Rs. {netBal.toLocaleString()}
-                                    </td>
-                                    <td className="py-3 px-4 text-right font-mono text-slate-500">
-                                      Rs. {creditLimit.toLocaleString()}
-                                    </td>
-                                    <td className="py-3 px-4">
-                                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                        <button
-                                          type="button"
-                                          onClick={(e) => handleOpenRecoveryForCustomer(c, e)}
-                                          className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                                          title="Daily Recovery"
-                                        >
-                                          <Wallet className="w-3 h-3" />
-                                          <span>+ Recovery</span>
-                                        </button>
-
-                                        <button
-                                          type="button"
-                                          onClick={(e) => handleOpenOrderForCustomer(c, e)}
-                                          className="px-2.5 py-1.5 rounded-lg bg-teal-800 hover:bg-teal-900 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                                          title="Daily Ordering"
-                                        >
-                                          <ShoppingBag className="w-3 h-3" />
-                                          <span>+ Order</span>
-                                        </button>
-
-                                        <button
-                                          type="button"
-                                          onClick={(e) => handleOpenInvoicesForCustomer(c, e)}
-                                          className="px-2 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                                          title="Invoices"
-                                        >
-                                          <Receipt className="w-3 h-3 text-sky-700" />
-                                          <span>Invoices</span>
-                                        </button>
-
-                                        <button
-                                          type="button"
-                                          onClick={(e) => handleOpenLedgerForCustomer(c, e)}
-                                          className="px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                                          title="Khata Ledger"
-                                        >
-                                          <BookOpen className="w-3 h-3 text-teal-700" />
-                                          <span>Ledger</span>
-                                        </button>
-
-                                        <button
-                                          type="button"
-                                          onClick={() => setDesktopEtcCustomer(c)}
-                                          className="px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                                          title="Etc & More"
-                                        >
-                                          <MoreHorizontal className="w-3 h-3" />
-                                        </button>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                                       </div>
                                     </td>
                                   </tr>
@@ -2511,7 +1817,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               )}
 
               {/* ==================================================== */}
-<<<<<<< HEAD
               {/* 4. SALES / ORDERING TAB (Order Form | Order List)    */}
               {/* ==================================================== */}
               {activeTab === 'SALES' && (
@@ -2540,37 +1845,18 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       >
                         Order List ({orders.length})
                       </button>
-=======
-              {/* 4. SALES TAB */}
-              {/* ==================================================== */}
-              {activeTab === 'SALES' && (
-                <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg font-black text-slate-900 dark:text-white">
-                        Sales Orders &amp; Invoices
-                      </h2>
-                      <p className="text-xs text-slate-500 font-medium">
-                        {orders.length} Total Booked Orders
-                      </p>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                     </div>
 
                     <button
                       type="button"
                       onClick={onOpenRateCard}
-<<<<<<< HEAD
                       className="btn-primary text-xs w-fit"
-=======
-                      className="px-3.5 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer"
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                     >
                       <Receipt className="w-3.5 h-3.5" />
                       <span>Rate List</span>
                     </button>
                   </div>
 
-<<<<<<< HEAD
                   {salesOrderView === 'ORDER_FORM' ? (
                     <BulkSkuOrderForm
                       currentUser={currentUser}
@@ -2790,56 +2076,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       </div>
                     </div>
                   )}
-=======
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
-                    {orders.map((o) => (
-                      <div key={o.id || o.orderNumber} className="p-4 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <div>
-                          <span className="font-mono font-bold text-slate-900 dark:text-white block">
-                            #{o.orderNumber || o.id?.slice(-6)} &bull; {o.customerName}
-                          </span>
-                          <span className="text-[11px] text-slate-400">
-                            {o.orderDate || o.createdAt?.slice(0, 10)} &bull; {o.items?.length || 1} SKUs &bull; Officer: {o.salesUserName}
-                          </span>
-                        </div>
-
-                        <div className="text-right flex items-center gap-3">
-                          <div>
-                            <span className="font-mono font-black text-slate-900 dark:text-white block">
-                              Rs. {Number(o.totalAmount || 0).toLocaleString()}
-                            </span>
-                            <span
-                              className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full ${
-                                o.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                              }`}
-                            >
-                              {o.status || 'SUBMITTED'}
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const c = customers.find((cust) => cust.id === o.customerId || cust.companyName === o.customerName);
-                              if (c) {
-                                downloadSalesInvoicePdf({
-                                  customer: c,
-                                  order: o,
-                                  previousBalance: c.currentBalance ?? c.openingBalance ?? 0,
-                                  preparedByName: currentUser.fullName,
-                                });
-                              }
-                            }}
-                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 cursor-pointer"
-                            title="Download PDF"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 </div>
               )}
 
@@ -2857,7 +2093,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                     </p>
                   </div>
 
-<<<<<<< HEAD
                   <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                     {/* Desktop Table View (>= lg) */}
                     <div className="hidden lg:block overflow-x-auto">
@@ -2974,28 +2209,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         );
                       })}
                     </div>
-=======
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
-                    {recoveries.map((r) => (
-                      <div key={r.id} className="p-4 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <div>
-                          <span className="font-mono font-bold text-slate-900 dark:text-white block">
-                            #{r.id} &bull; {r.customerName}
-                          </span>
-                          <span className="text-[11px] text-slate-400">
-                            {r.recordedAt?.slice(0, 10)} &bull; {r.paymentMode} &bull; Collector: {r.salesUserName}
-                          </span>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="font-mono font-black text-emerald-700 dark:text-emerald-400 text-sm block">
-                            Rs. {r.amount.toLocaleString()} PKR
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase">{r.status || 'PENDING'}</span>
-                        </div>
-                      </div>
-                    ))}
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                   </div>
                 </div>
               )}
@@ -3086,11 +2299,8 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       currentUser={currentUser}
                       orders={orders}
                       recoveries={recoveries}
-<<<<<<< HEAD
                       onSaveAttendanceEdit={onSaveAttendanceEdit}
                       onDeleteAttendance={onDeleteAttendance}
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                     />
                   )}
 
@@ -3111,7 +2321,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               )}
 
               {/* ==================================================== */}
-<<<<<<< HEAD
               {/* 7. REPORTS & AUDIT TAB (DEPARTMENT 10) */}
               {/* ==================================================== */}
               {activeTab === 'REPORTS' && (
@@ -3123,62 +2332,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   inventoryBalances={inventoryBalances}
                   attendanceRecords={attendanceRecords}
                 />
-=======
-              {/* 7. REPORTS TAB */}
-              {/* ==================================================== */}
-              {activeTab === 'REPORTS' && (
-                <div className="space-y-4 animate-in fade-in duration-200 text-xs">
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
-                    <h2 className="text-lg font-black text-slate-900 dark:text-white">
-                      Executive Reports &amp; Analytics
-                    </h2>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Download and print comprehensive operational summaries
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                      <span className="font-black text-slate-900 dark:text-white block">Sales Summary Report</span>
-                      <p className="text-[11px] text-slate-500">Town-wise order breakdown &amp; volume</p>
-                      <button
-                        type="button"
-                        onClick={() => exportSalesSummaryCsv(orders)}
-                        className="w-full py-2.5 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Export Orders CSV</span>
-                      </button>
-                    </div>
-
-                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                      <span className="font-black text-slate-900 dark:text-white block">Recovery Audit Statement</span>
-                      <p className="text-[11px] text-slate-500">Shahzad Ullah verified payment records</p>
-                      <button
-                        type="button"
-                        onClick={() => exportRecoveryAuditCsv(recoveries)}
-                        className="w-full py-2.5 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Export Recovery CSV</span>
-                      </button>
-                    </div>
-
-                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                      <span className="font-black text-slate-900 dark:text-white block">Outstanding Aging Report</span>
-                      <p className="text-[11px] text-slate-500">Dealers with high credit balances</p>
-                      <button
-                        type="button"
-                        onClick={() => exportAgingReportCsv(customers)}
-                        className="w-full py-2.5 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Export Aging CSV</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
               )}
 
               {/* ==================================================== */}
@@ -3216,7 +2369,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
                     <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                       <div>
-<<<<<<< HEAD
                         <span className="font-bold text-slate-900 dark:text-white block">Automatic Background Sync</span>
                         <span className="text-[11px] text-slate-500">Orders, recoveries and ledgers sync automatically in the background</span>
                       </div>
@@ -3231,18 +2383,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                           <span>{isSyncingSheet ? 'Syncing...' : 'Sync'}</span>
                         </button>
                       )}
-=======
-                        <span className="font-black text-slate-900 dark:text-white block">Two-Way Google Sheets Sync</span>
-                        <span className="text-[11px] text-slate-500">Synchronize all orders, recoveries and customer ledgers</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={onOpenSyncModal}
-                        className="px-4 py-2 rounded-xl bg-teal-800 text-white font-bold"
-                      >
-                        Configure Sync
-                      </button>
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                     </div>
 
                     {/* Global Session Invalidation Action */}
@@ -3290,7 +2430,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               {/* ==================================================== */}
               {activeTab === 'MANAGE_TOWNS' && (
                 <div className="animate-in fade-in duration-200">
-<<<<<<< HEAD
                   <Suspense fallback={<NatureSkeleton variant="full" />}>
                     <ManageTownsInterface
                       townNodes={effectiveTownNodes}
@@ -3318,12 +2457,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       }}
                     />
                   </Suspense>
-=======
-                  <ManageTownsInterface
-                    townNodes={effectiveTownNodes}
-                    onUpdateTownNodes={handleUpdateTowns}
-                  />
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                 </div>
               )}
             </>
@@ -3540,11 +2673,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-<<<<<<< HEAD
                   <div className="w-9 h-9 rounded-xl bg-[#003ECC] text-white flex items-center justify-center shrink-0">
-=======
-                  <div className="w-9 h-9 rounded-xl bg-indigo-700 text-white flex items-center justify-center shrink-0">
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
                     <Eye className="w-4 h-4" />
                   </div>
                   <div className="text-left">
@@ -3558,7 +2687,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
           </div>
         </div>
       )}
-<<<<<<< HEAD
 
       {/* 5-Step Operational Dispatch & Invoicing Modal */}
       {dispatchModalOrder && (
@@ -3642,8 +2770,6 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
           </div>
         </div>
       )}
-=======
->>>>>>> b797dab99a15ea2216a925a1d14a7b8ceca1050a
     </div>
   );
 };
