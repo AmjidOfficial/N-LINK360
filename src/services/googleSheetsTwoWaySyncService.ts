@@ -162,6 +162,21 @@ export function addPendingUpload(
   meta?: { customerName?: string; userName?: string }
 ): PendingUploadItem {
   const items = getPendingUploads();
+  const txRef = String(
+    data?.idempotencyKey || data?.orderNumber || data?.recoveryNumber || data?.id || ''
+  ).trim();
+
+  if (txRef) {
+    const existing = items.find(
+      (i) =>
+        i.type === type &&
+        String(i.data?.idempotencyKey || i.data?.orderNumber || i.data?.recoveryNumber || i.data?.id || '').trim() === txRef
+    );
+    if (existing) {
+      return existing;
+    }
+  }
+
   const newItem: PendingUploadItem = {
     id: `upload_${type}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     type,
@@ -478,15 +493,27 @@ export async function flushPendingUploadsToSheet(
   let flushedCount = 0;
   let failedCount = 0;
   const remaining: PendingUploadItem[] = [];
+  const MAX_SHEET_ATTEMPTS = 5;
+  const isPermanentSheetError = (msg?: string) =>
+    /PERMISSION_DENIED|HTTP_400|HTTP_401|HTTP_404|HTTP_422|insufficient|unauthorized/i.test(msg || '');
 
-  // Group pending uploads by type to leverage high-performance batch requests
-  const orderItems = pending.filter((i) => i.type === 'ORDER');
-  const recoveryItems = pending.filter((i) => i.type === 'RECOVERY');
-  const customerItems = pending.filter((i) => i.type === 'CUSTOMER');
-  const attendanceItems = pending.filter((i) => i.type === 'ATTENDANCE');
-  const visitItems = pending.filter((i) => i.type === 'VISIT');
-  const userItems = pending.filter((i) => i.type === 'USER');
-  const productItems = pending.filter((i) => i.type === 'PRODUCT');
+  const retryablePending: PendingUploadItem[] = [];
+  for (const item of pending) {
+    if ((item.attempts || 0) >= MAX_SHEET_ATTEMPTS || isPermanentSheetError(item.lastError)) {
+      remaining.push(item);
+    } else {
+      retryablePending.push(item);
+    }
+  }
+
+  // Group retryable pending uploads by type to leverage high-performance batch requests
+  const orderItems = retryablePending.filter((i) => i.type === 'ORDER');
+  const recoveryItems = retryablePending.filter((i) => i.type === 'RECOVERY');
+  const customerItems = retryablePending.filter((i) => i.type === 'CUSTOMER');
+  const attendanceItems = retryablePending.filter((i) => i.type === 'ATTENDANCE');
+  const visitItems = retryablePending.filter((i) => i.type === 'VISIT');
+  const userItems = retryablePending.filter((i) => i.type === 'USER');
+  const productItems = retryablePending.filter((i) => i.type === 'PRODUCT');
 
   // 1. Batch Push Sales Orders
   if (orderItems.length > 0) {
@@ -905,12 +932,11 @@ export function subscribeToAutoSync(listener: AutoSyncListener): () => void {
   };
 }
 
-let activeAppDataGetter: (() => SupabaseAppData) | null = null;
+let activeAppDataProvider: (() => SupabaseAppData) | null = null;
 
 export function registerAppDataProvider(provider: () => SupabaseAppData): void {
   activeAppDataProvider = provider;
 }
-let activeAppDataProvider: (() => SupabaseAppData) | null = null;
 
 /**
  * Initializes and starts the background 30-minute auto-sync loop

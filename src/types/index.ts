@@ -405,6 +405,7 @@ export type CustomerType = 'DISTRIBUTOR' | 'DEALER' | 'CUSTOMER' | 'SHOP';
 
 export interface Customer {
   id: string;
+  idempotencyKey?: string;
   customerCode: string;
   code?: string;
   companyName: string;
@@ -459,6 +460,7 @@ export interface Customer {
 
 export interface CustomerVisit {
   id: string;
+  idempotencyKey?: string;
   customerId: string;
   customerName?: string;
   salesUserId: string;
@@ -544,6 +546,7 @@ export type InventoryTransactionType =
 
 export interface InventoryTransaction {
   id: string;
+  idempotencyKey?: string;
   transactionNumber: string;
   transactionType: InventoryTransactionType;
   warehouseId: string;
@@ -634,6 +637,7 @@ export type DualApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface SalesOrder {
   id: string;
+  idempotencyKey?: string;
   orderNumber: string;
   customerId: string;
   customerName: string;
@@ -722,6 +726,7 @@ export interface InvoiceItem {
 
 export interface Invoice {
   id: string;
+  idempotencyKey?: string;
   invoiceNumber: string;
   orderId?: string;
   customerId: string;
@@ -808,6 +813,7 @@ export type PaymentMode = 'CASH' | 'CHEQUE' | 'ONLINE_TRANSFER' | 'PAY_ORDER';
 
 export interface Recovery {
   id: string;
+  idempotencyKey?: string;
   recoveryNumber: string;
   customerId: string;
   customerName: string;
@@ -897,6 +903,7 @@ export interface StockReturnItem {
 
 export interface StockReturn {
   id: string;
+  idempotencyKey?: string;
   returnNumber: string;
   customerId: string;
   customerName: string;

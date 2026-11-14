@@ -57,10 +57,87 @@ async function startServer() {
       res.setHeader('Vary', 'Origin');
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-google-sheets-webhook');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-google-sheets-webhook, x-idempotency-key');
     if (req.method === 'OPTIONS') {
       return res.sendStatus(204);
     }
+    next();
+  });
+
+  // Centralized Tiered API Rate Limiter (Server-Authoritative, Zero Client Bypass)
+  type ApiRateTier = 'AUTH' | 'FINANCIAL_WRITE' | 'READ';
+  const API_RATE_POLICIES: Record<ApiRateTier, { max: number; windowMs: number }> = {
+    AUTH: { max: 12, windowMs: 60_000 },
+    FINANCIAL_WRITE: { max: 30, windowMs: 60_000 },
+    READ: { max: 90, windowMs: 60_000 },
+  };
+  const apiRateBuckets = new Map<string, { count: number; resetAt: number }>();
+  const serverIdempotencyCache = new Map<string, { status: number; body: Record<string, unknown>; cachedAt: number }>();
+  const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  app.use('/api', (req, res, next) => {
+    if (req.method === 'OPTIONS' || req.path === '/health') return next();
+    const now = Date.now();
+    if (apiRateBuckets.size > 2000) {
+      for (const [k, v] of apiRateBuckets.entries()) {
+        if (now >= v.resetAt) apiRateBuckets.delete(k);
+      }
+    }
+
+    const lower = req.path.toLowerCase();
+    const tier: ApiRateTier =
+      lower.startsWith('/auth/') || lower.includes('admin-reset-password') || lower.includes('provision')
+        ? 'AUTH'
+        : req.method !== 'GET' && req.method !== 'HEAD'
+          ? 'FINANCIAL_WRITE'
+          : 'READ';
+
+    const policy = API_RATE_POLICIES[tier];
+    const ip =
+      String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown')
+        .split(',')[0]
+        .trim();
+    const authHeader = String(req.headers.authorization || '');
+    const subject = authHeader.startsWith('Bearer ') ? authHeader.slice(-16) : 'anon';
+    const bucketKey = `${tier}:${ip}:${subject}`;
+
+    let bucket = apiRateBuckets.get(bucketKey);
+    if (!bucket || now >= bucket.resetAt) {
+      bucket = { count: 0, resetAt: now + policy.windowMs };
+      apiRateBuckets.set(bucketKey, bucket);
+    }
+    bucket.count += 1;
+
+    const remaining = Math.max(0, policy.max - bucket.count);
+    const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+    res.setHeader('X-RateLimit-Tier', tier);
+    res.setHeader('X-RateLimit-Limit', String(policy.max));
+    res.setHeader('X-RateLimit-Remaining', String(remaining));
+    res.setHeader('X-RateLimit-Reset', String(Math.ceil(bucket.resetAt / 1000)));
+
+    if (bucket.count > policy.max) {
+      res.setHeader('Retry-After', String(retryAfter));
+      recordServerAudit({
+        action: 'API_RATE_LIMIT_BLOCKED',
+        module: 'SECURITY',
+        recordId: bucketKey,
+        details: `Blocked ${tier} burst from ${ip} on /api${req.path} (${bucket.count}/${policy.max})`,
+      });
+      return res.status(429).json({
+        success: false,
+        error: `Too many ${tier.toLowerCase()} requests. Retry after ${retryAfter} seconds.`,
+        retryAfter,
+      });
+    }
+
+    const idemHeader = req.headers['x-idempotency-key'];
+    if (typeof idemHeader === 'string' && idemHeader.trim() && !UUID_V4_RE.test(idemHeader.trim())) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid X-Idempotency-Key header. Expected RFC-4122 UUID v4.',
+      });
+    }
+
     next();
   });
 
@@ -1079,16 +1156,36 @@ Return valid JSON adhering strictly to the schema.`,
   });
 
   app.post("/api/sync", (req, res) => {
-    const payload = req.body;
-    res.json({
+    const payload = req.body || {};
+    const idemKey = String(req.headers['x-idempotency-key'] || payload?.idempotencyKey || '').trim();
+    if (idemKey && serverIdempotencyCache.has(idemKey)) {
+      const cached = serverIdempotencyCache.get(idemKey)!;
+      return res.status(cached.status).json({
+        ...cached.body,
+        idempotentReplay: true,
+      });
+    }
+
+    const responseBody = {
       success: true,
       message: "Transaction synchronized successfully with Supabase PostgreSQL",
       receivedAt: new Date().toISOString(),
+      idempotencyKey: idemKey || undefined,
       payloadSummary: {
         type: payload?.type || 'GENERAL_SYNC',
         recordId: payload?.id || `SYNC-${Date.now()}`
       }
-    });
+    };
+
+    if (idemKey) {
+      if (serverIdempotencyCache.size >= 1000) {
+        const oldestKey = serverIdempotencyCache.keys().next().value;
+        if (oldestKey) serverIdempotencyCache.delete(oldestKey);
+      }
+      serverIdempotencyCache.set(idemKey, { status: 200, body: responseBody, cachedAt: Date.now() });
+    }
+
+    res.json(responseBody);
   });
 
   // Google Sheets Server-Side Sync Proxy

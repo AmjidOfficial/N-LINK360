@@ -1,11 +1,16 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import type { CustomerVisit, PaymentMode, SalesOrder, CustomerRegistrationRequest } from '../types';
+import type { CustomerVisit, PaymentMode, SalesOrder } from '../types';
 import type { ImportEntityType } from './importEngine';
 import { assertAuthorizedApprover } from './production-users';
+import { generateIdempotencyUuid, isValidUuid } from '../utils/idGenerator';
 
 function db() {
   if (!isSupabaseConfigured || !supabase) return null;
   return supabase;
+}
+
+function resolveIdempotencyKey(candidate?: string): string {
+  return isValidUuid(candidate) ? String(candidate) : generateIdempotencyUuid();
 }
 
 export async function recordAuditLog(input: {
@@ -51,31 +56,47 @@ export async function recordAuditLog(input: {
   }
 }
 
-export async function submitOrder(order: Partial<SalesOrder>, recoveryAmount = 0) {
+export async function submitOrder(order: Partial<SalesOrder>, recoveryAmount = 0, explicitIdempotencyKey?: string) {
   const client = db();
   if (!client) {
     throw new Error('Transaction was not saved. Database connection is unavailable. Please check your Supabase credentials and try again.');
   }
+  const idempotencyKey = resolveIdempotencyKey(explicitIdempotencyKey || order.idempotencyKey);
   const items = (order.items || []).map((item) => ({
     sku_id: item.skuId,
     order_qty: item.orderedQuantity,
     unit_price: item.unitPrice,
   }));
-  const { data, error } = await client.rpc('nlink_submit_order', {
+
+  let { data, error } = await client.rpc('nlink_submit_order', {
     p_customer_id: order.customerId,
     p_items: items,
     p_recovery_amount: recoveryAmount,
     p_remarks: order.creditCheckNotes || null,
+    p_idempotency_key: idempotencyKey,
   });
+
+  // Fallback to 4-arg RPC signature if migration 017 has not yet been applied
+  if (error && /nlink_submit_order/i.test(String(error.message || ''))) {
+    const legacy = await client.rpc('nlink_submit_order', {
+      p_customer_id: order.customerId,
+      p_items: items,
+      p_recovery_amount: recoveryAmount,
+      p_remarks: order.creditCheckNotes || null,
+    });
+    data = legacy.data;
+    error = legacy.error;
+  }
+
   if (error) throw error;
-  
+
   await recordAuditLog({
     action: 'ORDER_SUBMIT',
     module: 'SALES_ORDERS',
     recordType: 'sales_orders',
     recordId: data as string,
-    details: `Sales order ${data} submitted for customer ${order.customerId}`,
-    newValue: { customerId: order.customerId, itemsCount: items.length, recoveryAmount },
+    details: `Sales order ${data} submitted for customer ${order.customerId} (key ${idempotencyKey})`,
+    newValue: { customerId: order.customerId, itemsCount: items.length, recoveryAmount, idempotencyKey },
   });
 
   return data as string;
@@ -233,13 +254,22 @@ export async function ensureRecoveryLedgerEntry(recoveryId: string) {
   }
 }
 
-export async function postInvoice(orderId: string, approverEmail?: string) {
+export async function postInvoice(orderId: string, approverEmail?: string, explicitIdempotencyKey?: string) {
   assertAuthorizedApprover(approverEmail);
   const client = db();
   if (!client) {
     throw new Error('Transaction was not saved. Database connection is unavailable. Please try again.');
   }
-  const { data, error } = await client.rpc('nlink_post_invoice', { p_order_id: orderId });
+  const idempotencyKey = resolveIdempotencyKey(explicitIdempotencyKey);
+  let { data, error } = await client.rpc('nlink_post_invoice', {
+    p_order_id: orderId,
+    p_idempotency_key: idempotencyKey,
+  });
+  if (error && /nlink_post_invoice/i.test(String(error.message || ''))) {
+    const legacy = await client.rpc('nlink_post_invoice', { p_order_id: orderId });
+    data = legacy.data;
+    error = legacy.error;
+  }
   if (error) throw error;
 
   const invoiceId = data as string;
@@ -250,8 +280,8 @@ export async function postInvoice(orderId: string, approverEmail?: string) {
     module: 'INVOICES',
     recordType: 'invoices',
     recordId: invoiceId,
-    details: `Official tax invoice generated for order ${orderId} authorized by ${approverEmail}`,
-    newValue: { invoiceId, orderId, approverEmail },
+    details: `Official tax invoice generated for order ${orderId} authorized by ${approverEmail} (key ${idempotencyKey})`,
+    newValue: { invoiceId, orderId, approverEmail, idempotencyKey },
   });
 
   return invoiceId;
@@ -291,13 +321,14 @@ export async function recordRecovery(input: {
   instrumentNumber?: string;
   bankName?: string;
   remarks?: string;
+  idempotencyKey?: string;
 }) {
   const client = db();
   if (!client) {
-    throw new Error('Transaction was not saved. Database connection is unavailable. Please try again.');
+    throw new Error('Transaction was not saved. Database connection is unavailable. Please check your Supabase credentials and try again.');
   }
   const paymentMethod = input.paymentMode === 'ONLINE_TRANSFER' ? 'ONLINE_TRANSFER' : input.paymentMode;
-  const idempotencyKey = crypto.randomUUID();
+  const idempotencyKey = resolveIdempotencyKey(input.idempotencyKey);
   const { data, error } = await client.rpc('nlink_record_recovery', {
     p_customer_id: input.customerId,
     p_amount: input.amount,
@@ -314,8 +345,8 @@ export async function recordRecovery(input: {
     module: 'RECOVERIES',
     recordType: 'recoveries',
     recordId: data as string,
-    details: `Payment recovery of PKR ${input.amount} recorded for customer ${input.customerId} via ${input.paymentMode}`,
-    newValue: { customerId: input.customerId, amount: input.amount, mode: input.paymentMode },
+    details: `Payment recovery of PKR ${input.amount} recorded for customer ${input.customerId} via ${input.paymentMode} (key ${idempotencyKey})`,
+    newValue: { customerId: input.customerId, amount: input.amount, mode: input.paymentMode, idempotencyKey },
   });
 
   return data as string;
@@ -379,11 +410,35 @@ export async function rejectRecovery(recoveryId: string, reason?: string, approv
   return true;
 }
 
-export async function logVisit(visit: Partial<CustomerVisit>) {
+export async function logVisit(visit: Partial<CustomerVisit> & { idempotencyKey?: string }) {
   const client = db();
   if (!client) {
     throw new Error('Visit record was not saved. Database connection is unavailable. Please try again.');
   }
+  const idempotencyKey = resolveIdempotencyKey(visit.idempotencyKey);
+
+  // Prefer atomic RPC if deployed
+  const rpcRes = await client.rpc('nlink_log_visit', {
+    p_customer_id: visit.customerId,
+    p_productive: Boolean(visit.orderPlaced),
+    p_latitude: visit.latitude ?? null,
+    p_longitude: visit.longitude ?? null,
+    p_notes: visit.notes || null,
+    p_idempotency_key: idempotencyKey,
+  });
+
+  if (!rpcRes.error && rpcRes.data) {
+    await recordAuditLog({
+      action: 'VISIT_LOG',
+      module: 'VISITS',
+      recordType: 'customer_visits',
+      recordId: rpcRes.data as string,
+      details: `GPS Customer visit recorded for customer ${visit.customerId} (key ${idempotencyKey})`,
+      newValue: { customerId: visit.customerId, productive: visit.orderPlaced, idempotencyKey },
+    });
+    return rpcRes.data as string;
+  }
+
   const { data: employeeId, error: employeeError } = await client.rpc('nlink_current_employee_id');
   if (employeeError) throw employeeError;
   if (!employeeId) throw new Error('No active employee is linked to the current login.');
@@ -391,7 +446,7 @@ export async function logVisit(visit: Partial<CustomerVisit>) {
   const { data, error } = await client
     .from('customer_visits')
     .insert({
-      visit_code: `VIS-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+      visit_code: `VIS-${new Date().getFullYear()}-${idempotencyKey.slice(0, 8).toUpperCase()}`,
       customer_id: visit.customerId,
       employee_id: employeeId,
       visit_at: visit.checkinTime || new Date().toISOString(),
@@ -399,6 +454,7 @@ export async function logVisit(visit: Partial<CustomerVisit>) {
       longitude: visit.longitude ?? null,
       productive: Boolean(visit.orderPlaced),
       notes: visit.notes || null,
+      idempotency_key: idempotencyKey,
     })
     .select('id')
     .single();
@@ -410,7 +466,7 @@ export async function logVisit(visit: Partial<CustomerVisit>) {
     recordType: 'customer_visits',
     recordId: data.id,
     details: `GPS Customer visit recorded for customer ${visit.customerId}`,
-    newValue: { customerId: visit.customerId, productive: visit.orderPlaced },
+    newValue: { customerId: visit.customerId, productive: visit.orderPlaced, idempotencyKey },
   });
 
   return data.id as string;
@@ -903,7 +959,8 @@ export async function assignCustomerRepresentative(customerId: string, employeeI
 
 export async function registerCustomerPending(req: any) {
   const client = db();
-  const customerCode = req.customerCode || `CUST-REG-${Math.floor(100000 + Math.random() * 900000)}`;
+  const idempotencyKey = resolveIdempotencyKey(req?.idempotencyKey);
+  const customerCode = req.customerCode || `CUST-REG-${idempotencyKey.slice(0, 6).toUpperCase()}`;
   const custName = req.businessName || req.name || req.companyName || 'New Commercial Partner';
   const ownerName = req.ownerName || req.contactPerson || null;
   const mobile = req.contactNumber || req.phone || req.mobile || null;
@@ -918,8 +975,18 @@ export async function registerCustomerPending(req: any) {
   const openingBalance = Number(req.proposedOpeningBalance ?? req.openingBalance) || 0;
 
   if (!client) {
-    // Return mock ID in demo mode
-    return req.id || `cust-${Date.now()}`;
+    // Return existing ID in demo mode
+    return req.id || `cust-${idempotencyKey.slice(0, 8)}`;
+  }
+
+  // Idempotent lookup by idempotency_key before insert
+  const { data: existingByKey } = await client
+    .from('customers')
+    .select('id')
+    .eq('idempotency_key', idempotencyKey)
+    .maybeSingle();
+  if (existingByKey?.id) {
+    return existingByKey.id as string;
   }
 
   const { data, error } = await client
@@ -937,6 +1004,7 @@ export async function registerCustomerPending(req: any) {
       credit_limit: creditLimit,
       credit_days: creditDays,
       opening_balance: openingBalance,
+      idempotency_key: idempotencyKey,
       status: false, // inactive / pending approval
     })
     .select('id')
@@ -944,7 +1012,7 @@ export async function registerCustomerPending(req: any) {
 
   if (error) {
     console.warn('Supabase insert notice in registerCustomerPending:', error.message);
-    return req.id || `cust-fallback-${Date.now()}`;
+    return req.id || `cust-fallback-${idempotencyKey.slice(0, 8)}`;
   }
 
   await recordAuditLog({
@@ -953,7 +1021,7 @@ export async function registerCustomerPending(req: any) {
     recordType: 'customers',
     recordId: data.id,
     details: `New customer registration submitted: ${custName} (${customerCode}) by field force. Pending executive approval.`,
-    newValue: { ...req, customerCode },
+    newValue: { ...req, customerCode, idempotencyKey },
   });
 
   return data.id as string;

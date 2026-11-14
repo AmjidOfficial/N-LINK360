@@ -7,12 +7,12 @@
  * Only Order QTY needs to be entered.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Customer, SalesOrder, SalesOrderItem } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import { NLINK_OFFICIAL_PRODUCTS } from '../../data/nlink-products';
 import { triggerHaptic } from '../../utils/haptics';
-import { generateUniqueOrderId, generateUniqueOrderItemId } from '../../utils/idGenerator';
+import { generateUniqueOrderId, generateUniqueOrderItemId, generateIdempotencyUuid } from '../../utils/idGenerator';
 import {
   Search,
   ShoppingBag,
@@ -60,6 +60,9 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
     order: SalesOrder;
     customer: Customer;
   } | null>(null);
+  const [draftIdempotencyKey, setDraftIdempotencyKey] = useState<string>(() => generateIdempotencyUuid());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
 
   const activeCustomer = useMemo(() => {
     if (preselectedCustomer) return preselectedCustomer;
@@ -192,73 +195,81 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
   }, [skuEntries]);
 
   const handleSubmitOrder = () => {
-    if (!activeCustomer || orderSummary.totalQty <= 0) return;
+    if (!activeCustomer || orderSummary.totalQty <= 0 || submitLockRef.current || isSubmitting) return;
+    submitLockRef.current = true;
+    setIsSubmitting(true);
 
-    const orderNumber = generateUniqueOrderId();
-    const nowIso = new Date().toISOString();
+    try {
+      const orderNumber = generateUniqueOrderId();
+      const nowIso = new Date().toISOString();
 
-    const orderItems: SalesOrderItem[] = NLINK_OFFICIAL_PRODUCTS.filter((sku) => {
-      const entry = skuEntries[sku.id];
-      const ctn = entry?.cartons || 0;
-      const pks = entry?.packs || 0;
-      const pcsPerCarton = sku.cartonQuantity || 20;
-      return (ctn * pcsPerCarton) + pks > 0;
-    }).map((sku, idx) => {
-      const entry = skuEntries[sku.id] || { cartons: 0, packs: 0 };
-      const ctn = entry.cartons || 0;
-      const pks = entry.packs || 0;
-      const pcsPerCarton = sku.cartonQuantity || 20;
-      const qty = (ctn * pcsPerCarton) + pks;
-      const grossRate = sku.tradePrice || 0;
-      const netRate = sku.retailPrice || Math.round(grossRate * 0.85);
-      const lineTotal = qty * netRate;
-      return {
-        id: generateUniqueOrderItemId(orderNumber, idx),
-        orderId: orderNumber,
-        skuId: sku.id,
-        skuCode: sku.skuCode,
-        skuName: sku.name,
-        orderedQuantity: qty,
-        discountPercent: 15,
-        lineTotal,
-        cartons: ctn,
-        piecesPerCarton: pcsPerCarton,
-        looseQuantity: pks,
-        quantity: qty,
-        unitPrice: netRate,
-        totalAmount: lineTotal,
+      const orderItems: SalesOrderItem[] = NLINK_OFFICIAL_PRODUCTS.filter((sku) => {
+        const entry = skuEntries[sku.id];
+        const ctn = entry?.cartons || 0;
+        const pks = entry?.packs || 0;
+        const pcsPerCarton = sku.cartonQuantity || 20;
+        return (ctn * pcsPerCarton) + pks > 0;
+      }).map((sku, idx) => {
+        const entry = skuEntries[sku.id] || { cartons: 0, packs: 0 };
+        const ctn = entry.cartons || 0;
+        const pks = entry.packs || 0;
+        const pcsPerCarton = sku.cartonQuantity || 20;
+        const qty = (ctn * pcsPerCarton) + pks;
+        const grossRate = sku.tradePrice || 0;
+        const netRate = sku.retailPrice || Math.round(grossRate * 0.85);
+        const lineTotal = qty * netRate;
+        return {
+          id: generateUniqueOrderItemId(orderNumber, idx),
+          orderId: orderNumber,
+          skuId: sku.id,
+          skuCode: sku.skuCode,
+          skuName: sku.name,
+          orderedQuantity: qty,
+          discountPercent: 15,
+          lineTotal,
+          cartons: ctn,
+          piecesPerCarton: pcsPerCarton,
+          looseQuantity: pks,
+          quantity: qty,
+          unitPrice: netRate,
+          totalAmount: lineTotal,
+        };
+      });
+
+      const newOrder: SalesOrder = {
+        id: orderNumber,
+        idempotencyKey: draftIdempotencyKey,
+        orderNumber,
+        orderDate: nowIso.slice(0, 10),
+        createdAt: nowIso,
+        customerId: activeCustomer.id,
+        customerName: activeCustomer.companyName,
+        customerCode: activeCustomer.customerCode || 'NL-DLR',
+        salesUserId: currentUser.id,
+        salesUserName: currentUser.fullName,
+        status: 'SUBMITTED',
+        subtotal: orderSummary.grossAmount,
+        totalAmount: orderSummary.netAmount,
+        netAmount: orderSummary.netAmount,
+        netTotal: orderSummary.netAmount,
+        discountAmount: orderSummary.discountAmount,
+        taxAmount: 0,
+        creditCheckStatus: 'GREEN',
+        items: orderItems,
+        notes: orderNotes ? `${orderNotes} | Net TP (@ 15% Less)` : 'Net TP (@ 15% Less)',
+        shahzadApproval: 'PENDING',
+        dualApprovalStatus: 'PENDING_DUAL_APPROVAL',
       };
-    });
 
-    const newOrder: SalesOrder = {
-      id: orderNumber,
-      orderNumber,
-      orderDate: nowIso.slice(0, 10),
-      createdAt: nowIso,
-      customerId: activeCustomer.id,
-      customerName: activeCustomer.companyName,
-      customerCode: activeCustomer.customerCode || 'NL-DLR',
-      salesUserId: currentUser.id,
-      salesUserName: currentUser.fullName,
-      status: 'SUBMITTED',
-      subtotal: orderSummary.grossAmount,
-      totalAmount: orderSummary.netAmount,
-      netAmount: orderSummary.netAmount,
-      netTotal: orderSummary.netAmount,
-      discountAmount: orderSummary.discountAmount,
-      taxAmount: 0,
-      creditCheckStatus: 'GREEN',
-      items: orderItems,
-      notes: orderNotes ? `${orderNotes} | Net TP (@ 15% Less)` : 'Net TP (@ 15% Less)',
-      shahzadApproval: 'PENDING',
-      dualApprovalStatus: 'PENDING_DUAL_APPROVAL',
-    };
-
-    triggerHaptic('success');
-    onPlaceOrder(newOrder);
-    setBookedOrder({ order: newOrder, customer: activeCustomer });
-    if (onOrderCompleted) {
-      onOrderCompleted(newOrder);
+      triggerHaptic('success');
+      onPlaceOrder(newOrder);
+      setBookedOrder({ order: newOrder, customer: activeCustomer });
+      if (onOrderCompleted) {
+        onOrderCompleted(newOrder);
+      }
+    } finally {
+      setIsSubmitting(false);
+      submitLockRef.current = false;
     }
   };
 
@@ -267,6 +278,9 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
     setSkuEntries({});
     setOrderNotes('');
     setBookedOrder(null);
+    setDraftIdempotencyKey(generateIdempotencyUuid());
+    submitLockRef.current = false;
+    setIsSubmitting(false);
   };
 
   if (bookedOrder) {
@@ -431,12 +445,12 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
       <div className="bg-white rounded-2xl border border-[#C8E6C9] overflow-x-hidden shadow-xs w-full min-w-0 flex flex-col">
         <div className="w-full min-w-0 h-[70vh] sm:h-[74vh] md:h-[78vh] max-h-[calc(100dvh-200px)] overflow-y-auto overflow-x-hidden overscroll-contain">
           {/* Pinned Sticky Header Row (high z-index, zero horizontal scroll) */}
-          <div className="sticky top-0 z-30 bg-[#1B5E3A] text-white text-[10px] sm:text-xs font-bold grid grid-cols-12 items-center gap-1 px-2 sm:px-3 py-3 shadow-md w-full min-w-0 overflow-x-hidden select-none">
-            <div className="col-span-4 sm:col-span-5 min-w-0 truncate">SKU ITEM</div>
+          <div className="sticky top-0 z-30 bg-[#1B5E3A] text-white text-[10px] sm:text-xs font-bold grid grid-cols-12 items-center gap-1.5 px-2 sm:px-3 py-3 shadow-md w-full min-w-0 overflow-x-hidden select-none">
+            <div className="col-span-4 min-w-0 truncate">SKU ITEM</div>
             <div className="col-span-2 min-w-0 text-right truncate">RATE</div>
             <div className="col-span-2 min-w-0 text-center truncate">CTN</div>
             <div className="col-span-2 min-w-0 text-center truncate">PACKS</div>
-            <div className="col-span-2 sm:col-span-1 min-w-0 text-right truncate">TOTAL</div>
+            <div className="col-span-2 min-w-0 text-right truncate">TOTAL</div>
           </div>
 
           {/* Responsive SKU Grid Rows */}
@@ -459,49 +473,62 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
                 return (
                 <div
                   key={sku.id}
-                  className={`grid grid-cols-12 items-center gap-2 px-2 py-3 transition-colors w-full ${
+                  className={`grid grid-cols-12 items-center gap-1.5 px-2 sm:px-3 py-2.5 transition-colors w-full min-w-0 ${
                     hasQty
                       ? 'bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900'
                       : 'bg-white dark:bg-[#111C33] border-b border-slate-100 dark:border-slate-800'
                   }`}
                 >
-                  {/* SKU Name & Rate */}
-                  <div className="col-span-6 min-w-0 pr-1">
-                    <div className="font-bold text-slate-900 dark:text-white text-[11px] truncate">{sku.name}</div>
-                    <div className="text-[9px] text-slate-500 font-mono">PKR {rate.toLocaleString()}</div>
+                  {/* Col 1: SKU Name */}
+                  <div className="col-span-4 min-w-0 pr-1">
+                    <div className="font-bold text-slate-900 dark:text-white text-[11px] sm:text-xs leading-tight line-clamp-2">{sku.name}</div>
+                    <div className="text-[9px] text-slate-500 font-mono truncate">{sku.skuCode}</div>
                   </div>
 
-                  {/* Steppers & Total */}
-                  <div className="col-span-6 flex items-center justify-end gap-2">
+                  {/* Col 2: Rate */}
+                  <div className="col-span-2 min-w-0 text-right font-mono tabular-nums text-[10px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+                    {rate.toLocaleString()}
+                  </div>
+
+                  {/* Col 3: Cartons */}
+                  <div className="col-span-2 min-w-0 flex justify-center">
                     <input
                       type="number"
                       min={0}
                       inputMode="numeric"
+                      aria-label={`${sku.name} Cartons`}
                       data-sku-row={idx}
                       data-sku-col={0}
                       value={ctn === 0 ? '' : ctn}
-                      placeholder="Ctn"
+                      placeholder="0"
                       onChange={(e) => handleUnitChange(sku.id, 'cartons', e.target.value)}
                       onFocus={(e) => e.target.select()}
                       onKeyDown={(e) => handleKeyDown(e, idx, 0)}
-                      className="w-12 h-9 text-center font-mono text-[10px] font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:border-emerald-500 outline-none"
+                      className="w-full max-w-[56px] min-h-[44px] text-center font-mono text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:border-emerald-500 outline-none"
                     />
+                  </div>
+
+                  {/* Col 4: Packs */}
+                  <div className="col-span-2 min-w-0 flex justify-center">
                     <input
                       type="number"
                       min={0}
                       inputMode="numeric"
+                      aria-label={`${sku.name} Packs`}
                       data-sku-row={idx}
                       data-sku-col={1}
                       value={pks === 0 ? '' : pks}
-                      placeholder="Pks"
+                      placeholder="0"
                       onChange={(e) => handleUnitChange(sku.id, 'packs', e.target.value)}
                       onFocus={(e) => e.target.select()}
                       onKeyDown={(e) => handleKeyDown(e, idx, 1)}
-                      className="w-12 h-9 text-center font-mono text-[10px] font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:border-emerald-500 outline-none"
+                      className="w-full max-w-[56px] min-h-[44px] text-center font-mono text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:border-emerald-500 outline-none"
                     />
-                    <div className="w-14 text-right text-xs font-black text-emerald-700 dark:text-emerald-300 font-mono tabular-nums truncate">
-                      {lineTotal > 0 ? lineTotal.toLocaleString() : '—'}
-                    </div>
+                  </div>
+
+                  {/* Col 5: Total */}
+                  <div className="col-span-2 min-w-0 text-right text-[11px] sm:text-xs font-black text-emerald-700 dark:text-emerald-300 font-mono tabular-nums truncate">
+                    {lineTotal > 0 ? lineTotal.toLocaleString() : '—'}
                   </div>
                 </div>
                 );
@@ -545,12 +572,12 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
             )}
             <button
               type="button"
-              disabled={!activeCustomer || orderSummary.totalQty <= 0}
+              disabled={!activeCustomer || orderSummary.totalQty <= 0 || isSubmitting}
               onClick={handleSubmitOrder}
-              className="btn-primary text-xs flex-1 sm:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary min-h-[44px] text-xs flex-1 sm:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ShoppingBag className="w-4 h-4" />
-              <span>Submit Order</span>
+              <span>{isSubmitting ? 'Submitting...' : 'Submit Order'}</span>
             </button>
           </div>
         </div>

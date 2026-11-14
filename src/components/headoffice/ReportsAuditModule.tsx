@@ -5,7 +5,7 @@
  * National Lights (Pvt.) Ltd. - Peshawar Head Office
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   FileBarChart2,
   Download,
@@ -13,6 +13,8 @@ import {
   Search,
   Calendar,
   ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { AuditLog, Customer, EmployeeAttendance, InventoryBalance, Recovery, SalesOrder } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
@@ -54,6 +56,55 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
   const [officerFilter, setOfficerFilter] = useState('ALL');
   const [auditSearch, setAuditSearch] = useState('');
   const [auditModuleFilter, setAuditModuleFilter] = useState('ALL');
+  const PAGE_SIZE = 20;
+  const [salesPage, setSalesPage] = useState(1);
+  const [financePage, setFinancePage] = useState(1);
+  const [hrPage, setHrPage] = useState(1);
+  const [auditPage, setAuditPage] = useState(1);
+
+  useEffect(() => {
+    setSalesPage(1);
+    setFinancePage(1);
+    setHrPage(1);
+    setAuditPage(1);
+  }, [datePreset, customFrom, customTo, townFilter, officerFilter, auditSearch, auditModuleFilter]);
+
+  const renderPaginationBar = (total: number, page: number, onChange: (next: number) => void) => {
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (total <= PAGE_SIZE) return null;
+    const startIdx = (page - 1) * PAGE_SIZE + 1;
+    const endIdx = Math.min(total, page * PAGE_SIZE);
+    return (
+      <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap print:hidden">
+        <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+          Showing {startIdx}–{endIdx} of {total}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => onChange(Math.max(1, page - 1))}
+            className="min-h-[40px] px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold flex items-center gap-1 disabled:opacity-40 cursor-pointer"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Prev</span>
+          </button>
+          <span className="font-mono font-bold text-slate-700 dark:text-slate-200 px-1">
+            {page} / {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages}
+            onClick={() => onChange(Math.min(totalPages, page + 1))}
+            className="min-h-[40px] px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold flex items-center gap-1 disabled:opacity-40 cursor-pointer"
+          >
+            <span>Next</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   const auditLogs: AuditLog[] = useMemo(() => getAuditLogs(), [orders, recoveries, customers, attendanceRecords, activeTab]);
 
@@ -320,62 +371,91 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
       </div>
 
       {/* SALES TAB */}
-      {activeTab === 'SALES' && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <FileBarChart2 className="w-4 h-4 text-emerald-500" />
-              <span>Sales Orders &amp; Invoiced Volume ({filteredOrders.length})</span>
-            </h3>
-            <button
-              type="button"
-              onClick={() => exportSalesSummaryCsv(filteredOrders)}
-              className="btn-primary py-2 px-3.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export Sales CSV</span>
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-bold">
-                <tr>
-                  <th className="py-2.5 px-4">Order / Invoice</th>
-                  <th className="py-2.5 px-4">Date</th>
-                  <th className="py-2.5 px-4">Customer</th>
-                  <th className="py-2.5 px-4">Officer</th>
-                  <th className="py-2.5 px-4 text-right">Net Amount</th>
-                  <th className="py-2.5 px-4">Stage</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-8 text-slate-400">
-                      No orders in selected period/filters.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredOrders.slice(0, 50).map((o) => (
-                    <tr key={o.id}>
-                      <td className="py-2.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
+      {activeTab === 'SALES' && (() => {
+        const pagedOrders = filteredOrders.slice((salesPage - 1) * PAGE_SIZE, salesPage * PAGE_SIZE);
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+              <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <FileBarChart2 className="w-4 h-4 text-emerald-500" />
+                <span>Sales Orders &amp; Invoiced Volume ({filteredOrders.length})</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => exportSalesSummaryCsv(filteredOrders)}
+                className="btn-primary py-2 px-3.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export Sales CSV</span>
+              </button>
+            </div>
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              {pagedOrders.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">No orders in selected period/filters.</div>
+              ) : (
+                pagedOrders.map((o) => (
+                  <div key={o.id} className="p-3.5 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-bold text-slate-900 dark:text-white">
                         #{o.orderNumber} {o.invoiceNumber ? `· ${o.invoiceNumber}` : ''}
-                      </td>
-                      <td className="py-2.5 px-4 font-mono text-slate-500">{(o.orderDate || o.createdAt).slice(0, 10)}</td>
-                      <td className="py-2.5 px-4 font-semibold text-slate-800 dark:text-slate-200">{o.customerName}</td>
-                      <td className="py-2.5 px-4 text-slate-600 dark:text-slate-300">{o.salesUserName}</td>
-                      <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
+                      </span>
+                      <span className="font-mono font-bold text-[11px] text-emerald-600 dark:text-emerald-400">{o.status}</span>
+                    </div>
+                    <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">{o.customerName}</div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <span className="truncate pr-2">{o.salesUserName} &middot; {(o.orderDate || o.createdAt).slice(0, 10)}</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white shrink-0">
                         Rs. {(o.netAmount ?? o.totalAmount ?? 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-bold">
+                  <tr>
+                    <th className="py-2.5 px-4">Order / Invoice</th>
+                    <th className="py-2.5 px-4">Date</th>
+                    <th className="py-2.5 px-4">Customer</th>
+                    <th className="py-2.5 px-4">Officer</th>
+                    <th className="py-2.5 px-4 text-right">Net Amount</th>
+                    <th className="py-2.5 px-4">Stage</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {pagedOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8 text-slate-400">
+                        No orders in selected period/filters.
                       </td>
-                      <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">{o.status}</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    pagedOrders.map((o) => (
+                      <tr key={o.id}>
+                        <td className="py-2.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                          #{o.orderNumber} {o.invoiceNumber ? `· ${o.invoiceNumber}` : ''}
+                        </td>
+                        <td className="py-2.5 px-4 font-mono text-slate-500">{(o.orderDate || o.createdAt).slice(0, 10)}</td>
+                        <td className="py-2.5 px-4 font-semibold text-slate-800 dark:text-slate-200">{o.customerName}</td>
+                        <td className="py-2.5 px-4 text-slate-600 dark:text-slate-300">{o.salesUserName}</td>
+                        <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
+                          Rs. {(o.netAmount ?? o.totalAmount ?? 0).toLocaleString()}
+                        </td>
+                        <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">{o.status}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {renderPaginationBar(filteredOrders.length, salesPage, setSalesPage)}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* FINANCE TAB */}
       {activeTab === 'FINANCE' && (
@@ -411,39 +491,68 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-bold">
-                  <tr>
-                    <th className="py-2.5 px-4">Dealer</th>
-                    <th className="py-2.5 px-4">Town</th>
-                    <th className="py-2.5 px-4 text-right">Credit Limit</th>
-                    <th className="py-2.5 px-4 text-right">Current Balance</th>
-                    <th className="py-2.5 px-4 text-right">Utilization</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {customers.slice(0, 40).map((c) => {
+          {(() => {
+            const pagedCustomers = customers.slice((financePage - 1) * PAGE_SIZE, financePage * PAGE_SIZE);
+            return (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                {/* Mobile Cards */}
+                <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                  {pagedCustomers.map((c) => {
                     const bal = c.currentBalance ?? c.openingBalance ?? 0;
                     const limit = c.creditLimit || 0;
                     const pct = limit > 0 ? Math.round((bal / limit) * 100) : 0;
                     return (
-                      <tr key={c.id}>
-                        <td className="py-2.5 px-4 font-semibold text-slate-900 dark:text-white">{c.companyName}</td>
-                        <td className="py-2.5 px-4 text-slate-500">{c.town || c.city}</td>
-                        <td className="py-2.5 px-4 text-right font-mono text-slate-500">Rs. {limit.toLocaleString()}</td>
-                        <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">Rs. {bal.toLocaleString()}</td>
-                        <td className={`py-2.5 px-4 text-right font-mono font-bold ${pct > 100 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                          {pct}%
-                        </td>
-                      </tr>
+                      <div key={c.id} className="p-3.5 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-slate-900 dark:text-white truncate">{c.companyName}</span>
+                          <span className={`font-mono font-bold shrink-0 ${pct > 100 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {pct}%
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
+                          <span>{c.town || c.city} &middot; Limit Rs. {limit.toLocaleString()}</span>
+                          <span className="font-mono font-bold text-slate-900 dark:text-white">Rs. {bal.toLocaleString()}</span>
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                </div>
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-bold">
+                      <tr>
+                        <th className="py-2.5 px-4">Dealer</th>
+                        <th className="py-2.5 px-4">Town</th>
+                        <th className="py-2.5 px-4 text-right">Credit Limit</th>
+                        <th className="py-2.5 px-4 text-right">Current Balance</th>
+                        <th className="py-2.5 px-4 text-right">Utilization</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {pagedCustomers.map((c) => {
+                        const bal = c.currentBalance ?? c.openingBalance ?? 0;
+                        const limit = c.creditLimit || 0;
+                        const pct = limit > 0 ? Math.round((bal / limit) * 100) : 0;
+                        return (
+                          <tr key={c.id}>
+                            <td className="py-2.5 px-4 font-semibold text-slate-900 dark:text-white">{c.companyName}</td>
+                            <td className="py-2.5 px-4 text-slate-500">{c.town || c.city}</td>
+                            <td className="py-2.5 px-4 text-right font-mono text-slate-500">Rs. {limit.toLocaleString()}</td>
+                            <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">Rs. {bal.toLocaleString()}</td>
+                            <td className={`py-2.5 px-4 text-right font-mono font-bold ${pct > 100 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                              {pct}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {renderPaginationBar(customers.length, financePage, setFinancePage)}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -484,129 +593,183 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
       )}
 
       {/* HR ATTENDANCE TAB */}
-      {activeTab === 'HR' && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 dark:text-white">HR Field &amp; Office Attendance ({filteredAttendance.length})</h3>
-            <button
-              type="button"
-              onClick={() => exportAttendanceCsv(filteredAttendance)}
-              className="btn-primary py-2 px-3.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export Attendance CSV</span>
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-bold">
-                <tr>
-                  <th className="py-2.5 px-4">Employee</th>
-                  <th className="py-2.5 px-4">Date</th>
-                  <th className="py-2.5 px-4">Location</th>
-                  <th className="py-2.5 px-4">Check-In</th>
-                  <th className="py-2.5 px-4">Check-Out</th>
-                  <th className="py-2.5 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredAttendance.length === 0 ? (
+      {activeTab === 'HR' && (() => {
+        const pagedAttendance = filteredAttendance.slice((hrPage - 1) * PAGE_SIZE, hrPage * PAGE_SIZE);
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+              <h3 className="font-bold text-slate-900 dark:text-white">HR Field &amp; Office Attendance ({filteredAttendance.length})</h3>
+              <button
+                type="button"
+                onClick={() => exportAttendanceCsv(filteredAttendance)}
+                className="btn-primary py-2 px-3.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export Attendance CSV</span>
+              </button>
+            </div>
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              {pagedAttendance.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">No attendance logs matched filters.</div>
+              ) : (
+                pagedAttendance.map((a) => (
+                  <div key={a.id} className="p-3.5 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-900 dark:text-white">{a.employeeName}</span>
+                      <span className="font-mono font-bold text-[11px] text-emerald-600 dark:text-emerald-400">{a.status}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      <span className="font-mono">{a.date}</span> &middot; {a.checkInLocation || '-'}
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-600 dark:text-slate-300">
+                      In: {a.checkInTime || '-'} &middot; Out: {a.checkOutTime || '-'}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-bold">
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-slate-400">
-                      No attendance logs matched filters.
-                    </td>
+                    <th className="py-2.5 px-4">Employee</th>
+                    <th className="py-2.5 px-4">Date</th>
+                    <th className="py-2.5 px-4">Location</th>
+                    <th className="py-2.5 px-4">Check-In</th>
+                    <th className="py-2.5 px-4">Check-Out</th>
+                    <th className="py-2.5 px-4">Status</th>
                   </tr>
-                ) : (
-                  filteredAttendance.map((a) => (
-                    <tr key={a.id}>
-                      <td className="py-2.5 px-4 font-semibold text-slate-900 dark:text-white">{a.employeeName}</td>
-                      <td className="py-2.5 px-4 font-mono">{a.date}</td>
-                      <td className="py-2.5 px-4 text-slate-500">{a.checkInLocation || '-'}</td>
-                      <td className="py-2.5 px-4 font-mono">{a.checkInTime || '-'}</td>
-                      <td className="py-2.5 px-4 font-mono">{a.checkOutTime || '-'}</td>
-                      <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">{a.status}</td>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {pagedAttendance.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8 text-slate-400">
+                        No attendance logs matched filters.
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    pagedAttendance.map((a) => (
+                      <tr key={a.id}>
+                        <td className="py-2.5 px-4 font-semibold text-slate-900 dark:text-white">{a.employeeName}</td>
+                        <td className="py-2.5 px-4 font-mono">{a.date}</td>
+                        <td className="py-2.5 px-4 text-slate-500">{a.checkInLocation || '-'}</td>
+                        <td className="py-2.5 px-4 font-mono">{a.checkInTime || '-'}</td>
+                        <td className="py-2.5 px-4 font-mono">{a.checkOutTime || '-'}</td>
+                        <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">{a.status}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {renderPaginationBar(filteredAttendance.length, hrPage, setHrPage)}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* CENTRAL AUDIT TRAIL TAB */}
-      {activeTab === 'AUDIT_TRAIL' && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="relative w-64">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={auditSearch}
-                  onChange={(e) => setAuditSearch(e.target.value)}
-                  placeholder="Search audit trail..."
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none"
-                />
+      {activeTab === 'AUDIT_TRAIL' && (() => {
+        const pagedAudits = filteredAudits.slice((auditPage - 1) * PAGE_SIZE, auditPage * PAGE_SIZE);
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={auditSearch}
+                    onChange={(e) => setAuditSearch(e.target.value)}
+                    placeholder="Search audit trail..."
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none"
+                  />
+                </div>
+                <select
+                  value={auditModuleFilter}
+                  onChange={(e) => setAuditModuleFilter(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-semibold text-slate-900 dark:text-white"
+                >
+                  {['ALL', 'AUTH', 'EMPLOYEES', 'SALES', 'ACCOUNTS', 'INVENTORY', 'PACKING', 'INVOICING', 'DISPATCH', 'HR'].map((m) => (
+                    <option key={m} value={m}>
+                      {m === 'ALL' ? 'All Modules' : m}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <select
-                value={auditModuleFilter}
-                onChange={(e) => setAuditModuleFilter(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-semibold text-slate-900 dark:text-white"
+              <button
+                type="button"
+                onClick={() => exportAuditLogCsv(filteredAudits)}
+                className="btn-primary py-2 px-3.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer"
               >
-                {['ALL', 'AUTH', 'EMPLOYEES', 'SALES', 'ACCOUNTS', 'INVENTORY', 'PACKING', 'INVOICING', 'DISPATCH', 'HR'].map((m) => (
-                  <option key={m} value={m}>
-                    {m === 'ALL' ? 'All Modules' : m}
-                  </option>
-                ))}
-              </select>
+                <Download className="w-3.5 h-3.5" />
+                <span>Export Audit CSV</span>
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => exportAuditLogCsv(filteredAudits)}
-              className="btn-primary py-2 px-3.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export Audit CSV</span>
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-bold">
-                <tr>
-                  <th className="py-2.5 px-4">Timestamp</th>
-                  <th className="py-2.5 px-4">Module</th>
-                  <th className="py-2.5 px-4">Action</th>
-                  <th className="py-2.5 px-4">Actor</th>
-                  <th className="py-2.5 px-4">Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredAudits.length === 0 ? (
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              {pagedAudits.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <ShieldCheck className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  No audit log entries match the active filters.
+                </div>
+              ) : (
+                pagedAudits.map((log) => (
+                  <div key={log.id} className="p-3.5 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{log.module}</span>
+                      <span className="font-mono font-bold text-[11px] text-emerald-600 dark:text-emerald-400">{log.action}</span>
+                    </div>
+                    <div className="font-semibold text-slate-900 dark:text-white">{log.userName || log.userEmail || 'System'}</div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-300 break-words">{log.details}</div>
+                    <div className="font-mono text-[10px] text-slate-400">
+                      {(log.timestamp || log.createdAt).slice(0, 19).replace('T', ' ')}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-bold">
                   <tr>
-                    <td colSpan={5} className="text-center py-8 text-slate-400">
-                      <ShieldCheck className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      No audit log entries match the active filters.
-                    </td>
+                    <th className="py-2.5 px-4">Timestamp</th>
+                    <th className="py-2.5 px-4">Module</th>
+                    <th className="py-2.5 px-4">Action</th>
+                    <th className="py-2.5 px-4">Actor</th>
+                    <th className="py-2.5 px-4">Details</th>
                   </tr>
-                ) : (
-                  filteredAudits.slice(0, 100).map((log) => (
-                    <tr key={log.id}>
-                      <td className="py-2.5 px-4 font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                        {(log.timestamp || log.createdAt).slice(0, 19).replace('T', ' ')}
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {pagedAudits.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-8 text-slate-400">
+                        <ShieldCheck className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        No audit log entries match the active filters.
                       </td>
-                      <td className="py-2.5 px-4 font-mono font-bold text-slate-700 dark:text-slate-300">{log.module}</td>
-                      <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">{log.action}</td>
-                      <td className="py-2.5 px-4 font-semibold text-slate-900 dark:text-white">{log.userName || log.userEmail || 'System'}</td>
-                      <td className="py-2.5 px-4 text-slate-600 dark:text-slate-300">{log.details}</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    pagedAudits.map((log) => (
+                      <tr key={log.id}>
+                        <td className="py-2.5 px-4 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                          {(log.timestamp || log.createdAt).slice(0, 19).replace('T', ' ')}
+                        </td>
+                        <td className="py-2.5 px-4 font-mono font-bold text-slate-700 dark:text-slate-300">{log.module}</td>
+                        <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">{log.action}</td>
+                        <td className="py-2.5 px-4 font-semibold text-slate-900 dark:text-white">{log.userName || log.userEmail || 'System'}</td>
+                        <td className="py-2.5 px-4 text-slate-600 dark:text-slate-300">{log.details}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {renderPaginationBar(filteredAudits.length, auditPage, setAuditPage)}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

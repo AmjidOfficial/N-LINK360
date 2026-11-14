@@ -5,6 +5,8 @@
  * Handles offline persistence, idempotent sync queuing, network state tracking, and conflict resolution.
  */
 
+import { generateIdempotencyUuid, isValidUuid } from '../utils/idGenerator';
+
 export type SyncStatus = 'DRAFT' | 'PENDING_SYNC' | 'SYNCED' | 'FAILED';
 
 export type ErrorCategory = 'NETWORK' | 'DATABASE' | 'RLS_AUTH' | 'VALIDATION' | 'TIMEOUT' | 'UNKNOWN';
@@ -51,10 +53,14 @@ export function classifySyncError(errorMsg?: string): ErrorCategory {
   if (lower.includes('timeout') || lower.includes('timed out') || lower.includes('504') || lower.includes('gateway')) {
     return 'TIMEOUT';
   }
-  if (lower.includes('validation') || lower.includes('missing') || lower.includes('invalid') || lower.includes('required')) {
+  if (lower.includes('validation') || lower.includes('missing') || lower.includes('invalid') || lower.includes('required') || lower.includes('credit limit')) {
     return 'VALIDATION';
   }
   return 'UNKNOWN';
+}
+
+export function isPermanentSyncError(category?: ErrorCategory): boolean {
+  return category === 'RLS_AUTH' || category === 'VALIDATION';
 }
 
 export interface OfflineQueueItem {
@@ -149,19 +155,37 @@ export function clearSyncAttemptLogs(): void {
 export function enqueueOfflineAction(
   module: OfflineQueueItem['module'],
   action: OfflineQueueItem['action'],
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  explicitIdempotencyKey?: string
 ): OfflineQueueItem {
   const queue = getOfflineQueue();
+  const payloadNestedOrder = (payload.order as Record<string, unknown> | undefined);
+  const candidateKey =
+    explicitIdempotencyKey ||
+    (typeof payload.idempotencyKey === 'string' ? payload.idempotencyKey : undefined) ||
+    (typeof payloadNestedOrder?.idempotencyKey === 'string' ? payloadNestedOrder.idempotencyKey : undefined);
 
-  // Create deterministic idempotency key
-  const idempotencyKey = `idem_${module}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const idempotencyKey = isValidUuid(candidateKey) ? String(candidateKey) : generateIdempotencyUuid();
+
+  // Deduplicate active queue entries carrying the exact same module + idempotencyKey
+  const existing = queue.find(
+    (entry) => entry.module === module && entry.idempotencyKey === idempotencyKey
+  );
+  if (existing) {
+    return existing;
+  }
+
+  const enrichedPayload: Record<string, unknown> = {
+    ...payload,
+    idempotencyKey,
+  };
 
   const item: OfflineQueueItem = {
     id: `queue_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     idempotencyKey,
     module,
     action,
-    payload,
+    payload: enrichedPayload,
     status: 'PENDING_SYNC',
     createdAt: new Date().toISOString(),
     attemptCount: 0,
@@ -189,27 +213,38 @@ export type SyncItemHandler = (item: OfflineQueueItem) => Promise<{ success: boo
 
 async function defaultSupabaseSyncHandler(item: OfflineQueueItem): Promise<{ success: boolean; error?: string }> {
   try {
-    const { submitOrder, recordRecovery, logVisit, registerCustomerPending } = await import('./supabase-transactions');
+    const { submitOrder, recordRecovery, logVisit, registerCustomerPending, recordAuditLog } = await import('./supabase-transactions');
     if (item.module === 'ORDERS') {
       const p = item.payload as Record<string, unknown>;
       const order = (p.order || p) as any;
       const recoveryAmount = Number(p.recoveryAmount || 0);
-      await submitOrder(order, recoveryAmount);
+      await submitOrder({ ...order, idempotencyKey: order?.idempotencyKey || item.idempotencyKey }, recoveryAmount);
       return { success: true };
     }
     if (item.module === 'RECOVERY') {
       const rec = item.payload as any;
-      await recordRecovery(rec);
+      await recordRecovery({ ...rec, idempotencyKey: rec?.idempotencyKey || item.idempotencyKey });
       return { success: true };
     }
     if (item.module === 'VISITS') {
       const visit = item.payload as any;
-      await logVisit(visit);
+      await logVisit({ ...visit, idempotencyKey: visit?.idempotencyKey || item.idempotencyKey });
       return { success: true };
     }
     if (item.module === 'CUSTOMERS') {
       const reg = item.payload as any;
-      await registerCustomerPending(reg);
+      await registerCustomerPending({ ...reg, idempotencyKey: reg?.idempotencyKey || item.idempotencyKey });
+      return { success: true };
+    }
+    if (item.module === 'RETURNS') {
+      await recordAuditLog({
+        action: 'RETURN_SYNC',
+        module: 'RETURNS',
+        recordType: 'stock_returns',
+        recordId: String((item.payload as any)?.id || item.id),
+        details: `Offline return synced with idempotency key ${item.idempotencyKey}`,
+        newValue: { ...(item.payload || {}), idempotencyKey: item.idempotencyKey },
+      });
       return { success: true };
     }
     return { success: false, error: `Unrecognized module: ${item.module}` };
@@ -311,9 +346,10 @@ class SyncManager {
   public enqueue(
     module: OfflineQueueItem['module'],
     action: OfflineQueueItem['action'],
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    explicitIdempotencyKey?: string
   ): OfflineQueueItem {
-    const item = enqueueOfflineAction(module, action, payload);
+    const item = enqueueOfflineAction(module, action, payload, explicitIdempotencyKey);
     this.notifyQueue();
     return item;
   }
@@ -485,7 +521,11 @@ class SyncManager {
     const handler = customHandler || this.defaultHandler;
 
     for (const item of queue) {
-      if (item.status === 'PENDING_SYNC' || item.status === 'FAILED') {
+      const shouldRetry =
+        item.status === 'PENDING_SYNC' ||
+        (item.status === 'FAILED' &&
+          (!isPermanentSyncError(item.errorCategory) || trigger === 'MANUAL_USER' || trigger === 'RETRY'));
+      if (shouldRetry) {
         item.attemptCount += 1;
         item.lastAttemptAt = new Date().toISOString();
 

@@ -81,8 +81,54 @@ export function notifyRateLimit(retryAfterSecs: number) {
   subscribers.forEach((cb) => cb(getRateLimitStatus()));
 }
 
+const PERMANENT_GOOGLE_403_REASONS = [
+  'insufficientpermissions',
+  'access_token_scope_insufficient',
+  'permission_denied',
+  'forbidden',
+  'accessnotconfigured',
+  'servicedisabled',
+];
+
+export interface GoogleErrorClassification {
+  retryable: boolean;
+  isRateLimit: boolean;
+  isPermanentAuth: boolean;
+  reason: string;
+}
+
+export function classifyGoogleHttpStatus(status: number, bodyText = ''): GoogleErrorClassification {
+  const lower = bodyText.toLowerCase();
+  if (status === 400 || status === 401 || status === 404 || status === 422) {
+    return { retryable: false, isRateLimit: false, isPermanentAuth: status === 401, reason: `HTTP_${status}` };
+  }
+  if (status === 403) {
+    const isPerm = PERMANENT_GOOGLE_403_REASONS.some((token) => lower.includes(token));
+    if (isPerm) {
+      return { retryable: false, isRateLimit: false, isPermanentAuth: true, reason: 'PERMISSION_DENIED' };
+    }
+    return { retryable: true, isRateLimit: true, isPermanentAuth: false, reason: 'QUOTA_EXCEEDED' };
+  }
+  if (status === 429 || status >= 500) {
+    return { retryable: true, isRateLimit: status === 429, isPermanentAuth: false, reason: `HTTP_${status}` };
+  }
+  return { retryable: false, isRateLimit: false, isPermanentAuth: false, reason: `HTTP_${status}` };
+}
+
+function parseRetryAfterMs(headers?: Headers): number | null {
+  try {
+    const raw = headers?.get?.('Retry-After');
+    if (!raw) return null;
+    const secs = Number(raw);
+    if (Number.isFinite(secs) && secs > 0) {
+      return Math.min(secs * 1000, 60_000);
+    }
+  } catch {}
+  return null;
+}
+
 /**
- * Exponential Backoff Fetch wrapper to mitigate API Rate limits and intermittent 429/403 errors
+ * Exponential Backoff Fetch wrapper with Retry-After support, jitter, and permanent error bailout
  */
 export async function fetchWithBackoff(
   url: string,
@@ -97,30 +143,45 @@ export async function fetchWithBackoff(
       if (response.ok) {
         return response;
       }
-      
-      // Handle rate limits (429) or potential quota errors (403)
-      if (response.status === 429 || response.status === 403) {
-        attempt++;
-        if (response.status === 403) {
-          // Trigger rate limit state (60 seconds countdown block)
-          notifyRateLimit(60);
-        }
-        if (attempt >= maxRetries) {
-          return response;
-        }
-        const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 200;
-        console.warn(`[Google API Rate Limit] Status ${response.status} detected on attempt ${attempt}/${maxRetries}. Retrying in ${Math.round(delay)}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        continue;
+
+      let errPreview = '';
+      if (response.status === 403 || response.status >= 400) {
+        try {
+          errPreview = await response.clone().text();
+        } catch {}
       }
-      return response;
+
+      const classified = classifyGoogleHttpStatus(response.status, errPreview);
+      if (!classified.retryable) {
+        // Never waste quota or cooldown retrying permanent validation/auth/permission errors
+        return response;
+      }
+
+      attempt++;
+      if (classified.isRateLimit) {
+        const retrySecs = Math.ceil((parseRetryAfterMs(response.headers) || 60_000) / 1000);
+        notifyRateLimit(retrySecs);
+      }
+
+      if (attempt >= maxRetries) {
+        return response;
+      }
+
+      const headerDelay = parseRetryAfterMs(response.headers);
+      const expDelay = Math.min(30_000, baseDelayMs * Math.pow(2, attempt - 1));
+      const jitter = Math.floor(Math.random() * 400);
+      const delay = (headerDelay ?? expDelay) + jitter;
+
+      console.warn(`[Google API Backoff] Status ${response.status} (${classified.reason}) on attempt ${attempt}/${maxRetries}. Retrying in ${delay}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
     } catch (error) {
       attempt++;
       if (attempt >= maxRetries) {
         throw error;
       }
-      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 200;
-      console.warn(`[Google API Network Error] Error on attempt ${attempt}/${maxRetries}. Retrying in ${Math.round(delay)}ms...`, error);
+      const jitter = Math.floor(Math.random() * 400);
+      const delay = Math.min(30_000, baseDelayMs * Math.pow(2, attempt - 1)) + jitter;
+      console.warn(`[Google API Network Error] Attempt ${attempt}/${maxRetries}. Retrying in ${delay}ms...`, error);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
@@ -742,8 +803,36 @@ export async function syncDatabaseToGoogleSheet(
   };
 }
 
+const SYNCED_SHEET_REFS_KEY = 'nlink_synced_sheet_refs_v1';
+
+function getSyncedSheetRefs(): Set<string> {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(SYNCED_SHEET_REFS_KEY) : null;
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export function markSyncedSheetRefs(refs: string[]): void {
+  try {
+    if (typeof localStorage === 'undefined' || refs.length === 0) return;
+    const set = getSyncedSheetRefs();
+    refs.forEach((r) => {
+      if (r) set.add(r);
+    });
+    const arr = Array.from(set).slice(-1000);
+    localStorage.setItem(SYNCED_SHEET_REFS_KEY, JSON.stringify(arr));
+  } catch {}
+}
+
+export function getSheetTxRef(prefix: 'ORD' | 'REC', record: any): string {
+  const ref = record?.idempotencyKey || record?.orderNumber || record?.recoveryNumber || record?.id;
+  return ref ? `${prefix}:${String(ref)}` : '';
+}
+
 /**
- * Append a newly booked sales order immediately into Google Sheet
+ * Append a newly booked sales order immediately into Google Sheet (idempotent by reference)
  */
 export async function pushOrderToGoogleSheet(
   spreadsheetId: string,
@@ -751,6 +840,9 @@ export async function pushOrderToGoogleSheet(
   customerName: string,
   accessToken: string
 ): Promise<void> {
+  const txRef = getSheetTxRef('ORD', order);
+  if (txRef && getSyncedSheetRefs().has(txRef)) return;
+
   const row = [
     order.orderNumber || order.id,
     order.orderDate || new Date().toISOString().slice(0, 10),
@@ -768,12 +860,13 @@ export async function pushOrderToGoogleSheet(
     new Date().toLocaleString(),
   ];
 
-  await appendSpreadsheetRows(spreadsheetId, 'Sales_Data!A:O', [row], accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Sales_Data!A:O', [row], accessToken);
   await appendSpreadsheetRows(spreadsheetId, 'Sales_Orders!A:O', [row], accessToken).catch(() => {});
+  if (txRef) markSyncedSheetRefs([txRef]);
 }
 
 /**
- * Append a newly collected payment recovery immediately into Google Sheet
+ * Append a newly collected payment recovery immediately into Google Sheet (idempotent by reference)
  */
 export async function pushRecoveryToGoogleSheet(
   spreadsheetId: string,
@@ -781,6 +874,9 @@ export async function pushRecoveryToGoogleSheet(
   customerName: string,
   accessToken: string
 ): Promise<void> {
+  const txRef = getSheetTxRef('REC', recovery);
+  if (txRef && getSyncedSheetRefs().has(txRef)) return;
+
   const row = [
     recovery.recoveryNumber || recovery.id,
     recovery.customerCode || '',
@@ -798,8 +894,9 @@ export async function pushRecoveryToGoogleSheet(
     new Date().toLocaleString(),
   ];
 
-  await appendSpreadsheetRows(spreadsheetId, 'Recoveries_Collections!A:O', [row], accessToken).catch(() => {});
+  await appendSpreadsheetRows(spreadsheetId, 'Recoveries_Collections!A:O', [row], accessToken);
   await appendSpreadsheetRows(spreadsheetId, 'Recoveries!A:O', [row], accessToken).catch(() => {});
+  if (txRef) markSyncedSheetRefs([txRef]);
 }
 
 /**
@@ -936,16 +1033,26 @@ export async function pushProductToGoogleSheet(
 }
 
 /**
- * Batch append multiple sales orders simultaneously to Google Sheet
+ * Batch append multiple sales orders simultaneously to Google Sheet (deduplicated)
  */
 export async function pushOrdersBatchToGoogleSheet(
   spreadsheetId: string,
   orders: { order: any; customerName?: string }[],
   accessToken: string
 ): Promise<void> {
-  if (orders.length === 0) return;
+  const synced = getSyncedSheetRefs();
+  const seenInBatch = new Set<string>();
+  const filtered = orders.filter(({ order }) => {
+    const ref = getSheetTxRef('ORD', order);
+    if (!ref) return true;
+    if (synced.has(ref) || seenInBatch.has(ref)) return false;
+    seenInBatch.add(ref);
+    return true;
+  });
+  if (filtered.length === 0) return;
+
   const nowStr = new Date().toLocaleString();
-  const rows = orders.map(({ order, customerName }) => [
+  const rows = filtered.map(({ order, customerName }) => [
     order.orderNumber || order.id,
     order.orderDate || new Date().toISOString().slice(0, 10),
     order.customerCode || '',
@@ -963,20 +1070,31 @@ export async function pushOrdersBatchToGoogleSheet(
   ]);
 
   await appendSpreadsheetRows(spreadsheetId, 'Sales_Data!A:O', rows, accessToken);
-  await appendSpreadsheetRows(spreadsheetId, 'Sales_Orders!A:O', rows, accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Sales_Orders!A:O', rows, accessToken).catch(() => {});
+  markSyncedSheetRefs(Array.from(seenInBatch));
 }
 
 /**
- * Batch append multiple recoveries simultaneously to Google Sheet
+ * Batch append multiple recoveries simultaneously to Google Sheet (deduplicated)
  */
 export async function pushRecoveriesBatchToGoogleSheet(
   spreadsheetId: string,
   recoveries: { recovery: any; customerName?: string }[],
   accessToken: string
 ): Promise<void> {
-  if (recoveries.length === 0) return;
+  const synced = getSyncedSheetRefs();
+  const seenInBatch = new Set<string>();
+  const filtered = recoveries.filter(({ recovery }) => {
+    const ref = getSheetTxRef('REC', recovery);
+    if (!ref) return true;
+    if (synced.has(ref) || seenInBatch.has(ref)) return false;
+    seenInBatch.add(ref);
+    return true;
+  });
+  if (filtered.length === 0) return;
+
   const nowStr = new Date().toLocaleString();
-  const rows = recoveries.map(({ recovery, customerName }) => [
+  const rows = filtered.map(({ recovery, customerName }) => [
     recovery.recoveryNumber || recovery.id,
     recovery.customerCode || '',
     customerName || recovery.customerName || 'Customer',
@@ -994,7 +1112,8 @@ export async function pushRecoveriesBatchToGoogleSheet(
   ]);
 
   await appendSpreadsheetRows(spreadsheetId, 'Recoveries_Collections!A:O', rows, accessToken);
-  await appendSpreadsheetRows(spreadsheetId, 'Recoveries!A:O', rows, accessToken);
+  await appendSpreadsheetRows(spreadsheetId, 'Recoveries!A:O', rows, accessToken).catch(() => {});
+  markSyncedSheetRefs(Array.from(seenInBatch));
 }
 
 /**

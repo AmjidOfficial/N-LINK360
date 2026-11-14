@@ -11,7 +11,7 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['national_light_logo.jpg'],
+        includeAssets: ['national_light_logo.jpg', 'apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png'],
         manifest: {
           id: '/',
           name: 'National Light Pakistan - N-LINK 360',
@@ -24,16 +24,22 @@ export default defineConfig(() => {
           scope: '/',
           icons: [
             {
-              src: '/national_light_logo.jpg',
+              src: '/icons/icon-192.png',
               sizes: '192x192',
-              type: 'image/jpeg',
+              type: 'image/png',
               purpose: 'any',
             },
             {
-              src: '/national_light_logo.jpg',
+              src: '/icons/icon-512.png',
               sizes: '512x512',
-              type: 'image/jpeg',
+              type: 'image/png',
               purpose: 'any',
+            },
+            {
+              src: '/icons/maskable-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
             },
           ],
         },

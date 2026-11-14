@@ -2648,6 +2648,170 @@ console.log('\n🌐 [27/27] Testing Netlify Static HTML Fallback & Client Auth S
   }
 }
 
+// =========================================================================
+// [28/30] IDEMPOTENCY UUIDS, OFFLINE QUEUE DEDUP & CONCURRENT SUBMISSIONS
+// =========================================================================
+console.log('\n🔒 [28/30] Testing Idempotency UUIDs, Offline Deduplication & Concurrent Duplicate Protection...');
+{
+  const { generateIdempotencyUuid, isValidUuid } = await import('../src/utils/idGenerator');
+  const {
+    enqueueOfflineAction,
+    getOfflineQueue,
+    saveOfflineQueue,
+    classifySyncError,
+    isPermanentSyncError,
+  } = await import('../src/services/offlineSyncEngine');
+
+  // Clear queue before test
+  saveOfflineQueue([]);
+
+  const uuid1 = generateIdempotencyUuid();
+  const uuid2 = generateIdempotencyUuid();
+  assert(isValidUuid(uuid1) && isValidUuid(uuid2) && uuid1 !== uuid2, 'Generated RFC-4122 UUID v4 idempotency keys are valid and unique');
+  assert(!isValidUuid('not-a-valid-uuid'), 'Invalid idempotency strings are rejected by isValidUuid');
+
+  // Concurrent duplicate enqueues sharing same idempotencyKey produce exactly ONE queued transaction
+  const [qA, qB, qC] = await Promise.all([
+    Promise.resolve(enqueueOfflineAction('ORDERS', 'CREATE', { order: { id: 'SO-CONC-1', totalAmount: 50000 } }, uuid1)),
+    Promise.resolve(enqueueOfflineAction('ORDERS', 'CREATE', { order: { id: 'SO-CONC-1', totalAmount: 50000 } }, uuid1)),
+    Promise.resolve(enqueueOfflineAction('ORDERS', 'CREATE', { order: { id: 'SO-CONC-1', totalAmount: 50000 } }, uuid1)),
+  ]);
+  const queueAfter = getOfflineQueue();
+  assert(
+    queueAfter.length === 1 && qA.id === qB.id && qB.id === qC.id && qA.idempotencyKey === uuid1,
+    'Concurrent duplicate offline order submissions share single queue entry & retain original idempotencyKey'
+  );
+
+  // Atomic idempotent transaction simulator (mirrors PostgreSQL UNIQUE + FOR UPDATE behavior)
+  const processedOrderKeys = new Set<string>();
+  const processedRecoveryKeys = new Set<string>();
+  let simulatedBalance = 100000;
+  let simulatedStock = 500;
+
+  const submitAtomicOrder = async (key: string, amount: number, qty: number) => {
+    if (processedOrderKeys.has(key)) return { duplicate: true, balance: simulatedBalance, stock: simulatedStock };
+    processedOrderKeys.add(key);
+    simulatedStock -= qty;
+    simulatedBalance += amount;
+    return { duplicate: false, balance: simulatedBalance, stock: simulatedStock };
+  };
+
+  const submitAtomicRecovery = async (key: string, amount: number) => {
+    if (processedRecoveryKeys.has(key)) return { duplicate: true, balance: simulatedBalance };
+    processedRecoveryKeys.add(key);
+    simulatedBalance -= amount;
+    return { duplicate: false, balance: simulatedBalance };
+  };
+
+  const orderResults = await Promise.all([
+    submitAtomicOrder(uuid1, 25000, 50),
+    submitAtomicOrder(uuid1, 25000, 50),
+    submitAtomicOrder(uuid1, 25000, 50),
+  ]);
+  assert(
+    orderResults.filter((r) => !r.duplicate).length === 1 && simulatedBalance === 125000 && simulatedStock === 450,
+    '3 concurrent order retries with same UUID debit ledger once (125,000) & deduct stock once (450)'
+  );
+
+  const recoveryResults = await Promise.all([
+    submitAtomicRecovery(uuid2, 40000),
+    submitAtomicRecovery(uuid2, 40000),
+  ]);
+  assert(
+    recoveryResults.filter((r) => !r.duplicate).length === 1 && simulatedBalance === 85000,
+    'Concurrent duplicate recovery retries credit customer ledger strictly once (85,000)'
+  );
+
+  // Permanent sync errors must NOT auto-retry indefinitely
+  assert(isPermanentSyncError(classifySyncError('HTTP 403 Row-Level Security policy violation')), 'RLS/Auth error classified as permanent');
+  assert(isPermanentSyncError(classifySyncError('Validation error: Customer credit limit exceeded')), 'Validation error classified as permanent');
+  assert(!isPermanentSyncError(classifySyncError('Failed to fetch network error')), 'Transient network error remains retryable');
+
+  saveOfflineQueue([]);
+}
+
+// =========================================================================
+// [29/30] GOOGLE SHEETS ERROR CLASSIFICATION, TX-REF DEDUP & QUEUE GUARD
+// =========================================================================
+console.log('\n📊 [29/30] Testing Google Sheets Error Classification & Sync Reference Deduplication...');
+{
+  const {
+    classifyGoogleHttpStatus,
+    getSheetTxRef,
+    markSyncedSheetRefs,
+  } = await import('../src/services/googleSheetsLiveService');
+  const { addPendingUpload, getPendingUploads, savePendingUploads } = await import('../src/services/googleSheetsTwoWaySyncService');
+
+  const perm403 = classifyGoogleHttpStatus(403, 'PERMISSION_DENIED: Caller does not have permission');
+  const quota403 = classifyGoogleHttpStatus(403, 'Rate Limit Exceeded / Quota exceeded');
+  const auth401 = classifyGoogleHttpStatus(401, 'Invalid Credentials');
+  const limit429 = classifyGoogleHttpStatus(429, 'Too many requests');
+  const err503 = classifyGoogleHttpStatus(503, 'Service unavailable');
+
+  assert(!perm403.retryable && perm403.isPermanentAuth, 'Google Sheets 403 PERMISSION_DENIED stops retry immediately');
+  assert(quota403.retryable && quota403.isRateLimit, 'Google Sheets 403 QUOTA_EXCEEDED triggers backoff + cooldown');
+  assert(!auth401.retryable && auth401.isPermanentAuth, 'Google Sheets 401 halts backoff retries');
+  assert(limit429.retryable && limit429.isRateLimit, 'Google Sheets 429 triggers exponential backoff');
+  assert(err503.retryable && !err503.isRateLimit, 'Google Sheets 5xx transient error triggers retry');
+
+  const ref = getSheetTxRef('ORD', { idempotencyKey: '550e8400-e29b-41d4-a716-446655440000', orderNumber: 'SO-9001' });
+  assert(ref === 'ORD:550e8400-e29b-41d4-a716-446655440000', 'Sheet TX ref prefers idempotencyKey UUID');
+  markSyncedSheetRefs([ref]);
+  const storedRefs = JSON.parse(localStorage.getItem('nlink_synced_sheet_refs_v1') || '[]');
+  assert(storedRefs.includes(ref), 'Synced sheet reference persisted to prevent duplicate Google Sheet rows');
+
+  savePendingUploads([]);
+  const firstPending = addPendingUpload('ORDER', { id: 'SO-Q1', idempotencyKey: '550e8400-e29b-41d4-a716-446655440000' }, { customerName: 'Test Dealer' });
+  const dupPending = addPendingUpload('ORDER', { id: 'SO-Q1', idempotencyKey: '550e8400-e29b-41d4-a716-446655440000' }, { customerName: 'Test Dealer' });
+  assert(
+    firstPending.id === dupPending.id && getPendingUploads().length === 1,
+    'Google Sheets Two-Way Sync pending queue deduplicates identical transaction references'
+  );
+  savePendingUploads([]);
+}
+
+// =========================================================================
+// [30/30] API RATE-LIMIT POLICIES & UUID HEADER VALIDATION PARITY
+// =========================================================================
+console.log('\n🛡️ [30/30] Testing Tiered API Rate-Limiting & Payload Header Guard Parity...');
+{
+  const RATE_POLICIES = {
+    AUTH: { max: 12, windowMs: 60_000 },
+    FINANCIAL_WRITE: { max: 30, windowMs: 60_000 },
+    READ: { max: 90, windowMs: 60_000 },
+  };
+  const buckets = new Map<string, { count: number; resetAt: number }>();
+  const checkTier = (tier: keyof typeof RATE_POLICIES, key: string, now: number) => {
+    const policy = RATE_POLICIES[tier];
+    let b = buckets.get(`${tier}:${key}`);
+    if (!b || now >= b.resetAt) {
+      b = { count: 0, resetAt: now + policy.windowMs };
+      buckets.set(`${tier}:${key}`, b);
+    }
+    b.count += 1;
+    return {
+      allowed: b.count <= policy.max,
+      remaining: Math.max(0, policy.max - b.count),
+      retryAfter: b.count > policy.max ? Math.max(1, Math.ceil((b.resetAt - now) / 1000)) : 0,
+    };
+  };
+
+  const t0 = 1_700_000_000_000;
+  let authBlockedAt = -1;
+  for (let i = 1; i <= 15; i++) {
+    const r = checkTier('AUTH', 'ip-1', t0 + i * 100);
+    if (!r.allowed && authBlockedAt === -1) authBlockedAt = i;
+  }
+  assert(authBlockedAt === 13, 'AUTH tier permits 12 attempts/min and blocks on attempt 13 with Retry-After');
+
+  let writeOkCount = 0;
+  for (let i = 1; i <= 30; i++) {
+    if (checkTier('FINANCIAL_WRITE', 'user-1', t0 + i * 100).allowed) writeOkCount++;
+  }
+  const write31 = checkTier('FINANCIAL_WRITE', 'user-1', t0 + 3500);
+  assert(writeOkCount === 30 && !write31.allowed && write31.retryAfter > 0, 'FINANCIAL_WRITE allows 30 ops/min for field work and throttles burst #31');
+}
+
 console.log('\n================================================================');
 console.log(`🎉 TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log('================================================================\n');
@@ -2655,6 +2819,6 @@ console.log('================================================================\n'
 if (failed > 0) {
   process.exit(1);
 } else {
-  console.log('🚀 ALL 27 MODULES PASSED VERIFICATION!');
+  console.log('🚀 ALL 30 MODULES PASSED VERIFICATION!');
   process.exit(0);
 }

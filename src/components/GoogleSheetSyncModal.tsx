@@ -156,6 +156,8 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
 
   const [pendingItems, setPendingItems] = useState<PendingUploadItem[]>([]);
   const [retryingIds, setRetryingIds] = useState<Record<string, boolean>>({});
+  const [confirmClearAll, setConfirmClearAll] = useState<boolean>(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     setPendingItems(getPendingUploads());
@@ -1084,23 +1086,42 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center justify-between px-1 gap-2 flex-wrap">
                     <span className="text-xs font-black uppercase tracking-wider text-slate-700">
                       Pending Transaction Items ({pendingItems.length})
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm('Are you sure you want to clear all pending records from local cache?')) {
-                          pendingItems.forEach(item => removePendingUpload(item.id));
-                          setPendingItems(getPendingUploads());
-                          setOpStatus({ type: 'success', message: 'Cleared all items from queue.' });
-                        }
-                      }}
-                      className="text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
-                    >
-                      Clear Entire Queue
-                    </button>
+                    {!confirmClearAll ? (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmClearAll(true)}
+                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer min-h-[36px] px-2"
+                      >
+                        Clear Entire Queue
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-rose-700">Clear {pendingItems.length} cached items?</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            pendingItems.forEach((item) => removePendingUpload(item.id));
+                            setPendingItems(getPendingUploads());
+                            setConfirmClearAll(false);
+                            setOpStatus({ type: 'success', message: 'Cleared all items from queue.' });
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold cursor-pointer"
+                        >
+                          Confirm Clear
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmClearAll(false)}
+                          className="px-2 py-1 rounded-lg bg-slate-200 text-slate-700 text-[11px] font-bold cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
@@ -1172,20 +1193,38 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                                 <RefreshCw className={`w-3.5 h-3.5 ${retryLoading ? 'animate-spin' : ''}`} />
                                 <span className="hidden sm:inline">Retry</span>
                               </button>
-                              <button
-                                type="button"
-                                disabled={retryLoading || isOperating}
-                                onClick={() => {
-                                  if (confirm(`Remove ${item.type} record for ${detailLabel} from queue?`)) {
-                                    handleDeleteItem(item.id);
-                                  }
-                                }}
-                                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 hover:border-rose-300 text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
-                                title="Delete record from queue"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">Delete</span>
-                              </button>
+                              {confirmDeleteId === item.id ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleDeleteItem(item.id);
+                                      setConfirmDeleteId(null);
+                                    }}
+                                    className="px-2 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold cursor-pointer"
+                                  >
+                                    Remove
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="px-2 py-1 rounded-lg bg-slate-200 text-slate-700 text-[11px] font-bold cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={retryLoading || isOperating}
+                                  onClick={() => setConfirmDeleteId(item.id)}
+                                  className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 hover:border-rose-300 text-[11px] font-black flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                                  title="Delete record from queue"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">Delete</span>
+                                </button>
+                              )}
                             </div>
                           </div>
 

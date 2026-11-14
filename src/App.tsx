@@ -48,7 +48,7 @@ import { reconcileUsersWithGoogleSheet } from './services/googleSheetsSync';
 import { syncToGoogleSheetsWebhook, getGoogleSheetsWebhookUrl } from './services/google-sheets';
 import { assertAuthorizedApprover, isAuthorizedApproverEmail, invalidateAllSessionsGlobally } from './services/production-users';
 import { getStoredTownNodes, saveTownNodes, PAKISTAN_TOWN_COORDINATES } from './services/townManagement';
-import { generateUniqueOrderId, generateUniqueRecoveryId } from './utils/idGenerator';
+import { generateUniqueOrderId, generateUniqueRecoveryId, generateIdempotencyUuid } from './utils/idGenerator';
 import { persistAttendanceRecord } from './services/attendance';
 import { executeOrderCancellationOrReversal, executeRecoveryCancellationOrReversal, isEntryConfirmedByAccountsOrNsm } from './utils/entryManagement';
 import { TeamShareModal } from './components/TeamShareModal';
@@ -875,6 +875,15 @@ export default function App() {
 
   // Order Placement Handler
   const handlePlaceOrder = (newOrder: SalesOrder) => {
+    const idemKey = newOrder.idempotencyKey || generateIdempotencyUuid();
+
+    // Strong idempotency replay guard (prevents double-click / mobile retry duplicate state)
+    const existingByIdem = orders.find((o) => o.idempotencyKey && o.idempotencyKey === idemKey);
+    if (existingByIdem) {
+      setLedgerToastMessage(`Order #${existingByIdem.orderNumber} already recorded (duplicate prevented).`);
+      return;
+    }
+
     const hasCollision = orders.some(
       (o) =>
         (newOrder.id && o.id === newOrder.id) ||
@@ -886,6 +895,7 @@ export default function App() {
         : newOrder.orderNumber;
     const effectiveOrder: SalesOrder = {
       ...newOrder,
+      idempotencyKey: idemKey,
       id: hasCollision || !newOrder.id ? uniqueOrderRef : newOrder.id,
       orderNumber: hasCollision || !newOrder.orderNumber ? uniqueOrderRef : newOrder.orderNumber,
     };
@@ -895,9 +905,17 @@ export default function App() {
     syncToCache(customers, updatedOrders, recoveries);
 
     if (isOnline) {
-      syncOrderToSupabase(effectiveOrder).catch((err) => {
-        console.warn('Supabase order upload failed:', err);
-      });
+      syncOrderToSupabase(effectiveOrder)
+        .then((ok) => {
+          if (!ok) {
+            syncManager.enqueue('ORDERS', 'CREATE', { order: effectiveOrder, recoveryAmount: 0 }, idemKey);
+          }
+        })
+        .catch(() => {
+          syncManager.enqueue('ORDERS', 'CREATE', { order: effectiveOrder, recoveryAmount: 0 }, idemKey);
+        });
+    } else {
+      syncManager.enqueue('ORDERS', 'CREATE', { order: effectiveOrder, recoveryAmount: 0 }, idemKey);
     }
 
     setLedgerToastMessage(
@@ -907,6 +925,14 @@ export default function App() {
 
   // Recovery Logging Handler: Entry Flow Step 1 & Confirmation Rule
   const handleRecordRecovery = (newRecovery: Recovery) => {
+    const idemKey = newRecovery.idempotencyKey || generateIdempotencyUuid();
+
+    const existingByIdem = recoveries.find((r) => r.idempotencyKey && r.idempotencyKey === idemKey);
+    if (existingByIdem) {
+      setLedgerToastMessage(`Recovery #${existingByIdem.recoveryNumber || existingByIdem.id} already recorded (duplicate prevented).`);
+      return;
+    }
+
     const hasCollision = recoveries.some(
       (r) =>
         (newRecovery.id && r.id === newRecovery.id) ||
@@ -920,6 +946,7 @@ export default function App() {
     // Unconfirmed recovery starts as PENDING until confirmed by Shahzad Ullah
     const effectiveRecovery: Recovery = {
       ...newRecovery,
+      idempotencyKey: idemKey,
       id: hasCollision || !newRecovery.id ? uniqueRecRef : newRecovery.id,
       recoveryNumber: hasCollision || !(newRecovery as any).recoveryNumber ? uniqueRecRef : (newRecovery as any).recoveryNumber,
       status: (newRecovery.status === 'VERIFIED' || newRecovery.status === 'APPROVED') ? newRecovery.status : 'PENDING',
@@ -931,9 +958,17 @@ export default function App() {
     syncToCache(customers, orders, updatedRecoveries);
 
     if (isOnline) {
-      syncRecoveryToSupabase(effectiveRecovery).catch((err) => {
-        console.warn('Supabase recovery upload failed:', err);
-      });
+      syncRecoveryToSupabase(effectiveRecovery)
+        .then((ok) => {
+          if (!ok) {
+            syncManager.enqueue('RECOVERY', 'CREATE', effectiveRecovery as unknown as Record<string, unknown>, idemKey);
+          }
+        })
+        .catch(() => {
+          syncManager.enqueue('RECOVERY', 'CREATE', effectiveRecovery as unknown as Record<string, unknown>, idemKey);
+        });
+    } else {
+      syncManager.enqueue('RECOVERY', 'CREATE', effectiveRecovery as unknown as Record<string, unknown>, idemKey);
     }
 
     setLedgerToastMessage(

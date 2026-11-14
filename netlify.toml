@@ -24,6 +24,10 @@
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
+[[edge_functions]]
+  path = "/api/*"
+  function = "rate-limit-guard"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

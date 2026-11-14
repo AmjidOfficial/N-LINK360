@@ -13,7 +13,7 @@
  * Step 5: Add Invoice to Customer Ledger (Net 15% Less)
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Customer, SalesOrder, InventoryBalance, SKU } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import { downloadSalesInvoicePdf } from '../../utils/exportInvoicePdf';
@@ -84,6 +84,21 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
   // Step 3: SKU Stock Selection State (which SKUs are accepted vs left/omitted)
   const [skuDecisions, setSkuDecisions] = useState<Record<string, { accepted: boolean; orderedQty: number; availableQty: number; isMissing: boolean }>>({});
   const [isInitialized, setIsInitialized] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   // Initialize stock decisions when order changes
   useMemo(() => {
@@ -169,6 +184,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
   const projectedBalance = previousBalance + netInvoiceTotal;
 
   const handleToggleSku = (key: string) => {
+    setValidationError(null);
     setSkuDecisions((prev) => {
       const current = prev[key];
       if (!current) return prev;
@@ -184,9 +200,11 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
 
   const handleExecuteFulfillment = () => {
     if (acceptedItems.length === 0) {
-      alert('Cannot create invoice: At least 1 SKU must be accepted for dispatch.');
+      setValidationError('Cannot create invoice: At least 1 SKU must be accepted for dispatch.');
+      setCurrentStep(3);
       return;
     }
+    setValidationError(null);
 
     const payload: DispatchInvoiceCompletionPayload = {
       orderId: order.id,
@@ -332,7 +350,16 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
+          {validationError && (
+            <div
+              role="alert"
+              className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{validationError}</span>
+            </div>
+          )}
           
           {/* ========================================================================= */}
           {/* STEP 2: CREATE DISPATCH NOTE */}

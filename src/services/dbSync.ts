@@ -373,52 +373,66 @@ function handleSupabaseError(actionDescription: string, err: any) {
 // Live Mutator Syncing Methods
 // ==============================================================================
 
+const inFlightSyncs = new Map<string, Promise<boolean>>();
+
+function runOncePerKey(key: string, task: () => Promise<boolean>): Promise<boolean> {
+  const active = inFlightSyncs.get(key);
+  if (active) return active;
+  const promise = task().finally(() => {
+    inFlightSyncs.delete(key);
+  });
+  inFlightSyncs.set(key, promise);
+  return promise;
+}
+
 export async function syncOrderToSupabase(order: SalesOrder): Promise<boolean> {
   if (!supabase || !isSupabaseConfigured || isSupabaseUnreachable) return false;
-  try {
-    const oId = order.id;
-    const dbOrder = {
-      id: oId,
-      order_number: order.orderNumber,
-      customer_id: toUUID(order.customerId, 'c'),
-      sales_user_id: CONST_SALES_USER_UUID, // Use default seeded sales user profile
-      order_date: order.orderDate,
-      status: order.status,
-      subtotal: order.subtotal,
-      discount_amount: order.discountAmount,
-      tax_amount: order.taxAmount,
-      total_amount: order.totalAmount,
-      credit_check_status: order.creditCheckStatus,
-      credit_check_notes: order.creditCheckNotes || '',
-      created_at: order.createdAt || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+  const dedupKey = `order:${order.idempotencyKey || order.id}`;
+  return runOncePerKey(dedupKey, async () => {
+    try {
+      const oId = order.id;
+      const dbOrder = {
+        id: oId,
+        order_number: order.orderNumber,
+        customer_id: toUUID(order.customerId, 'c'),
+        sales_user_id: CONST_SALES_USER_UUID,
+        order_date: order.orderDate,
+        status: order.status,
+        subtotal: order.subtotal,
+        discount_amount: order.discountAmount,
+        tax_amount: order.taxAmount,
+        total_amount: order.totalAmount,
+        credit_check_status: order.creditCheckStatus,
+        credit_check_notes: order.creditCheckNotes || '',
+        created_at: order.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-    const { error: ordErr } = await supabase.from('sales_orders').upsert(dbOrder);
-    if (ordErr) throw ordErr;
+      const { error: ordErr } = await supabase!.from('sales_orders').upsert(dbOrder);
+      if (ordErr) throw ordErr;
 
-    // Save items
-    if (order.items && order.items.length > 0) {
-      const dbItems = order.items.map((it, idx) => ({
-        id: toUUID(`so-item-${order.id}-${idx}`, 'a'),
-        order_id: oId,
-        sku_id: toUUID(it.skuId, 'k'),
-        ordered_quantity: it.orderedQuantity,
-        approved_quantity: it.orderedQuantity,
-        unit_price: it.unitPrice,
-        discount_percent: it.discountPercent,
-        line_total: it.lineTotal,
-      }));
+      if (order.items && order.items.length > 0) {
+        const dbItems = order.items.map((it, idx) => ({
+          id: toUUID(`so-item-${order.id}-${idx}`, 'a'),
+          order_id: oId,
+          sku_id: toUUID(it.skuId, 'k'),
+          ordered_quantity: it.orderedQuantity,
+          approved_quantity: it.orderedQuantity,
+          unit_price: it.unitPrice,
+          discount_percent: it.discountPercent,
+          line_total: it.lineTotal,
+        }));
 
-      const { error: itemsErr } = await supabase.from('sales_order_items').upsert(dbItems);
-      if (itemsErr) throw itemsErr;
+        const { error: itemsErr } = await supabase!.from('sales_order_items').upsert(dbItems);
+        if (itemsErr) throw itemsErr;
+      }
+
+      return true;
+    } catch (err) {
+      handleSupabaseError(`sales order ${order.orderNumber}`, err);
+      return false;
     }
-
-    return true;
-  } catch (err) {
-    handleSupabaseError(`sales order ${order.orderNumber}`, err);
-    return false;
-  }
+  });
 }
 
 export async function syncRecoveryToSupabase(
@@ -426,40 +440,43 @@ export async function syncRecoveryToSupabase(
   updateCustomerBalance?: { customerId: string; balance: number }
 ): Promise<boolean> {
   if (!supabase || !isSupabaseConfigured || isSupabaseUnreachable) return false;
-  try {
-    const rId = recovery.id;
-    const dbRecovery = {
-      id: rId,
-      recovery_number: recovery.recoveryNumber,
-      customer_id: toUUID(recovery.customerId, 'c'),
-      sales_user_id: CONST_SALES_USER_UUID,
-      collection_date: recovery.collectionDate,
-      amount: recovery.amount,
-      payment_mode: recovery.paymentMode,
-      instrument_number: recovery.instrumentNumber || null,
-      bank_name: recovery.bankName || null,
-      status: recovery.status,
-      remarks: recovery.remarks || '',
-      created_at: recovery.createdAt || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+  const dedupKey = `recovery:${recovery.idempotencyKey || recovery.id}`;
+  return runOncePerKey(dedupKey, async () => {
+    try {
+      const rId = recovery.id;
+      const dbRecovery = {
+        id: rId,
+        recovery_number: recovery.recoveryNumber,
+        customer_id: toUUID(recovery.customerId, 'c'),
+        sales_user_id: CONST_SALES_USER_UUID,
+        collection_date: recovery.collectionDate,
+        amount: recovery.amount,
+        payment_mode: recovery.paymentMode,
+        instrument_number: recovery.instrumentNumber || null,
+        bank_name: recovery.bankName || null,
+        status: recovery.status,
+        remarks: recovery.remarks || '',
+        created_at: recovery.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-    const { error: recErr } = await supabase.from('recoveries').upsert(dbRecovery);
-    if (recErr) throw recErr;
+      const { error: recErr } = await supabase!.from('recoveries').upsert(dbRecovery);
+      if (recErr) throw recErr;
 
-    if (updateCustomerBalance) {
-      const { error: custErr } = await supabase
-        .from('customers')
-        .update({ current_balance: updateCustomerBalance.balance, updated_at: new Date().toISOString() })
-        .eq('id', toUUID(updateCustomerBalance.customerId, 'c'));
-      if (custErr) throw custErr;
+      if (updateCustomerBalance) {
+        const { error: custErr } = await supabase!
+          .from('customers')
+          .update({ current_balance: updateCustomerBalance.balance, updated_at: new Date().toISOString() })
+          .eq('id', toUUID(updateCustomerBalance.customerId, 'c'));
+        if (custErr) throw custErr;
+      }
+
+      return true;
+    } catch (err) {
+      handleSupabaseError(`recovery ${recovery.recoveryNumber}`, err);
+      return false;
     }
-
-    return true;
-  } catch (err) {
-    handleSupabaseError(`recovery ${recovery.recoveryNumber}`, err);
-    return false;
-  }
+  });
 }
 
 export async function syncInvoiceAndLedgerToSupabase(

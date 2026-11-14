@@ -11,11 +11,11 @@
  * - PDF Statement Download & Audit History actions
  */
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Customer, SalesOrder, Recovery } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import { triggerHaptic } from '../../utils/haptics';
-import { generateUniqueRecoveryId } from '../../utils/idGenerator';
+import { generateUniqueRecoveryId, generateIdempotencyUuid } from '../../utils/idGenerator';
 import { NationalLightHeaderBrand, DocumentCenterWatermark } from '../NationalLightLogo';
 import {
   Wallet,
@@ -59,6 +59,10 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
   const [referenceNumber, setReferenceNumber] = useState('');
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draftIdempotencyKey, setDraftIdempotencyKey] = useState<string>(() => generateIdempotencyUuid());
+  const submitLockRef = useRef(false);
 
   // Accounting calculations
   const openingBalance = customer.openingBalance ?? 0;
@@ -98,37 +102,49 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitLockRef.current || isSubmitting) return;
     const cleanAmount = parseInt(amountInput.replace(/[^0-9]/g, ''), 10) || 0;
     if (cleanAmount <= 0) {
-      alert('Please enter a valid recovery amount');
+      setValidationError('Please enter a valid recovery amount greater than 0 PKR.');
       return;
     }
 
-    const recoveryId = generateUniqueRecoveryId();
-    const newRecovery: Recovery = {
-      id: recoveryId,
-      recoveryNumber: recoveryId,
-      customerId: customer.id,
-      customerName: customer.companyName,
-      customerCode: customer.customerCode || 'NL-DLR',
-      salesUserId: currentUser.id,
-      salesUserName: currentUser.fullName,
-      collectionDate: new Date().toISOString().slice(0, 10),
-      amount: cleanAmount,
-      paymentMode: payMethod === 'BANK_TRANSFER' ? 'ONLINE_TRANSFER' : payMethod,
-      instrumentNumber: referenceNumber || undefined,
-      receiptUrl: receiptImage || undefined,
-      createdAt: new Date().toISOString(),
-      status: 'PENDING_VERIFICATION',
-      shahzadApproval: 'PENDING',
-    };
+    setValidationError(null);
+    submitLockRef.current = true;
+    setIsSubmitting(true);
 
-    triggerHaptic('success');
-    onRecordRecovery(newRecovery);
-    setToastMessage('Recovery collection logged and synced with N-LINK-360!');
-    setTimeout(() => setToastMessage(null), 5000);
-    setReferenceNumber('');
-    setReceiptImage(null);
+    try {
+      const recoveryId = generateUniqueRecoveryId();
+      const newRecovery: Recovery = {
+        id: recoveryId,
+        idempotencyKey: draftIdempotencyKey,
+        recoveryNumber: recoveryId,
+        customerId: customer.id,
+        customerName: customer.companyName,
+        customerCode: customer.customerCode || 'NL-DLR',
+        salesUserId: currentUser.id,
+        salesUserName: currentUser.fullName,
+        collectionDate: new Date().toISOString().slice(0, 10),
+        amount: cleanAmount,
+        paymentMode: payMethod === 'BANK_TRANSFER' ? 'ONLINE_TRANSFER' : payMethod,
+        instrumentNumber: referenceNumber || undefined,
+        receiptUrl: receiptImage || undefined,
+        createdAt: new Date().toISOString(),
+        status: 'PENDING_VERIFICATION',
+        shahzadApproval: 'PENDING',
+      };
+
+      triggerHaptic('success');
+      onRecordRecovery(newRecovery);
+      setToastMessage('Recovery collection logged and synced with N-LINK-360!');
+      setTimeout(() => setToastMessage(null), 5000);
+      setReferenceNumber('');
+      setReceiptImage(null);
+      setDraftIdempotencyKey(generateIdempotencyUuid());
+    } finally {
+      setIsSubmitting(false);
+      submitLockRef.current = false;
+    }
   };
 
   return (
@@ -410,12 +426,20 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
             )}
           </div>
 
+          {validationError && (
+            <div role="alert" className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-200 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{validationError}</span>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full py-3 bg-[#0052FF] hover:bg-[#003ECC] text-white rounded-lg font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+            disabled={isSubmitting}
+            className="w-full min-h-[46px] py-3 bg-[#0052FF] hover:bg-[#003ECC] text-white rounded-lg font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>Submit Recovery Collection</span>
+            <span>{isSubmitting ? 'Submitting...' : 'Submit Recovery Collection'}</span>
           </button>
         </form>
       </div>
@@ -520,15 +544,15 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
         </button>
       </div>
 
-      {/* Toast */}
+      {/* Non-overlapping top toast */}
       {toastMessage && (
-        <div className="fixed bottom-24 inset-x-4 z-50 bg-[#0F172A] text-white px-4 py-3 rounded-xl shadow-lg border border-slate-700 flex items-center justify-between text-xs font-semibold animate-in fade-in duration-200">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>{toastMessage}</span>
+        <div className="fixed top-16 inset-x-4 max-w-md mx-auto z-50 bg-[#0F172A] text-white px-4 py-3 rounded-xl shadow-lg border border-slate-700 flex items-center justify-between text-xs font-semibold animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 min-w-0">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="truncate">{toastMessage}</span>
           </div>
-          <button type="button" onClick={() => setToastMessage(null)} className="p-1 text-slate-400 hover:text-white">
-            <X className="w-3.5 h-3.5" />
+          <button type="button" onClick={() => setToastMessage(null)} className="min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-white shrink-0">
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}

@@ -48,6 +48,7 @@ import { BrandHeader } from '../BrandHeader';
 import { getCanonicalDashboardRole } from '../../lib/permissions';
 import { RoleBasedDashboardShell } from '../dashboard/engine';
 import { exportSalesSummaryCsv } from '../../utils/reportExport';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 const Customer360Screen = React.lazy(() => import('./Customer360Screen').then((m) => ({ default: m.Customer360Screen })));
 const BulkSkuOrderForm = React.lazy(() => import('./BulkSkuOrderForm').then((m) => ({ default: m.BulkSkuOrderForm })));
@@ -242,6 +243,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
   const [notificationLog, setNotificationLog] = useState<{ id: string; message: string; time: string; type: 'info' | 'success' | 'warning' }[]>([]);
   const toastTimerRef = useRef<number | null>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
+  const { canInstall: canInstallPwa, promptInstall } = usePWAInstall();
 
   const scrollMainToTop = (behavior: ScrollBehavior = 'auto') => {
     if (mainScrollRef.current) {
@@ -254,6 +256,20 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
   useEffect(() => {
     scrollMainToTop('auto');
   }, [activeTab, orderingSubTab, activeCustomerId, customerSubView]);
+
+  useEffect(() => {
+    if (!isNavDrawerOpen || typeof window === 'undefined') return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsNavDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isNavDrawerOpen]);
 
   // Customer List Filters
   const [customerSearch, setCustomerSearch] = useState('');
@@ -870,14 +886,30 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
               </nav>
             </div>
 
-            <div className="p-4 border-t border-[#E2E8F0] dark:border-slate-800">
+            <div className="p-4 border-t border-[#E2E8F0] dark:border-slate-800 space-y-2">
+              {canInstallPwa && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const ok = await promptInstall();
+                    if (ok) {
+                      setIsNavDrawerOpen(false);
+                      pushNotification('N-LINK 360 App installed on your device.', 'success');
+                    }
+                  }}
+                  className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold bg-[#1B5E3A] text-white hover:bg-[#14472B] cursor-pointer transition-colors"
+                >
+                  <Download className="w-4 h-4 text-[#F59E0B]" />
+                  <span>Install N-LINK 360 App</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
                   setIsNavDrawerOpen(false);
                   onSignOut();
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#EF4444] hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
+                className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#EF4444] hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Log out</span>

@@ -9,7 +9,7 @@
  * 4. Executive Sign-offs (Shahzad Ullah sole signing authority)
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   DistributorTransferRequest,
@@ -102,6 +102,22 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
 
   // Inspect Transfer Details Modal
   const [inspectTransfer, setInspectTransfer] = useState<DistributorTransferRequest | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isModalOpen || typeof window === 'undefined') return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsModalOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isModalOpen]);
 
   // Is Shahzad Ullah Executive Approver
   const isShahzad = isAuthorizedApproverEmail(currentUser?.email, currentUser);
@@ -196,9 +212,11 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
   // Submit New Handover Request
   const handleSubmitNewTransfer = () => {
     if (!targetDistributorName.trim()) {
-      alert('Please enter Target Distributor Name.');
+      setFormError('Please enter Target Distributor Name before submitting.');
+      setActiveStep(1);
       return;
     }
+    setFormError(null);
 
     const billsPayload: TransferredBillItem[] = availableOutstandingOrders
       .filter((o) => selectedBillIds.includes(o.id))
@@ -256,6 +274,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
 
   // Executive Approval Handler
   const handleApproveTransfer = (transferId: string) => {
+    setActionError(null);
     try {
       const res = approveDistributorTransfer(transferId, currentUser.email, currentUser);
       setTransfers(getStoredDistributorTransfers());
@@ -278,12 +297,27 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
         onToastMessage(res.message);
       }
     } catch (err: any) {
-      alert(`Approval Error: ${err.message || err}`);
+      setActionError(`Approval Error: ${err?.message || err}`);
     }
   };
 
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
+      {actionError && (
+        <div
+          role="alert"
+          className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center justify-between gap-2"
+        >
+          <span>{actionError}</span>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="text-rose-500 hover:text-rose-700 px-2 py-1 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* 1. Header Banner & Action Control Bar */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
@@ -433,7 +467,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
               </div>
 
               {/* Metrics Ribbon */}
-              <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
                   <span className="text-[10px] text-slate-400 block font-bold">Transferred Dealers</span>
                   <span className="text-sm font-black font-mono text-slate-900 dark:text-white">
@@ -486,12 +520,26 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setFormError(null);
+                }}
+                className="p-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                aria-label="Close handover modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {formError && (
+              <div
+                role="alert"
+                className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2"
+              >
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
 
             {/* Step 1: Handover Type & Target Distributor */}
             {activeStep === 1 && (

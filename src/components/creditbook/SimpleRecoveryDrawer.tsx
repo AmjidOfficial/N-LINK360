@@ -9,7 +9,7 @@
  * - Immediate offline queue & Google Sheets sync
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Customer, Recovery } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import {
@@ -22,9 +22,10 @@ import {
   Wallet,
   Building2,
   TrendingDown,
+  AlertCircle,
 } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
-import { generateUniqueRecoveryId } from '../../utils/idGenerator';
+import { generateUniqueRecoveryId, generateIdempotencyUuid } from '../../utils/idGenerator';
 
 export interface SimpleRecoveryDrawerProps {
   isOpen: boolean;
@@ -48,44 +49,94 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
   const [notes, setNotes] = useState('');
   const [slipImage, setSlipImage] = useState<string | null>(null);
   const [submittedRecovery, setSubmittedRecovery] = useState<Recovery | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draftIdempotencyKey, setDraftIdempotencyKey] = useState<string>(() => generateIdempotencyUuid());
+  const submitLockRef = useRef(false);
 
   const previousBalance = customer.currentBalance ?? customer.openingBalance ?? 0;
   const paymentAmount = Math.max(0, parseInt(amountStr.replace(/[^0-9]/g, ''), 10) || 0);
   const projectedBalance = Math.max(0, previousBalance - paymentAmount);
 
+  const handleResetAndClose = () => {
+    triggerHaptic('light');
+    setAmountStr('');
+    setPaymentMode('CASH');
+    setInstrumentNumber('');
+    setBankName('');
+    setNotes('');
+    setSlipImage(null);
+    setSubmittedRecovery(null);
+    setValidationError(null);
+    setIsSubmitting(false);
+    submitLockRef.current = false;
+    setDraftIdempotencyKey(generateIdempotencyUuid());
+    onClose();
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setDraftIdempotencyKey(generateIdempotencyUuid());
+    setValidationError(null);
+    setIsSubmitting(false);
+    submitLockRef.current = false;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleResetAndClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [isOpen]);
+
   const handleSubmitRecovery = () => {
+    if (submitLockRef.current || isSubmitting) return;
     if (paymentAmount <= 0) {
-      alert('Please enter a valid recovery amount.');
+      setValidationError('Please enter a valid recovery amount greater than 0 PKR.');
       return;
     }
 
-    const recoveryId = generateUniqueRecoveryId();
-    const nowIso = new Date().toISOString();
+    setValidationError(null);
+    submitLockRef.current = true;
+    setIsSubmitting(true);
 
-    const newRec: Recovery = {
-      id: recoveryId,
-      recoveryNumber: recoveryId,
-      customerId: customer.id,
-      customerName: customer.companyName,
-      customerCode: customer.customerCode || 'NL-DLR',
-      salesUserId: currentUser.id,
-      salesUserName: currentUser.fullName,
-      collectionDate: nowIso.slice(0, 10),
-      amount: paymentAmount,
-      paymentMode,
-      instrumentNumber: instrumentNumber || undefined,
-      bankName: bankName || undefined,
-      createdAt: nowIso,
-      status: 'PENDING_VERIFICATION',
-      remarks: notes || undefined,
-      receiptUrl: slipImage || undefined,
-      shahzadApproval: 'PENDING',
-      dualApprovalStatus: 'PENDING_DUAL_APPROVAL',
-    };
+    try {
+      const recoveryId = generateUniqueRecoveryId();
+      const nowIso = new Date().toISOString();
 
-    triggerHaptic('success');
-    onRecordRecovery(newRec);
-    setSubmittedRecovery(newRec);
+      const newRec: Recovery = {
+        id: recoveryId,
+        idempotencyKey: draftIdempotencyKey,
+        recoveryNumber: recoveryId,
+        customerId: customer.id,
+        customerName: customer.companyName,
+        customerCode: customer.customerCode || 'NL-DLR',
+        salesUserId: currentUser.id,
+        salesUserName: currentUser.fullName,
+        collectionDate: nowIso.slice(0, 10),
+        amount: paymentAmount,
+        paymentMode,
+        instrumentNumber: instrumentNumber || undefined,
+        bankName: bankName || undefined,
+        createdAt: nowIso,
+        status: 'PENDING_VERIFICATION',
+        remarks: notes || undefined,
+        receiptUrl: slipImage || undefined,
+        shahzadApproval: 'PENDING',
+        dualApprovalStatus: 'PENDING_DUAL_APPROVAL',
+      };
+
+      triggerHaptic('success');
+      onRecordRecovery(newRec);
+      setSubmittedRecovery(newRec);
+    } finally {
+      setIsSubmitting(false);
+      submitLockRef.current = false;
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,18 +149,6 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleResetAndClose = () => {
-    triggerHaptic('light');
-    setAmountStr('');
-    setPaymentMode('CASH');
-    setInstrumentNumber('');
-    setBankName('');
-    setNotes('');
-    setSlipImage(null);
-    setSubmittedRecovery(null);
-    onClose();
   };
 
   if (!isOpen) return null;
@@ -395,19 +434,26 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                 </div>
               </div>
 
+              {validationError && (
+                <div role="alert" className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-200 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{validationError}</span>
+                </div>
+              )}
+
               {/* Submit CTA */}
               <button
                 type="button"
                 onClick={handleSubmitRecovery}
-                disabled={paymentAmount <= 0}
+                disabled={paymentAmount <= 0 || isSubmitting}
                 className={`w-full min-h-[50px] py-3.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer touch-manipulation ${
-                  paymentAmount <= 0
+                  paymentAmount <= 0 || isSubmitting
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                     : 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-98 shadow-emerald-950/20'
                 }`}
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>CONFIRM &amp; LOG RECOVERY (Rs. {paymentAmount.toLocaleString()})</span>
+                <span>{isSubmitting ? 'SUBMITTING...' : `CONFIRM & LOG RECOVERY (Rs. ${paymentAmount.toLocaleString()})`}</span>
               </button>
             </div>
           )}

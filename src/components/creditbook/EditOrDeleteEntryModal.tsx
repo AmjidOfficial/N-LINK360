@@ -50,6 +50,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
 }) => {
   const [activeMode, setActiveMode] = useState<'EDIT' | 'DELETE'>('EDIT');
   const [reason, setReason] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state for Order Edit
@@ -71,6 +72,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
   useEffect(() => {
     if (!entryData) return;
     setReason('');
+    setValidationError(null);
     setIsSubmitting(false);
 
     if (entryType === 'ORDER') {
@@ -87,6 +89,20 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
       setAttendanceRemarks(entryData.remarks || '');
     }
   }, [entryType, entryData, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen || !entryData) return null;
 
@@ -133,9 +149,10 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
   const handleConfirmDeleteOrReverse = async () => {
     if (!permissions.allowed) return;
     if (permissions.requiresReversal && !reason.trim()) {
-      alert('A formal audit reason is required to cancel or reverse this posted entry.');
+      setValidationError('A formal audit reason is required to cancel or reverse this posted entry.');
       return;
     }
+    setValidationError(null);
 
     setIsSubmitting(true);
     triggerHaptic('warning');
@@ -192,8 +209,11 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
         <div className="p-3 bg-[#F8FAFC] dark:bg-slate-900 border-b border-[#E2E8F0] dark:border-slate-800 grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => setActiveMode('EDIT')}
-            className={`min-h-[40px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors ${
+            onClick={() => {
+              setActiveMode('EDIT');
+              setValidationError(null);
+            }}
+            className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors ${
               activeMode === 'EDIT'
                 ? 'bg-[#1B5E3A] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
@@ -205,8 +225,11 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
 
           <button
             type="button"
-            onClick={() => setActiveMode('DELETE')}
-            className={`min-h-[40px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors ${
+            onClick={() => {
+              setActiveMode('DELETE');
+              setValidationError(null);
+            }}
+            className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors ${
               activeMode === 'DELETE'
                 ? 'bg-rose-700 text-white shadow-xs'
                 : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
@@ -417,11 +440,24 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                   rows={2}
                   required
                   value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                  onChange={(e) => {
+                    setReason(e.target.value);
+                    if (validationError) setValidationError(null);
+                  }}
                   placeholder="Explain why this entry is being cancelled (required for audit)..."
                   className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-[#0F172A] dark:text-white outline-none focus:border-rose-500"
                 />
               </div>
+
+              {validationError && (
+                <div
+                  role="alert"
+                  className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2"
+                >
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{validationError}</span>
+                </div>
+              )}
             </div>
           )}
         </div>

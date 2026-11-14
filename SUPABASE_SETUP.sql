@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS public.erp_products (
 CREATE TABLE IF NOT EXISTS public.orders (
   id TEXT PRIMARY KEY,
   order_number TEXT UNIQUE NOT NULL,
+  idempotency_key UUID UNIQUE,
   booking_date TIMESTAMPTZ DEFAULT NOW(),
   booker_id TEXT NOT NULL,
   booker_name TEXT NOT NULL,
@@ -78,6 +79,9 @@ CREATE TABLE IF NOT EXISTS public.orders (
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS idempotency_key UUID;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_hybrid_orders_idempotency_key ON public.orders (idempotency_key) WHERE idempotency_key IS NOT NULL;
 
 -- 5. ORDER ITEMS TABLE
 CREATE TABLE IF NOT EXISTS public.order_items (
@@ -94,6 +98,7 @@ CREATE TABLE IF NOT EXISTS public.order_items (
 -- 6. PARTY LEDGERS & VOUCHERS TABLE
 CREATE TABLE IF NOT EXISTS public.party_ledgers (
   id TEXT PRIMARY KEY,
+  idempotency_key UUID UNIQUE,
   transaction_date TIMESTAMPTZ DEFAULT NOW(),
   party_id TEXT REFERENCES public.parties(id),
   party_name TEXT NOT NULL,
@@ -105,6 +110,30 @@ CREATE TABLE IF NOT EXISTS public.party_ledgers (
   narration TEXT,
   created_by TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.party_ledgers ADD COLUMN IF NOT EXISTS idempotency_key UUID;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_hybrid_party_ledgers_idempotency_key ON public.party_ledgers (idempotency_key) WHERE idempotency_key IS NOT NULL;
+
+-- 6B. CENTRALIZED RATE LIMIT & SECURITY EVENT TABLES
+CREATE TABLE IF NOT EXISTS public.api_rate_limits (
+  bucket_key TEXT PRIMARY KEY,
+  action_name TEXT NOT NULL,
+  auth_user_id UUID,
+  window_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  request_count INTEGER NOT NULL DEFAULT 1,
+  blocked_until TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.security_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_type TEXT NOT NULL,
+  action_name TEXT NOT NULL,
+  severity TEXT NOT NULL DEFAULT 'WARN',
+  auth_user_id UUID,
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- 7. ATTENDANCE & ROUTES TABLE
