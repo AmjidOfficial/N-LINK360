@@ -60,7 +60,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   onOpenConfigDrawer,
   onQuickAction,
 }) => {
-  const quickActions = config.allowedQuickActions.slice(0, 4);
+  const quickActions = onQuickAction ? config.allowedQuickActions.slice(0, 4) : [];
 
   return (
     <header className="rounded-2xl border border-slate-200 dark:border-emerald-900/50 bg-white dark:bg-[#0E1A14] px-4 py-4 sm:px-6 sm:py-5">
