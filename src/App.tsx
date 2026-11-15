@@ -52,7 +52,7 @@ import { generateUniqueOrderId, generateUniqueRecoveryId, generateIdempotencyUui
 import { persistAttendanceRecord } from './services/attendance';
 import { executeOrderCancellationOrReversal, executeRecoveryCancellationOrReversal, isEntryConfirmedByAccountsOrNsm } from './utils/entryManagement';
 import { TeamShareModal } from './components/TeamShareModal';
-import { detectDeviceExperience, isMobileDevice } from './utils/deviceDetection';
+import { detectDeviceExperience } from './utils/deviceDetection';
 import {
   checkMidnightCutoff,
   prepareDataForNextDay,
@@ -80,22 +80,6 @@ export default function App() {
   const [experienceMode, setExperienceMode] = useState<'FIELD_MOBILE' | 'HEAD_OFFICE'>(() => {
     return detectDeviceExperience();
   });
-
-  // Responsive device auto-detection on resize / orientation change
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handleResize = () => {
-      setExperienceMode(detectDeviceExperience());
-    };
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
 
   // Central Complete SKU & Price List state (reactive to head-office RBAC price updates)
   const [catalogSkus, setCatalogSkus] = useState(() => getCentralPriceList());
@@ -133,6 +117,30 @@ export default function App() {
       return null;
     }
   });
+
+  // Select the mobile workspace by role, never by screen size alone.
+  const updateExperienceMode = (user: NLinkUser | null) => {
+    const isSmallScreen = detectDeviceExperience() === 'FIELD_MOBILE';
+    const role = String(user?.role || '').trim().toUpperCase();
+    const mobileWorkspaceRoles = [
+      'SALES_RECOVERY', 'SALES_OFFICER', 'FIELD_SALES_USER', 'ORDER_BOOKER',
+      'RECOVERY_OFFICER', 'TSM', 'ASM', 'OB', 'SS', 'DEALER', 'DISTRIBUTOR',
+      'TRADE_PARTNER',
+    ];
+    setExperienceMode(isSmallScreen && mobileWorkspaceRoles.includes(role) ? 'FIELD_MOBILE' : 'HEAD_OFFICE');
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => updateExperienceMode(currentUser);
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    handleResize();
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, [currentUser]);
 
   // Login handler with automatic role-based home screen routing
   const handleSignIn = async (signedInUser: User & { mustChangePassword?: boolean }) => {
@@ -187,32 +195,7 @@ export default function App() {
       localStorage.setItem('nlink_active_user_session', JSON.stringify(userPersona));
     } catch (e) {}
 
-    // AUTOMATIC DEVICE-AWARE & ROLE-BASED ROUTING:
-    // 1. Mobile Phone / Tablet -> Automatically routes to Field Mobile Experience
-    // 2. Laptop / Desktop -> Routes to Head Office Command Center (or Field Mobile if field role)
-    const isFieldRole = ['SALES_RECOVERY', 'ORDER_BOOKER', 'RECOVERY_OFFICER', 'TSM', 'ASM', 'OB', 'SS'].includes(
-      userPersona.role || ''
-    );
-    const isHeadOfficeRole = [
-      'SUPER_ADMIN',
-      'MANAGEMENT',
-      'NATIONAL_MANAGER',
-      'NSM',
-      'ACCOUNTS',
-      'WAREHOUSE_MANAGER',
-      'FACTORY_MANAGER',
-      'DISPATCH_OFFICER',
-    ].includes(userPersona.role || '');
-
-    if (isMobileDevice()) {
-      setExperienceMode('FIELD_MOBILE');
-    } else {
-      if (isFieldRole && !isHeadOfficeRole) {
-        setExperienceMode('FIELD_MOBILE');
-      } else {
-        setExperienceMode('HEAD_OFFICE');
-      }
-    }
+    updateExperienceMode(userPersona);
   };
 
   const handleSignOut = async () => {
