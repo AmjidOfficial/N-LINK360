@@ -4,6 +4,8 @@ import {
   normalizeRole, normalizeTradePartnerType,
 } from '../src/lib/dashboard/unified-role-model';
 import { DEPARTMENT_DASHBOARDS, getDashboardDefinitionForRole } from '../src/lib/dashboard/department-dashboard-blueprints';
+import { getCanonicalDashboardRole, getEffectivePermissionGroup } from '../src/lib/permissions';
+import { resolveUserDataScope } from '../src/lib/dashboard/scope';
 
 assert.equal(normalizeRole('TSM'), 'SALES_OFFICER');
 assert.equal(normalizeRole('Sales Officer'), 'SALES_OFFICER');
@@ -26,6 +28,15 @@ assert.equal(normalizeTradePartnerType('OTHER'), null);
 assert.equal(getDashboardDefinitionForRole('TRADE_PARTNER'), DEPARTMENT_DASHBOARDS.TRADE);
 assert.equal(getDashboardDefinitionForRole('SALES_OFFICER'), DEPARTMENT_DASHBOARDS.SALES);
 assert.equal(getDashboardDefinitionForRole('FACTORY'), DEPARTMENT_DASHBOARDS.MANUFACTURING);
+assert.equal(getEffectivePermissionGroup('TSM'), getEffectivePermissionGroup('SALES_OFFICER'));
+assert.equal(getEffectivePermissionGroup('DEALER'), getEffectivePermissionGroup('DISTRIBUTOR'));
+assert.equal(getCanonicalDashboardRole('DEALER'), getCanonicalDashboardRole('DISTRIBUTOR'));
+assert.equal(getCanonicalDashboardRole('FACTORY'), 'FACTORY');
+const dealerScope = resolveUserDataScope({ id: 'dealer-user', role: 'DEALER', dealerId: 'dealer-1' });
+const distributorScope = resolveUserDataScope({ id: 'dist-user', role: 'DISTRIBUTOR', distributorId: 'dist-1' });
+assert.equal(dealerScope.dashboardRoleKey, distributorScope.dashboardRoleKey);
+assert.equal(dealerScope.scopeLevel, 'DEALER');
+assert.equal(distributorScope.scopeLevel, 'DISTRIBUTOR');
 
 assert.equal(canPreviewDashboard({ actorRole: 'SUPER_ADMIN', actorScope: 'COMPANY', requestedRole: 'FACTORY', requestedScope: 'DEPARTMENT' }), true);
 assert.equal(canPreviewDashboard({ actorRole: 'TOP_MANAGEMENT', actorScope: 'COMPANY', requestedRole: 'TRADE_PARTNER', requestedScope: 'ASSIGNED_CUSTOMERS' }), true);
