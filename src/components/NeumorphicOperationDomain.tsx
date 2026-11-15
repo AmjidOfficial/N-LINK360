@@ -1504,7 +1504,7 @@ export const NeumorphicOperationDomain: React.FC<OperationDomainProps> = ({
             </div>
             <button
               onClick={() => {
-                setDealerForm({ name: '', town: '', region: 'Punjab Central', creditLimit: 1500000, currentBalance: 0, status: 'NORMAL', phone: '', contactPerson: '', creditDays: 30 });
+                setDealerForm({ name: '', customerType: 'DEALER', region: 'Punjab Central', area: '', territory: '', assignedTsm: '', town: '', cnic: '', contactPerson: '', phone: '', secondaryPhone: '', email: '', address: '', ntn: '', strn: '', creditLimit: 1500000, creditDays: 30, currentBalance: 0, status: 'NORMAL', bankName: '', bankIban: '' });
                 setModalType('ADD_DEALER');
               }}
               className="nm-btn-primary px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-sm"

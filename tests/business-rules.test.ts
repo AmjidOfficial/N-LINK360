@@ -1353,14 +1353,16 @@ console.log('\n[22] Testing Phase 1 Role-Based Dashboard Architecture, PKT Dates
     'TSM, SS, and OB resolve to identical FIELD_SALES_USER dashboard layout and KPIs'
   );
 
-  // B. Role Permissions & Config Isolation for DEALER & DISTRIBUTOR
+  // B. Shared TRADE_PARTNER dashboard with distinct underlying customer scopes
   const cfgDealer = resolveRoleDashboardConfig('DEALER');
   const cfgDist = resolveRoleDashboardConfig('DISTRIBUTOR');
   const cfgMd = resolveRoleDashboardConfig('SUPER_ADMIN');
-  assert(cfgDealer.dataScope === 'DEALER' && !cfgDealer.allowedKpis.includes('activeDealersCount'), 'DEALER config restricted to own account KPIs');
-  assert(cfgDist.dataScope === 'DISTRIBUTOR' && cfgDist.allowedKpis.includes('activeDealersCount'), 'DISTRIBUTOR config covers own account & linked dealers');
+  const dealerDataScope = resolveUserDataScope({ id: 'dealer-1', role: 'DEALER', dealerId: 'dealer-1' });
+  const distributorDataScope = resolveUserDataScope({ id: 'dist-1', role: 'DISTRIBUTOR', distributorId: 'dist-1' });
+  assert(cfgDealer.roleKey === cfgDist.roleKey && JSON.stringify(cfgDealer.allowedKpis) === JSON.stringify(cfgDist.allowedKpis), 'DEALER and DISTRIBUTOR share one dashboard layout and KPI set');
+  assert(dealerDataScope.scopeLevel === 'DEALER' && distributorDataScope.scopeLevel === 'DISTRIBUTOR', 'Trade partner records retain separate account and linked-dealer data scopes');
   assert(cfgMd.dataScope === 'COMPANY' && cfgMd.allowedKpis.length >= 12, 'MD/SUPER_ADMIN config exposes company-wide 12 KPIs');
-  assert(hasPermission('DEALER', 'dashboard.configure') === false && hasPermission('DISTRIBUTOR', 'recovery.verify') === false, 'DEALER and DISTRIBUTOR cannot administer or verify payments');
+  assert(hasPermission('DEALER', 'dashboard.configure') === false && hasPermission('DISTRIBUTOR', 'recovery.verify') === false, 'Trade partners cannot administer dashboards or verify payments');
 
   // C. Pakistan Standard Time (Asia/Karachi, UTC+5) Date Engine
   const utcCrossingPkt = new Date('2026-05-01T19:30:00.000Z'); // 00:30 AM May 2 in PKT

@@ -37,6 +37,7 @@ export interface ScopedUserInput {
   team?: string;
   distributorId?: string;
   dealerId?: string;
+  partnerType?: 'DEALER' | 'DISTRIBUTOR' | string;
 }
 
 export function resolveUserDataScope(user: ScopedUserInput): UserDataScope {
@@ -57,6 +58,7 @@ export function resolveUserDataScope(user: ScopedUserInput): UserDataScope {
       break;
     case 'ACCOUNTS':
     case 'WAREHOUSE':
+    case 'FACTORY':
     case 'DISPATCH':
     case 'HR_ADMIN':
       scopeLevel = 'DEPARTMENT';
@@ -71,12 +73,12 @@ export function resolveUserDataScope(user: ScopedUserInput): UserDataScope {
     case 'FIELD_SALES_USER':
       scopeLevel = 'TERRITORY';
       break;
-    case 'DISTRIBUTOR':
-      scopeLevel = 'DISTRIBUTOR';
+    case 'DEALER': {
+      const rawRole = String(user.role || '').trim().toUpperCase();
+      const partnerType = String(user.partnerType || (user.distributorId ? 'DISTRIBUTOR' : user.dealerId ? 'DEALER' : rawRole)).trim().toUpperCase();
+      scopeLevel = partnerType === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'DEALER';
       break;
-    case 'DEALER':
-      scopeLevel = 'DEALER';
-      break;
+    }
   }
 
   return {
@@ -250,6 +252,8 @@ function customerMatchesFilter(c: Customer, filter: DashboardHierarchyFilter): b
   if (filter.territory && norm(c.territory || c.city || c.town) !== norm(filter.territory)) return false;
   if (filter.town && norm(c.town || c.city) !== norm(filter.town)) return false;
   if (filter.dealerId && c.id !== filter.dealerId && c.customerCode !== filter.dealerId) return false;
+  if (filter.distributorId && c.id !== filter.distributorId && c.customerCode !== filter.distributorId &&
+      (c as any).distributorId !== filter.distributorId && (c as any).parentDistributorId !== filter.distributorId) return false;
   return true;
 }
 
@@ -268,11 +272,6 @@ function customerMatchesScope(c: Customer, scope: UserDataScope): boolean {
       if ((c as any).distributorId === scope.distributorId || (c as any).parentDistributorId === scope.distributorId) return true;
     }
     if (scope.email && c.email && norm(c.email) === norm(scope.email)) return true;
-    // Also permit dealers inside the distributor's explicit assigned towns if mapped
-    const custTown = norm(c.town || c.city);
-    if (scope.assignedTowns.length > 0 && custTown && scope.assignedTowns.some((t) => norm(t) === custTown)) {
-      return c.type === 'DEALER' || c.type === 'SHOP' || c.type === 'CUSTOMER';
-    }
     return false;
   }
 

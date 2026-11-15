@@ -10,6 +10,7 @@ import {
   validateRequestedFilter,
 } from '../../../lib/dashboard';
 import { hasPermission } from '../../../lib/permissions';
+import { canPreviewDashboard, getDefaultScopeForRole, normalizeRole, type CanonicalRole, type OrganisationScope } from '../../../lib/dashboard/unified-role-model';
 import { fetchScopedDashboardSummary, saveRoleDashboardConfigOverride } from '../../../services/dashboardApi';
 import type {
   AdminRoleConfigOverride,
@@ -63,10 +64,33 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
   const [filter, setFilter] = useState<DashboardHierarchyFilter>({});
   const [selectedKpi, setSelectedKpi] = useState<KpiMetricValue | null>(null);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [previewRole, setPreviewRole] = useState<CanonicalRole | null>(null);
   const [configOverride, setConfigOverride] = useState<AdminRoleConfigOverride | null>(() => {
     const scope = resolveUserDataScope(currentUser);
     return loadLocalRoleConfigOverrides()[scope.dashboardRoleKey] || null;
   });
+
+  const actorRole = normalizeRole(currentUser.role);
+  const actorScope = resolveUserDataScope(currentUser).scopeLevel as OrganisationScope;
+  const previewRoleOptions: CanonicalRole[] =
+    actorRole === 'SUPER_ADMIN' || actorRole === 'TOP_MANAGEMENT'
+      ? ['SUPER_ADMIN', 'TOP_MANAGEMENT', 'NSM', 'RSM', 'ZSM', 'SALES_OFFICER', 'TRADE_PARTNER', 'ACCOUNTS', 'WAREHOUSE', 'FACTORY', 'DISPATCH', 'HR']
+      : actorRole === 'NSM'
+        ? ['NSM', 'RSM', 'ZSM', 'SALES_OFFICER', 'TRADE_PARTNER']
+        : [];
+  const requestedPreviewScope = previewRole ? getDefaultScopeForRole(previewRole) : null;
+  const isPreviewAllowed = Boolean(
+    previewRole &&
+    requestedPreviewScope &&
+    canPreviewDashboard({
+      actorRole: currentUser.role,
+      actorScope,
+      requestedRole: previewRole,
+      requestedScope: requestedPreviewScope,
+    })
+  );
+  const isPreviewMode = Boolean(previewRole && isPreviewAllowed);
+  const activeDashboardRole = isPreviewMode && previewRole ? previewRole : currentUser.role;
 
   const effectiveDataset = useMemo<DashboardDataset>(() => {
     const userScope = resolveUserDataScope({
@@ -77,6 +101,9 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
       zone: currentUser.zone || currentUser.area,
       territory: currentUser.territory,
       assignedTowns: currentUser.assignedTowns,
+      distributorId: (currentUser as any).distributorId,
+      dealerId: (currentUser as any).dealerId,
+      partnerType: currentUser.partnerType,
     });
     const hasConfiguredTargets = Boolean(dataset.targets && dataset.targets.length > 0);
     const hasEmployees = Boolean(dataset.employees && dataset.employees.length > 0);
@@ -126,8 +153,12 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
       assignedTowns: currentUser.assignedTowns,
       distributorId: (currentUser as any).distributorId,
       dealerId: (currentUser as any).dealerId,
+      partnerType: currentUser.partnerType,
     });
-    const config = resolveRoleDashboardConfig(currentUser.role, configOverride);
+    const previewConfigOverride = isPreviewMode
+      ? loadLocalRoleConfigOverrides()[resolveUserDataScope({ ...currentUser, role: activeDashboardRole }).dashboardRoleKey] || null
+      : configOverride;
+    const config = resolveRoleDashboardConfig(activeDashboardRole, previewConfigOverride);
     const dateRange = getKarachiDateRange(datePreset, customStart, customEnd);
     const validation = validateRequestedFilter(userScope, filter);
     const scopedDataset = filterDashboardDatasetByScope(userScope, effectiveDataset, validation.effectiveFilter);
@@ -137,11 +168,15 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
       scope: userScope,
       config,
     });
-  }, [currentUser, effectiveDataset, datePreset, customStart, customEnd, filter, configOverride]);
+  }, [currentUser, effectiveDataset, datePreset, customStart, customEnd, filter, configOverride, activeDashboardRole, isPreviewMode]);
 
   const [serverSummary, setServerSummary] = useState<DashboardComputationResult | null>(null);
 
   useEffect(() => {
+    if (isPreviewMode) {
+      setServerSummary(null);
+      return;
+    }
     let active = true;
     fetchScopedDashboardSummary({
       user: currentUser,
@@ -161,14 +196,20 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
     return () => {
       active = false;
     };
-  }, [currentUser, effectiveDataset, datePreset, customStart, customEnd, filter, configOverride]);
+  }, [currentUser, effectiveDataset, datePreset, customStart, customEnd, filter, configOverride, isPreviewMode]);
 
-  const summary = serverSummary || localSummary;
-  const canConfigure =
+  const summary = isPreviewMode ? localSummary : serverSummary || localSummary;
+  const canConfigure = !isPreviewMode && (
     hasPermission(currentUser.role, 'dashboard.configure') ||
-    hasPermission(currentUser.role, 'roles.manage');
+    hasPermission(currentUser.role, 'roles.manage')
+  );
+
+  useEffect(() => {
+    if (isPreviewMode) setIsConfigOpen(false);
+  }, [isPreviewMode]);
 
   const handleSaveConfig = async (nextOverride: AdminRoleConfigOverride) => {
+    if (isPreviewMode) return;
     await saveRoleDashboardConfigOverride(nextOverride);
     setConfigOverride(nextOverride);
   };
@@ -188,17 +229,36 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
     <>
       <DashboardLayout
         header={
-          <DashboardHeader
-            config={summary.config}
-            scope={summary.scope}
-            userName={currentUser.fullName}
-            dateRangeLabel={summary.dateRange.label}
-            isDarkMode={isDarkMode}
-            onToggleTheme={onToggleTheme}
-            canConfigure={canConfigure}
-            onOpenConfigDrawer={() => setIsConfigOpen(true)}
-            onQuickAction={onQuickAction}
-          />
+          <div className="space-y-3">
+            {previewRoleOptions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+                <label className="text-xs font-bold" htmlFor="nlink-dashboard-preview">Preview dashboard</label>
+                <select
+                  id="nlink-dashboard-preview"
+                  className="min-h-10 min-w-52 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-emerald-800 dark:bg-slate-900 dark:text-white"
+                  value={previewRole || ''}
+                  onChange={(event) => setPreviewRole(event.target.value ? event.target.value as CanonicalRole : null)}
+                >
+                  <option value="">My assigned dashboard</option>
+                  {previewRoleOptions.map((role) => (
+                    <option key={role} value={role}>{role.replaceAll('_', ' ')}</option>
+                  ))}
+                </select>
+                {isPreviewMode && <span className="text-xs font-semibold">LAYOUT PREVIEW · Your data scope stays unchanged · Actions disabled</span>}
+              </div>
+            )}
+            <DashboardHeader
+              config={summary.config}
+              scope={summary.scope}
+              userName={currentUser.fullName}
+              dateRangeLabel={summary.dateRange.label}
+              isDarkMode={isDarkMode}
+              onToggleTheme={onToggleTheme}
+              canConfigure={canConfigure}
+              onOpenConfigDrawer={() => setIsConfigOpen(true)}
+              onQuickAction={isPreviewMode ? undefined : onQuickAction}
+            />
+          </div>
         }
         filters={
           <DashboardFilters
@@ -219,6 +279,11 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
           />
         }
       >
+        {summary.config.roleKey === 'FACTORY' && summary.config.allowedKpis.length === 0 && (
+          <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+            <strong>Factory dashboard setup required.</strong> Production data is not yet connected. This view intentionally shows no sales or warehouse figures as factory KPIs.
+          </div>
+        )}
         {summary.config.layoutSections.includes('KPIS') && (
           <KPIGrid
             config={summary.config}
@@ -273,7 +338,7 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
             {summary.config.layoutSections.includes('PENDING_ACTIONS') && (
               <PendingActions
                 items={summary.pendingActions}
-                onAction={(actionId) => onQuickAction?.(actionId)}
+                onAction={isPreviewMode ? undefined : (actionId) => onQuickAction?.(actionId)}
               />
             )}
 
@@ -302,7 +367,7 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
             dateRangeLabel={summary.dateRange.label}
             liveContext={fieldLiveContext}
             onSelectCustomer={onSelectCustomer}
-            onQuickAction={onQuickAction}
+            onQuickAction={isPreviewMode ? undefined : onQuickAction}
           />
         )}
 

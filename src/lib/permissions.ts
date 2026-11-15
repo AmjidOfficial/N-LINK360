@@ -1,4 +1,5 @@
 import { UserRole } from '../types';
+import { normalizeRole } from './dashboard/unified-role-model';
 
 export type Permission =
   | 'dashboard.view'
@@ -106,6 +107,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
   HR_ADMIN: [
     'dashboard.view', 'hr.view', 'hr.manage', 'users.manage', 'reports.view', 'reports.export',
   ],
+  TRADE_PARTNER: [
+    'dashboard.view', 'sales.order', 'sales.customers', 'ledger.view', 'inventory.view', 'reports.view',
+  ],
   DISTRIBUTOR: [
     'dashboard.view', 'sales.order', 'sales.customers', 'ledger.view', 'inventory.view',
   ],
@@ -129,33 +133,42 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
 export const ROLE_PERMISSIONS = DEFAULT_ROLE_PERMISSIONS;
 
 export function getEffectivePermissionGroup(role: UserRole | string): string {
-  const normalized = String(role || '').trim().toUpperCase();
-  if (
-    [
-      'TSM',
-      'SS',
-      'OB',
-      'SALES_RECOVERY',
-      'ASM',
-      'ORDER_BOOKER',
-      'RECOVERY_OFFICER',
-      'FIELD_SALES_USER',
-    ].includes(normalized)
-  ) {
-    return 'FIELD_SALES_USER';
+  const canonical = normalizeRole(role);
+  if (!canonical) return String(role || '').trim().toUpperCase();
+  switch (canonical) {
+    case 'SUPER_ADMIN': return 'SUPER_ADMIN';
+    case 'TOP_MANAGEMENT': return 'MANAGEMENT';
+    case 'NSM': return 'NSM';
+    case 'RSM': return 'RSM';
+    case 'ZSM': return 'ZSM';
+    case 'SALES_OFFICER': return 'FIELD_SALES_USER';
+    case 'TRADE_PARTNER': return 'TRADE_PARTNER';
+    case 'ACCOUNTS': return 'ACCOUNTS';
+    case 'WAREHOUSE': return 'WAREHOUSE';
+    case 'FACTORY': return 'FACTORY';
+    case 'DISPATCH': return 'DISPATCH';
+    case 'HR': return 'HR_ADMIN';
   }
-  return normalized;
 }
 
 export function getCanonicalDashboardRole(role: UserRole | string): string {
-  const group = getEffectivePermissionGroup(role);
-  if (group === 'SUPER_ADMIN' || group === 'MANAGEMENT') return 'MD_EXECUTIVE';
-  if (group === 'NSM' || group === 'NATIONAL_MANAGER' || group === 'SALES_MANAGER') return 'NATIONAL_MANAGER';
-  if (group === 'WAREHOUSE_MANAGER' || group === 'WAREHOUSE' || group === 'FACTORY_MANAGER' || group === 'FACTORY') {
-    return 'WAREHOUSE';
+  const canonical = normalizeRole(role);
+  if (!canonical) return 'UNKNOWN';
+  switch (canonical) {
+    case 'SUPER_ADMIN':
+    case 'TOP_MANAGEMENT': return 'MD_EXECUTIVE';
+    case 'NSM': return 'NATIONAL_MANAGER';
+    case 'RSM': return 'RSM';
+    case 'ZSM': return 'ZSM';
+    case 'SALES_OFFICER': return 'FIELD_SALES_USER';
+    // Dealer and Distributor share one dashboard; data scope remains distinct.
+    case 'TRADE_PARTNER': return 'DEALER';
+    case 'ACCOUNTS': return 'ACCOUNTS';
+    case 'WAREHOUSE': return 'WAREHOUSE';
+    case 'FACTORY': return 'FACTORY';
+    case 'DISPATCH': return 'DISPATCH';
+    case 'HR': return 'HR_ADMIN';
   }
-  if (group === 'DISPATCH_OFFICER' || group === 'DISPATCH') return 'DISPATCH';
-  return group;
 }
 
 // In-memory or database dynamic role registry
@@ -166,7 +179,7 @@ export function setCustomRolePermissions(roles: Record<string, Permission[]>) {
 }
 
 export function hasPermission(role: string, permission: Permission): boolean {
-  if (role === 'SUPER_ADMIN') return true;
+  if (normalizeRole(role) === 'SUPER_ADMIN') return true;
   const group = getEffectivePermissionGroup(role);
   const configured = customRolePermissions[group] || customRolePermissions[role] || DEFAULT_ROLE_PERMISSIONS[group] || DEFAULT_ROLE_PERMISSIONS[role];
   if (!configured) return false;
@@ -175,6 +188,6 @@ export function hasPermission(role: string, permission: Permission): boolean {
 
 export function workspaceForRole(role: string): 'PORTAL' | 'MOBILE_APP' {
   const group = getEffectivePermissionGroup(role);
-  const mobileRoles = ['FIELD_SALES_USER', 'RSM', 'ZSM'];
+  const mobileRoles = ['FIELD_SALES_USER', 'RSM', 'ZSM', 'TRADE_PARTNER'];
   return mobileRoles.includes(group) ? 'MOBILE_APP' : 'PORTAL';
 }

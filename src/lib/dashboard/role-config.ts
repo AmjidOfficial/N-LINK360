@@ -215,6 +215,22 @@ export const DEFAULT_ROLE_DASHBOARD_CONFIGS: Record<DashboardRoleKey, RoleDashbo
     configurableByAdmin: true,
   },
 
+  FACTORY: {
+    roleKey: 'FACTORY',
+    title: 'Factory & Production Dashboard',
+    subtitle: 'Production data source is not yet connected. No sales or warehouse KPI fallback is used.',
+    dataScope: 'DEPARTMENT',
+    layoutSections: ['KPIS', 'PENDING_ACTIONS', 'ALERTS'],
+    allowedKpis: [],
+    mobilePrimaryKpis: [],
+    allowedCharts: [],
+    allowedFilters: ['DATE_RANGE'],
+    allowedQuickActions: [],
+    allowedPendingTasks: [],
+    allowedAlerts: [],
+    configurableByAdmin: true,
+  },
+
   DISPATCH: {
     roleKey: 'DISPATCH',
     title: 'Dispatch & Logistics Dashboard',
@@ -285,8 +301,8 @@ export const DEFAULT_ROLE_DASHBOARD_CONFIGS: Record<DashboardRoleKey, RoleDashbo
 
   DEALER: {
     roleKey: 'DEALER',
-    title: 'Dealer Account Portal',
-    subtitle: 'My Orders, Invoices, Confirmed Payments & Available Credit',
+    title: 'Trade Partner Portal',
+    subtitle: 'Shared Dealer and Distributor experience with account-specific records',
     dataScope: 'DEALER',
     layoutSections: ['KPIS', 'PENDING_ACTIONS', 'RECENT_TRANSACTIONS', 'ALERTS'],
     allowedKpis: [
@@ -342,7 +358,8 @@ export function resolveRoleDashboardConfig(
   override?: AdminRoleConfigOverride | null
 ): RoleDashboardConfig {
   const key = getCanonicalDashboardRole(role) as DashboardRoleKey;
-  const base = DEFAULT_ROLE_DASHBOARD_CONFIGS[key] || DEFAULT_ROLE_DASHBOARD_CONFIGS.FIELD_SALES_USER;
+  const base = DEFAULT_ROLE_DASHBOARD_CONFIGS[key];
+  if (!base) throw new Error(`No dashboard configuration registered for role: ${role}`);
   if (!override) return { ...base };
 
   const hiddenKpiSet = new Set(override.hiddenKpis || []);
