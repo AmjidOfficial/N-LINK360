@@ -244,6 +244,9 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
   const toastTimerRef = useRef<number | null>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const { canInstall: canInstallPwa, promptInstall } = usePWAInstall();
+  const isNetlifyHosted =
+    typeof window !== 'undefined' &&
+    window.location.hostname.toLowerCase().endsWith('.netlify.app');
 
   const scrollMainToTop = (behavior: ScrollBehavior = 'auto') => {
     if (mainScrollRef.current) {
@@ -938,7 +941,11 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
         ref={mainScrollRef}
         className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain w-full"
       >
-        <div className="w-full max-w-full lg:max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 py-2.5 sm:py-4 pb-24 lg:pb-8">
+        <div
+          className={`w-full max-w-full lg:max-w-6xl mx-auto px-2 sm:px-4 lg:px-6 py-2.5 sm:py-4 lg:pb-8 ${
+            isNetlifyHosted ? 'pb-36' : 'pb-24'
+          }`}
+        >
         {/* ==================================================== */}
         {/* 1. ATTENDANCE & RECORD TAB (Unified Segmented View) */}
         {/* ==================================================== */}
@@ -2855,7 +2862,11 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
       {/* Fixed 5-Tab Mobile Bottom Navigation Bar (<= 15% viewport height, 44px+ touch targets) */}
       <nav
         aria-label="Mobile Primary Navigation"
-        className="lg:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-white/95 dark:bg-[#0E1A14]/95 backdrop-blur-md border-t border-[#C8E6C9] dark:border-emerald-900/50 pb-safe"
+        className={`lg:hidden fixed z-40 h-16 bg-white/95 dark:bg-[#0E1A14]/95 backdrop-blur-md border-[#C8E6C9] dark:border-emerald-900/50 ${
+          isNetlifyHosted
+            ? 'bottom-[58px] inset-x-2 rounded-2xl border shadow-xl'
+            : 'bottom-0 inset-x-0 border-t pb-safe'
+        }`}
       >
         <div className="max-w-lg mx-auto h-full grid grid-cols-5 items-center px-1">
           {(
