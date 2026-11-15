@@ -146,25 +146,34 @@ export function canPreviewDashboard(request: DashboardPreviewRequest): boolean {
   const target = normalizeRole(request.requestedRole);
   if (!actor || !target) return false;
 
-  const previewRoles: CanonicalRole[] = [
-    'SUPER_ADMIN',
-    'TOP_MANAGEMENT',
-    'NSM',
-  ];
-  if (!previewRoles.includes(actor)) return false;
+  // Company administrators may preview any department, but the preview remains
+  // constrained by their authenticated server-side data scope.
+  if (actor === 'SUPER_ADMIN' || actor === 'TOP_MANAGEMENT') return true;
 
-  const scopeRank: Record<OrganisationScope, number> = {
+  // NSM may preview only roles in the national sales/trade reporting chain.
+  const nsmPreviewRoles: CanonicalRole[] = [
+    'NSM',
+    'RSM',
+    'ZSM',
+    'SALES_OFFICER',
+    'TRADE_PARTNER',
+  ];
+  if (actor !== 'NSM' || !nsmPreviewRoles.includes(target)) return false;
+
+  const scopeRank: Partial<Record<OrganisationScope, number>> = {
     COMPANY: 0,
     NATIONAL: 1,
     REGION: 2,
     ZONE: 3,
     TERRITORY: 4,
     ASSIGNED_CUSTOMERS: 5,
-    DEPARTMENT: 6,
   };
+  const actorRank = scopeRank[request.actorScope];
+  const requestedRank = scopeRank[request.requestedScope];
+  if (actorRank === undefined || requestedRank === undefined) return false;
 
   // A preview can simulate a narrower scope, never a wider one.
-  return scopeRank[request.requestedScope] >= scopeRank[request.actorScope];
+  return requestedRank >= actorRank;
 }
 
 export function isReadOnlyDashboardPreview(isPreview: boolean): boolean {
