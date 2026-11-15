@@ -74,4 +74,14 @@ assert.equal(
   true,
 );
 
+assert.equal(
+  canPreviewDashboard({
+    actorRole: 'SUPER_ADMIN',
+    actorScope: 'REGION',
+    requestedRole: 'FACTORY',
+    requestedScope: 'DEPARTMENT',
+  }),
+  false,
+);
+
 console.log('Unified dashboard model tests passed.');
