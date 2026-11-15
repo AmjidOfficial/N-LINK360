@@ -77,6 +77,9 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
       zone: currentUser.zone || currentUser.area,
       territory: currentUser.territory,
       assignedTowns: currentUser.assignedTowns,
+      distributorId: (currentUser as any).distributorId,
+      dealerId: (currentUser as any).dealerId,
+      partnerType: currentUser.partnerType,
     });
     const hasConfiguredTargets = Boolean(dataset.targets && dataset.targets.length > 0);
     const hasEmployees = Boolean(dataset.employees && dataset.employees.length > 0);
@@ -126,6 +129,7 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
       assignedTowns: currentUser.assignedTowns,
       distributorId: (currentUser as any).distributorId,
       dealerId: (currentUser as any).dealerId,
+      partnerType: currentUser.partnerType,
     });
     const config = resolveRoleDashboardConfig(currentUser.role, configOverride);
     const dateRange = getKarachiDateRange(datePreset, customStart, customEnd);
