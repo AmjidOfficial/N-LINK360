@@ -171,3 +171,29 @@ Same role, KPIs, data scope and allowed actions on every device. Use responsive 
 ## 9. AI Studio execution instruction
 
 Read this document first. Then inspect the current repository and compare every existing prompt, role, dashboard, route, permission and data query against it. Implement in small, reviewable stages. For each stage report: files inspected, files changed, business rules preserved, tests run, test results, unresolved risks and exact commit/branch. Do not claim completion for work that has not been built and tested. Do not overwrite main or production data.
+
+
+## 10. Current branch implementation status
+
+Completed on the isolated rebuild branch:
+- Canonical role normalizer with legacy aliases.
+- TSM/Sales Officer share the same canonical permission group and dashboard.
+- Dealer/Distributor share the same dashboard and permission group while preserving distinct record scopes.
+- Distributor customer visibility no longer falls back to town-name matching; only explicit distributor links are accepted.
+- Factory no longer silently resolves to the Warehouse or Field Sales dashboard. Until production data is connected, the dashboard clearly reports that its production source is not ready.
+- Phone workspace selection is role-led. Small screens do not force Accounts, HR, Factory, Warehouse or Dispatch into the Field Sales app.
+- Management and NSM preview selector is read-only and keeps the signed-in user's data scope.
+- Unmatched user profiles no longer receive invented towns, targets or a fake phone number in the login fallback.
+- Dashboard role and department blueprint registry, regression tests and a GitHub Actions quality workflow have been added.
+
+Not yet complete and must not be described as production-ready:
+- Connect every department KPI to verified Supabase queries and source tables.
+- Finish the dedicated Factory production and quality data model.
+- Consolidate the new department blueprint with the existing KPI configuration registry into one operational source of truth.
+- Complete department-specific server-side data scoping and verify matching Supabase RLS policies.
+- Complete every department's mobile navigation and page-level responsive review.
+- Add Playwright coverage for all roles at phone, tablet and desktop widths.
+- Verify existing order, recovery, invoice, ledger, stock, attendance and dispatch workflows after integration.
+- Update the repository lockfile. The current package manifest and lockfile were already out of sync on the baseline. CI currently uses Node 22 and `npm install` to validate the source without silently claiming the lockfile is fixed.
+- Apply no production database migrations until schema, backup and RLS review are complete.
+
