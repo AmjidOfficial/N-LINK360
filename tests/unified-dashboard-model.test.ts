@@ -6,6 +6,7 @@ import {
 import { DEPARTMENT_DASHBOARDS, getDashboardDefinitionForRole } from '../src/lib/dashboard/department-dashboard-blueprints';
 import { getCanonicalDashboardRole, getEffectivePermissionGroup } from '../src/lib/permissions';
 import { resolveUserDataScope } from '../src/lib/dashboard/scope';
+import { resolveRoleDashboardConfig } from '../src/lib/dashboard/role-config';
 
 assert.equal(normalizeRole('TSM'), 'SALES_OFFICER');
 assert.equal(normalizeRole('Sales Officer'), 'SALES_OFFICER');
@@ -32,6 +33,8 @@ assert.equal(getEffectivePermissionGroup('TSM'), getEffectivePermissionGroup('SA
 assert.equal(getEffectivePermissionGroup('DEALER'), getEffectivePermissionGroup('DISTRIBUTOR'));
 assert.equal(getCanonicalDashboardRole('DEALER'), getCanonicalDashboardRole('DISTRIBUTOR'));
 assert.equal(getCanonicalDashboardRole('FACTORY'), 'FACTORY');
+assert.equal(resolveRoleDashboardConfig('FACTORY').roleKey, 'FACTORY');
+assert.throws(() => resolveRoleDashboardConfig('UNKNOWN_ROLE'), /No dashboard configuration registered/);
 const dealerScope = resolveUserDataScope({ id: 'dealer-user', role: 'DEALER', dealerId: 'dealer-1' });
 const distributorScope = resolveUserDataScope({ id: 'dist-user', role: 'DISTRIBUTOR', distributorId: 'dist-1' });
 assert.equal(dealerScope.dashboardRoleKey, distributorScope.dashboardRoleKey);
