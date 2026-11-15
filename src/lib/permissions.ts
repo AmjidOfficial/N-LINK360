@@ -154,8 +154,7 @@ export function getCanonicalDashboardRole(role: UserRole | string): string {
   // Dealer and Distributor share one trade-partner dashboard. Their data scopes remain distinct.
   if (group === 'DISTRIBUTOR' || group === 'DEALER') return 'DEALER';
   if (group === 'WAREHOUSE_MANAGER' || group === 'WAREHOUSE') return 'WAREHOUSE';
-  // Factory is its own department dashboard, not a warehouse dashboard.
-  if (group === 'FACTORY_MANAGER' || group === 'FACTORY') return 'FACTORY';
+  if (group === 'FACTORY_MANAGER' || group === 'FACTORY') return 'WAREHOUSE';
   if (group === 'DISPATCH_OFFICER' || group === 'DISPATCH') return 'DISPATCH';
   return group;
 }
