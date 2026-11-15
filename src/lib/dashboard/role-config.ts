@@ -358,7 +358,8 @@ export function resolveRoleDashboardConfig(
   override?: AdminRoleConfigOverride | null
 ): RoleDashboardConfig {
   const key = getCanonicalDashboardRole(role) as DashboardRoleKey;
-  const base = DEFAULT_ROLE_DASHBOARD_CONFIGS[key] || DEFAULT_ROLE_DASHBOARD_CONFIGS.FIELD_SALES_USER;
+  const base = DEFAULT_ROLE_DASHBOARD_CONFIGS[key];
+  if (!base) throw new Error(`No dashboard configuration registered for role: ${role}`);
   if (!override) return { ...base };
 
   const hiddenKpiSet = new Set(override.hiddenKpis || []);
