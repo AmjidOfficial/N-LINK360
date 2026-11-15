@@ -71,11 +71,9 @@ export function resolveUserDataScope(user: ScopedUserInput): UserDataScope {
     case 'FIELD_SALES_USER':
       scopeLevel = 'TERRITORY';
       break;
-    case 'DISTRIBUTOR':
-      scopeLevel = 'DISTRIBUTOR';
-      break;
     case 'DEALER':
-      scopeLevel = 'DEALER';
+      // Both partner types use one dashboard role, while retaining their own security scope.
+      scopeLevel = permissionGroup === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'DEALER';
       break;
   }
 

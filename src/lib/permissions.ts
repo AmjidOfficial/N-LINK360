@@ -151,9 +151,10 @@ export function getCanonicalDashboardRole(role: UserRole | string): string {
   const group = getEffectivePermissionGroup(role);
   if (group === 'SUPER_ADMIN' || group === 'MANAGEMENT') return 'MD_EXECUTIVE';
   if (group === 'NSM' || group === 'NATIONAL_MANAGER' || group === 'SALES_MANAGER') return 'NATIONAL_MANAGER';
-  if (group === 'WAREHOUSE_MANAGER' || group === 'WAREHOUSE' || group === 'FACTORY_MANAGER' || group === 'FACTORY') {
-    return 'WAREHOUSE';
-  }
+  // Dealer and Distributor share one trade-partner dashboard. Their data scopes remain distinct.
+  if (group === 'DISTRIBUTOR' || group === 'DEALER') return 'DEALER';
+  if (group === 'WAREHOUSE_MANAGER' || group === 'WAREHOUSE') return 'WAREHOUSE';
+  if (group === 'FACTORY_MANAGER' || group === 'FACTORY') return 'WAREHOUSE';
   if (group === 'DISPATCH_OFFICER' || group === 'DISPATCH') return 'DISPATCH';
   return group;
 }
