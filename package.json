@@ -12,7 +12,8 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview --port=3000 --host=0.0.0.0",
     "lint": "tsc --noEmit",
-    "test": "tsx tests/business-rules.test.ts",
+    "test": "tsx tests/business-rules.test.ts && tsx tests/unified-dashboard-model.test.ts",
+    "test:dashboard": "tsx tests/unified-dashboard-model.test.ts",
     "test:e2e": "playwright test",
     "purge-mock-data": "tsx scripts/purge-mock-data.ts"
   },
