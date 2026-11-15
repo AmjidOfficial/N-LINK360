@@ -79,8 +79,12 @@ export const AuthGate: React.FC<AuthGateProps> = ({
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = identifier.trim().toLowerCase();
+    let cleanEmail = identifier.trim().toLowerCase();
     const cleanPass = password.trim();
+
+    // Smart domain typo auto-correction (e.g. @nationalight.com or @nationallights.com -> @nationallight.pk)
+    cleanEmail = cleanEmail
+      .replace(/@nationa(l|ll)ights?(\.com|\.pk)$/i, '@nationallight.pk');
 
     if (!cleanEmail || !cleanEmail.includes('@')) {
       setError('Please enter a valid corporate email address.');

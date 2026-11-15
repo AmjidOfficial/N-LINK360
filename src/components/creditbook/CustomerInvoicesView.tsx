@@ -29,6 +29,7 @@ import {
   X,
 } from 'lucide-react';
 import { downloadSalesInvoicePdf, buildInvoiceWhatsAppText } from '../../utils/exportInvoicePdf';
+import { formatKarachiDate, formatKarachiDateTime } from '../../utils/dateTime';
 import { NationalLightHeaderBrand, DocumentCenterWatermark } from '../NationalLightLogo';
 
 export interface CustomerInvoicesViewProps {
@@ -359,14 +360,17 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                     </span>
                   </div>
 
-                  <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5" />
-                    {orderDate.toLocaleDateString('en-PK', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
-                  </span>
+                  <div className="text-right">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-end gap-1">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Invoice: {formatKarachiDate(order.invoiceDate || order.orderDate || order.createdAt)}
+                    </span>
+                    {order.createdAt && (
+                      <span className="text-[10px] font-mono text-slate-400 block">
+                        Entered: {formatKarachiDateTime(order.createdAt)}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Rejection Details & Reason if Rejected */}

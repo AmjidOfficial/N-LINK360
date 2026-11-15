@@ -27,8 +27,10 @@ import {
   Layers,
   Sparkles,
   Plus,
+  Printer,
 } from 'lucide-react';
 import { downloadSalesInvoicePdf, buildInvoiceWhatsAppText } from '../../utils/exportInvoicePdf';
+import { formatKarachiDate, formatKarachiDateTime } from '../../utils/dateTime';
 import { triggerHaptic } from '../../utils/haptics';
 
 export interface OrderHistoryViewProps {
@@ -51,7 +53,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
   onWhatsAppShareInvoice,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'ALL' | 'APPROVED' | 'PENDING' | 'OTHER'>('ALL');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'ALL' | 'INVOICED' | 'APPROVED' | 'PENDING' | 'OTHER'>('ALL');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [isDownloadingId, setIsDownloadingId] = useState<string | null>(null);
 
@@ -75,6 +77,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
   // Filtered orders by search query and status filter
   const filteredOrders = useMemo(() => {
     return customerOrders.filter((order) => {
+      const isInvoiced = order.status === 'INVOICED';
       const isApproved =
         order.status === 'APPROVED' ||
         order.status === 'INVOICED' ||
@@ -84,6 +87,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
 
       const isPending = !isApproved && order.status !== 'REJECTED';
 
+      if (selectedStatusFilter === 'INVOICED' && !isInvoiced) return false;
       if (selectedStatusFilter === 'APPROVED' && !isApproved) return false;
       if (selectedStatusFilter === 'PENDING' && !isPending) return false;
       if (selectedStatusFilter === 'OTHER' && (isApproved || isPending)) return false;
@@ -224,6 +228,17 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
           </button>
           <button
             type="button"
+            onClick={() => setSelectedStatusFilter('INVOICED')}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+              selectedStatusFilter === 'INVOICED'
+                ? 'bg-[#1B5E3A] text-white font-semibold shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+            }`}
+          >
+            Invoiced ({customerOrders.filter((o) => o.status === 'INVOICED').length})
+          </button>
+          <button
+            type="button"
             onClick={() => setSelectedStatusFilter('APPROVED')}
             className={`px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
               selectedStatusFilter === 'APPROVED'
@@ -344,11 +359,17 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
                             {isApproved ? 'Approved' : order.status || 'Pending'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                            {order.orderDate || order.createdAt?.slice(0, 10) || '2026-11-02'}
+                            Inv Date: {formatKarachiDate(order.invoiceDate || order.orderDate || order.createdAt)}
                           </span>
+                          {order.createdAt && (
+                            <>
+                              <span>•</span>
+                              <span className="font-mono text-[10px]">Entered: {formatKarachiDateTime(order.createdAt)}</span>
+                            </>
+                          )}
                           <span>•</span>
                           <span>{order.salesUserName || 'Shahzad Ullah'}</span>
                         </div>
@@ -404,6 +425,42 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
                         >
                           <Download className="w-4 h-4" />
                         </button>
+                        {order.status === 'INVOICED' ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              if (onPreviewInvoicePdf) {
+                                onPreviewInvoicePdf(order, customer);
+                                setTimeout(() => window.print(), 350);
+                              } else {
+                                handleDownloadPdf(order);
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-[#1B5E3A] hover:bg-[#14472B] text-white text-[11px] font-bold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                            title="Print Official Tax Invoice"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            <span>Print Invoice</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              if (onPreviewInvoicePdf) {
+                                onPreviewInvoicePdf(order, customer);
+                                setTimeout(() => window.print(), 350);
+                              } else {
+                                handleDownloadPdf(order);
+                              }
+                            }}
+                            className="p-1.5 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                            title="Print Order Summary"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleWhatsAppShare(order)}

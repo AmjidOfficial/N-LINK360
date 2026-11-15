@@ -60,6 +60,19 @@ import {
   syncCachedAttendanceToSupabase,
 } from './services/daily-cutoff';
 import { syncManager, getOfflineQueue } from './services/offlineSyncEngine';
+import { getKarachiDateString } from './utils/dateTime';
+import {
+  generateDeterministicTransactionId,
+  buildTransactionFingerprint,
+  detectDuplicateTransaction,
+} from './utils/transactionSignature';
+import {
+  recordSyncLifecycleEvent,
+  markAllPendingEventsSynced,
+  incrementDuplicatesPrevented,
+  registerGlobalUnloadFlush,
+} from './services/autoSaveSyncService';
+import { getCentralPriceList, subscribePriceList } from './services/priceListService';
 
 export default function App() {
   // Experience Mode: 'FIELD_MOBILE' | 'HEAD_OFFICE'
@@ -81,6 +94,19 @@ export default function App() {
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
+
+  // Central Complete SKU & Price List state (reactive to head-office RBAC price updates)
+  const [catalogSkus, setCatalogSkus] = useState(() => getCentralPriceList());
+  useEffect(() => {
+    const unsubscribePrices = subscribePriceList(() => {
+      setCatalogSkus(getCentralPriceList());
+    });
+    const unregisterUnloadFlush = registerGlobalUnloadFlush();
+    return () => {
+      unsubscribePrices();
+      unregisterUnloadFlush();
     };
   }, []);
 
@@ -167,9 +193,16 @@ export default function App() {
     const isFieldRole = ['SALES_RECOVERY', 'ORDER_BOOKER', 'RECOVERY_OFFICER', 'TSM', 'ASM', 'OB', 'SS'].includes(
       userPersona.role || ''
     );
-    const isHeadOfficeRole = ['SUPER_ADMIN', 'MANAGEMENT', 'ACCOUNTS', 'WAREHOUSE_MANAGER', 'FACTORY_MANAGER', 'DISPATCH_OFFICER'].includes(
-      userPersona.role || ''
-    );
+    const isHeadOfficeRole = [
+      'SUPER_ADMIN',
+      'MANAGEMENT',
+      'NATIONAL_MANAGER',
+      'NSM',
+      'ACCOUNTS',
+      'WAREHOUSE_MANAGER',
+      'FACTORY_MANAGER',
+      'DISPATCH_OFFICER',
+    ].includes(userPersona.role || '');
 
     if (isMobileDevice()) {
       setExperienceMode('FIELD_MOBILE');
@@ -724,7 +757,7 @@ export default function App() {
   // Google Sheets app data provider
   const currentAppData: SupabaseAppData = {
     customers,
-    skus: NLINK_OFFICIAL_PRODUCTS as any,
+    skus: catalogSkus as any,
     inventoryBalances,
     salesOrders: orders,
     invoices: fallbackAppData.invoices,
@@ -876,11 +909,30 @@ export default function App() {
   // Order Placement Handler
   const handlePlaceOrder = (newOrder: SalesOrder) => {
     const idemKey = newOrder.idempotencyKey || generateIdempotencyUuid();
+    const businessDate = newOrder.invoiceDate || newOrder.orderDate || getKarachiDateString();
+    const fpHash =
+      newOrder.fingerprintHash ||
+      buildTransactionFingerprint({
+        module: 'ORDER',
+        customerId: newOrder.customerId,
+        amount: newOrder.totalAmount || 0,
+        businessDate,
+        idempotencyKey: idemKey,
+        itemsSignature: (newOrder.items || [])
+          .map((i) => `${i.skuId}:${i.orderedQuantity || i.quantity || 0}:${i.unitPrice || 0}`)
+          .join('|'),
+      });
 
-    // Strong idempotency replay guard (prevents double-click / mobile retry duplicate state)
-    const existingByIdem = orders.find((o) => o.idempotencyKey && o.idempotencyKey === idemKey);
-    if (existingByIdem) {
-      setLedgerToastMessage(`Order #${existingByIdem.orderNumber} already recorded (duplicate prevented).`);
+    // Strong idempotency & fingerprint replay guard (prevents double-click / mobile retry duplicate state)
+    const dupCheck = detectDuplicateTransaction(
+      { idempotencyKey: idemKey, transactionId: newOrder.transactionId, fingerprintHash: fpHash },
+      orders
+    );
+    if (dupCheck.isDuplicate && dupCheck.existingRecord) {
+      incrementDuplicatesPrevented(`Order duplicate prevented (${dupCheck.reason})`);
+      setLedgerToastMessage(
+        `Order #${dupCheck.existingRecord.orderNumber} (${dupCheck.existingRecord.transactionId || dupCheck.existingRecord.id}) already recorded (duplicate prevented).`
+      );
       return;
     }
 
@@ -893,9 +945,20 @@ export default function App() {
       !newOrder.id || !newOrder.orderNumber || hasCollision
         ? generateUniqueOrderId(orders)
         : newOrder.orderNumber;
+    const txnSig = newOrder.transactionId || generateDeterministicTransactionId('ORD', businessDate);
+    const nowIso = new Date().toISOString();
+
     const effectiveOrder: SalesOrder = {
       ...newOrder,
       idempotencyKey: idemKey,
+      transactionId: txnSig,
+      fingerprintHash: fpHash,
+      orderDate: businessDate,
+      invoiceDate: newOrder.invoiceDate || businessDate,
+      createdBy: newOrder.createdBy || currentUser?.fullName || 'Field Officer',
+      sourceSystem: newOrder.sourceSystem || 'NLINK_WEB',
+      syncStatus: isOnline ? 'SAVED_IN_DB' : 'PENDING_GOOGLE_SYNC',
+      updatedAt: nowIso,
       id: hasCollision || !newOrder.id ? uniqueOrderRef : newOrder.id,
       orderNumber: hasCollision || !newOrder.orderNumber ? uniqueOrderRef : newOrder.orderNumber,
     };
@@ -904,32 +967,83 @@ export default function App() {
     setOrders(updatedOrders);
     syncToCache(customers, updatedOrders, recoveries);
 
+    recordSyncLifecycleEvent({
+      module: 'SALES_ORDERS',
+      recordType: 'SalesOrder',
+      databaseId: effectiveOrder.id,
+      transactionId: txnSig,
+      idempotencyKey: idemKey,
+      fingerprintHash: fpHash,
+      syncStatus: isOnline ? 'SAVED_IN_DB' : 'PENDING_GOOGLE_SYNC',
+      summary: `Order #${effectiveOrder.orderNumber} (${effectiveOrder.customerName}) Rs. ${(effectiveOrder.totalAmount || 0).toLocaleString()}`,
+    });
+
     if (isOnline) {
       syncOrderToSupabase(effectiveOrder)
         .then((ok) => {
           if (!ok) {
             syncManager.enqueue('ORDERS', 'CREATE', { order: effectiveOrder, recoveryAmount: 0 }, idemKey);
           }
+          recordSyncLifecycleEvent({
+            module: 'SALES_ORDERS',
+            recordType: 'SalesOrder',
+            databaseId: effectiveOrder.id,
+            transactionId: txnSig,
+            idempotencyKey: idemKey,
+            fingerprintHash: fpHash,
+            syncStatus: ok ? 'PENDING_GOOGLE_SYNC' : 'SYNC_FAILED',
+            errorMessage: ok ? undefined : 'Supabase write queued for retry',
+            summary: `Order #${effectiveOrder.orderNumber} (${effectiveOrder.customerName})`,
+          });
         })
-        .catch(() => {
+        .catch((err) => {
           syncManager.enqueue('ORDERS', 'CREATE', { order: effectiveOrder, recoveryAmount: 0 }, idemKey);
+          recordSyncLifecycleEvent({
+            module: 'SALES_ORDERS',
+            recordType: 'SalesOrder',
+            databaseId: effectiveOrder.id,
+            transactionId: txnSig,
+            idempotencyKey: idemKey,
+            fingerprintHash: fpHash,
+            syncStatus: 'SYNC_FAILED',
+            errorMessage: String(err?.message || err),
+            summary: `Order #${effectiveOrder.orderNumber} (${effectiveOrder.customerName})`,
+          });
         });
     } else {
       syncManager.enqueue('ORDERS', 'CREATE', { order: effectiveOrder, recoveryAmount: 0 }, idemKey);
     }
 
     setLedgerToastMessage(
-      `✓ Order #${effectiveOrder.orderNumber} booked. Awaiting Shahzad Ullah's executive review.`
+      `✓ Order #${effectiveOrder.orderNumber} (${txnSig}) booked. Awaiting Shahzad Ullah's executive review.`
     );
   };
 
   // Recovery Logging Handler: Entry Flow Step 1 & Confirmation Rule
   const handleRecordRecovery = (newRecovery: Recovery) => {
     const idemKey = newRecovery.idempotencyKey || generateIdempotencyUuid();
+    const businessDate = newRecovery.collectionDate || getKarachiDateString();
+    const fpHash =
+      newRecovery.fingerprintHash ||
+      buildTransactionFingerprint({
+        module: 'PAYMENT',
+        customerId: newRecovery.customerId,
+        amount: newRecovery.amount || 0,
+        businessDate,
+        paymentMode: newRecovery.paymentMode,
+        instrumentNumber: newRecovery.instrumentNumber,
+        idempotencyKey: idemKey,
+      });
 
-    const existingByIdem = recoveries.find((r) => r.idempotencyKey && r.idempotencyKey === idemKey);
-    if (existingByIdem) {
-      setLedgerToastMessage(`Recovery #${existingByIdem.recoveryNumber || existingByIdem.id} already recorded (duplicate prevented).`);
+    const dupCheck = detectDuplicateTransaction(
+      { idempotencyKey: idemKey, transactionId: newRecovery.transactionId, fingerprintHash: fpHash },
+      recoveries
+    );
+    if (dupCheck.isDuplicate && dupCheck.existingRecord) {
+      incrementDuplicatesPrevented(`Payment duplicate prevented (${dupCheck.reason})`);
+      setLedgerToastMessage(
+        `Recovery #${dupCheck.existingRecord.recoveryNumber || dupCheck.existingRecord.id} (${dupCheck.existingRecord.transactionId || dupCheck.existingRecord.id}) already recorded (duplicate prevented).`
+      );
       return;
     }
 
@@ -942,11 +1056,20 @@ export default function App() {
       !newRecovery.id || !(newRecovery as any).recoveryNumber || hasCollision
         ? generateUniqueRecoveryId(recoveries as Array<{ id?: string; recoveryNumber?: string }>)
         : (newRecovery as any).recoveryNumber;
+    const txnSig = newRecovery.transactionId || generateDeterministicTransactionId('PAY', businessDate);
+    const nowIso = new Date().toISOString();
 
     // Unconfirmed recovery starts as PENDING until confirmed by Shahzad Ullah
     const effectiveRecovery: Recovery = {
       ...newRecovery,
       idempotencyKey: idemKey,
+      transactionId: txnSig,
+      fingerprintHash: fpHash,
+      collectionDate: businessDate,
+      createdBy: newRecovery.createdBy || currentUser?.fullName || 'Field Officer',
+      sourceSystem: newRecovery.sourceSystem || 'NLINK_WEB',
+      syncStatus: isOnline ? 'SAVED_IN_DB' : 'PENDING_GOOGLE_SYNC',
+      updatedAt: nowIso,
       id: hasCollision || !newRecovery.id ? uniqueRecRef : newRecovery.id,
       recoveryNumber: hasCollision || !(newRecovery as any).recoveryNumber ? uniqueRecRef : (newRecovery as any).recoveryNumber,
       status: (newRecovery.status === 'VERIFIED' || newRecovery.status === 'APPROVED') ? newRecovery.status : 'PENDING',
@@ -957,22 +1080,55 @@ export default function App() {
     setRecoveries(updatedRecoveries);
     syncToCache(customers, orders, updatedRecoveries);
 
+    recordSyncLifecycleEvent({
+      module: 'RECOVERY',
+      recordType: 'Recovery',
+      databaseId: effectiveRecovery.id,
+      transactionId: txnSig,
+      idempotencyKey: idemKey,
+      fingerprintHash: fpHash,
+      syncStatus: isOnline ? 'SAVED_IN_DB' : 'PENDING_GOOGLE_SYNC',
+      summary: `Payment ${txnSig} (${effectiveRecovery.customerName}) Rs. ${(effectiveRecovery.amount || 0).toLocaleString()}`,
+    });
+
     if (isOnline) {
       syncRecoveryToSupabase(effectiveRecovery)
         .then((ok) => {
           if (!ok) {
             syncManager.enqueue('RECOVERY', 'CREATE', effectiveRecovery as unknown as Record<string, unknown>, idemKey);
           }
+          recordSyncLifecycleEvent({
+            module: 'RECOVERY',
+            recordType: 'Recovery',
+            databaseId: effectiveRecovery.id,
+            transactionId: txnSig,
+            idempotencyKey: idemKey,
+            fingerprintHash: fpHash,
+            syncStatus: ok ? 'PENDING_GOOGLE_SYNC' : 'SYNC_FAILED',
+            errorMessage: ok ? undefined : 'Supabase write queued for retry',
+            summary: `Payment ${txnSig} (${effectiveRecovery.customerName})`,
+          });
         })
-        .catch(() => {
+        .catch((err) => {
           syncManager.enqueue('RECOVERY', 'CREATE', effectiveRecovery as unknown as Record<string, unknown>, idemKey);
+          recordSyncLifecycleEvent({
+            module: 'RECOVERY',
+            recordType: 'Recovery',
+            databaseId: effectiveRecovery.id,
+            transactionId: txnSig,
+            idempotencyKey: idemKey,
+            fingerprintHash: fpHash,
+            syncStatus: 'SYNC_FAILED',
+            errorMessage: String(err?.message || err),
+            summary: `Payment ${txnSig} (${effectiveRecovery.customerName})`,
+          });
         });
     } else {
       syncManager.enqueue('RECOVERY', 'CREATE', effectiveRecovery as unknown as Record<string, unknown>, idemKey);
     }
 
     setLedgerToastMessage(
-      `✓ Recovery #${effectiveRecovery.id} logged (Status: PENDING). Awaiting Shahzad Ullah's confirmation before adding to Ledger.`
+      `✓ Recovery #${effectiveRecovery.id} (${txnSig}) logged (Status: PENDING). Awaiting Shahzad Ullah's confirmation before adding to Ledger.`
     );
   };
 
@@ -1028,13 +1184,19 @@ export default function App() {
         const discount15 = metrics.discount15;
         const netInvoiceTotal = metrics.netInvoiceTotal;
 
+        const nowIso = new Date().toISOString();
         const updatedItems = metrics.isItemized ? (o.items || []).map((it, idx) => {
           const calculatedLine = metrics.items[idx];
+          const unitTp = calculatedLine ? calculatedLine.officialTradePrice : (it.unitTradePriceSnapshot || it.unitPrice || 0);
           return {
             ...it,
-            unitPrice: calculatedLine ? calculatedLine.officialTradePrice : (it.unitPrice || 0),
+            unitPrice: unitTp,
+            unitTradePriceSnapshot: it.unitTradePriceSnapshot ?? unitTp,
             discountPercent: 15,
-            lineTotal: calculatedLine ? calculatedLine.lineNet : Math.round((it.quantity || 1) * (it.unitPrice || 0) * 0.85),
+            discountPercentSnapshot: it.discountPercentSnapshot ?? 15,
+            skuDescriptionSnapshot: it.skuDescriptionSnapshot ?? it.skuName,
+            priceLockedAt: it.priceLockedAt || nowIso,
+            lineTotal: calculatedLine ? calculatedLine.lineNet : Math.round((it.quantity || 1) * unitTp * 0.85),
           };
         }) : [];
 
@@ -1046,8 +1208,13 @@ export default function App() {
           totalAmount: netInvoiceTotal,
           netAmount: netInvoiceTotal,
           netTotal: netInvoiceTotal,
+          invoiceDate: o.invoiceDate || o.orderDate || getKarachiDateString(o.createdAt),
           shahzadApproval: 'APPROVED' as const,
-          shahzadApprovedAt: new Date().toISOString(),
+          shahzadApprovedAt: nowIso,
+          postedAt: o.postedAt || nowIso,
+          postedBy: o.postedBy || currentUser?.fullName || 'Shahzad Ullah',
+          updatedAt: nowIso,
+          syncStatus: 'SAVED_IN_DB' as const,
           status: 'APPROVED' as const,
           dualApprovalStatus: 'DUAL_APPROVED' as const,
           approvedBy: 'Shahzad Ullah',
@@ -1214,19 +1381,32 @@ export default function App() {
       return false;
     };
 
+    const nowDispatchIso = new Date().toISOString();
     const updatedOrders = orders.map((o) => {
       if (isOrderMatch(o)) {
         matchedAny = true;
+        const lockedDispatchedItems = (payload.dispatchedItems || []).map((it) => ({
+          ...it,
+          unitTradePriceSnapshot: it.unitTradePriceSnapshot ?? it.unitPrice,
+          discountPercentSnapshot: it.discountPercentSnapshot ?? (it.discountPercent || 15),
+          skuDescriptionSnapshot: it.skuDescriptionSnapshot ?? it.skuName,
+          priceLockedAt: it.priceLockedAt || nowDispatchIso,
+        }));
         targetOrd = {
           ...o,
-          items: payload.dispatchedItems,
+          items: lockedDispatchedItems,
           subtotal: payload.grossSubtotal,
           discountAmount: payload.discount15,
           totalAmount: payload.netInvoiceTotal,
           netAmount: payload.netInvoiceTotal,
           netTotal: payload.netInvoiceTotal,
+          invoiceDate: o.invoiceDate || o.orderDate || getKarachiDateString(o.createdAt),
           shahzadApproval: 'APPROVED' as const,
-          shahzadApprovedAt: new Date().toISOString(),
+          shahzadApprovedAt: nowDispatchIso,
+          postedAt: o.postedAt || nowDispatchIso,
+          postedBy: o.postedBy || currentUser?.fullName || 'Shahzad Ullah',
+          updatedAt: nowDispatchIso,
+          syncStatus: 'SAVED_IN_DB' as const,
           status: 'APPROVED' as const,
           dualApprovalStatus: 'DUAL_APPROVED' as const,
           approvedBy: 'Shahzad Ullah',
@@ -1235,7 +1415,7 @@ export default function App() {
           transporterName: payload.transporterName,
           vehicleNumber: payload.vehicleNumber,
           bilityNumber: payload.bilityNumber,
-          dispatchedAt: new Date().toISOString(),
+          dispatchedAt: nowDispatchIso,
         };
         return targetOrd;
       }
@@ -1432,6 +1612,7 @@ export default function App() {
       return;
     }
 
+    const nowVerifyIso = new Date().toISOString();
     let targetRec: Recovery | null = null;
     const updatedRecoveries = recoveries.map((r) => {
       if (isRecoveryMatch(r)) {
@@ -1439,7 +1620,11 @@ export default function App() {
         targetRec = {
           ...r,
           shahzadApproval: 'APPROVED' as const,
-          shahzadApprovedAt: new Date().toISOString(),
+          shahzadApprovedAt: nowVerifyIso,
+          postedAt: r.postedAt || nowVerifyIso,
+          postedBy: r.postedBy || currentUser?.fullName || 'Shahzad Ullah',
+          updatedAt: nowVerifyIso,
+          syncStatus: 'SAVED_IN_DB' as const,
           status: 'VERIFIED' as const,
           dualApprovalStatus: 'DUAL_APPROVED' as const,
           verifiedBy: 'Shahzad Ullah',
@@ -2019,22 +2204,40 @@ export default function App() {
       };
     });
 
-    const updatedOrders = orders.map((o) =>
-      o.id === order.id
-        ? {
-            ...o,
-            status: 'INVOICED' as const,
-            invoiceNumber: invNumber,
-            invoicedAt: nowIso,
-            invoicedBy: currentUser?.fullName || 'Accounts Department',
-            subtotal: metrics.grossSubtotal,
-            discountAmount: metrics.discount15,
-            totalAmount: metrics.netInvoiceTotal,
-            netAmount: metrics.netInvoiceTotal,
-            netTotal: metrics.netInvoiceTotal,
-          }
-        : o
-    );
+    const updatedOrders = orders.map((o) => {
+      if (o.id !== order.id) return o;
+      const lockedItems = (o.items || []).map((it, idx) => {
+        const calc = metrics.items[idx];
+        const tp = it.unitTradePriceSnapshot ?? (calc ? calc.officialTradePrice : (it.unitPrice || 0));
+        return {
+          ...it,
+          unitPrice: tp,
+          unitTradePriceSnapshot: tp,
+          discountPercentSnapshot: it.discountPercentSnapshot ?? (it.discountPercent || 15),
+          skuDescriptionSnapshot: it.skuDescriptionSnapshot ?? it.skuName,
+          priceLockedAt: it.priceLockedAt || nowIso,
+          lineTotal: it.priceLockedAt ? it.lineTotal : (calc ? calc.lineNet : it.lineTotal),
+        };
+      });
+      return {
+        ...o,
+        items: lockedItems,
+        status: 'INVOICED' as const,
+        invoiceNumber: invNumber,
+        invoiceDate: o.invoiceDate || o.orderDate || getKarachiDateString(o.createdAt),
+        invoicedAt: nowIso,
+        invoicedBy: currentUser?.fullName || 'Accounts Department',
+        postedAt: o.postedAt || nowIso,
+        postedBy: o.postedBy || currentUser?.fullName || 'Accounts Department',
+        updatedAt: nowIso,
+        syncStatus: 'SAVED_IN_DB' as const,
+        subtotal: metrics.grossSubtotal,
+        discountAmount: metrics.discount15,
+        totalAmount: metrics.netInvoiceTotal,
+        netAmount: metrics.netInvoiceTotal,
+        netTotal: metrics.netInvoiceTotal,
+      };
+    });
 
     const updatedCustomers = customers.map((c) => {
       const cId = String(c.id || '').toLowerCase().trim();
@@ -2401,14 +2604,27 @@ export default function App() {
           setLedgerEntries(sheetData.ledgerEntries);
         }
 
+        markAllPendingEventsSynced('1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo');
         setLedgerToastMessage(
           `✓ Google Sheet live sync complete! Synchronized ${sheetData.customersCount} dealers, ${sheetData.ordersCount} invoices/orders, and ${sheetData.recoveriesCount} recoveries.`
         );
       } else {
+        markAllPendingEventsSynced('1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo');
         setLedgerToastMessage('ℹ️ Google Sheet verified: Synchronized successfully.');
       }
     } catch (err: any) {
       console.error('Google sheet sync failed:', err);
+      recordSyncLifecycleEvent({
+        module: 'GOOGLE_SHEETS',
+        recordType: 'SyncBatch',
+        databaseId: 'SHEET-BATCH',
+        transactionId: generateDeterministicTransactionId('SYN'),
+        idempotencyKey: `sheet-sync-${Date.now()}`,
+        syncStatus: 'SYNC_FAILED',
+        externalSheetId: '1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo',
+        errorMessage: err?.message || 'Error connecting to Google Sheet',
+        summary: 'Manual Google Sheet sync batch failed',
+      });
       setLedgerToastMessage(`⚠️ Sync failed: ${err.message || 'Error connecting to Google Sheet'}`);
     } finally {
       setIsSyncingSheet(false);
@@ -2812,7 +3028,7 @@ export default function App() {
             inventoryBalances={inventoryBalances}
             inventoryTransactions={inventoryTransactions}
             leaveRequests={leaveRequests}
-            skus={NLINK_OFFICIAL_PRODUCTS as any}
+            skus={catalogSkus as any}
             invoices={fallbackAppData.invoices}
             dispatches={fallbackAppData.dispatches}
             stockReturns={fallbackAppData.stockReturns}

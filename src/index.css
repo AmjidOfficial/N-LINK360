@@ -216,17 +216,19 @@ button {
 /* Print-Ready Stylesheet */
 @media print {
   @page {
-    size: auto;
-    margin: 5mm;
+    size: A4 portrait;
+    margin: 8mm 6mm;
   }
 
   body {
     background: #ffffff !important;
     color: #000000 !important;
+    font-size: 11pt !important;
   }
 
-  nav, header, footer, button, .no-print, [data-no-print] {
+  nav, header, footer, button, input, select, textarea, iframe, [role="button"], .no-print, [data-no-print] {
     display: none !important;
+    visibility: hidden !important;
   }
 
   body * {
@@ -238,17 +240,48 @@ button {
   }
 
   .invoice-print-container {
+    display: block !important;
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
-    padding: 8px !important;
+    padding: 10mm 8mm !important;
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #111827 !important;
     box-shadow: none !important;
-    border: none !important;
+    border: 1px solid #1B5E3A !important;
+    border-radius: 4px !important;
     page-break-inside: avoid;
+    font-size: 10pt !important;
+    line-height: 1.35 !important;
+  }
+
+  .invoice-print-container table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .invoice-print-container th {
+    background-color: #F1F8E9 !important;
+    color: #1B5E3A !important;
+    font-size: 9pt !important;
+    font-weight: 700 !important;
+    border-bottom: 2px solid #1B5E3A !important;
+    padding: 4px 6px !important;
+  }
+
+  .invoice-print-container td {
+    border-bottom: 1px solid #E2E8F0 !important;
+    padding: 4px 6px !important;
+    font-size: 9pt !important;
+  }
+
+  .invoice-print-container button,
+  .invoice-print-container [role="button"],
+  .invoice-print-container input {
+    display: none !important;
   }
 
   .print-area {

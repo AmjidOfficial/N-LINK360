@@ -7,10 +7,13 @@
  * Only Order QTY needs to be entered.
  */
 
-import React, { useMemo, useRef, useState } from 'react';
-import { Customer, SalesOrder, SalesOrderItem } from '../../types';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Customer, SalesOrder, SalesOrderItem, SKU } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
-import { NLINK_OFFICIAL_PRODUCTS } from '../../data/nlink-products';
+import { getCentralPriceList, subscribePriceList } from '../../services/priceListService';
+import { scheduleDebouncedAutoSave, cancelDebouncedAutoSave, flushAllAutoSaves } from '../../services/autoSaveSyncService';
+import { getKarachiDateString } from '../../utils/dateTime';
+import { buildTransactionFingerprint, generateDeterministicTransactionId } from '../../utils/transactionSignature';
 import { triggerHaptic } from '../../utils/haptics';
 import { generateUniqueOrderId, generateUniqueOrderItemId, generateIdempotencyUuid } from '../../utils/idGenerator';
 import {
@@ -39,6 +42,8 @@ export interface BulkSkuOrderFormProps {
   stickyTopOffsetClass?: string;
 }
 
+const ORDER_DRAFT_STORAGE_KEY = 'nlink360_bulk_order_draft_v1';
+
 export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
   currentUser,
   availableCustomers,
@@ -53,9 +58,30 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
     preselectedCustomer?.id || availableCustomers[0]?.id || ''
   );
-  const [skuEntries, setSkuEntries] = useState<Record<string, { cartons: number; packs: number }>>({});
+  const [skuEntries, setSkuEntries] = useState<Record<string, { cartons: number; packs: number }>>(() => {
+    try {
+      const raw = localStorage.getItem(ORDER_DRAFT_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.skuEntries && typeof parsed.skuEntries === 'object') {
+          return parsed.skuEntries;
+        }
+      }
+    } catch {}
+    return {};
+  });
+  const [catalogSkus, setCatalogSkus] = useState<SKU[]>(() => getCentralPriceList());
   const [searchQuery, setSearchQuery] = useState('');
-  const [orderNotes, setOrderNotes] = useState('');
+  const [orderNotes, setOrderNotes] = useState(() => {
+    try {
+      const raw = localStorage.getItem(ORDER_DRAFT_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return typeof parsed?.orderNotes === 'string' ? parsed.orderNotes : '';
+      }
+    } catch {}
+    return '';
+  });
   const [bookedOrder, setBookedOrder] = useState<{
     order: SalesOrder;
     customer: Customer;
@@ -63,6 +89,42 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
   const [draftIdempotencyKey, setDraftIdempotencyKey] = useState<string>(() => generateIdempotencyUuid());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitLockRef = useRef(false);
+
+  useEffect(() => {
+    const unsub = subscribePriceList(() => {
+      setCatalogSkus(getCentralPriceList());
+    });
+    return unsub;
+  }, []);
+
+  // Global debounced auto-save for order drafts + guarantee flush on unmount/tab switch
+  useEffect(() => {
+    if (bookedOrder) return;
+    const hasEntries = Object.values(skuEntries).some((v) => (v.cartons || 0) > 0 || (v.packs || 0) > 0);
+    if (!hasEntries && !orderNotes.trim()) {
+      cancelDebouncedAutoSave('bulk-order-draft');
+      return;
+    }
+    scheduleDebouncedAutoSave('bulk-order-draft', () => {
+      try {
+        localStorage.setItem(
+          ORDER_DRAFT_STORAGE_KEY,
+          JSON.stringify({
+            customerId: selectedCustomerId,
+            skuEntries,
+            orderNotes,
+            updatedAt: new Date().toISOString(),
+          })
+        );
+      } catch {}
+    });
+  }, [skuEntries, orderNotes, selectedCustomerId, bookedOrder]);
+
+  useEffect(() => {
+    return () => {
+      void flushAllAutoSaves();
+    };
+  }, []);
 
   const activeCustomer = useMemo(() => {
     if (preselectedCustomer) return preselectedCustomer;
@@ -75,16 +137,16 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
 
   const filteredSkus = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return NLINK_OFFICIAL_PRODUCTS.filter((sku) => {
+    return catalogSkus.filter((sku) => {
       if (sku.isActive === false) return false;
       const matchSearch =
         !q ||
         sku.name.toLowerCase().includes(q) ||
         sku.skuCode.toLowerCase().includes(q) ||
-        sku.categoryLabel.toLowerCase().includes(q);
+        (sku.categoryName || sku.category || '').toLowerCase().includes(q);
       return matchSearch;
     });
-  }, [searchQuery]);
+  }, [searchQuery, catalogSkus]);
 
   const handleUnitChange = (skuId: string, field: 'cartons' | 'packs', rawValue: string) => {
     const parsed = rawValue === '' ? 0 : Math.max(0, Math.floor(Number(rawValue) || 0));
@@ -171,11 +233,11 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
     let grossAmount = 0;
     let netAmount = 0;
 
-    NLINK_OFFICIAL_PRODUCTS.forEach((sku) => {
+    catalogSkus.forEach((sku) => {
       const entry = skuEntries[sku.id];
       const ctn = entry?.cartons || 0;
       const pks = entry?.packs || 0;
-      const pcsPerCarton = sku.cartonQuantity || 20;
+      const pcsPerCarton = sku.cartonQuantity || sku.packSize || 20;
       const qty = (ctn * pcsPerCarton) + pks;
       if (qty > 0) {
         const grossRate = sku.tradePrice || 0;
@@ -192,7 +254,7 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
     const discountAmount = grossAmount - netAmount;
 
     return { activeSkuCount, totalCartons, totalPacks, totalQty, grossAmount, netAmount, discountAmount };
-  }, [skuEntries]);
+  }, [skuEntries, catalogSkus]);
 
   const handleSubmitOrder = () => {
     if (!activeCustomer || orderSummary.totalQty <= 0 || submitLockRef.current || isSubmitting) return;
@@ -202,18 +264,20 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
     try {
       const orderNumber = generateUniqueOrderId();
       const nowIso = new Date().toISOString();
+      const businessDatePkt = getKarachiDateString(nowIso);
+      const txnId = generateDeterministicTransactionId('ORD', businessDatePkt);
 
-      const orderItems: SalesOrderItem[] = NLINK_OFFICIAL_PRODUCTS.filter((sku) => {
+      const orderItems: SalesOrderItem[] = catalogSkus.filter((sku) => {
         const entry = skuEntries[sku.id];
         const ctn = entry?.cartons || 0;
         const pks = entry?.packs || 0;
-        const pcsPerCarton = sku.cartonQuantity || 20;
+        const pcsPerCarton = sku.cartonQuantity || sku.packSize || 20;
         return (ctn * pcsPerCarton) + pks > 0;
       }).map((sku, idx) => {
         const entry = skuEntries[sku.id] || { cartons: 0, packs: 0 };
         const ctn = entry.cartons || 0;
         const pks = entry.packs || 0;
-        const pcsPerCarton = sku.cartonQuantity || 20;
+        const pcsPerCarton = sku.cartonQuantity || sku.packSize || 20;
         const qty = (ctn * pcsPerCarton) + pks;
         const grossRate = sku.tradePrice || 0;
         const netRate = sku.retailPrice || Math.round(grossRate * 0.85);
@@ -224,6 +288,11 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
           skuId: sku.id,
           skuCode: sku.skuCode,
           skuName: sku.name,
+          skuDescriptionSnapshot: sku.name,
+          unitTradePriceSnapshot: grossRate,
+          unitRetailPriceSnapshot: netRate,
+          discountPercentSnapshot: 15,
+          taxRateSnapshot: sku.taxRate || 0,
           orderedQuantity: qty,
           discountPercent: 15,
           lineTotal,
@@ -236,12 +305,30 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
         };
       });
 
+      const itemsSig = orderItems.map((i) => `${i.skuCode}:${i.orderedQuantity}:${i.unitPrice}`).join(',');
+      const fpHash = buildTransactionFingerprint({
+        module: 'ORDER',
+        customerId: activeCustomer.id,
+        amount: orderSummary.netAmount,
+        businessDate: businessDatePkt,
+        idempotencyKey: draftIdempotencyKey,
+        itemsSignature: itemsSig,
+      });
+
       const newOrder: SalesOrder = {
         id: orderNumber,
         idempotencyKey: draftIdempotencyKey,
+        transactionId: txnId,
+        fingerprintHash: fpHash,
+        databaseId: orderNumber,
+        sourceSystem: 'NLINK_WEB',
+        syncStatus: 'SAVED_IN_DB',
         orderNumber,
-        orderDate: nowIso.slice(0, 10),
+        orderDate: businessDatePkt,
+        invoiceDate: businessDatePkt,
         createdAt: nowIso,
+        updatedAt: nowIso,
+        createdBy: currentUser.email || currentUser.fullName,
         customerId: activeCustomer.id,
         customerName: activeCustomer.companyName,
         customerCode: activeCustomer.customerCode || 'NL-DLR',
@@ -262,6 +349,10 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
       };
 
       triggerHaptic('success');
+      cancelDebouncedAutoSave('bulk-order-draft');
+      try {
+        localStorage.removeItem(ORDER_DRAFT_STORAGE_KEY);
+      } catch {}
       onPlaceOrder(newOrder);
       setBookedOrder({ order: newOrder, customer: activeCustomer });
       if (onOrderCompleted) {
@@ -278,6 +369,10 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
     setSkuEntries({});
     setOrderNotes('');
     setBookedOrder(null);
+    cancelDebouncedAutoSave('bulk-order-draft');
+    try {
+      localStorage.removeItem(ORDER_DRAFT_STORAGE_KEY);
+    } catch {}
     setDraftIdempotencyKey(generateIdempotencyUuid());
     submitLockRef.current = false;
     setIsSubmitting(false);

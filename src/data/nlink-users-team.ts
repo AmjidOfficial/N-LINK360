@@ -61,7 +61,7 @@ export const NLINK_TEAM_ROSTER: NLinkUser[] = [
     fullName: 'Shahzad Ullah',
     email: 'shahzadullah@nationallight.pk',
     phone: '+92 300 1234567',
-    role: 'SUPER_ADMIN',
+    role: 'NSM',
     roleTitle: 'NSM (National Sales Manager) & Sole Approver',
     department: 'EXECUTIVE',
     region: 'National',
@@ -91,10 +91,11 @@ export const NLINK_TEAM_ROSTER: NLinkUser[] = [
     roleTitle: 'ZSM (Zonal Sales Manager)',
     department: 'SALES_FIELD',
     region: 'KPK',
-    area: 'Swat & Malakand',
-    territory: 'Mingora (Swat)',
-    assignedTowns: ['Mingora (Swat)', 'Mardan'],
-    assignedBeats: ['Mingora Electric Market', 'GT Road Swat Beat'],
+    zone: 'KPK Zone',
+    area: 'KPK Zone',
+    territory: 'Peshawar',
+    assignedTowns: ['Peshawar', 'Mardan', 'Nowshera', 'Charsadda', 'Mingora (Swat)'],
+    assignedBeats: ['Peshawar City Market', 'Saddar Kali Bari', 'Khyber Bazaar'],
     monthlySalesTarget: 15000000,
     monthlyRecoveryTarget: 12000000,
     mtdSalesAchieved: 0,
@@ -181,6 +182,33 @@ export const NLINK_TEAM_ROSTER: NLinkUser[] = [
     todayRecoveryAchieved: 0,
     status: 'ACTIVE',
     avatarInitials: 'NL',
+    mustChangePassword: true,
+    initialPasswordStatus: 'ISSUED_CHANGE_REQUIRED',
+  },
+  // --- 6. TSM (ARSHAD KHAN) ---
+  {
+    id: 'USR-005',
+    employeeCode: 'EMP-005',
+    fullName: 'Arshad Khan',
+    email: 'arshadkhan@nationallight.pk',
+    phone: '+92 300 5551122',
+    role: 'TSM',
+    roleTitle: 'TSM (Territory Sales Manager)',
+    department: 'SALES_FIELD',
+    region: 'KPK',
+    zone: 'Malakand',
+    area: 'Malakand',
+    territory: 'Mingora (Swat)',
+    assignedTowns: ['Mingora (Swat)', 'Malakand', 'Batkhela'],
+    assignedBeats: ['Mingora Electric Market', 'GT Road Swat Beat', 'Batkhela Bazaar'],
+    monthlySalesTarget: 8000000,
+    monthlyRecoveryTarget: 7000000,
+    mtdSalesAchieved: 0,
+    mtdRecoveryAchieved: 0,
+    todaySalesAchieved: 0,
+    todayRecoveryAchieved: 0,
+    status: 'ACTIVE',
+    avatarInitials: 'AK',
     mustChangePassword: true,
     initialPasswordStatus: 'ISSUED_CHANGE_REQUIRED',
   },
@@ -275,7 +303,7 @@ export function generateCryptographicInitialPassword(length = 14): string {
     symbols[getRand(symbols.length)],
   ];
 
-  while (chars.length < Math.max(12, length)) {
+  while (chars.length < Math.max(6, length)) {
     chars.push(all[getRand(all.length)]);
   }
 
@@ -285,7 +313,7 @@ export function generateCryptographicInitialPassword(length = 14): string {
     [chars[i], chars[j]] = [chars[j], chars[i]];
   }
 
-  return chars.join('');
+  return chars.slice(0, Math.max(6, length)).join('');
 }
 
 /**

@@ -62,6 +62,9 @@ const ExecutiveDashboardView = React.lazy(() => import('../dashboard/ExecutiveDa
 const ManageTownsInterface = React.lazy(() => import('./ManageTownsInterface').then((m) => ({ default: m.ManageTownsInterface })));
 const DistributorTransferModule = React.lazy(() => import('./DistributorTransferModule').then((m) => ({ default: m.DistributorTransferModule })));
 const DealerCreditHealthMap = React.lazy(() => import('../d3/DealerCreditHealthMap').then((m) => ({ default: m.DealerCreditHealthMap })));
+const SyncMonitoringModule = React.lazy(() => import('./SyncMonitoringModule').then((m) => ({ default: m.SyncMonitoringModule })));
+const PriceListModule = React.lazy(() => import('./PriceListModule').then((m) => ({ default: m.PriceListModule })));
+import { flushAllAutoSaves } from '../../services/autoSaveSyncService';
 import { exportSalesSummaryCsv } from '../../utils/reportExport';
 import {
   LayoutDashboard,
@@ -110,6 +113,7 @@ import {
   ArrowRightLeft,
   Edit3,
   KeyRound,
+  Tag,
 } from 'lucide-react';
 import { downloadSalesInvoicePdf } from '../../utils/exportInvoicePdf';
 import { downloadCustomerLedgerPdf } from '../../utils/exportLedgerPdf';
@@ -135,7 +139,9 @@ export type HeadOfficeTab =
   | 'PACKING_LOADING'
   | 'INVOICE_GENERATION'
   | 'DISPATCH_LOGISTICS'
-  | 'HR_ADMIN';
+  | 'HR_ADMIN'
+  | 'SYNC_MONITORING'
+  | 'PRICE_LIST';
 
 export interface HeadOfficeExperienceProps {
   currentUser: NLinkUser;
@@ -546,6 +552,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
       items: [
         { id: 'CUSTOMERS' as const, label: 'Dealers Network', icon: Building2, badge: customers.length, requiredPermissions: ['sales.customers'] },
         { id: 'INVENTORY_WAREHOUSE' as const, label: 'Inventory & Stock', icon: PackageCheck, requiredPermissions: ['inventory.view'] },
+        { id: 'PRICE_LIST' as const, label: 'Price List & SKUs', icon: Tag, badge: skus?.length || 30, requiredPermissions: ['masters.view', 'inventory.view', 'sales.order', 'invoice.create'] },
         { id: 'PACKING_LOADING' as const, label: 'Packing & Loading', icon: Truck, requiredPermissions: ['inventory.manage', 'dispatch.manage'] },
         { id: 'INVOICE_GENERATION' as const, label: 'Invoicing & Billing', icon: Receipt, requiredPermissions: ['invoice.create', 'invoice.post'] },
         { id: 'DISPATCH_LOGISTICS' as const, label: 'Dispatch & Logistics', icon: Truck, requiredPermissions: ['dispatch.manage'] },
@@ -574,6 +581,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
         { id: 'EMPLOYEE_MANAGEMENT' as const, label: 'Employee Management', icon: Users2, requiredPermissions: ['users.manage'] },
         { id: 'HR_ADMIN' as const, label: 'HR & Administration', icon: FileText, requiredPermissions: ['hr.manage'] },
         { id: 'APPROVALS' as const, label: 'Approvals Hub', icon: CheckSquare, alertBadge: pendingTotalCount, requiredPermissions: ['recovery.verify'] },
+        { id: 'SYNC_MONITORING' as const, label: 'Sync Monitoring', icon: Activity, requiredPermissions: ['settings.manage', 'reports.view', 'ledger.manage'] },
         { id: 'SETTINGS' as const, label: 'Settings & Sync', icon: Settings, requiredPermissions: ['settings.manage'] },
       ],
     },
@@ -587,6 +595,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
     .filter((group) => group.items.length > 0);
 
   const handleSidebarNav = (id: string) => {
+    void flushAllAutoSaves();
     setSelectedCustomerIdFor360(null);
     setIsSidebarOpen(false);
     scrollMainToTop('smooth');
@@ -2443,22 +2452,40 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       </button>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <span className="font-bold text-slate-900 dark:text-white block">Automatic Background Sync</span>
+                        <span className="font-bold text-slate-900 dark:text-white block">Automatic Background Sync &amp; Reconciliation</span>
                         <span className="text-[11px] text-slate-500">Orders, recoveries and ledgers sync automatically in the background</span>
                       </div>
-                      {onSyncGoogleSheet && (
+                      <div className="flex items-center gap-2 flex-wrap">
                         <button
                           type="button"
-                          onClick={() => onSyncGoogleSheet()}
-                          disabled={isSyncingSheet}
-                          className="btn-primary text-xs"
+                          onClick={() => setActiveTab('SYNC_MONITORING')}
+                          className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                         >
-                          <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheet ? 'animate-spin' : ''}`} />
-                          <span>{isSyncingSheet ? 'Syncing...' : 'Sync'}</span>
+                          <Activity className="w-3.5 h-3.5" />
+                          <span>Sync Monitoring</span>
                         </button>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('PRICE_LIST')}
+                          className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Tag className="w-3.5 h-3.5" />
+                          <span>Price List ({skus?.length || 30} SKUs)</span>
+                        </button>
+                        {onSyncGoogleSheet && (
+                          <button
+                            type="button"
+                            onClick={() => onSyncGoogleSheet()}
+                            disabled={isSyncingSheet}
+                            className="btn-primary text-xs"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheet ? 'animate-spin' : ''}`} />
+                            <span>{isSyncingSheet ? 'Syncing...' : 'Sync'}</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Global Session Invalidation Action */}
@@ -2566,6 +2593,37 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         }
                       }}
                     />
+                  </Suspense>
+                </div>
+              )}
+
+              {/* ==================================================== */}
+              {/* 11. CENTRAL SYNC MONITORING & RECONCILIATION CENTER */}
+              {/* ==================================================== */}
+              {activeTab === 'SYNC_MONITORING' && (
+                <div className="animate-in fade-in duration-200">
+                  <Suspense fallback={<NatureSkeleton variant="card" count={3} />}>
+                    <SyncMonitoringModule
+                      customers={customers}
+                      orders={orders}
+                      recoveries={recoveries}
+                      ledgerEntries={ledgerEntries}
+                      skus={skus}
+                      isOnline={isOnline}
+                      isSyncingSheet={isSyncingSheet}
+                      onSyncGoogleSheet={onSyncGoogleSheet}
+                    />
+                  </Suspense>
+                </div>
+              )}
+
+              {/* ==================================================== */}
+              {/* 12. CENTRAL COMPLETE SKU & PRICE LIST MANAGER */}
+              {/* ==================================================== */}
+              {activeTab === 'PRICE_LIST' && (
+                <div className="animate-in fade-in duration-200">
+                  <Suspense fallback={<NatureSkeleton variant="card" count={3} />}>
+                    <PriceListModule currentUser={currentUser} />
                   </Suspense>
                 </div>
               )}

@@ -12,6 +12,7 @@ export type UserRole =
   | 'SUPER_ADMIN'
   | 'MANAGEMENT'
   | 'NATIONAL_MANAGER'
+  | 'NSM'
   | 'RSM'
   | 'ZSM'
   | 'TSM'
@@ -396,6 +397,78 @@ export interface SKU {
   currentVersionId?: string;
   currentVersionNumber?: number;
   versions?: SKUVersion[];
+  // Central Price List metadata
+  subcategory?: string;
+  uom?: string;
+  packSize?: number;
+  purchasePrice?: number | null;
+  dealerPrice?: number;
+  distributorPrice?: number | null;
+  discountPercentage?: string;
+  effectivePriceDate?: string;
+  updatedAt?: string;
+}
+
+export type SyncLifecycleStatus =
+  | 'SAVED_IN_DB'
+  | 'PENDING_GOOGLE_SYNC'
+  | 'SUCCESSFULLY_SYNCED'
+  | 'SYNC_FAILED'
+  | 'REQUIRES_RECONCILIATION';
+
+export interface SyncRecordEvent {
+  id: string;
+  module: string;
+  recordType: string;
+  databaseId: string;
+  externalSheetId?: string;
+  transactionId: string;
+  idempotencyKey: string;
+  fingerprintHash?: string;
+  syncStatus: SyncLifecycleStatus;
+  sourceSystem: 'NLINK_WEB' | 'NLINK_MOBILE' | 'GOOGLE_SHEETS' | 'SUPABASE_DB' | string;
+  lastDbSavedAt?: string;
+  lastSyncedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  summary?: string;
+  errorMessage?: string;
+  retryCount: number;
+}
+
+export interface SKUPriceHistoryEntry {
+  id: string;
+  skuId: string;
+  skuCode: string;
+  skuName: string;
+  oldTradePrice: number;
+  newTradePrice: number;
+  oldListPrice: number;
+  newListPrice: number;
+  oldDiscountPercent?: string;
+  newDiscountPercent?: string;
+  effectiveDate: string;
+  changedBy: string;
+  changedByEmail?: string;
+  reason: string;
+  createdAt: string;
+}
+
+export interface ReconciliationFlag {
+  id: string;
+  module: 'INVOICE_DATE' | 'GOOGLE_SHEETS' | 'PRICE_LIST' | 'DUPLICATE_TXN' | 'LEDGER';
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'REQUIRES_RECONCILIATION' | 'RESOLVED';
+  recordId: string;
+  transactionId?: string;
+  customerName?: string;
+  title: string;
+  description: string;
+  databaseValue?: string;
+  sheetOrExternalValue?: string;
+  detectedAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
 }
 
 // ==============================================================================
@@ -620,6 +693,10 @@ export interface SalesOrderItem {
   unitsPerCartonSnapshot?: number;
   unitTradePriceSnapshot?: number;
   unitRetailPriceSnapshot?: number;
+  discountPercentSnapshot?: number;
+  taxRateSnapshot?: number;
+  skuDescriptionSnapshot?: string;
+  priceLockedAt?: string;
   packagingUnit?: string;
   orderedQuantity: number;
   approvedQuantity?: number;
@@ -663,7 +740,18 @@ export interface SalesOrder {
   approvedAt?: string;
   rejectionReason?: string;
   dualApprovalStatus?: 'PENDING_DUAL_APPROVAL' | 'DUAL_APPROVED' | 'PARTIALLY_APPROVED' | 'REJECTED';
-  syncStatus?: 'SYNCED' | 'PENDING' | 'OFFLINE';
+  syncStatus?: 'SYNCED' | 'PENDING' | 'OFFLINE' | SyncLifecycleStatus;
+  transactionId?: string;
+  fingerprintHash?: string;
+  databaseId?: string;
+  externalSheetId?: string;
+  lastSyncedAt?: string;
+  sourceSystem?: string;
+  createdBy?: string;
+  postedAt?: string;
+  postedBy?: string;
+  updatedAt?: string;
+  invoiceDate?: string;
   shahzadApproval?: DualApprovalStatus;
   shahzadApprovedAt?: string;
   shahzadRejectionReason?: string;
@@ -716,6 +804,11 @@ export interface InvoiceItem {
   unitsPerCartonSnapshot?: number;
   unitTradePriceSnapshot?: number;
   unitRetailPriceSnapshot?: number;
+  unitPriceSnapshot?: number;
+  discountPercentSnapshot?: number;
+  taxRateSnapshot?: number;
+  skuDescriptionSnapshot?: string;
+  priceLockedAt?: string;
   packagingUnit?: string;
   quantity: number;
   unitPrice: number;
@@ -727,6 +820,13 @@ export interface InvoiceItem {
 export interface Invoice {
   id: string;
   idempotencyKey?: string;
+  transactionId?: string;
+  fingerprintHash?: string;
+  databaseId?: string;
+  externalSheetId?: string;
+  syncStatus?: SyncLifecycleStatus;
+  lastSyncedAt?: string;
+  sourceSystem?: string;
   invoiceNumber: string;
   orderId?: string;
   customerId: string;
@@ -746,7 +846,10 @@ export interface Invoice {
   paymentMode?: string;
   printedAt?: string;
   createdBy?: string;
+  postedAt?: string;
+  postedBy?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 // ==============================================================================
@@ -834,7 +937,17 @@ export interface Recovery {
   verifiedAt?: string;
   rejectionReason?: string;
   dualApprovalStatus?: 'PENDING_DUAL_APPROVAL' | 'DUAL_APPROVED' | 'PARTIALLY_APPROVED' | 'REJECTED';
-  syncStatus?: 'SYNCED' | 'PENDING' | 'OFFLINE';
+  syncStatus?: 'SYNCED' | 'PENDING' | 'OFFLINE' | SyncLifecycleStatus;
+  transactionId?: string;
+  fingerprintHash?: string;
+  databaseId?: string;
+  externalSheetId?: string;
+  lastSyncedAt?: string;
+  sourceSystem?: string;
+  createdBy?: string;
+  postedAt?: string;
+  postedBy?: string;
+  updatedAt?: string;
   shahzadApproval?: DualApprovalStatus;
   shahzadApprovedAt?: string;
   shahzadRejectionReason?: string;
@@ -854,6 +967,14 @@ export type LedgerTransactionType =
 export interface LedgerEntry {
   id: string;
   entryNumber: string;
+  transactionId?: string;
+  idempotencyKey?: string;
+  fingerprintHash?: string;
+  databaseId?: string;
+  externalSheetId?: string;
+  syncStatus?: SyncLifecycleStatus;
+  lastSyncedAt?: string;
+  sourceSystem?: string;
   customerId: string;
   customerName: string;
   entryDate: string;
@@ -866,7 +987,11 @@ export interface LedgerEntry {
   creditAmount: number;
   runningBalance: number;
   description: string;
+  createdBy?: string;
+  postedAt?: string;
+  postedBy?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CreditNote {

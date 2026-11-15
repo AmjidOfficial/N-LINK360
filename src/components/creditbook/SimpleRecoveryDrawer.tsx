@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { generateUniqueRecoveryId, generateIdempotencyUuid } from '../../utils/idGenerator';
+import { getKarachiDateString, formatKarachiDateTime } from '../../utils/dateTime';
+import { buildTransactionFingerprint, generateDeterministicTransactionId } from '../../utils/transactionSignature';
 
 export interface SimpleRecoveryDrawerProps {
   isOpen: boolean;
@@ -107,22 +109,41 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
     try {
       const recoveryId = generateUniqueRecoveryId();
       const nowIso = new Date().toISOString();
+      const businessDatePkt = getKarachiDateString(nowIso);
+      const txnId = generateDeterministicTransactionId('PAY', businessDatePkt);
+      const fpHash = buildTransactionFingerprint({
+        module: 'PAYMENT',
+        customerId: customer.id,
+        amount: paymentAmount,
+        businessDate: businessDatePkt,
+        paymentMode,
+        instrumentNumber: instrumentNumber || undefined,
+        idempotencyKey: draftIdempotencyKey,
+      });
 
       const newRec: Recovery = {
         id: recoveryId,
         idempotencyKey: draftIdempotencyKey,
+        transactionId: txnId,
+        fingerprintHash: fpHash,
+        databaseId: recoveryId,
+        sourceSystem: 'NLINK_WEB',
+        syncStatus: 'SAVED_IN_DB',
         recoveryNumber: recoveryId,
         customerId: customer.id,
         customerName: customer.companyName,
         customerCode: customer.customerCode || 'NL-DLR',
         salesUserId: currentUser.id,
         salesUserName: currentUser.fullName,
-        collectionDate: nowIso.slice(0, 10),
+        createdBy: currentUser.email || currentUser.fullName,
+        collectionDate: businessDatePkt,
+        paymentDate: businessDatePkt,
         amount: paymentAmount,
         paymentMode,
         instrumentNumber: instrumentNumber || undefined,
         bankName: bankName || undefined,
         createdAt: nowIso,
+        updatedAt: nowIso,
         status: 'PENDING_VERIFICATION',
         remarks: notes || undefined,
         receiptUrl: slipImage || undefined,
@@ -228,6 +249,12 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
               {/* Summary */}
               <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 text-left text-xs space-y-1.5">
                 <div className="flex justify-between">
+                  <span className="text-slate-500">Transaction Signature:</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                    {submittedRecovery.transactionId || submittedRecovery.id}
+                  </span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-slate-500">Payment Amount:</span>
                   <span className="font-mono font-black text-emerald-800 dark:text-emerald-300">
                     Rs. {submittedRecovery.amount.toLocaleString()} PKR
@@ -237,6 +264,12 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                   <span className="text-slate-500">Payment Mode:</span>
                   <span className="font-bold text-slate-700 dark:text-slate-300">
                     {submittedRecovery.paymentMode}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Recorded (PKT):</span>
+                  <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">
+                    {formatKarachiDateTime(submittedRecovery.createdAt)}
                   </span>
                 </div>
                 <div className="flex justify-between">

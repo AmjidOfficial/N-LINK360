@@ -8,11 +8,12 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Receipt, Search, FileText, Download, Eye, CheckCircle2 } from 'lucide-react';
+import { Receipt, Search, FileText, Download, Eye, CheckCircle2, Printer } from 'lucide-react';
 import { Customer, SalesOrder } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import { calculateInvoiceMetrics } from '../../hooks/useSkuInvoicePricing';
 import { downloadSalesInvoicePdf } from '../../utils/exportInvoicePdf';
+import { formatKarachiDate, formatKarachiDateTime } from '../../utils/dateTime';
 
 interface InvoiceGenerationModuleProps {
   currentUser: NLinkUser;
@@ -146,6 +147,19 @@ export const InvoiceGenerationModule: React.FC<InvoiceGenerationModuleProps> = (
                     <strong className="text-slate-900 dark:text-white">Rs. {metrics.netInvoiceTotal.toLocaleString()}</strong>
                     {cust && ` · Prev Ledger Bal: Rs. ${prevBal.toLocaleString()}`}
                   </div>
+                  <div className="text-[11px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 pt-0.5">
+                    <span>
+                      Invoice Date: <strong className="text-slate-700 dark:text-slate-300">{formatKarachiDate(order.invoiceDate || order.orderDate)}</strong>
+                    </span>
+                    <span>
+                      Entered (PKT): <strong className="text-slate-700 dark:text-slate-300">{formatKarachiDateTime(order.createdAt)}</strong>
+                    </span>
+                    {(order.postedAt || order.invoicedAt || order.shahzadApprovedAt) && (
+                      <span>
+                        Posted (PKT): <strong className="text-slate-700 dark:text-slate-300">{formatKarachiDateTime(order.postedAt || order.invoicedAt || order.shahzadApprovedAt)}</strong>
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
@@ -185,6 +199,28 @@ export const InvoiceGenerationModule: React.FC<InvoiceGenerationModuleProps> = (
                         >
                           <Download className="w-3.5 h-3.5" />
                           <span>Download PDF</span>
+                        </button>
+                      )}
+                      {cust && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onPreviewInvoicePdf) {
+                              onPreviewInvoicePdf(order, cust);
+                              setTimeout(() => window.print(), 350);
+                            } else {
+                              downloadSalesInvoicePdf({
+                                customer: cust,
+                                order,
+                                previousBalance: prevBal,
+                                preparedByName: currentUser.fullName,
+                              });
+                            }
+                          }}
+                          className="px-3.5 py-2 rounded-xl border border-emerald-600 dark:border-emerald-500 text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Print</span>
                         </button>
                       )}
                       <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold px-2">

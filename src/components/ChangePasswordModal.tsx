@@ -54,13 +54,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   if (!isOpen) return null;
 
-  const hasMinLen = newPassword.length >= 12;
+  const hasMinLen = newPassword.length >= 6;
   const hasUpper = /[A-Z]/.test(newPassword);
   const hasLower = /[a-z]/.test(newPassword);
   const hasDigit = /[0-9]/.test(newPassword);
   const hasSymbol = /[^A-Za-z0-9]/.test(newPassword);
   const matchesConfirm = newPassword.length > 0 && newPassword === confirmPassword;
-  const policyValid = hasMinLen && hasUpper && hasLower && hasDigit && hasSymbol && matchesConfirm;
+  const policyValid = hasMinLen && matchesConfirm;
 
   const handleGenerateStrong = () => {
     const generated = generateCryptographicInitialPassword(14);
@@ -86,8 +86,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       setError('Please enter your current password.');
       return;
     }
-    if (!hasMinLen || !hasUpper || !hasLower || !hasDigit || !hasSymbol) {
-      setError('Password must be at least 12 characters with uppercase, lowercase, numbers, and special characters.');
+    if (!hasMinLen) {
+      setError('Password must be at least 6 characters long.');
       return;
     }
     if (!matchesConfirm) {
@@ -221,7 +221,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                placeholder="Minimum 12 characters with symbol"
+                placeholder="Minimum 6 characters"
                 className="w-full min-h-[44px] pl-9 pr-10 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-colors"
               />
               <button
@@ -263,23 +263,19 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className={`flex items-center gap-1.5 ${hasMinLen ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-400'}`}>
                 {hasMinLen ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <span className="w-3.5 text-center">•</span>}
-                <span>12+ characters</span>
+                <span>6+ characters (Required)</span>
+              </div>
+              <div className={`flex items-center gap-1.5 ${matchesConfirm ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-400'}`}>
+                {matchesConfirm ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <span className="w-3.5 text-center">•</span>}
+                <span>Passwords match (Required)</span>
               </div>
               <div className={`flex items-center gap-1.5 ${hasUpper && hasLower ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-400'}`}>
                 {hasUpper && hasLower ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <span className="w-3.5 text-center">•</span>}
-                <span>Upper &amp; lowercase</span>
+                <span>Mixed case (Recommended)</span>
               </div>
-              <div className={`flex items-center gap-1.5 ${hasDigit ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-400'}`}>
-                {hasDigit ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <span className="w-3.5 text-center">•</span>}
-                <span>Number (0-9)</span>
-              </div>
-              <div className={`flex items-center gap-1.5 ${hasSymbol ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-400'}`}>
-                {hasSymbol ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <span className="w-3.5 text-center">•</span>}
-                <span>Special (!@#$%*)</span>
-              </div>
-              <div className={`col-span-2 flex items-center gap-1.5 ${matchesConfirm ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-400'}`}>
-                {matchesConfirm ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <span className="w-3.5 text-center">•</span>}
-                <span>Passwords match</span>
+              <div className={`flex items-center gap-1.5 ${hasDigit || hasSymbol ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-400'}`}>
+                {hasDigit || hasSymbol ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <span className="w-3.5 text-center">•</span>}
+                <span>Number/symbol (Recommended)</span>
               </div>
             </div>
           </div>

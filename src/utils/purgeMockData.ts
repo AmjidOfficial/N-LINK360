@@ -264,7 +264,41 @@ export function purgeMockDataFromState(currentState?: {
   };
 }
 
-export const SEED_CUSTOMERS: Customer[] = [RASHEED_ELECTRIC_CUSTOMER];
+export const RIZWAN_ELECTRIC_STORE_CUSTOMER: Customer = {
+  id: 'CUST-RIZWAN-PEW',
+  customerCode: 'NL-PEW-RZ02',
+  code: 'NL-PEW-RZ02',
+  companyName: 'Rizwan Electric Store',
+  name: 'Rizwan Electric Store',
+  contactPerson: 'Rizwan (Verified Dealer)',
+  proprietorName: 'Rizwan',
+  phone: '0300-9876543',
+  type: 'DEALER',
+  customerType: 'DEALER',
+  address: 'Kali Bari, Peshawar Saddar, Peshawar, Khyber Pakhtunkhwa',
+  city: 'Peshawar',
+  town: 'Peshawar',
+  region: 'KPK',
+  area: 'Peshawar Division',
+  territory: 'Peshawar City',
+  route: 'Kali Bari - Peshawar Saddar Electrical Beat',
+  creditLimit: 300000,
+  creditDays: 30,
+  openingBalance: 0,
+  currentBalance: 0,
+  isCreditLocked: false,
+  isActive: true,
+  status: 'NORMAL' as any,
+  approvalStatus: 'APPROVED' as any,
+  assignedEmployee: 'Arshad Khan',
+  assignedOfficerId: 'USR-005',
+  assignedOfficerName: 'Arshad Khan',
+  approvedBy: 'Shahzad Ullah',
+  createdAt: '2026-08-15T08:00:00.000Z',
+  updatedAt: '2026-11-14T08:00:00.000Z',
+};
+
+export const SEED_CUSTOMERS: Customer[] = [RASHEED_ELECTRIC_CUSTOMER, RIZWAN_ELECTRIC_STORE_CUSTOMER];
 
 export const SEED_ORDERS: SalesOrder[] = [...RASHEED_ELECTRIC_ORDERS];
 

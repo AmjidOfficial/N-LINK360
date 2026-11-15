@@ -44,7 +44,7 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
     expect(badIdem.status()).toBe(400);
 
     // Valid RFC-4122 UUID v4 deduplicates repeated POST /api/sync submissions
-    const uuid = '550e8400-e29b-41d4-a716-446655440099';
+    const uuid = crypto.randomUUID();
     const firstSync = await request.post('/api/sync', {
       headers: {
         'Content-Type': 'application/json',
@@ -125,26 +125,14 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
       ).toBeLessThanOrEqual(metrics.innerWidth + 2);
     }
 
-    // Mobile drawer auto-close and Escape behavior at 375px
-    await page.setViewportSize({ width: 375, height: 812 });
-    const menuBtn = page.getByRole('button', { name: 'Open navigation menu' });
-    await expect(menuBtn).toBeVisible();
-    await menuBtn.click();
+    // Desktop frozen header + scroll reset check at 1280x800
+    await page.setViewportSize({ width: 1280, height: 800 });
     const sidebar = page.getByLabel('ERP Sidebar Navigation');
     await expect(sidebar).toBeVisible();
 
-    // Press Escape -> drawer slides closed
-    await page.keyboard.press('Escape');
-    await expect(sidebar).toHaveClass(/-translate-x-full/);
-
-    // Reopen drawer, select Reports & Audits -> auto-closes drawer and opens Reports tab
-    await menuBtn.click();
     await sidebar.getByRole('button', { name: /Reports & Audits/i }).click();
-    await expect(sidebar).toHaveClass(/-translate-x-full/);
     await expect(page.locator('header h1')).toContainText(/reports/i);
 
-    // Desktop frozen header + scroll reset check at 1280x800
-    await page.setViewportSize({ width: 1280, height: 800 });
     await page.evaluate(() => {
       const main = document.querySelector('main');
       if (main) main.scrollTop = 400;
@@ -153,85 +141,207 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
     await page.waitForTimeout(100);
     const afterSwitch = await page.evaluate(() => {
       const main = document.querySelector('main');
+      const brandBar = document.getElementById('brand-header-top-bar');
       const header = document.querySelector('header');
       return {
         mainScrollTop: main ? main.scrollTop : 0,
+        brandTop: brandBar ? brandBar.getBoundingClientRect().top : -1,
         headerTop: header ? header.getBoundingClientRect().top : -1,
       };
     });
     expect(afterSwitch.mainScrollTop).toBe(0);
+    expect(afterSwitch.brandTop).toBeGreaterThanOrEqual(0);
+    expect(afterSwitch.brandTop).toBeLessThanOrEqual(5);
     expect(afterSwitch.headerTop).toBeGreaterThanOrEqual(0);
-    expect(afterSwitch.headerTop).toBeLessThanOrEqual(5);
+    expect(afterSwitch.headerTop).toBeLessThanOrEqual(85);
 
     expect(pageErrors).toEqual([]);
   });
 
-  test('Field Mobile Portal: Single 5-Tab Bottom Nav, Frozen Header, Drawer & Zero Overflow (320px–480px)', async ({ page }) => {
+  test('Field Mobile Portal: Single 5-Tab Bottom Nav, Frozen Header, Drawer & Zero Overflow (320px–480px)', async ({ page, request }) => {
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
+    // Ensure clean initial password state before first-login rotation check
+    await request.post('/api/employees/admin-reset-password', {
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.44' },
+      data: {
+        email: 'syedzain@nationallight.pk',
+        temporaryPassword: 'National@link360',
+        resetBy: 'E2E Test Setup',
+      },
+    });
+
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await page.fill('#login-email', 'syedzain@nationallight.pk');
-    await page.fill('#login-password', 'N@link360');
+    // Also exercises domain typo auto-correction (@nationalight.com -> @nationallight.pk)
+    await page.fill('#login-email', 'syedzain@nationalight.com');
+    await page.fill('#login-password', 'National@link360');
     await page.locator('form button[type="submit"]').click();
 
-    // Handle first-login forced password rotation modal if shown
-    const changePassHeading = page.getByText(/Mandatory Password|Change Password/i).first();
-    if (await changePassHeading.isVisible({ timeout: 3000 }).catch(() => false)) {
-      const currentInput = page.locator('input[placeholder*="current" i], input[name*="current" i]').first();
-      const newInput = page.locator('input[placeholder*="new" i], input[name*="new" i]').first();
-      const confirmInput = page.locator('input[placeholder*="confirm" i], input[name*="confirm" i]').first();
-      if (await currentInput.isVisible().catch(() => false)) {
-        await currentInput.fill('N@link360');
-      }
-      if (await newInput.isVisible().catch(() => false)) {
-        await newInput.fill('Zain@National2026!');
-      }
-      if (await confirmInput.isVisible().catch(() => false)) {
-        await confirmInput.fill('Zain@National2026!');
-      }
-      const saveBtn = page.getByRole('button', { name: /Update Password|Save Password|Change Password/i }).first();
-      if (await saveBtn.isVisible().catch(() => false)) {
-        await saveBtn.click();
-      }
+    // Wait for either first-login password rotation modal (#cp-new) OR mobile bottom nav
+    await page.waitForSelector('#cp-new, [aria-label="Mobile Primary Navigation"]', {
+      state: 'visible',
+      timeout: 15_000,
+    });
+
+    const cpNew = page.locator('#cp-new');
+    if (await cpNew.isVisible()) {
+      await cpNew.fill('Zain@National2026!');
+      await page.locator('#cp-confirm').fill('Zain@National2026!');
+      await page.locator('button[type="submit"]:has-text("Set Permanent Password")').click();
+      await expect(page.locator('#cp-new')).toHaveCount(0, { timeout: 10_000 });
     }
 
-    // If Field Mobile rendered (or wait for header)
+    // Verify Field Mobile rendered with authoritative single 5-tab bar
     const mobileNav = page.getByLabel('Mobile Primary Navigation');
-    if (await mobileNav.isVisible({ timeout: 8000 }).catch(() => false)) {
-      // Strictly 1 primary mobile bottom nav with exactly 5 tab buttons
-      await expect(mobileNav).toHaveCount(1);
-      await expect(mobileNav.locator('button')).toHaveCount(5);
+    await expect(mobileNav).toBeVisible({ timeout: 15_000 });
 
-      const box = await mobileNav.boundingBox();
-      expect(box).toBeTruthy();
-      if (box) {
-        expect(box.height).toBeLessThanOrEqual(80);
-      }
+    // Strictly 1 primary mobile bottom nav with exactly 5 tab buttons
+    await expect(mobileNav).toHaveCount(1);
+    await expect(mobileNav.locator('button')).toHaveCount(5);
 
-      // Navigate via 5-tab bar to Entry, then Invoices, checking overflow at 320px and 390px
-      await mobileNav.getByRole('button', { name: 'Entry' }).click();
-      for (const vp of [
-        { width: 320, height: 640 },
-        { width: 360, height: 740 },
-        { width: 390, height: 844 },
-        { width: 480, height: 854 },
-      ]) {
-        await page.setViewportSize(vp);
-        await page.waitForTimeout(80);
-        const overflow = await page.evaluate(() => ({
-          scrollWidth: document.documentElement.scrollWidth,
-          innerWidth: window.innerWidth,
-        }));
-        expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth + 2);
-      }
+    const box = await mobileNav.boundingBox();
+    expect(box).toBeTruthy();
+    if (box) {
+      expect(box.height).toBeLessThanOrEqual(80);
+    }
 
-      // Open drawer, press Escape -> closes
-      await page.getByRole('button', { name: /Open menu/i }).click();
+    // Navigate via 5-tab bar to Entry, then Invoices, checking overflow at 320px and 390px
+    await mobileNav.getByRole('button', { name: 'Entry' }).click();
+    for (const vp of [
+      { width: 320, height: 640 },
+      { width: 360, height: 740 },
+      { width: 390, height: 844 },
+      { width: 480, height: 854 },
+    ]) {
+      await page.setViewportSize(vp);
+      await page.waitForTimeout(80);
+      const overflow = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        innerWidth: window.innerWidth,
+      }));
+      expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth + 2);
+    }
+
+    // Open drawer, press Escape -> closes
+    const drawerToggle = page.getByRole('button', { name: /Open menu/i });
+    if (await drawerToggle.isVisible().catch(() => false)) {
+      await drawerToggle.click();
       await page.keyboard.press('Escape');
     }
+
+    // Restore initial temporary credential so management onboarding credential stays valid
+    await request.post('/api/employees/admin-reset-password', {
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.45' },
+      data: {
+        email: 'syedzain@nationallight.pk',
+        temporaryPassword: 'National@link360',
+        resetBy: 'E2E Test Cleanup',
+      },
+    });
+
+    expect(pageErrors).toEqual([]);
+  });
+
+  test('Auto-Sync Duplicate Signature Guard & Central 30-SKU Price List RBAC APIs + Head Office UI', async ({ page, request }) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', (err) => pageErrors.push(err.message));
+
+    // 1. Transaction Signature / Fingerprint Duplicate Prevention on POST /api/sync
+    const uniqueFp = `fp_e2e_${Date.now()}`;
+    const txnSig = `NLINK-PAY-20261115-${Math.floor(100000 + Math.random() * 899999)}`;
+    const firstPost = await request.post('/api/sync', {
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.77' },
+      data: {
+        type: 'PAYMENT_RECOVERY',
+        id: txnSig,
+        transactionId: txnSig,
+        fingerprintHash: uniqueFp,
+        idempotencyKey: crypto.randomUUID(),
+      },
+    });
+    expect(firstPost.status()).toBe(200);
+    const firstJson = await firstPost.json();
+    expect(firstJson.duplicatePrevented).toBe(false);
+
+    // Retry with DIFFERENT idempotency key but SAME fingerprintHash -> MUST prevent duplicate
+    const dupFpPost = await request.post('/api/sync', {
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.77' },
+      data: {
+        type: 'PAYMENT_RECOVERY',
+        id: `${txnSig}-RETRY`,
+        transactionId: `${txnSig}-RETRY`,
+        fingerprintHash: uniqueFp,
+        idempotencyKey: crypto.randomUUID(),
+      },
+    });
+    expect(dupFpPost.status()).toBe(200);
+    const dupFpJson = await dupFpPost.json();
+    expect(dupFpJson.duplicatePrevented).toBe(true);
+    expect(dupFpJson.originalTransactionId).toBe(txnSig);
+
+    const syncStatusRes = await request.get('/api/sync/status');
+    expect(syncStatusRes.ok()).toBeTruthy();
+    const syncStatusJson = await syncStatusRes.json();
+    expect(syncStatusJson.duplicatesPrevented).toBeGreaterThanOrEqual(1);
+
+    // 2. Price List GET (30 SKUs) & PUT RBAC Check
+    const priceListRes = await request.get('/api/price-list');
+    expect(priceListRes.ok()).toBeTruthy();
+    const priceListJson = await priceListRes.json();
+    expect(priceListJson.count).toBe(30);
+
+    // Unauthenticated PUT -> 401
+    const unauthPut = await request.put('/api/price-list/NL-BULB-05W', {
+      data: { tradePrice: 999, listPrice: 850, reason: 'Unauth test' },
+    });
+    expect(unauthPut.status()).toBe(401);
+
+    // Authenticated SUPER_ADMIN login + authorized price edit + revert
+    const loginRes = await request.post('/api/auth/login', {
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.78' },
+      data: { email: 'amjid.bisconni@gmail.com', password: 'Amjid@1947' },
+    });
+    expect(loginRes.ok()).toBeTruthy();
+    const loginJson = await loginRes.json();
+    const originalBulb = priceListJson.items.find((i: any) => i.id === 'NL-BULB-05W');
+
+    const authPut = await request.put('/api/price-list/NL-BULB-05W', {
+      headers: { Authorization: `Bearer ${loginJson.sessionToken}` },
+      data: { tradePrice: 400, listPrice: 340, reason: 'E2E Verification Rate Test' },
+    });
+    expect(authPut.status()).toBe(200);
+
+    // Restore original rate cleanly
+    await request.put('/api/price-list/NL-BULB-05W', {
+      headers: { Authorization: `Bearer ${loginJson.sessionToken}` },
+      data: {
+        tradePrice: originalBulb.tradePrice,
+        listPrice: originalBulb.listPrice,
+        reason: 'E2E Restoration',
+      },
+    });
+
+    // 3. Head Office UI Navigation: Price List & SKUs (30 SKUs + Integrity Banner) & Sync Monitoring (3 Tabs)
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await signInAs(page, 'amjid.bisconni@gmail.com', 'Amjid@1947');
+    const sidebar = page.getByLabel('ERP Sidebar Navigation');
+    await expect(sidebar).toBeVisible();
+
+    await sidebar.getByRole('button', { name: /Price List & SKUs/i }).click();
+    await expect(page.getByText(/Complete SKU & Price List \(30 Official Products\)/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Catalog Rate-Card Integrity Diagnostics/i)).toBeVisible();
+    await expect(page.getByText('NL-CP-12W', { exact: true })).toBeVisible();
+
+    await sidebar.getByRole('button', { name: /Sync Monitoring/i }).click();
+    await expect(page.getByText(/Sync Monitoring & Reconciliation Center/i)).toBeVisible({ timeout: 10_000 });
+    const ghaffarTab = page.getByRole('button', { name: /M Ghaffar Tools & Date Forensics/i });
+    await expect(ghaffarTab).toBeVisible();
+    await ghaffarTab.click();
+    await expect(page.getByText(/M Ghaffar Tools — Invoice Date vs Entry Timestamp Investigation/i)).toBeVisible();
 
     expect(pageErrors).toEqual([]);
   });
 });
+

@@ -27,6 +27,7 @@ import {
   buildBulkInvoiceWhatsAppText,
 } from '../../utils/exportInvoicePdf';
 import { NationalLightHeaderBrand, DocumentCenterWatermark } from '../NationalLightLogo';
+import { formatKarachiDate, formatKarachiDateTime } from '../../utils/dateTime';
 
 export interface InvoicePdfPreviewModalProps {
   isOpen: boolean;
@@ -128,23 +129,18 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
     }
   };
 
-  // Print Handler
+  // Print Handler - triggers dedicated @media print view targeting .invoice-print-container
   const handlePrint = () => {
-    const iframe = document.getElementById('pdf-preview-iframe') as HTMLIFrameElement;
-    if (iframe && iframe.contentWindow && !isMobileViewport) {
-      try {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        return;
-      } catch {
-        window.print();
-      }
-    } else {
-      window.print();
-    }
+    window.print();
   };
 
   const orderItems: any[] = Array.isArray(order?.items) ? order.items : [];
+  const grossTotal = orderItems.reduce(
+    (sum, it) => sum + Number(it.grossLineTotal || it.lineTotal || it.totalPrice || it.total || (it.quantity || it.orderedQuantity || 0) * (it.unitPrice || it.rate || 0)),
+    0
+  );
+  const netTotal = Number(order?.totalAmount || grossTotal || 0);
+  const discountAmount = Math.max(0, grossTotal - netTotal);
 
   return (
     <div
@@ -182,42 +178,52 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
 
         {/* Modal Main Body */}
         <div className="flex-1 bg-[#F1F8E9] relative overflow-y-auto flex flex-col items-center justify-start md:justify-center p-3 sm:p-4">
-          {isMobileViewport ? (
-            /* Mobile-Friendly HTML Receipt Preview with Top Logo Header & Center Watermark */
-            <div className="relative w-full max-w-lg bg-white border border-[#C8E6C9] rounded-2xl p-4 space-y-4 text-[#1B5E3A] shadow-xs invoice-print-container overflow-hidden">
-              <DocumentCenterWatermark title="NATIONAL LIGHT INVOICE" />
-              <div className="relative z-10 space-y-4">
+          {/* Print-Optimized Official National Lights Invoice Document (Visible on mobile screen, and always active during @media print) */}
+          <div
+            className={`${
+              isMobileViewport
+                ? 'relative w-full max-w-lg bg-white border border-[#C8E6C9] rounded-2xl p-4 space-y-4 text-[#1B5E3A] shadow-xs overflow-hidden'
+                : 'hidden print:block w-full bg-white p-4 space-y-4 text-[#1B5E3A]'
+            } invoice-print-container`}
+          >
+            <DocumentCenterWatermark title="NATIONAL LIGHT INVOICE" />
+            <div className="relative z-10 space-y-4">
               <div className="pb-3 border-b border-[#C8E6C9] flex items-center justify-between">
                 <NationalLightHeaderBrand size="sm" />
-                <span className="text-[10px] font-mono font-bold text-[#1B5E3A] px-2 py-0.5 rounded bg-[#F1F8E9] border border-[#C8E6C9]">
-                  OFFICIAL TAX INVOICE
-                </span>
+                <div className="text-right">
+                  <span className="text-[10px] font-mono font-bold text-[#1B5E3A] px-2 py-0.5 rounded bg-[#F1F8E9] border border-[#C8E6C9] inline-block">
+                    {order?.status === 'INVOICED' ? 'OFFICIAL TAX INVOICE · INVOICED' : 'OFFICIAL SALES INVOICE'}
+                  </span>
+                  <div className="text-[10px] text-[#5F8564] mt-1 font-mono">
+                    Head Office: GF-71, Sheikh Yaseen Tower, Peshawar
+                  </div>
+                </div>
               </div>
+
               <div className="flex items-start justify-between gap-2 pb-3 border-b border-[#C8E6C9]">
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-[#4CAF50]">
-                    National Light Pakistan
+                    National Lights (Pvt.) Ltd.
                   </div>
                   <div className="text-base font-bold text-[#1B5E3A] mt-0.5">{title}</div>
                   <div className="text-xs text-[#5F8564] mt-0.5">
-                    {order?.orderDate
-                      ? new Date(order.orderDate).toLocaleDateString('en-PK', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                      : new Date().toLocaleDateString('en-PK')}
+                    Invoice Date: {formatKarachiDate(order?.invoiceDate || order?.orderDate || new Date())}
+                    {' · '}Order #{order?.orderNumber || order?.id || 'N/A'}
                     {' · '}Officer: {officerName}
                   </div>
+                  {order?.createdAt && (
+                    <div className="text-[10px] text-[#5F8564] font-mono mt-0.5">
+                      Entered: {formatKarachiDateTime(order.createdAt)}
+                      {(order?.postedAt || order?.invoicedAt || order?.shahzadApprovedAt) &&
+                        ` · Posted: ${formatKarachiDateTime(order.postedAt || order.invoicedAt || order.shahzadApprovedAt)}`}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-[11px] text-[#5F8564]">Grand Total</div>
+                  <div className="text-[11px] text-[#5F8564]">Net Payable</div>
                   <div className="font-mono font-bold text-base text-[#1B5E3A] tabular-nums">
                     Rs.{' '}
-                    {(isBulk
-                      ? totalBulkAmount
-                      : Number(order?.totalAmount || 0)
-                    ).toLocaleString()}
+                    {(isBulk ? totalBulkAmount : netTotal).toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -253,8 +259,14 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                 <>
                   {customer && (
                     <div className="bg-[#F1F8E9] border border-[#C8E6C9] rounded-xl p-3 text-xs space-y-1">
-                      <div className="font-bold text-[#1B5E3A] text-sm">{customer.companyName}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-[#1B5E3A] text-sm">{customer.companyName}</span>
+                        <span className="font-mono text-[11px] text-[#3E6B48]">
+                          {customer.customerCode || customer.id}
+                        </span>
+                      </div>
                       <div className="text-[#3E6B48]">
+                        {customer.address ? `${customer.address} · ` : ''}
                         {customer.town || customer.city || 'Region'}
                         {customer.phone ? ` · ${customer.phone}` : ''}
                       </div>
@@ -262,62 +274,84 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                   )}
 
                   {orderItems.length > 0 && (
-                    <div className="border border-[#C8E6C9] rounded-xl overflow-hidden bg-white">
-                      <div className="grid grid-cols-12 gap-1 px-3 py-2 bg-[#1B5E3A] text-[11px] font-semibold text-white">
-                        <div className="col-span-6">SKU / Item</div>
-                        <div className="col-span-2 text-center">Qty</div>
-                        <div className="col-span-4 text-right">Total</div>
-                      </div>
-                      <div className="divide-y divide-[#C8E6C9]">
+                    <table className="w-full border border-[#C8E6C9] rounded-xl overflow-hidden bg-white text-xs">
+                      <thead>
+                        <tr className="bg-[#1B5E3A] text-white text-left">
+                          <th className="px-3 py-2">SKU / Item</th>
+                          <th className="px-2 py-2 text-center">Qty</th>
+                          <th className="px-2 py-2 text-right">Rate</th>
+                          <th className="px-3 py-2 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
                         {orderItems.map((it, idx) => (
-                          <div
-                            key={it.id || it.sku || idx}
-                            className="grid grid-cols-12 gap-1 px-3 py-2 text-xs items-center"
-                          >
-                            <div className="col-span-6 min-w-0">
-                              <div className="font-medium text-[#1B5E3A] truncate">
-                                {it.productName || it.name || it.sku}
+                          <tr key={it.id || it.sku || idx} className="border-t border-[#C8E6C9]">
+                            <td className="px-3 py-2">
+                              <div className="font-medium text-[#1B5E3A]">
+                                {it.skuName || it.productName || it.name || it.sku}
                               </div>
                               <div className="font-mono text-[10px] text-[#5F8564]">
-                                @ Rs. {Number(it.unitPrice || it.rate || 0).toLocaleString()}
+                                {it.skuCode || it.sku || 'NL-SKU'}
                               </div>
-                            </div>
-                            <div className="col-span-2 text-center font-mono text-[#3E6B48] tabular-nums">
+                            </td>
+                            <td className="px-2 py-2 text-center font-mono text-[#3E6B48] tabular-nums">
                               {it.cartons ? `${it.cartons}c` : ''}
-                              {it.packs ? ` ${it.packs}p` : !it.cartons ? `${it.quantity || 0}` : ''}
-                            </div>
-                            <div className="col-span-4 text-right font-mono font-semibold text-[#1B5E3A] tabular-nums">
-                              Rs. {Number(it.totalPrice || it.total || 0).toLocaleString()}
-                            </div>
-                          </div>
+                              {it.packs ? ` ${it.packs}p` : !it.cartons ? `${it.orderedQuantity || it.quantity || 0}` : ''}
+                            </td>
+                            <td className="px-2 py-2 text-right font-mono text-[#3E6B48] tabular-nums">
+                              Rs. {Number(it.unitPrice || it.rate || 0).toLocaleString()}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono font-semibold text-[#1B5E3A] tabular-nums">
+                              Rs. {Number(it.lineTotal || it.totalPrice || it.total || 0).toLocaleString()}
+                            </td>
+                          </tr>
                         ))}
-                      </div>
-                    </div>
+                      </tbody>
+                    </table>
                   )}
+
+                  <div className="flex flex-col items-end gap-1 pt-2 border-t border-[#C8E6C9] text-xs font-mono">
+                    {discountAmount > 0 && (
+                      <>
+                        <div className="text-[#5F8564]">
+                          Gross Subtotal: Rs. {grossTotal.toLocaleString()}
+                        </div>
+                        <div className="text-[#3E6B48]">
+                          Trade Discount: -Rs. {discountAmount.toLocaleString()}
+                        </div>
+                      </>
+                    )}
+                    <div className="text-sm font-bold text-[#1B5E3A]">
+                      Net Invoice Payable: Rs. {netTotal.toLocaleString()}
+                    </div>
+                  </div>
                 </>
               )}
 
               <div className="pt-2 border-t border-[#C8E6C9] flex items-center justify-between text-[11px] text-[#5F8564]">
                 <span className="flex items-center gap-1.5 text-[#1B5E3A] font-medium">
                   <ShieldCheck className="w-4 h-4 text-[#4CAF50]" />
-                  Auth: Shahzad Ullah
+                  Authorized Signatory: Shahzad Ullah (NSM)
                 </span>
-                <span className="font-mono truncate max-w-[160px]">{pdfFilename}</span>
-              </div>
+                <span className="font-mono truncate max-w-[180px]">{pdfFilename}</span>
               </div>
             </div>
-          ) : pdfDataUrl ? (
-            <iframe
-              id="pdf-preview-iframe"
-              src={pdfDataUrl}
-              title="National Lights PDF Invoice Receipt Preview"
-              className="w-full h-full rounded-xl border border-[#C8E6C9] shadow-lg bg-white"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-3 text-[#1B5E3A]">
-              <div className="w-10 h-10 rounded-full border-3 border-[#4CAF50] border-t-transparent animate-spin" />
-              <p className="text-sm font-medium">Rendering vector PDF document...</p>
-            </div>
+          </div>
+
+          {!isMobileViewport && (
+            pdfDataUrl ? (
+              <iframe
+                id="pdf-preview-iframe"
+                src={pdfDataUrl}
+                title="National Lights PDF Invoice Receipt Preview"
+                className="w-full h-full rounded-xl border border-[#C8E6C9] shadow-lg bg-white print:hidden"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 text-[#1B5E3A] print:hidden">
+                <div className="w-10 h-10 rounded-full border-3 border-[#4CAF50] border-t-transparent animate-spin" />
+                <p className="text-sm font-medium">Rendering vector PDF document...</p>
+              </div>
+            )
           )}
 
           {/* Toast Notification Banner */}

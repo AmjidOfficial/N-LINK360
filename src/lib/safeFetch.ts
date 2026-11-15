@@ -15,7 +15,11 @@ export interface SafeApiResponse<T = any> {
 function getApiBaseUrl(): string {
   try {
     if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) {
-      return String((import.meta as any).env.VITE_API_BASE_URL).replace(/\/+$/, '');
+      const candidate = String((import.meta as any).env.VITE_API_BASE_URL).trim();
+      // Supabase REST endpoints are for database tables, not the backend /api gateway
+      if (candidate && !candidate.includes('.supabase.co') && !candidate.includes('/rest/v1')) {
+        return candidate.replace(/\/+$/, '');
+      }
     }
   } catch {}
   return '';

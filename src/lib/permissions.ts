@@ -77,6 +77,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'dashboard.view', 'sales.order', 'sales.customers', 'recovery.collect', 'recovery.verify',
     'ledger.view', 'inventory.view', 'reports.view', 'reports.export', 'hierarchy.manage',
   ],
+  NSM: [
+    'dashboard.view', 'sales.order', 'sales.customers', 'recovery.collect', 'recovery.verify',
+    'ledger.view', 'inventory.view', 'reports.view', 'reports.export', 'hierarchy.manage',
+  ],
   SALES_MANAGER: [
     'dashboard.view', 'sales.order', 'sales.customers', 'recovery.collect', 'recovery.verify',
     'ledger.view', 'inventory.view', 'reports.view', 'reports.export', 'hierarchy.manage'
@@ -146,7 +150,7 @@ export function getEffectivePermissionGroup(role: UserRole | string): string {
 export function getCanonicalDashboardRole(role: UserRole | string): string {
   const group = getEffectivePermissionGroup(role);
   if (group === 'SUPER_ADMIN' || group === 'MANAGEMENT') return 'MD_EXECUTIVE';
-  if (group === 'NATIONAL_MANAGER' || group === 'SALES_MANAGER') return 'NATIONAL_MANAGER';
+  if (group === 'NSM' || group === 'NATIONAL_MANAGER' || group === 'SALES_MANAGER') return 'NATIONAL_MANAGER';
   if (group === 'WAREHOUSE_MANAGER' || group === 'WAREHOUSE' || group === 'FACTORY_MANAGER' || group === 'FACTORY') {
     return 'WAREHOUSE';
   }
