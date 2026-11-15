@@ -30,6 +30,12 @@ interface HeaderProps {
 const roleLabel: Record<User['role'], string> = {
   SUPER_ADMIN: 'Super Admin',
   MANAGEMENT: 'Management',
+  NATIONAL_MANAGER: 'National Sales Manager',
+  NSM: 'National Sales Manager',
+  FIELD_SALES_USER: 'Sales Officer',
+  HR_ADMIN: 'HR & Administration',
+  DISTRIBUTOR: 'Trade Partner',
+  DEALER: 'Trade Partner',
   FACTORY_MANAGER: 'Factory In-Charge',
   WAREHOUSE_MANAGER: 'Warehouse In-Charge',
   ACCOUNTS: 'Accounts',
