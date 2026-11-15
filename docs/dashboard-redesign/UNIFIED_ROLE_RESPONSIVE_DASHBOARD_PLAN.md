@@ -155,4 +155,4 @@ All controls need accessible labels, keyboard focus, adequate touch targets, loa
 
 ## 10. Current implementation note
 
-The first code step on this branch maps Dealer and Distributor to the same dashboard key while preserving their separate data-scope enforcement. The remaining work must follow the migration plan above. Do not treat this document or the first code step as proof that all dashboards are complete or production-ready.
+The first code steps on this branch map Dealer and Distributor to the same dashboard key while preserving their separate data-scope enforcement, add regression tests for that mapping, and route small-screen users to the field/trade workspace only when their role requires it. Other departments stay in the responsive Head Office workspace on phones. The remaining work must follow the migration plan above. Do not treat these first steps as proof that all dashboards are complete or production-ready.
