@@ -146,9 +146,11 @@ export function canPreviewDashboard(request: DashboardPreviewRequest): boolean {
   const target = normalizeRole(request.requestedRole);
   if (!actor || !target) return false;
 
-  // Company administrators may preview any department, but the preview remains
-  // constrained by their authenticated server-side data scope.
-  if (actor === 'SUPER_ADMIN' || actor === 'TOP_MANAGEMENT') return true;
+  // Company-wide preview is only valid when the authenticated actor really
+  // has company scope. The server must derive this value from trusted claims.
+  if (actor === 'SUPER_ADMIN' || actor === 'TOP_MANAGEMENT') {
+    return request.actorScope === 'COMPANY';
+  }
 
   // NSM may preview only roles in the national sales/trade reporting chain.
   const nsmPreviewRoles: CanonicalRole[] = [
