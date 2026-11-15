@@ -32,6 +32,7 @@ export type DashboardRoleKey =
   | 'FIELD_SALES_USER'
   | 'ACCOUNTS'
   | 'WAREHOUSE'
+  | 'FACTORY'
   | 'DISPATCH'
   | 'HR_ADMIN'
   | 'DISTRIBUTOR'
