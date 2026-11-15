@@ -55,4 +55,23 @@ assert.equal(
   false,
 );
 
+assert.equal(
+  canPreviewDashboard({
+    actorRole: 'NSM',
+    actorScope: 'NATIONAL',
+    requestedRole: 'ACCOUNTS',
+    requestedScope: 'DEPARTMENT',
+  }),
+  false,
+);
+assert.equal(
+  canPreviewDashboard({
+    actorRole: 'NSM',
+    actorScope: 'NATIONAL',
+    requestedRole: 'RSM',
+    requestedScope: 'REGION',
+  }),
+  true,
+);
+
 console.log('Unified dashboard model tests passed.');
