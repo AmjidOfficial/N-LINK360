@@ -52,7 +52,7 @@ import { generateUniqueOrderId, generateUniqueRecoveryId, generateIdempotencyUui
 import { persistAttendanceRecord } from './services/attendance';
 import { executeOrderCancellationOrReversal, executeRecoveryCancellationOrReversal, isEntryConfirmedByAccountsOrNsm } from './utils/entryManagement';
 import { TeamShareModal } from './components/TeamShareModal';
-import { detectDeviceExperience, isMobileDevice } from './utils/deviceDetection';
+import { detectDeviceExperience } from './utils/deviceDetection';
 import {
   checkMidnightCutoff,
   prepareDataForNextDay,
@@ -73,29 +73,11 @@ import {
   registerGlobalUnloadFlush,
 } from './services/autoSaveSyncService';
 import { getCentralPriceList, subscribePriceList } from './services/priceListService';
+import { getDepartmentForRole, normalizeRole } from './lib/dashboard/unified-role-model';
 
 export default function App() {
-  // Experience Mode: 'FIELD_MOBILE' | 'HEAD_OFFICE'
-  // Auto-detect device: Phones & Tablets (< 1024px) -> Mobile Version; Laptops & Desktops -> Head Office Web Portal
-  const [experienceMode, setExperienceMode] = useState<'FIELD_MOBILE' | 'HEAD_OFFICE'>(() => {
-    return detectDeviceExperience();
-  });
-
-  // Responsive device auto-detection on resize / orientation change
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handleResize = () => {
-      setExperienceMode(detectDeviceExperience());
-    };
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
+  // The selected workspace is role-led; viewport size changes layout only.
+  const [experienceMode, setExperienceMode] = useState<'FIELD_MOBILE' | 'HEAD_OFFICE'>(() => 'HEAD_OFFICE');
 
   // Central Complete SKU & Price List state (reactive to head-office RBAC price updates)
   const [catalogSkus, setCatalogSkus] = useState(() => getCentralPriceList());
@@ -134,40 +116,71 @@ export default function App() {
     }
   });
 
-  // Login handler with automatic role-based home screen routing
+  // Sales and trade users get the touch-first field workspace on small screens.
+  // Every other department keeps its own workspace and uses responsive layout.
+  const updateExperienceMode = (user: NLinkUser | null) => {
+    const isSmallScreen = detectDeviceExperience() === 'FIELD_MOBILE';
+    const department = getDepartmentForRole(user?.role);
+    const useFieldWorkspace = isSmallScreen && (department === 'SALES' || department === 'TRADE');
+    setExperienceMode(useFieldWorkspace ? 'FIELD_MOBILE' : 'HEAD_OFFICE');
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => updateExperienceMode(currentUser);
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    handleResize();
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, [currentUser]);
+
+  // Login handler with canonical role validation and safe profile fallback.
   const handleSignIn = async (signedInUser: User & { mustChangePassword?: boolean }) => {
+    const canonicalRole = normalizeRole(signedInUser.role);
+    if (!canonicalRole) {
+      console.error('Blocked dashboard access for an unrecognised role.');
+      setCurrentUser(null);
+      setExperienceMode('HEAD_OFFICE');
+      return;
+    }
+
     const storedUsers = getStoredUsers();
     const allAvailable = storedUsers && storedUsers.length > 0 ? storedUsers : (TEAM_USERS || []);
-
     const matched = (allAvailable || []).find(
       (u) => u.email?.toLowerCase() === signedInUser.email?.toLowerCase() || u.id === signedInUser.id
     );
 
-    const isSalesField = ['SALES_RECOVERY', 'ORDER_BOOKER', 'RECOVERY_OFFICER', 'TSM', 'ASM', 'OB', 'SS'].includes(
-      signedInUser.role || ''
-    );
+    const roleDepartment = getDepartmentForRole(canonicalRole);
+    const fallbackDepartment: NLinkUser['department'] =
+      roleDepartment === 'SALES' || roleDepartment === 'TRADE' ? 'SALES_FIELD' :
+      roleDepartment === 'FINANCE' ? 'FINANCE_ACCOUNTS' :
+      roleDepartment === 'WAREHOUSE' || roleDepartment === 'LOGISTICS' ? 'SUPPLY_CHAIN' :
+      roleDepartment === 'MANUFACTURING' ? 'MANUFACTURING' : 'EXECUTIVE';
 
     const basePersona: NLinkUser = matched || {
-      id: signedInUser.id || `USR-${Date.now()}`,
-      employeeCode: 'EMP-001',
-      fullName: signedInUser.fullName || signedInUser.email?.split('@')[0] || 'National Lights Personnel',
+      id: signedInUser.id,
+      employeeCode: '',
+      fullName: signedInUser.fullName || signedInUser.email?.split('@')[0] || 'National Lights User',
       email: signedInUser.email,
-      phone: signedInUser.phone || '+92 300 1234567',
-      role: signedInUser.role || 'SALES_RECOVERY',
-      roleTitle: signedInUser.role || 'Field Officer',
-      department: isSalesField ? 'SALES_FIELD' : 'EXECUTIVE',
-      region: 'National',
-      area: 'National',
-      territory: 'National',
-      assignedTowns: ['Abbottabad', 'Peshawar', 'Rawalpindi', 'Lahore'],
-      assignedBeats: ['All Beats'],
-      monthlySalesTarget: 5000000,
-      monthlyRecoveryTarget: 4000000,
+      phone: signedInUser.phone || '',
+      role: signedInUser.role,
+      roleTitle: signedInUser.role,
+      department: fallbackDepartment,
+      region: signedInUser.region || '',
+      area: signedInUser.zone || '',
+      territory: signedInUser.territory || '',
+      assignedTowns: signedInUser.assignedTowns || [],
+      assignedBeats: [],
+      monthlySalesTarget: 0,
+      monthlyRecoveryTarget: 0,
       mtdSalesAchieved: 0,
       mtdRecoveryAchieved: 0,
       todaySalesAchieved: 0,
       todayRecoveryAchieved: 0,
-      status: 'ACTIVE',
+      status: signedInUser.isActive ? 'ACTIVE' : 'INACTIVE',
       avatarInitials: signedInUser.fullName?.slice(0, 2).toUpperCase() || 'NL',
     };
 
@@ -176,43 +189,14 @@ export default function App() {
         ? Boolean(signedInUser.mustChangePassword)
         : Boolean(matched?.mustChangePassword && matched?.initialPasswordStatus !== 'CHANGED');
 
-    const userPersona: NLinkUser = {
-      ...basePersona,
-      mustChangePassword: isMustChange,
-    };
-
+    const userPersona: NLinkUser = { ...basePersona, mustChangePassword: isMustChange };
     setCurrentUser(userPersona);
     try {
       localStorage.setItem('nlink_active_logged_user', JSON.stringify(userPersona));
       localStorage.setItem('nlink_active_user_session', JSON.stringify(userPersona));
     } catch (e) {}
 
-    // AUTOMATIC DEVICE-AWARE & ROLE-BASED ROUTING:
-    // 1. Mobile Phone / Tablet -> Automatically routes to Field Mobile Experience
-    // 2. Laptop / Desktop -> Routes to Head Office Command Center (or Field Mobile if field role)
-    const isFieldRole = ['SALES_RECOVERY', 'ORDER_BOOKER', 'RECOVERY_OFFICER', 'TSM', 'ASM', 'OB', 'SS'].includes(
-      userPersona.role || ''
-    );
-    const isHeadOfficeRole = [
-      'SUPER_ADMIN',
-      'MANAGEMENT',
-      'NATIONAL_MANAGER',
-      'NSM',
-      'ACCOUNTS',
-      'WAREHOUSE_MANAGER',
-      'FACTORY_MANAGER',
-      'DISPATCH_OFFICER',
-    ].includes(userPersona.role || '');
-
-    if (isMobileDevice()) {
-      setExperienceMode('FIELD_MOBILE');
-    } else {
-      if (isFieldRole && !isHeadOfficeRole) {
-        setExperienceMode('FIELD_MOBILE');
-      } else {
-        setExperienceMode('HEAD_OFFICE');
-      }
-    }
+    updateExperienceMode(userPersona);
   };
 
   const handleSignOut = async () => {
