@@ -204,7 +204,12 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
     hasPermission(currentUser.role, 'roles.manage')
   );
 
+  useEffect(() => {
+    if (isPreviewMode) setIsConfigOpen(false);
+  }, [isPreviewMode]);
+
   const handleSaveConfig = async (nextOverride: AdminRoleConfigOverride) => {
+    if (isPreviewMode) return;
     await saveRoleDashboardConfigOverride(nextOverride);
     setConfigOverride(nextOverride);
   };
@@ -239,7 +244,7 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
                     <option key={role} value={role}>{role.replaceAll('_', ' ')}</option>
                   ))}
                 </select>
-                {isPreviewMode && <span className="text-xs font-semibold">READ ONLY · Your original access scope remains active</span>}
+                {isPreviewMode && <span className="text-xs font-semibold">LAYOUT PREVIEW · Your data scope stays unchanged · Actions disabled</span>}
               </div>
             )}
             <DashboardHeader
