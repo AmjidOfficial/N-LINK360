@@ -43,6 +43,8 @@ export interface NLinkUser {
   joiningDate?: string;
   permissionGroup?: string;
   partnerType?: 'DEALER' | 'DISTRIBUTOR';
+  distributorId?: string;
+  dealerId?: string;
   mustChangePassword?: boolean;
   initialPasswordStatus?:
     | 'PENDING_FIRST_LOGIN'
