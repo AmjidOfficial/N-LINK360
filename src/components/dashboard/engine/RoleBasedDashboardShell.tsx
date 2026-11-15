@@ -279,6 +279,11 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
           />
         }
       >
+        {summary.config.roleKey === 'FACTORY' && summary.config.allowedKpis.length === 0 && (
+          <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+            <strong>Factory dashboard setup required.</strong> Production data is not yet connected. This view intentionally shows no sales or warehouse figures as factory KPIs.
+          </div>
+        )}
         {summary.config.layoutSections.includes('KPIS') && (
           <KPIGrid
             config={summary.config}
