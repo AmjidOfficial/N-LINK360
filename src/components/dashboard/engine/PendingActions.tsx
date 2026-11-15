@@ -39,9 +39,9 @@ export const PendingActions: React.FC<PendingActionsProps> = ({ items, onAction 
               </div>
             </div>
 
-            <button
+            {onAction && <button
               type="button"
-              onClick={() => onAction?.(item.actionId, item)}
+              onClick={() => onAction(item.actionId, item)}
               className={`inline-flex items-center gap-1 min-h-[44px] sm:min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                 item.count > 0 && item.urgency === 'high'
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
@@ -50,7 +50,7 @@ export const PendingActions: React.FC<PendingActionsProps> = ({ items, onAction 
             >
               <span>{item.actionLabel}</span>
               <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            </button>}
           </div>
         ))}
       </div>
