@@ -75,7 +75,7 @@ export function resolveUserDataScope(user: ScopedUserInput): UserDataScope {
       break;
     case 'DEALER': {
       const rawRole = String(user.role || '').trim().toUpperCase();
-      const partnerType = String(user.partnerType || rawRole).trim().toUpperCase();
+      const partnerType = String(user.partnerType || (user.distributorId ? 'DISTRIBUTOR' : user.dealerId ? 'DEALER' : rawRole)).trim().toUpperCase();
       scopeLevel = partnerType === 'DISTRIBUTOR' ? 'DISTRIBUTOR' : 'DEALER';
       break;
     }
