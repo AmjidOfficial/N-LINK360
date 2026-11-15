@@ -58,6 +58,7 @@ export function resolveUserDataScope(user: ScopedUserInput): UserDataScope {
       break;
     case 'ACCOUNTS':
     case 'WAREHOUSE':
+    case 'FACTORY':
     case 'DISPATCH':
     case 'HR_ADMIN':
       scopeLevel = 'DEPARTMENT';
