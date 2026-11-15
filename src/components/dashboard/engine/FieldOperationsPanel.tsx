@@ -157,14 +157,16 @@ export const FieldOperationsPanel: React.FC<FieldOperationsPanelProps> = ({
                 )}
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => onQuickAction?.('VIEW_ATTENDANCE')}
-              className="min-h-[44px] px-3.5 py-2 rounded-lg border border-slate-200 dark:border-emerald-800/70 bg-white dark:bg-[#0B1610] hover:bg-slate-50 dark:hover:bg-emerald-950/50 text-xs font-semibold text-slate-700 dark:text-emerald-200 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
-            >
-              <CalendarCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Attendance Log</span>
-            </button>
+            {onQuickAction && (
+              <button
+                type="button"
+                onClick={() => onQuickAction('VIEW_ATTENDANCE')}
+                className="min-h-[44px] px-3.5 py-2 rounded-lg border border-slate-200 dark:border-emerald-800/70 bg-white dark:bg-[#0B1610] hover:bg-slate-50 dark:hover:bg-emerald-950/50 text-xs font-semibold text-slate-700 dark:text-emerald-200 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+              >
+                <CalendarCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Attendance Log</span>
+              </button>
+            )}
           </div>
         </div>
 
