@@ -2927,7 +2927,7 @@ export default function App() {
         <BrandHeader
           currentUser={currentUser}
           experienceMode={experienceMode}
-          onToggleExperience={() => setExperienceMode('FIELD_MOBILE')}
+          onToggleExperience={() => updateExperienceMode(currentUser)}
           className="shrink-0 z-40"
         />
       )}
