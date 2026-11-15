@@ -159,6 +159,16 @@ console.log('\n👑 [2/16] Testing User Roles & Permission Matrices...');
   assert(workspaceForRole('SUPER_ADMIN') === 'PORTAL', 'Super Admin routes to Corporate Web Portal');
   assert(workspaceForRole('SALES_RECOVERY') === 'MOBILE_APP', 'Field Sales routes to Mobile PWA');
   assert(workspaceForRole('OB') === 'MOBILE_APP', 'Order Booker routes to Mobile PWA');
+  assert(getCanonicalDashboardRole('TSM') === getCanonicalDashboardRole('FIELD_SALES_USER'), 'TSM and Sales Officer share one dashboard role');
+  assert(getCanonicalDashboardRole('DEALER') === getCanonicalDashboardRole('DISTRIBUTOR'), 'Dealer and Distributor share one dashboard role');
+
+  const dealerScope = resolveUserDataScope({ id: 'dealer-1', role: 'DEALER', dealerId: 'dealer-1' });
+  const distributorScope = resolveUserDataScope({ id: 'dist-1', role: 'DISTRIBUTOR', distributorId: 'dist-1' });
+  assert(dealerScope.dashboardRoleKey === distributorScope.dashboardRoleKey, 'Trade partners share dashboard configuration');
+  assert(dealerScope.scopeLevel === 'DEALER', 'Dealer keeps own-account data scope');
+  assert(distributorScope.scopeLevel === 'DISTRIBUTOR', 'Distributor keeps linked-partner data scope');
+  assert(resolveRoleDashboardConfig('DEALER').roleKey === resolveRoleDashboardConfig('DISTRIBUTOR').roleKey, 'Trade partners resolve to the same dashboard configuration');
+
 }
 
 // -----------------------------------------------------------------------------
