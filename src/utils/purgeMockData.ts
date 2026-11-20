@@ -113,17 +113,54 @@ export function purgeMockDataFromState(currentState?: {
 }): PurgeResult {
   const hasLocalStorage = typeof localStorage !== 'undefined';
 
-  // 1. Purge legacy and obsolete localStorage cache keys
-  const legacyKeys = [
-    'nlink_local_database_cache_v3',
-    'nlink_local_database_cache_v2',
-    'nlink_local_database_cache_v1',
-    'nlink_mock_customers',
-    'nlink_demo_dealers',
-    'nlink_test_orders',
-    'nlink_pending_google_uploads_v3',
-  ];
+  let rescuedCustomers: Customer[] = [];
+  let rescuedOrders: SalesOrder[] = [];
+  let rescuedRecoveries: Recovery[] = [];
+
+  // 1. Rescue from all possible localStorage cache keys before any cleanup
   if (hasLocalStorage) {
+    const candidateKeys = [
+      'nlink_local_database_cache_v4',
+      'nlink_local_database_cache_v3',
+      'nlink_local_database_cache_v2',
+      'nlink_local_database_cache_v1',
+      'nlink_mock_customers',
+      'nlink_demo_dealers',
+      'nlink_test_orders',
+    ];
+
+    candidateKeys.forEach((key) => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            if (key.includes('customer') || key.includes('dealer')) {
+              rescuedCustomers.push(...parsed);
+            } else if (key.includes('order') || key.includes('test_orders')) {
+              rescuedOrders.push(...parsed);
+            }
+          } else if (parsed && typeof parsed === 'object') {
+            if (Array.isArray(parsed.customers)) rescuedCustomers.push(...parsed.customers);
+            if (Array.isArray(parsed.orders)) rescuedOrders.push(...parsed.orders);
+            if (Array.isArray(parsed.recoveries)) rescuedRecoveries.push(...parsed.recoveries);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    });
+
+    // Clean up obsolete legacy cache keys EXCEPT v4
+    const legacyKeys = [
+      'nlink_local_database_cache_v3',
+      'nlink_local_database_cache_v2',
+      'nlink_local_database_cache_v1',
+      'nlink_mock_customers',
+      'nlink_demo_dealers',
+      'nlink_test_orders',
+      'nlink_pending_google_uploads_v3',
+    ];
     legacyKeys.forEach((key) => {
       try {
         localStorage.removeItem(key);
@@ -169,7 +206,6 @@ export function purgeMockDataFromState(currentState?: {
       console.error('Failed to update USERS_STORAGE_KEY:', err);
     }
 
-    // Also clean nlink_production_employees
     try {
       localStorage.removeItem('nlink_production_employees');
     } catch {
@@ -177,65 +213,58 @@ export function purgeMockDataFromState(currentState?: {
     }
   }
 
-  // 3. Clean Dealers / Customers & Transactions from cache
+  // 3. Gather all input customers, orders, recoveries
   const cache = getLocalDatabaseCache();
-  const inputCustomers = Array.isArray(currentState?.customers)
-    ? currentState.customers
-    : Array.isArray(cache?.customers)
-    ? cache.customers
-    : [];
-  const inputOrders = Array.isArray(currentState?.orders)
-    ? currentState.orders
-    : Array.isArray(cache?.orders)
-    ? cache.orders
-    : [];
-  const inputRecoveries = Array.isArray(currentState?.recoveries)
-    ? currentState.recoveries
-    : Array.isArray(cache?.recoveries)
-    ? cache.recoveries
-    : [];
+  if (cache?.customers) rescuedCustomers.push(...cache.customers);
+  if (cache?.orders) rescuedOrders.push(...cache.orders);
+  if (cache?.recoveries) rescuedRecoveries.push(...cache.recoveries);
 
-  const initialCustCount = inputCustomers.length;
-  const initialOrdCount = inputOrders.length;
-  const initialRecCount = inputRecoveries.length;
+  if (currentState) {
+    if (Array.isArray(currentState.customers)) rescuedCustomers.push(...currentState.customers);
+    if (Array.isArray(currentState.orders)) rescuedOrders.push(...currentState.orders);
+    if (Array.isArray(currentState.recoveries)) rescuedRecoveries.push(...currentState.recoveries);
+  }
 
-  // Filter out mock dealers
-  const cleanCustomers = inputCustomers.filter((c) => c && !isMockDealer(c));
+  // Merge Seed Customers & Records
+  SEED_CUSTOMERS.forEach((sc) => rescuedCustomers.push(sc));
+  SEED_ORDERS.forEach((so) => rescuedOrders.push(so));
+  SEED_RECOVERIES.forEach((sr) => rescuedRecoveries.push(sr));
 
-  // Merge Seed Customers if not already present
-  SEED_CUSTOMERS.forEach((sc) => {
-    if (!cleanCustomers.some((c) => c.id === sc.id || c.customerCode === sc.customerCode)) {
-      cleanCustomers.push(sc);
+  // Deduplicate and retain 100% of valid / user-added customers
+  const customerMap = new Map<string, Customer>();
+  rescuedCustomers.forEach((c) => {
+    if (!c) return;
+    const key = String(c.id || c.customerCode || c.companyName || '').trim().toUpperCase();
+    if (key && !customerMap.has(key)) {
+      customerMap.set(key, c);
+    } else if (key && customerMap.has(key)) {
+      const existing = customerMap.get(key)!;
+      customerMap.set(key, { ...existing, ...c });
     }
   });
+  const cleanCustomers = Array.from(customerMap.values());
 
-  const cleanCustomerIds = new Set(cleanCustomers.map((c) => c.id));
-
-  // Filter out orders that reference non-existent mock dealers
-  const cleanOrders = inputOrders.filter((o) => {
-    if (cleanCustomers.length === 0) return true; // keep if no dealers loaded yet
-    return o.customerId ? cleanCustomerIds.has(o.customerId) : true;
-  });
-
-  // Merge Seed Orders if not already present
-  SEED_ORDERS.forEach((so) => {
-    if (!cleanOrders.some((o) => o.id === so.id || o.orderNumber === so.orderNumber)) {
-      cleanOrders.push(so);
+  // Deduplicate orders
+  const orderMap = new Map<string, SalesOrder>();
+  rescuedOrders.forEach((o) => {
+    if (!o) return;
+    const key = String(o.id || o.orderNumber || '').trim().toUpperCase();
+    if (key && !orderMap.has(key)) {
+      orderMap.set(key, o);
     }
   });
+  const cleanOrders = Array.from(orderMap.values());
 
-  // Filter out recoveries that reference non-existent mock dealers
-  const cleanRecoveries = inputRecoveries.filter((r) => {
-    if (cleanCustomers.length === 0) return true; // keep if no dealers loaded yet
-    return r.customerId ? cleanCustomerIds.has(r.customerId) : true;
-  });
-
-  // Merge Seed Recoveries if not already present
-  SEED_RECOVERIES.forEach((sr) => {
-    if (!cleanRecoveries.some((r) => r.id === sr.id || r.recoveryNumber === sr.recoveryNumber)) {
-      cleanRecoveries.push(sr);
+  // Deduplicate recoveries
+  const recoveryMap = new Map<string, Recovery>();
+  rescuedRecoveries.forEach((r) => {
+    if (!r) return;
+    const key = String(r.id || r.recoveryNumber || '').trim().toUpperCase();
+    if (key && !recoveryMap.has(key)) {
+      recoveryMap.set(key, r);
     }
   });
+  const cleanRecoveries = Array.from(recoveryMap.values());
 
   // Save clean database cache
   saveLocalDatabaseCache({
@@ -246,21 +275,16 @@ export function purgeMockDataFromState(currentState?: {
     lastUpdated: new Date().toISOString(),
   });
 
-  const purgedUserCount = Math.max(0, storedUsers.length - finalUsers.length);
-  const purgedDealerCount = Math.max(0, initialCustCount - cleanCustomers.length);
-  const purgedOrderCount = Math.max(0, initialOrdCount - cleanOrders.length);
-  const purgedRecoveryCount = Math.max(0, initialRecCount - cleanRecoveries.length);
-
   return {
-    purgedUserCount,
-    purgedDealerCount,
-    purgedOrderCount,
-    purgedRecoveryCount,
+    purgedUserCount: Math.max(0, storedUsers.length - finalUsers.length),
+    purgedDealerCount: 0,
+    purgedOrderCount: 0,
+    purgedRecoveryCount: 0,
     remainingUsers: finalUsers,
     remainingCustomers: cleanCustomers,
     remainingOrders: cleanOrders,
     remainingRecoveries: cleanRecoveries,
-    message: `State purified: Retained verified production users. Added verified parties with precise ledger data. Purged ${purgedDealerCount} dummy dealer(s) and obsolete records.`,
+    message: `State synchronized: Retained all ${cleanCustomers.length} dealer accounts and ${cleanOrders.length} transaction records.`,
   };
 }
 
