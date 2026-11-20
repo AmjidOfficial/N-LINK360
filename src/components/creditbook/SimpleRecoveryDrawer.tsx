@@ -176,17 +176,17 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-lg max-h-[92vh] rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 duration-200">
+      <div className="bg-white dark:bg-[#1E293B] w-full max-w-lg max-h-[92vh] rounded-t-3xl sm:rounded-3xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 duration-200">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/50">
-          <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#0052FF] dark:text-blue-400">
+        <div className="p-4 sm:p-5 border-b border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-3 bg-white dark:bg-[#0F172A] shrink-0">
+          <div className="min-w-0">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#3B82F6] dark:text-blue-400">
               Record Customer Payment / Wasooli
             </span>
-            <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+            <h2 className="text-base sm:text-lg font-bold text-[#0F172A] dark:text-white truncate">
               {customer.companyName}
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
               Town: <strong>{customer.town || customer.city}</strong> &bull; Dealer Code: {customer.customerCode || 'NL-DLR'}
             </p>
           </div>
@@ -194,31 +194,32 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
           <button
             type="button"
             onClick={handleResetAndClose}
-            className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 cursor-pointer transition-colors"
+            aria-label="Close payment drawer"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 cursor-pointer transition-colors shrink-0"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* 3-Stat Financial Breakdown Card (mobile_recovery_customer_ledger standard) */}
-        <div className="px-4 pt-3">
-          <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-[#0F172A] text-white border border-slate-800 text-xs">
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Outstanding</span>
-              <span className="font-mono font-bold text-white text-[12px] block mt-0.5">
-                Rs. {previousBalance.toLocaleString()}
+        {/* 3-Stat Financial Breakdown Card */}
+        <div className="px-4 pt-3 shrink-0">
+          <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-white border border-[#E2E8F0] dark:border-slate-700/80 text-xs">
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block">Outstanding</span>
+              <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white text-xs block mt-0.5 truncate">
+                PKR {previousBalance.toLocaleString()}
               </span>
             </div>
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Credit Limit</span>
-              <span className="font-mono font-bold text-emerald-400 text-[12px] block mt-0.5">
-                Rs. {(customer.creditLimit || 1500000).toLocaleString()}
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block">Credit Limit</span>
+              <span className="font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400 text-xs block mt-0.5 truncate">
+                PKR {(customer.creditLimit || 1500000).toLocaleString()}
               </span>
             </div>
-            <div className="text-right">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold block">Projected Bal</span>
-              <span className="font-mono font-bold text-amber-300 text-[12px] block mt-0.5">
-                Rs. {projectedBalance.toLocaleString()}
+            <div className="text-right min-w-0">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block">Projected Bal</span>
+              <span className="font-mono tabular-nums font-bold text-[#F97316] dark:text-orange-400 text-xs block mt-0.5 truncate">
+                PKR {projectedBalance.toLocaleString()}
               </span>
             </div>
           </div>
@@ -229,52 +230,52 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
           {submittedRecovery ? (
             /* SUCCESS CONFIRMATION STATE */
             <div className="space-y-4 py-4 text-center animate-in zoom-in-95 duration-200">
-              <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 mx-auto flex items-center justify-center">
+              <div className="w-14 h-14 rounded-xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400 mx-auto flex items-center justify-center">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
 
               <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                  Payment Recorded Successfully!
+                <h3 className="text-lg font-bold text-[#0F172A] dark:text-white">
+                  Payment Recorded Successfully
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
                   Recovery <strong>#{submittedRecovery.id}</strong> of{' '}
-                  <strong>Rs. {submittedRecovery.amount.toLocaleString()} PKR</strong> recorded.
+                  <strong>PKR {submittedRecovery.amount.toLocaleString()}</strong> recorded.
                 </p>
-                <div className="mt-2 inline-block px-3 py-1 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 rounded-full text-amber-900 dark:text-amber-200 text-xs font-bold">
-                  ⏳ Awaiting Shahzad Ullah&apos;s Verification
+                <div className="mt-2 inline-block px-3 py-1 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 rounded-md text-amber-900 dark:text-amber-200 text-xs font-semibold">
+                  Awaiting Shahzad Ullah&apos;s Verification
                 </div>
               </div>
 
               {/* Summary */}
-              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 text-left text-xs space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Transaction Signature:</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+              <div className="bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 text-left text-xs space-y-2">
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 dark:text-slate-400">Transaction Signature</span>
+                  <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-slate-200">
                     {submittedRecovery.transactionId || submittedRecovery.id}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Payment Amount:</span>
-                  <span className="font-mono font-black text-emerald-800 dark:text-emerald-300">
-                    Rs. {submittedRecovery.amount.toLocaleString()} PKR
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 dark:text-slate-400">Payment Amount</span>
+                  <span className="font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-300">
+                    PKR {submittedRecovery.amount.toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Payment Mode:</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300">
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 dark:text-slate-400">Payment Mode</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
                     {submittedRecovery.paymentMode}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Recorded (PKT):</span>
-                  <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 dark:text-slate-400">Recorded (PKT)</span>
+                  <span className="font-mono tabular-nums font-semibold text-slate-700 dark:text-slate-300">
                     {formatKarachiDateTime(submittedRecovery.createdAt)}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Collected By:</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300">
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 dark:text-slate-400">Collected By</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
                     {currentUser.fullName}
                   </span>
                 </div>
@@ -283,7 +284,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
               <button
                 type="button"
                 onClick={handleResetAndClose}
-                className="w-full py-3 rounded-2xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs cursor-pointer transition-colors"
+                className="btn-primary w-full min-h-[44px] text-xs"
               >
                 Done / Back to Customer 360
               </button>
@@ -292,15 +293,15 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
             /* ACTIVE FORM */
             <div className="space-y-4 text-xs">
               {/* Payment Amount Input */}
-              <div className="bg-emerald-50/60 dark:bg-emerald-950/30 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 space-y-2">
-                <label className="text-xs font-black uppercase tracking-wider text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
-                  <Wallet className="w-4 h-4" />
+              <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 space-y-2.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-slate-200 flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
                   Enter Received Amount (PKR)
                 </label>
 
                 <div className="relative">
-                  <span className="absolute left-3 top-3 font-mono font-black text-sm text-emerald-900 dark:text-emerald-300">
-                    Rs.
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono font-bold text-xs text-slate-500 dark:text-slate-400 pointer-events-none select-none">
+                    PKR
                   </span>
                   <input
                     type="text"
@@ -308,11 +309,11 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                     placeholder="0"
                     value={amountStr}
                     onChange={(e) => setAmountStr(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 rounded-2xl text-lg font-mono font-black text-emerald-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-600"
+                    className="w-full min-h-[48px] pl-14 pr-4 py-3 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-lg font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
 
-                {/* Quick Amount Suggestion Buttons (Easypaisa style quick fill) */}
+                {/* Quick Amount Suggestion Buttons */}
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <button
                     type="button"
@@ -320,9 +321,9 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                       triggerHaptic('light');
                       setAmountStr(previousBalance.toString());
                     }}
-                    className="min-h-[44px] px-3.5 py-2 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-200 font-bold text-xs cursor-pointer hover:bg-emerald-200 active:scale-95 transition-all border border-emerald-300 dark:border-emerald-800"
+                    className="min-h-[44px] px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#1D4ED8] dark:text-blue-300 font-semibold text-xs cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/60 active:scale-95 transition-all border border-blue-200 dark:border-blue-800/70 tabular-nums"
                   >
-                    Full Balance (Rs. {previousBalance.toLocaleString()})
+                    Full Balance (PKR {previousBalance.toLocaleString()})
                   </button>
 
                   {previousBalance > 50000 && (
@@ -332,9 +333,9 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                         triggerHaptic('light');
                         setAmountStr(Math.round(previousBalance / 2).toString());
                       }}
-                      className="min-h-[44px] px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer hover:bg-slate-200 active:scale-95 transition-all border border-slate-200 dark:border-slate-700"
+                      className="min-h-[44px] px-3.5 py-2 rounded-xl bg-white dark:bg-[#1E293B] text-slate-700 dark:text-slate-300 font-semibold text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all border border-[#E2E8F0] dark:border-slate-700 tabular-nums"
                     >
-                      50% (Rs. {Math.round(previousBalance / 2).toLocaleString()})
+                      50% (PKR {Math.round(previousBalance / 2).toLocaleString()})
                     </button>
                   )}
                 </div>
@@ -342,7 +343,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
 
               {/* Payment Mode Selector */}
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold uppercase text-slate-400 block">
+                <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block">
                   Select Payment Mode
                 </label>
 
@@ -355,10 +356,10 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                         triggerHaptic('selection');
                         setPaymentMode(mode);
                       }}
-                      className={`min-h-[46px] p-2.5 rounded-xl font-bold text-xs border text-center transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
+                      className={`min-h-[44px] p-2.5 rounded-xl font-semibold text-xs border text-center transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
                         paymentMode === mode
-                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs font-black'
-                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                          ? 'bg-[#3B82F6] text-white border-[#3B82F6] shadow-xs font-bold'
+                          : 'bg-white dark:bg-[#0F172A] border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
                       {mode.replace('_', ' ')}
@@ -369,9 +370,9 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
 
               {/* Conditional Bank / Cheque Details */}
               {paymentMode !== 'CASH' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
-                    <label className="text-[10px] font-extrabold uppercase text-slate-400 block mb-1">
+                    <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">
                       Bank Name
                     </label>
                     <input
@@ -379,12 +380,12 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                       placeholder="e.g. Meezan Bank, HBL"
                       value={bankName}
                       onChange={(e) => setBankName(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none"
+                      className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-extrabold uppercase text-slate-400 block mb-1">
+                    <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">
                       Cheque / Ref #
                     </label>
                     <input
@@ -392,7 +393,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                       placeholder="e.g. CHQ-981240"
                       value={instrumentNumber}
                       onChange={(e) => setInstrumentNumber(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none"
+                      className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                     />
                   </div>
                 </div>
@@ -400,25 +401,26 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
 
               {/* Slip / Receipt Photo Upload */}
               <div>
-                <label className="text-[10px] font-extrabold uppercase text-slate-400 block mb-1">
+                <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">
                   Deposit Slip or Cheque Photo (Optional)
                 </label>
 
                 {slipImage ? (
-                  <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 max-h-40">
+                  <div className="relative rounded-xl overflow-hidden border border-[#E2E8F0] dark:border-slate-700 max-h-40">
                     <img src={slipImage} alt="Payment slip" className="w-full h-auto object-cover" />
                     <button
                       type="button"
                       onClick={() => setSlipImage(null)}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-950/70 text-white cursor-pointer"
+                      aria-label="Remove payment slip photo"
+                      className="absolute top-2 right-2 w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-950/75 text-white flex items-center justify-center cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
-                  <label className="flex items-center justify-center gap-2 p-4 bg-slate-50 dark:bg-slate-800 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors">
+                  <label className="flex items-center justify-center gap-2 min-h-[52px] p-4 bg-[#F8FAFC] dark:bg-[#0F172A] border border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors">
                     <Camera className="w-4 h-4 text-slate-400" />
-                    <span className="text-xs text-slate-600 dark:text-slate-300 font-bold">
+                    <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
                       Upload Deposit Slip / Camera Photo
                     </span>
                     <input
@@ -433,7 +435,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
 
               {/* Remarks */}
               <div>
-                <label className="text-[10px] font-extrabold uppercase text-slate-400 block mb-1">
+                <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">
                   Recovery Notes
                 </label>
                 <input
@@ -441,56 +443,65 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                   placeholder="e.g. Deposited by dealer at shop"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none"
+                  className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                 />
               </div>
 
               {/* Balance Calculation */}
-              <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Current Balance:</span>
-                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                    Rs. {previousBalance.toLocaleString()}
+              <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-4 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 space-y-2">
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 dark:text-slate-400">Current Balance</span>
+                  <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-slate-200">
+                    PKR {previousBalance.toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-emerald-700 dark:text-emerald-400 font-bold">This Recovery:</span>
-                  <span className="font-mono font-black text-emerald-700 dark:text-emerald-400">
-                    - Rs. {paymentAmount.toLocaleString()}
+                <div className="flex justify-between gap-2">
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold">This Recovery</span>
+                  <span className="font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400">
+                    -PKR {paymentAmount.toLocaleString()} CR
                   </span>
                 </div>
-                <div className="pt-1.5 border-t border-slate-200 dark:border-slate-700 flex justify-between font-bold">
-                  <span className="text-slate-800 dark:text-white">Remaining Balance:</span>
-                  <span className="font-mono font-black text-slate-900 dark:text-white">
-                    Rs. {projectedBalance.toLocaleString()} PKR
+                <div className="pt-2 border-t border-[#E2E8F0] dark:border-slate-700 flex justify-between gap-2 font-bold">
+                  <span className="text-[#0F172A] dark:text-white">Remaining Balance</span>
+                  <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
+                    PKR {projectedBalance.toLocaleString()}
                   </span>
                 </div>
               </div>
 
               {validationError && (
-                <div role="alert" className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-200 text-xs font-semibold flex items-center gap-2">
+                <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-200 text-xs font-semibold flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{validationError}</span>
                 </div>
               )}
-
-              {/* Submit CTA */}
-              <button
-                type="button"
-                onClick={handleSubmitRecovery}
-                disabled={paymentAmount <= 0 || isSubmitting}
-                className={`w-full min-h-[50px] py-3.5 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer touch-manipulation ${
-                  paymentAmount <= 0 || isSubmitting
-                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-98 shadow-emerald-950/20'
-                }`}
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{isSubmitting ? 'SUBMITTING...' : `CONFIRM & LOG RECOVERY (Rs. ${paymentAmount.toLocaleString()})`}</span>
-              </button>
             </div>
           )}
         </div>
+
+        {/* Sticky Footer Actions (Cancel left, Confirm right) */}
+        {!submittedRecovery && (
+          <div className="p-4 border-t border-[#E2E8F0] dark:border-slate-700/80 bg-white dark:bg-[#0F172A] flex items-center justify-between gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={handleResetAndClose}
+              className="btn-outline min-h-[44px] text-xs px-4"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmitRecovery}
+              disabled={paymentAmount <= 0 || isSubmitting}
+              className="btn-primary flex-1 min-h-[44px] text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="tabular-nums truncate">
+                {isSubmitting ? 'Submitting...' : `Confirm & Log (PKR ${paymentAmount.toLocaleString()})`}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

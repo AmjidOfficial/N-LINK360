@@ -559,27 +559,27 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
   ].includes(currentUser.role || '');
 
   return (
-    <div className="flex-1 min-h-0 h-full bg-[#F1F8E9] dark:bg-[#070E0B] text-[#1B5E3A] dark:text-emerald-50 flex overflow-hidden antialiased">
+    <div className="flex-1 min-h-0 h-full bg-[#F8FAFC] dark:bg-[#0B1120] text-[#0F172A] dark:text-[#F8FAFC] flex overflow-hidden antialiased">
       {/* Persistent Frozen Left Side Menu (Desktop / Large Screens lg+) */}
       <aside
-        className={`hidden lg:flex flex-col h-full bg-white dark:bg-[#0B1610] border-r border-[#C8E6C9] dark:border-emerald-900/50 shrink-0 overflow-hidden transition-all duration-200 ${
+        className={`hidden lg:flex flex-col h-full bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-slate-800 shrink-0 overflow-hidden transition-all duration-200 ${
           isSidebarCollapsed ? 'w-[72px]' : 'w-64'
         }`}
       >
         <div className="flex-1 min-h-0 flex flex-col">
           {/* Brand + Collapse Toggle */}
-          <div className="p-4 bg-[#1B5E3A] dark:bg-[#0E1A14] border-b border-[#2E6B46] dark:border-emerald-900/60 text-white flex items-center justify-between gap-2 min-h-[60px] shrink-0">
+          <div className="p-4 bg-[#0F172A] dark:bg-[#0B1120] border-b border-slate-800 text-white flex items-center justify-between gap-2 min-h-[60px] shrink-0">
             {!isSidebarCollapsed && (
               <div className="min-w-0">
-                <div className="text-sm font-bold tracking-tight truncate text-[#F1F8E9]">N-LINK 360</div>
-                <div className="text-[10px] font-mono text-[#D9F99D] truncate">{currentUser.fullName}</div>
+                <div className="text-sm font-bold tracking-tight truncate text-[#F8FAFC]">N-LINK 360</div>
+                <div className="text-[11px] font-mono text-slate-400 truncate">{currentUser.fullName}</div>
               </div>
             )}
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed((prev) => !prev)}
               aria-label={isSidebarCollapsed ? 'Expand side menu' : 'Collapse side menu'}
-              className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 text-[#D9F99D] flex items-center justify-center shrink-0 cursor-pointer mx-auto"
+              className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center shrink-0 cursor-pointer mx-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F97316]"
               title={isSidebarCollapsed ? 'Expand Menu' : 'Collapse Menu'}
             >
               <ArrowRight className={`w-4 h-4 transition-transform ${isSidebarCollapsed ? '' : 'rotate-180'}`} />
@@ -608,13 +608,13 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     scrollMainToTop('smooth');
                   }}
                   title={item.label}
-                  className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-3 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                  className={`w-full min-h-[44px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
                     active
-                      ? 'bg-[#1B5E3A] dark:bg-emerald-700 text-white shadow-sm'
-                      : 'text-[#1B5E3A] dark:text-emerald-100 hover:bg-[#F1F8E9] dark:hover:bg-emerald-950/60'
+                      ? 'bg-[#3B82F6] text-white shadow-sm'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-[#D9F99D]' : 'text-[#4CAF50] dark:text-emerald-400'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
                   {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                 </button>
               );
@@ -635,13 +635,13 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   pushNotification(`Sync completed at ${ts}`, 'success');
                 }}
                 title="Sync Up & Sync Down"
-                className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-3 rounded-xl bg-[#0D9488]/10 hover:bg-[#0D9488]/20 text-[#0F172A] dark:text-white cursor-pointer transition-colors`}
+                className={`w-full min-h-[44px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-[#0F172A] dark:text-white cursor-pointer transition-colors`}
               >
-                <RefreshCw className={`w-4 h-4 text-[#0D9488] shrink-0 ${isSyncingSheet ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 text-[#3B82F6] shrink-0 ${isSyncingSheet ? 'animate-spin' : ''}`} />
                 {!isSidebarCollapsed && (
                   <div className="text-left min-w-0">
                     <div className="text-xs font-bold">{isSyncingSheet ? 'Syncing...' : 'Sync'}</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{lastSyncAt}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate tabular-nums">{lastSyncAt}</div>
                   </div>
                 )}
               </button>
@@ -655,13 +655,13 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 scrollMainToTop('smooth');
               }}
               title="Settings & Profile"
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-3 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+              className={`w-full min-h-[44px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
                 activeTab === 'MORE'
-                  ? 'bg-[#1B5E3A] text-white'
-                  : 'text-[#0F172A] dark:text-white hover:bg-[#F8FAFC] dark:hover:bg-slate-800'
+                  ? 'bg-[#3B82F6] text-white'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <SlidersHorizontal className="w-4 h-4 text-slate-500 shrink-0" />
+              <SlidersHorizontal className={`w-4 h-4 shrink-0 ${activeTab === 'MORE' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
               {!isSidebarCollapsed && <span className="truncate">Settings &amp; Profile</span>}
             </button>
           </nav>
@@ -672,7 +672,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             type="button"
             onClick={onSignOut}
             title="Log out"
-            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2.5 rounded-xl text-xs font-semibold text-[#EF4444] hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer`}
+            className={`w-full min-h-[44px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2.5 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer`}
           >
             <LogOut className="w-4 h-4 shrink-0" />
             {!isSidebarCollapsed && <span>Log out</span>}
@@ -683,8 +683,8 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
       {/* Main Column */}
       <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
       {/* Frozen Top App Bar */}
-      <header className="shrink-0 z-30 bg-white/95 dark:bg-[#0E1A14]/95 backdrop-blur-md border-b border-[#C8E6C9] dark:border-emerald-900/50 px-4 py-2.5 flex items-center justify-between text-[#1B5E3A] dark:text-emerald-50">
-        <div className="flex items-center gap-2.5 min-w-0">
+      <header className="shrink-0 z-30 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-slate-800 px-3 sm:px-4 py-2 flex items-center justify-between text-[#0F172A] dark:text-[#F8FAFC]">
+        <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
             onClick={() => {
@@ -692,13 +692,13 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
               setIsNavDrawerOpen(true);
             }}
             aria-label="Open navigation menu"
-            className="lg:hidden w-11 h-11 rounded-xl flex items-center justify-center text-[#1B5E3A] dark:text-emerald-100 hover:bg-[#F1F8E9] dark:hover:bg-emerald-950/60 cursor-pointer shrink-0"
+            className="lg:hidden w-11 h-11 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shrink-0"
           >
             <Menu className="w-5 h-5" />
           </button>
           <NationalLightLogo size="sm" showGlow />
           <div className="min-w-0">
-            <span className="text-base font-bold tracking-tight text-[#1B5E3A] dark:text-emerald-50 block truncate">
+            <span className="text-base font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] block truncate">
               {activeTab === 'DASHBOARD'
                 ? 'Home Dashboard'
                 : activeTab === 'ORDERING'
@@ -721,11 +721,11 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
           <button
             type="button"
             onClick={handleToggleTheme}
-            aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Industrial Dark Mode'}
-            title={isDarkMode ? 'Light Mode' : 'Industrial Dark Mode'}
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-[#1B5E3A] dark:text-emerald-200 hover:bg-[#F1F8E9] dark:hover:bg-emerald-950/60 cursor-pointer"
+            aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            title={isDarkMode ? 'Light Mode' : 'Dark Mode'}
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
           >
-            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
+            {isDarkMode ? <Sun className="w-4 h-4 text-[#F97316]" /> : <Moon className="w-4 h-4" />}
           </button>
 
           {onSyncGoogleSheet && (
@@ -742,7 +742,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
               className="btn-outline px-2.5 py-1.5 min-h-[44px] text-xs whitespace-nowrap"
               title="Bidirectional Sync"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-[#0D9488] dark:text-emerald-400 ${isSyncingSheet ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400 ${isSyncingSheet ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{isSyncingSheet ? 'Syncing...' : 'Sync'}</span>
             </button>
           )}
@@ -751,11 +751,11 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             type="button"
             onClick={() => setIsNotifLogOpen(true)}
             aria-label="Open notification log"
-            className="relative w-11 h-11 rounded-xl flex items-center justify-center text-[#0F172A] dark:text-emerald-100 hover:bg-slate-100 dark:hover:bg-emerald-950/60 cursor-pointer"
+            className="relative w-11 h-11 rounded-xl flex items-center justify-center text-[#0F172A] dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
           >
             <Bell className="w-5 h-5" />
             {(notificationLog.length > 0 || orders.some((o) => o.status === 'PENDING_APPROVAL')) && (
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#F59E0B]" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#F97316]" />
             )}
           </button>
 
@@ -766,16 +766,16 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
       {isNavDrawerOpen && (
         <div className="fixed inset-0 z-50 flex">
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs"
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
             onClick={() => setIsNavDrawerOpen(false)}
           />
-          <aside className="relative z-10 w-76 max-w-[84vw] bg-white dark:bg-[#111C33] h-full flex flex-col justify-between border-r border-[#E2E8F0] dark:border-slate-800 shadow-2xl animate-in slide-in-from-left duration-200 overflow-y-auto">
+          <aside className="relative z-10 w-76 max-w-[84vw] bg-white dark:bg-[#0F172A] h-full flex flex-col justify-between border-r border-[#E2E8F0] dark:border-slate-800 shadow-2xl animate-in slide-in-from-left duration-200 overflow-y-auto">
             <div>
               {/* Drawer Officer Profile Header */}
-              <div className="p-5 bg-[#1B5E3A] text-white space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="p-4 bg-[#0F172A] dark:bg-[#0B1120] border-b border-slate-800 text-white space-y-3">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-11 h-11 rounded-full bg-[#0D9488] text-white flex items-center justify-center font-bold shrink-0">
+                    <div className="w-11 h-11 rounded-xl bg-[#3B82F6] text-white flex items-center justify-center font-bold shrink-0">
                       {(currentUser.fullName || 'NL')
                         .split(' ')
                         .map((n) => n[0])
@@ -795,10 +795,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsNavDrawerOpen(false)}
-                    className="p-1.5 rounded-lg text-slate-300 hover:text-white cursor-pointer"
+                    className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer shrink-0"
                     aria-label="Close menu"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -828,11 +828,11 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                       }}
                       className={`w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
                         active
-                          ? 'bg-[#1B5E3A] text-white'
-                          : 'text-[#0F172A] dark:text-white hover:bg-[#F8FAFC] dark:hover:bg-slate-800'
+                          ? 'bg-[#3B82F6] text-white'
+                          : 'text-[#0F172A] dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${active ? 'text-[#F59E0B]' : 'text-[#0D9488]'}`} />
+                      <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
                       <span>{item.label}</span>
                     </button>
                   );
@@ -853,15 +853,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                       pushNotification(`Sync completed at ${ts}`, 'success');
                       setIsNavDrawerOpen(false);
                     }}
-                    className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl text-left bg-[#0D9488]/10 hover:bg-[#0D9488]/20 text-[#0F172A] dark:text-white cursor-pointer transition-colors"
+                    className="w-full min-h-[44px] flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left bg-blue-500/10 hover:bg-blue-500/20 text-[#0F172A] dark:text-white cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <RefreshCw className={`w-4 h-4 text-[#0D9488] shrink-0 ${isSyncingSheet ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`w-4 h-4 text-[#3B82F6] shrink-0 ${isSyncingSheet ? 'animate-spin' : ''}`} />
                       <div>
                         <div className="text-sm font-bold">
                           {isSyncingSheet ? 'Syncing...' : 'Sync'}
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
                           Last Sync: {lastSyncAt}
                         </div>
                       </div>
@@ -877,13 +877,13 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     setIsNavDrawerOpen(false);
                     scrollMainToTop('smooth');
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
+                  className={`w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
                     activeTab === 'MORE'
-                      ? 'bg-[#1B5E3A] text-white'
-                      : 'text-[#0F172A] dark:text-white hover:bg-[#F8FAFC] dark:hover:bg-slate-800'
+                      ? 'bg-[#3B82F6] text-white'
+                      : 'text-[#0F172A] dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <SlidersHorizontal className="w-4 h-4 text-slate-500" />
+                  <SlidersHorizontal className={`w-4 h-4 ${activeTab === 'MORE' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
                   <span>Settings &amp; Profile</span>
                 </button>
               </nav>
@@ -900,9 +900,9 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                       pushNotification('N-LINK 360 App installed on your device.', 'success');
                     }
                   }}
-                  className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold bg-[#1B5E3A] text-white hover:bg-[#14472B] cursor-pointer transition-colors"
+                  className="btn-primary w-full justify-start"
                 >
-                  <Download className="w-4 h-4 text-[#F59E0B]" />
+                  <Download className="w-4 h-4" />
                   <span>Install N-LINK 360 App</span>
                 </button>
               )}
@@ -912,7 +912,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   setIsNavDrawerOpen(false);
                   onSignOut();
                 }}
-                className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#EF4444] hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
+                className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Log out</span>
@@ -924,14 +924,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
 
       {/* Auto-Hiding Notification Toast */}
       {gpsToast && (
-        <div className="fixed top-16 right-4 left-4 sm:left-auto sm:w-96 z-40 p-3 bg-[#1B5E3A] text-white rounded-xl shadow-lg border border-[#0D9488] text-xs font-semibold flex items-center justify-between animate-in fade-in duration-200">
+        <div className="fixed top-16 right-4 left-4 sm:left-auto sm:w-96 z-40 px-3 py-2 bg-[#0F172A] dark:bg-[#1E293B] text-white rounded-xl shadow-lg border border-[#3B82F6]/60 text-xs font-semibold flex items-center justify-between animate-in fade-in duration-200">
           <span className="pr-2">{gpsToast}</span>
           <button
             type="button"
             onClick={() => setGpsToast(null)}
-            className="text-slate-300 hover:text-white px-1.5 py-0.5 cursor-pointer"
+            aria-label="Dismiss notification"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-300 hover:text-white cursor-pointer"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -951,13 +952,13 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
         {/* ==================================================== */}
         {activeTab === 'ATTENDANCE' && (
           <div className="space-y-4">
-            <div className="bg-white dark:bg-[#111C33] p-1 rounded-xl border border-[#E2E8F0] dark:border-slate-800 grid grid-cols-2 gap-1 max-w-md">
+            <div className="bg-white dark:bg-[#1E293B] p-1 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 grid grid-cols-2 gap-1 max-w-md">
               <button
                 type="button"
                 onClick={() => setIsAttendanceLedgerOpen(false)}
-                className={`min-h-[40px] rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                className={`min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                   !isAttendanceLedgerOpen
-                    ? 'bg-[#1B5E3A] text-white'
+                    ? 'bg-[#3B82F6] text-white'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -966,9 +967,9 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAttendanceLedgerOpen(true)}
-                className={`min-h-[40px] rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                className={`min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                   isAttendanceLedgerOpen
-                    ? 'bg-[#1B5E3A] text-white'
+                    ? 'bg-[#3B82F6] text-white'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -1069,14 +1070,14 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 {customerSubView === 'LEDGER' && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between px-1">
-                      <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                      <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 rounded-xl">
                         <button
                           type="button"
                           onClick={() => setLedgerViewMode('ENTERPRISE_BENTO')}
-                          className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                          className={`min-h-[40px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                             ledgerViewMode === 'ENTERPRISE_BENTO'
-                              ? 'bg-white dark:bg-slate-700 text-teal-900 dark:text-teal-200 shadow-xs'
-                              : 'text-slate-500 hover:text-slate-800'
+                              ? 'bg-[#3B82F6] text-white shadow-xs'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                           }`}
                         >
                           Recovery &amp; Summary
@@ -1084,10 +1085,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                         <button
                           type="button"
                           onClick={() => setLedgerViewMode('DETAILED_JOURNAL')}
-                          className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                          className={`min-h-[40px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                             ledgerViewMode === 'DETAILED_JOURNAL'
-                              ? 'bg-white dark:bg-slate-700 text-teal-900 dark:text-teal-200 shadow-xs'
-                              : 'text-slate-500 hover:text-slate-800'
+                              ? 'bg-[#3B82F6] text-white shadow-xs'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                           }`}
                         >
                           Detailed Journal
@@ -1133,8 +1134,8 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 )}
               </div>
             ) : !isCheckedIn && !canSwitchTown ? (
-              <div className="bg-white dark:bg-[#111C33] rounded-2xl p-6 border border-[#E2E8F0] dark:border-slate-800 text-center space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#0D9488]/10 text-[#0D9488] flex items-center justify-center mx-auto">
+              <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 border border-[#E2E8F0] dark:border-slate-700/80 text-center space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-[#3B82F6] flex items-center justify-center mx-auto">
                   <MapPin className="w-6 h-6" />
                 </div>
                 <div className="space-y-1">
@@ -1152,7 +1153,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     disabled={isDetectingLocation}
                     className="btn-outline"
                   >
-                    <Navigation className="w-4 h-4 text-[#0D9488]" />
+                    <Navigation className="w-4 h-4 text-[#3B82F6]" />
                     <span>{isDetectingLocation ? 'Detecting GPS...' : 'Detect GPS Town'}</span>
                   </button>
                   <button
@@ -1170,15 +1171,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             ) : activeTab === 'ORDERING' ? (
               <div className="space-y-3.5 animate-in fade-in duration-200">
                 {/* Ordering Sub-Tabs: Order Form | Order List */}
-                <div className="bg-white dark:bg-[#111C33] rounded-2xl p-3 border border-[#E2E8F0] dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-3 border border-[#E2E8F0] dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-[#0F172A] rounded-xl">
                     <button
                       type="button"
                       onClick={() => setOrderingSubTab('ORDER_FORM')}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                      className={`min-h-[40px] px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                         orderingSubTab === 'ORDER_FORM'
-                          ? 'bg-[#1B5E3A] text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                          ? 'bg-[#3B82F6] text-white'
+                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       Order Form
@@ -1186,10 +1187,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     <button
                       type="button"
                       onClick={() => setOrderingSubTab('ORDER_LIST')}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                      className={`min-h-[40px] px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer tabular-nums ${
                         orderingSubTab === 'ORDER_LIST'
-                          ? 'bg-[#1B5E3A] text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                          ? 'bg-[#3B82F6] text-white'
+                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       Order List ({orders.filter((o) => canSwitchTown || displayedCustomers.some((c) => c.id === o.customerId || c.companyName === o.customerName)).length})
@@ -1197,10 +1198,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     <button
                       type="button"
                       onClick={() => setOrderingSubTab('RECENT_ORDERS')}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                      className={`min-h-[40px] px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                         orderingSubTab === 'RECENT_ORDERS'
-                          ? 'bg-[#1B5E3A] text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                          ? 'bg-[#3B82F6] text-white'
+                          : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       Recent Orders (10)
@@ -1208,7 +1209,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                    <MapPin className="w-3.5 h-3.5 text-[#0D9488]" />
+                    <MapPin className="w-3.5 h-3.5 text-[#3B82F6]" />
                     <span className="font-semibold text-[#0F172A] dark:text-white">{selectedTown}</span>
                   </div>
                 </div>
@@ -1257,7 +1258,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
 
                       return (
                         <>
-                          <div className="bg-white dark:bg-[#111C33] rounded-2xl border border-[#E2E8F0] dark:border-slate-800 p-3.5 space-y-3">
+                          <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 p-4 space-y-3">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {/* A. Town Selection */}
                               <div className="min-w-0">
@@ -1270,7 +1271,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                     onSelectTown(e.target.value);
                                     setSelectedOrderDealerId('');
                                   }}
-                                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
+                                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                                 >
                                   {availableTowns.map((town) => (
                                     <option key={town} value={town}>
@@ -1288,7 +1289,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                 <select
                                   value={activeOrderDealer?.id || ''}
                                   onChange={(e) => setSelectedOrderDealerId(e.target.value)}
-                                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
+                                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                                 >
                                   {displayedCustomers.length === 0 ? (
                                     <option value="">No Dealers in {selectedTown}</option>
@@ -1304,26 +1305,31 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                             </div>
 
                             {/* C. Simple 1-Box Recovery Amount Entry */}
-                            <div className="pt-2 border-t border-[#E2E8F0] dark:border-slate-800">
+                            <div className="pt-2 border-t border-[#E2E8F0] dark:border-slate-700/80">
                               <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
                                 C. Recovery Amount (PKR) — {activeOrderDealer?.companyName || 'Select Dealer'}
                               </label>
                               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                                <input
-                                  type="number"
-                                  min={0}
-                                  inputMode="numeric"
-                                  value={quickRecoveryAmount}
-                                  onChange={(e) => setQuickRecoveryAmount(e.target.value)}
-                                  placeholder="Enter Recovery Amount (Rs.)"
-                                  className="flex-1 min-w-0 min-h-[44px] px-3.5 py-2 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 text-sm font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
-                                />
+                                <div className="relative flex-1 min-w-0 flex items-center">
+                                  <span className="absolute left-3 text-xs font-mono font-bold text-slate-500 dark:text-slate-400 pointer-events-none select-none">
+                                    PKR
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    inputMode="numeric"
+                                    value={quickRecoveryAmount}
+                                    onChange={(e) => setQuickRecoveryAmount(e.target.value)}
+                                    placeholder="0"
+                                    className="w-full min-h-[44px] pl-12 pr-3.5 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-sm font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                                  />
+                                </div>
                                 <div className="flex flex-wrap items-center gap-2">
                                   <select
                                     value={quickRecoveryMode}
                                     onChange={(e) => setQuickRecoveryMode(e.target.value as any)}
                                     aria-label="Recovery Payment Mode"
-                                    className="min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none"
+                                    className="min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                                   >
                                     <option value="CASH">Cash</option>
                                     <option value="ONLINE_TRANSFER">Online</option>
@@ -1333,7 +1339,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                     type="button"
                                     disabled={!activeOrderDealer || !quickRecoveryAmount || Number(quickRecoveryAmount) <= 0}
                                     onClick={handleQuickRecoverySubmit}
-                                    className="min-h-[44px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold whitespace-nowrap cursor-pointer transition-colors"
+                                    className="btn-secondary min-h-[44px] px-4 py-2 text-xs whitespace-nowrap"
                                   >
                                     Save Recovery
                                   </button>
@@ -1368,27 +1374,31 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                         .map((o) => {
                           const cust = customers.find((c) => c.id === o.customerId || c.companyName === o.customerName);
                           return (
-                            <div key={o.id || o.orderNumber} className="bg-white dark:bg-[#111C33] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-800 shadow-sm space-y-3">
-                              <div className="flex justify-between items-start">
+                            <div key={o.id || o.orderNumber} className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-sm space-y-3">
+                              <div className="flex justify-between items-start gap-2">
                                 <div className="min-w-0">
-                                  <div className="font-bold text-[#0D9488] font-mono">#{o.orderNumber || o.id?.slice(-6)}</div>
+                                  <div className="font-bold text-[#3B82F6] dark:text-blue-400 font-mono tabular-nums">#{o.orderNumber || o.id?.slice(-6)}</div>
                                   <div className="font-bold text-[#0F172A] dark:text-white truncate">{o.customerName}</div>
-                                  <div className="text-[10px] text-slate-500 font-mono">{o.orderDate || o.createdAt?.slice(0, 10)}</div>
+                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">{o.orderDate || o.createdAt?.slice(0, 10)}</div>
                                 </div>
-                                <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-                                  o.status === 'APPROVED' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-[#F59E0B]/10 text-[#F59E0B]'
+                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border shrink-0 ${
+                                  o.status === 'APPROVED'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                    : o.status === 'REJECTED'
+                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                    : 'bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border-orange-500/20'
                                 }`}>
                                   {o.status || 'SUBMITTED'}
                                 </span>
                               </div>
-                              <div className="flex justify-between items-center pt-2 border-t border-slate-50 dark:border-slate-800/50">
+                              <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-700/60">
                                 <div className="text-xs">
-                                  <span className="text-slate-500">Items: </span>
-                                  <span className="font-bold text-[#0F172A] dark:text-white">{o.items?.length || 1}</span>
+                                  <span className="text-slate-500 dark:text-slate-400">Items: </span>
+                                  <span className="font-bold font-mono tabular-nums text-[#0F172A] dark:text-white">{o.items?.length || 1}</span>
                                 </div>
                                 <div className="text-right">
-                                  <div className="text-[10px] text-slate-500 uppercase font-bold">Amount</div>
-                                  <div className="font-mono font-black text-[#0F172A] dark:text-white">Rs. {Number(o.totalAmount || 0).toLocaleString()}</div>
+                                  <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Amount</div>
+                                  <div className="font-mono tabular-nums font-black text-[#0F172A] dark:text-white">PKR {Number(o.totalAmount || 0).toLocaleString()}</div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 pt-1">
@@ -1396,7 +1406,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => onPreviewInvoicePdf(o, cust)}
-                                    className="flex-1 btn-outline min-h-[38px] text-[11px]"
+                                    className="flex-1 btn-outline min-h-[44px] text-[11px]"
                                   >
                                     <Eye className="w-3.5 h-3.5" />
                                     <span>Preview</span>
@@ -1406,7 +1416,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => onDownloadInvoicePdf(o, cust)}
-                                    className="flex-1 btn-primary min-h-[38px] text-[11px]"
+                                    className="flex-1 btn-primary min-h-[44px] text-[11px]"
                                   >
                                     <Download className="w-3.5 h-3.5" />
                                     <span>PDF</span>
@@ -1416,7 +1426,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => setEditDeleteTarget({ type: 'ORDER', data: o })}
-                                    className="btn-outline min-h-[38px] text-[11px] px-3 text-slate-700 dark:text-slate-200"
+                                    className="btn-outline min-h-[44px] text-[11px] px-3 text-slate-700 dark:text-slate-200"
                                     title="Edit or Cancel / Reverse today's order"
                                   >
                                     <Edit3 className="w-3.5 h-3.5" />
@@ -1430,42 +1440,46 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     </div>
 
                     {/* Desktop Table View (>= md) */}
-                    <div className="hidden md:block bg-white dark:bg-[#111C33] rounded-2xl border border-[#E2E8F0] dark:border-slate-800 overflow-hidden">
+                    <div className="hidden md:block bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
-                          <thead className="bg-[#1B5E3A] text-white text-[11px] font-semibold">
+                          <thead className="bg-[#0F172A] text-white text-[11px] font-semibold">
                             <tr>
-                              <th className="py-2.5 px-3">Order #</th>
+                              <th className="frozen-first-col bg-[#0F172A] py-2.5 px-3">Order #</th>
                               <th className="py-2.5 px-3">Dealer / Distributor</th>
-                              <th className="py-2.5 px-3 text-center">SKUs</th>
+                              <th className="py-2.5 px-3 text-right">SKUs</th>
                               <th className="py-2.5 px-3 text-right">Amount</th>
                               <th className="py-2.5 px-3 text-center">Status</th>
                               <th className="py-2.5 px-3 text-center">Actions</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-800">
+                          <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
                             {orders
                               .filter((o) => canSwitchTown || displayedCustomers.some((c) => c.id === o.customerId || c.companyName === o.customerName))
                               .map((o) => {
                                 const cust = customers.find((c) => c.id === o.customerId || c.companyName === o.customerName);
                                 return (
-                                  <tr key={o.id || o.orderNumber} className="hover:bg-[#F8FAFC] dark:hover:bg-slate-800/40">
-                                    <td className="py-2.5 px-3 font-mono tabular-nums font-bold text-[#0D9488]">
+                                  <tr key={o.id || o.orderNumber} className="hover:bg-[#F8FAFC] dark:hover:bg-slate-800/60">
+                                    <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-2.5 px-3 font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
                                       #{o.orderNumber || o.id?.slice(-6)}
                                     </td>
                                     <td className="py-2.5 px-3">
                                       <div className="font-semibold text-[#0F172A] dark:text-white">{o.customerName}</div>
-                                      <div className="text-[10px] text-slate-500 font-mono">{o.orderDate || o.createdAt?.slice(0, 10)}</div>
+                                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">{o.orderDate || o.createdAt?.slice(0, 10)}</div>
                                     </td>
-                                    <td className="py-2.5 px-3 text-center font-mono tabular-nums">
+                                    <td className="py-2.5 px-3 text-right font-mono tabular-nums">
                                       {o.items?.length || 1}
                                     </td>
                                     <td className="py-2.5 px-3 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
-                                      Rs. {Number(o.totalAmount || 0).toLocaleString()}
+                                      PKR {Number(o.totalAmount || 0).toLocaleString()}
                                     </td>
                                     <td className="py-2.5 px-3 text-center">
-                                      <span className={`text-[10px] font-bold uppercase ${
-                                        o.status === 'APPROVED' ? 'text-[#10B981]' : 'text-[#F59E0B]'
+                                      <span className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
+                                        o.status === 'APPROVED'
+                                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                          : o.status === 'REJECTED'
+                                          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                          : 'bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border-orange-500/20'
                                       }`}>
                                         {o.status || 'SUBMITTED'}
                                       </span>
@@ -1476,7 +1490,8 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                           <button
                                             type="button"
                                             onClick={() => onPreviewInvoicePdf(o, cust)}
-                                            className="btn-outline px-2 py-1 min-h-[32px] text-[11px]"
+                                            className="btn-outline px-2.5 py-1 min-h-[36px] text-[11px]"
+                                            aria-label="Preview invoice"
                                           >
                                             <Eye className="w-3.5 h-3.5" />
                                           </button>
@@ -1485,7 +1500,8 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                           <button
                                             type="button"
                                             onClick={() => onDownloadInvoicePdf(o, cust)}
-                                            className="btn-primary px-2 py-1 min-h-[32px] text-[11px]"
+                                            className="btn-primary px-2.5 py-1 min-h-[36px] text-[11px]"
+                                            aria-label="Download invoice PDF"
                                           >
                                             <Download className="w-3.5 h-3.5" />
                                           </button>
@@ -1494,8 +1510,9 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                           <button
                                             type="button"
                                             onClick={() => setEditDeleteTarget({ type: 'ORDER', data: o })}
-                                            className="btn-outline px-2 py-1 min-h-[32px] text-[11px] text-slate-600 dark:text-slate-300"
+                                            className="btn-outline px-2.5 py-1 min-h-[36px] text-[11px] text-slate-600 dark:text-slate-300"
                                             title="Edit or Cancel / Reverse"
+                                            aria-label="Manage order"
                                           >
                                             <Edit3 className="w-3.5 h-3.5" />
                                           </button>
@@ -1512,17 +1529,17 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="bg-white dark:bg-[#111C33] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-800 shadow-xs flex items-center justify-between">
+                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs flex items-center justify-between gap-2">
                       <div>
                         <h3 className="text-sm font-bold text-[#0F172A] dark:text-white flex items-center gap-2">
-                          <ShoppingBag className="w-4 h-4 text-[#1B5E3A]" />
+                          <ShoppingBag className="w-4 h-4 text-[#3B82F6]" />
                           <span>Last 10 Orders Submitted</span>
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                           Showing recent orders booked by {currentUser.fullName} with approval status.
                         </p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full bg-[#1B5E3A]/10 text-[#1B5E3A] dark:text-emerald-400 font-mono text-xs font-bold">
+                      <span className="px-2.5 py-1 rounded-md bg-blue-500/10 text-[#3B82F6] dark:text-blue-400 border border-blue-500/20 font-mono tabular-nums text-xs font-bold shrink-0">
                         {orders.filter((o) => o.salesUserId === currentUser.id || canSwitchTown).slice(0, 10).length} Orders
                       </span>
                     </div>
@@ -1535,20 +1552,19 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                           const cust = customers.find((c) => c.id === o.customerId || c.companyName === o.customerName);
                           const isApproved = o.status === 'APPROVED' || (o.status as string) === 'VERIFIED' || (o as any).accountsApproval === 'APPROVED';
                           const isRejected = o.status === 'REJECTED' || o.shahzadApproval === 'REJECTED' || (o as any).accountsApproval === 'REJECTED';
-                          const isPending = !isApproved && !isRejected;
 
                           return (
                             <div
                               key={o.id || o.orderNumber}
-                              className="bg-white dark:bg-[#111C33] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-800 shadow-xs space-y-3 transition-all hover:shadow-md"
+                              className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3 transition-all hover:shadow-md"
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-mono tabular-nums font-bold text-xs text-[#0D9488] dark:text-teal-400">
+                                    <span className="font-mono tabular-nums font-bold text-xs text-[#3B82F6] dark:text-blue-400">
                                       #{o.orderNumber || o.id}
                                     </span>
-                                    <span className="text-[10px] text-slate-400 font-mono">
+                                    <span className="text-[11px] text-slate-400 font-mono tabular-nums">
                                       &middot; {o.orderDate || o.createdAt?.slice(0, 10)}
                                     </span>
                                   </div>
@@ -1557,34 +1573,34 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                   </h4>
                                 </div>
 
-                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                                <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 border ${
                                   isApproved
-                                    ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                                     : isRejected
-                                    ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
-                                    : 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800'
+                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                    : 'bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border-orange-500/20'
                                 }`}>
                                   {isApproved ? 'Approved / Verified' : isRejected ? 'Rejected' : 'Pending Approval'}
                                 </span>
                               </div>
 
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-xs">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2 px-3 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-slate-100 dark:border-slate-800 text-xs">
                                 <div>
                                   <span className="text-[10px] text-slate-400 block">SKU Items</span>
-                                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                  <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
                                     {o.items?.length || 1} SKUs
                                   </span>
                                 </div>
                                 <div>
                                   <span className="text-[10px] text-slate-400 block">Total Qty</span>
-                                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                  <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
                                     {o.items?.reduce((sum, i) => sum + (i.orderedQuantity || i.quantity || 0), 0) || 0} pcs
                                   </span>
                                 </div>
                                 <div>
                                   <span className="text-[10px] text-slate-400 block">Order Amount</span>
-                                  <span className="font-mono font-black text-[#1B5E3A] dark:text-emerald-400">
-                                    Rs. {Number(o.totalAmount || 0).toLocaleString()}
+                                  <span className="font-mono tabular-nums font-black text-[#0F172A] dark:text-white">
+                                    PKR {Number(o.totalAmount || 0).toLocaleString()}
                                   </span>
                                 </div>
                                 <div className="text-right">
@@ -1600,7 +1616,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => onPreviewInvoicePdf(o, cust)}
-                                    className="btn-outline text-xs px-3 py-1.5"
+                                    className="btn-outline text-xs px-3 py-1.5 min-h-[40px]"
                                   >
                                     <Eye className="w-3.5 h-3.5" />
                                     <span>Preview Invoice</span>
@@ -1610,7 +1626,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => onDownloadInvoicePdf(o, cust)}
-                                    className="btn-primary text-xs px-3 py-1.5"
+                                    className="btn-primary text-xs px-3 py-1.5 min-h-[40px]"
                                   >
                                     <Download className="w-3.5 h-3.5" />
                                     <span>Download PDF</span>
@@ -1627,16 +1643,16 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             ) : (
               <div className="space-y-3.5 animate-in fade-in duration-200">
                 {/* 1. STREAMLINED TOP COMMAND BAR */}
-                <div className="bg-white dark:bg-[#111C33] rounded-xl p-4 border border-[#E2E8F0] dark:border-slate-800 shadow-xs space-y-3">
+                <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3">
                   {/* Top Line: Territory Town Selector & New Dealer Button */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2 min-w-0">
-                      <MapPin className="w-4 h-4 text-[#0D9488] dark:text-teal-400 shrink-0" />
+                      <MapPin className="w-4 h-4 text-[#3B82F6] dark:text-blue-400 shrink-0" />
                       <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-bold uppercase tracking-wider text-[#0D9488] dark:text-teal-400 truncate">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#3B82F6] dark:text-blue-400 truncate">
                           {selectedTown} Beat
                         </span>
-                        <span className="text-[11px] text-slate-400 font-medium font-mono whitespace-nowrap">
+                        <span className="text-[11px] text-slate-400 font-medium font-mono tabular-nums whitespace-nowrap">
                           ({displayedCustomers.length} Dealers)
                         </span>
                       </div>
@@ -1651,7 +1667,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                           triggerHaptic('selection');
                           onSelectTown(e.target.value);
                         }}
-                        className="flex-1 sm:flex-none min-w-0 text-xs font-semibold bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg px-2.5 py-2 border border-slate-200 dark:border-slate-700 outline-none cursor-pointer focus:border-[#0D9488] disabled:opacity-75 disabled:cursor-not-allowed"
+                        className="flex-1 sm:flex-none min-w-0 min-h-[44px] text-xs font-semibold bg-slate-50 dark:bg-[#0F172A] text-slate-700 dark:text-slate-200 rounded-lg px-2.5 py-2 border border-slate-200 dark:border-slate-700 outline-none cursor-pointer focus:border-[#3B82F6] disabled:opacity-75 disabled:cursor-not-allowed"
                         title={canSwitchTown ? 'Switch territory town' : 'Locked to Check-In GPS town'}
                       >
                         {availableTowns.filter((t) => canSwitchTown || t !== 'All Towns').map((t) => (
@@ -1662,7 +1678,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                       <button
                         type="button"
                         onClick={() => setIsAddCustomerOpen(true)}
-                        className="btn-primary px-3 py-2 min-h-[36px] text-xs shrink-0"
+                        className="btn-outline px-3 py-2 min-h-[44px] text-xs shrink-0"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Dealer</span>
@@ -1679,15 +1695,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                         setQuickActionPicker('RECOVERY');
                         setQuickPickerSearch('');
                       }}
-                      className="min-h-[46px] p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white flex items-center gap-2.5 shadow-xs cursor-pointer transition-all touch-manipulation"
+                      className="min-h-[46px] p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-[#0F172A] dark:hover:bg-slate-800 border border-slate-800 dark:border-slate-700 active:scale-[0.98] text-white flex items-center gap-2.5 shadow-xs cursor-pointer transition-all touch-manipulation"
                       title="Collect daily cash recovery"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
                         <Wallet className="w-4 h-4 stroke-[2.25]" />
                       </div>
                       <div className="text-left min-w-0">
                         <span className="block text-xs font-bold leading-none">Daily Recovery</span>
-                        <span className="block text-[10px] text-emerald-100 font-medium mt-0.5 truncate">Collect Wasooli</span>
+                        <span className="block text-[10px] text-slate-300 font-medium mt-0.5 truncate">Collect Wasooli</span>
                       </div>
                     </button>
 
@@ -1698,7 +1714,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                         setQuickActionPicker('ORDER');
                         setQuickPickerSearch('');
                       }}
-                      className="min-h-[46px] p-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] active:scale-[0.98] text-white flex items-center gap-2.5 shadow-xs cursor-pointer transition-all touch-manipulation"
+                      className="min-h-[46px] p-2.5 rounded-xl bg-[#3B82F6] hover:bg-blue-600 active:scale-[0.98] text-white flex items-center gap-2.5 shadow-xs cursor-pointer transition-all touch-manipulation"
                       title="Book daily sales order"
                     >
                       <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
@@ -1706,7 +1722,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                       </div>
                       <div className="text-left min-w-0">
                         <span className="block text-xs font-bold leading-none">Daily Ordering</span>
-                        <span className="block text-[10px] text-teal-100 font-medium mt-0.5 truncate">Book SKUs</span>
+                        <span className="block text-[10px] text-blue-100 font-medium mt-0.5 truncate">Book SKUs</span>
                       </div>
                     </button>
 
@@ -1717,11 +1733,11 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                         setQuickActionPicker('INVOICES');
                         setQuickPickerSearch('');
                       }}
-                      className="min-h-[46px] p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-[0.98] text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center gap-2.5 cursor-pointer transition-all touch-manipulation"
+                      className="min-h-[46px] p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#0F172A] dark:hover:bg-slate-800 active:scale-[0.98] text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center gap-2.5 cursor-pointer transition-all touch-manipulation"
                       title="View invoices and bills"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
-                        <Receipt className="w-4 h-4 text-[#0D9488] dark:text-teal-400 stroke-[2]" />
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+                        <Receipt className="w-4 h-4 text-[#3B82F6] dark:text-blue-400 stroke-[2]" />
                       </div>
                       <div className="text-left min-w-0">
                         <span className="block text-xs font-bold leading-none">Invoices</span>
@@ -1736,11 +1752,11 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                         setQuickActionPicker('LEDGER');
                         setQuickPickerSearch('');
                       }}
-                      className="min-h-[46px] p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-[0.98] text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center gap-2.5 cursor-pointer transition-all touch-manipulation"
+                      className="min-h-[46px] p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#0F172A] dark:hover:bg-slate-800 active:scale-[0.98] text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center gap-2.5 cursor-pointer transition-all touch-manipulation"
                       title="View Khata ledger statement"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
-                        <BookOpen className="w-4 h-4 text-[#0D9488] dark:text-teal-400 stroke-[2]" />
+                      <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+                        <BookOpen className="w-4 h-4 text-[#3B82F6] dark:text-blue-400 stroke-[2]" />
                       </div>
                       <div className="text-left min-w-0">
                         <span className="block text-xs font-bold leading-none">Khata Ledgers</span>
@@ -1750,17 +1766,17 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   </div>
 
                   {/* Compact Financial Status Ribbon */}
-                  <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-800/60 px-3 py-2 rounded-lg border border-slate-200/70 dark:border-slate-800">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">
-                      Market Balance: <strong className="font-mono text-slate-900 dark:text-white font-bold">Rs. {totalMarketOutstanding.toLocaleString()}</strong>
+                  <div className="flex items-center justify-between gap-2 text-xs bg-slate-50 dark:bg-[#0F172A] px-3 py-2 rounded-lg border border-slate-200/70 dark:border-slate-800">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium truncate">
+                      Market Balance: <strong className="font-mono tabular-nums text-slate-900 dark:text-white font-bold">PKR {totalMarketOutstanding.toLocaleString()}</strong>
                     </span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                      Today&apos;s Wasooli: <strong className="font-mono font-bold">Rs. {totalTodayRecoveryInTown.toLocaleString()}</strong>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium shrink-0">
+                      Today&apos;s Wasooli: <strong className="font-mono tabular-nums font-bold">PKR {totalTodayRecoveryInTown.toLocaleString()}</strong>
                     </span>
                   </div>
                 </div>
 
-                {/* 1B. FMCG Book Order Summary Banner & Productive Tabs (Matches image_576ae861.png) */}
+                {/* 1B. FMCG Book Order Summary Banner & Productive Tabs */}
                 {(() => {
                   const todayIso = new Date().toISOString().slice(0, 10);
                   const todayStoreOrders = orders.filter(
@@ -1785,22 +1801,23 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     <div className="space-y-3">
                       {/* Search + Add Dealer / Distributor Toolbar */}
                       <div className="flex items-center gap-2">
-                        <div className="relative flex-1">
+                        <div className="relative flex-1 min-w-0">
                           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                           <input
                             type="text"
                             value={customerSearch}
                             onChange={(e) => setCustomerSearch(e.target.value)}
                             placeholder="Search Dealer / Distributor, code, or town..."
-                            className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-white dark:bg-[#111C33] border border-[#E2E8F0] dark:border-slate-800 text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
+                            className="w-full min-h-[44px] pl-9 pr-11 py-2 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                           />
                           {customerSearch && (
                             <button
                               type="button"
                               onClick={() => setCustomerSearch('')}
-                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                              aria-label="Clear dealer search"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                             >
-                              <X className="w-3.5 h-3.5" />
+                              <X className="w-4 h-4" />
                             </button>
                           )}
                         </div>
@@ -1808,10 +1825,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                         <button
                           type="button"
                           onClick={() => setCustomerViewMode(customerViewMode === 'LIST' ? 'MAP' : 'LIST')}
-                          className="btn-outline px-3"
+                          className="btn-outline px-3 min-h-[44px]"
                           title="Toggle Map / List"
                         >
-                          <MapPin className="w-4 h-4 text-[#0D9488]" />
+                          <MapPin className="w-4 h-4 text-[#3B82F6]" />
                           <span className="hidden sm:inline">{customerViewMode === 'LIST' ? 'Map' : 'List'}</span>
                         </button>
 
@@ -1819,7 +1836,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                           <button
                             type="button"
                             onClick={() => setIsAddCustomerOpen(true)}
-                            className="btn-primary px-3.5"
+                            className="btn-primary px-3.5 min-h-[44px]"
                           >
                             <Plus className="w-4 h-4" />
                             <span>Add</span>
@@ -1827,36 +1844,36 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                         )}
                       </div>
 
-                      {/* Deep Navy #0B132B Summary Banner */}
-                      <div className="bg-[#1B5E3A] text-white rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border border-slate-800">
-                        <div>
-                          <span className="text-slate-300 block text-[11px]">Booking Value</span>
-                          <span className="font-mono tabular-nums font-bold text-sm text-[#F59E0B]">
-                            Rs. {bookingValToday.toLocaleString()}
+                      {/* Deep Navy #0F172A Summary Banner */}
+                      <div className="bg-[#0F172A] dark:bg-[#1E293B] text-white rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border border-slate-800 dark:border-slate-700/80">
+                        <div className="min-w-0">
+                          <span className="text-slate-400 block text-[11px]">Booking Value</span>
+                          <span className="font-mono tabular-nums font-bold text-sm text-[#F97316] truncate block">
+                            PKR {bookingValToday.toLocaleString()}
                           </span>
                         </div>
-                        <div>
-                          <span className="text-slate-300 block text-[11px]">Productive Calls</span>
-                          <span className="font-mono tabular-nums font-bold text-sm text-[#10B981]">
+                        <div className="min-w-0">
+                          <span className="text-slate-400 block text-[11px]">Productive Calls</span>
+                          <span className="font-mono tabular-nums font-bold text-sm text-emerald-400 truncate block">
                             {productiveList.length} / {displayedCustomers.length}
                           </span>
                         </div>
-                        <div>
-                          <span className="text-slate-300 block text-[11px]">Cartons Today</span>
-                          <span className="font-mono tabular-nums font-bold text-sm">
+                        <div className="min-w-0">
+                          <span className="text-slate-400 block text-[11px]">Cartons Today</span>
+                          <span className="font-mono tabular-nums font-bold text-sm truncate block">
                             {totalCartonsToday}
                           </span>
                         </div>
-                        <div>
-                          <span className="text-slate-300 block text-[11px]">Market Balance</span>
-                          <span className="font-mono tabular-nums font-bold text-sm">
-                            Rs. {totalMarketOutstanding.toLocaleString()}
+                        <div className="min-w-0">
+                          <span className="text-slate-400 block text-[11px]">Market Balance</span>
+                          <span className="font-mono tabular-nums font-bold text-sm truncate block">
+                            PKR {totalMarketOutstanding.toLocaleString()}
                           </span>
                         </div>
                       </div>
 
                       {/* 3-Tab Filter Strip */}
-                      <div className="bg-white dark:bg-[#111C33] rounded-xl border border-[#E2E8F0] dark:border-slate-800 grid grid-cols-3 text-xs font-semibold overflow-hidden">
+                      <div className="bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 grid grid-cols-3 text-xs font-semibold overflow-hidden">
                         {(
                           [
                             { id: 'ALL', label: `All Dealers (${displayedCustomers.length})` },
@@ -1870,10 +1887,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                               key={t.id}
                               type="button"
                               onClick={() => setVisitFilterTab(t.id)}
-                              className={`py-3 px-2 text-center border-b-2 transition-colors cursor-pointer truncate ${
+                              className={`min-h-[44px] py-2.5 px-2 text-center border-b-2 transition-colors cursor-pointer truncate tabular-nums ${
                                 active
-                                  ? 'border-[#0D9488] text-[#0D9488] dark:text-teal-400'
-                                  : 'border-transparent text-slate-500 hover:text-[#0F172A] dark:hover:text-white'
+                                  ? 'border-[#3B82F6] text-[#3B82F6] dark:text-blue-400 bg-blue-50/40 dark:bg-blue-950/30'
+                                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
                               }`}
                             >
                               {t.label}
@@ -1895,11 +1912,11 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                           />
                         </Suspense>
                       ) : (
-                        <div className="bg-white dark:bg-[#111C33] rounded-2xl border border-[#E2E8F0] dark:border-slate-800 divide-y divide-[#E2E8F0] dark:divide-slate-800 overflow-hidden">
+                        <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 divide-y divide-[#E2E8F0] dark:divide-slate-700/80 overflow-hidden">
                           {visibleList.length === 0 ? (
                             <div className="p-8 text-center text-slate-400 space-y-2">
                               <Users className="w-8 h-8 mx-auto opacity-40 text-slate-500" />
-                              <p className="font-semibold text-[#0F172A] dark:text-slate-300">No Dealers / Distributors found</p>
+                              <p className="font-semibold text-[#0F172A] dark:text-slate-200">No Dealers / Distributors found</p>
                               <p className="text-xs">Adjust your search or filter tab above.</p>
                             </div>
                           ) : (
@@ -1911,10 +1928,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                               return (
                                 <div
                                   key={cust.id}
-                                  className="relative p-4 flex items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                                  className="relative p-3.5 sm:p-4 flex items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                                 >
                                   {isProductive && (
-                                    <span className="absolute left-0 top-0 bottom-0 w-1 bg-[#10B981]" aria-hidden="true" />
+                                    <span className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" aria-hidden="true" />
                                   )}
 
                                   <div
@@ -1927,8 +1944,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                     <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                                       {cust.address || cust.town || cust.city || 'Registered Dealer / Distributor'}
                                     </div>
-                                    <div className="text-[11px] font-mono tabular-nums text-slate-500 mt-1 whitespace-nowrap truncate">
-                                      Bal: <strong className="text-[#0F172A] dark:text-white">Rs. {netBal.toLocaleString()}</strong>
+                                    <div className="text-[11px] font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-1 whitespace-nowrap truncate">
+                                      Bal: <strong className={netBal < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#0F172A] dark:text-white'}>
+                                        {netBal < 0 ? `-PKR ${Math.abs(netBal).toLocaleString()} CR` : `PKR ${netBal.toLocaleString()}`}
+                                      </strong>
                                     </div>
                                   </div>
 
@@ -1936,7 +1955,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                     <button
                                       type="button"
                                       onClick={(e) => handleOpenOrderForCustomer(cust, e)}
-                                      className="btn-primary px-2.5 min-h-[36px] text-[11px]"
+                                      className="btn-primary px-3 min-h-[44px] sm:min-h-[38px] text-[11px]"
                                       title="Book Order"
                                     >
                                       Order
@@ -1946,8 +1965,9 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                       <a
                                         href={`tel:${cust.phone}`}
                                         onClick={(e) => e.stopPropagation()}
-                                        className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:border-[#0D9488]"
+                                        className="w-11 h-11 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:border-[#3B82F6] hover:text-[#3B82F6]"
                                         title="Call Dealer"
+                                        aria-label={`Call ${cust.companyName}`}
                                       >
                                         <Phone className="w-4 h-4" />
                                       </a>
@@ -2000,18 +2020,18 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
         {/* Quick Action Dealer Picker Sheet Modal */}
         {quickActionPicker && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-lg max-h-[85vh] rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 duration-200">
+            <div className="bg-white dark:bg-[#1E293B] w-full max-w-lg max-h-[85vh] rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 duration-200">
               {/* Header */}
-              <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/60">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-700/80 flex items-center justify-between bg-slate-50/90 dark:bg-[#0F172A]">
                 <div className="flex items-center gap-2.5">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white ${
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${
                     quickActionPicker === 'ORDER'
-                      ? 'bg-[#0052FF]'
+                      ? 'bg-[#F97316]'
                       : quickActionPicker === 'RECOVERY'
                       ? 'bg-emerald-600'
                       : quickActionPicker === 'INVOICES'
-                      ? 'bg-[#0052FF]'
-                      : 'bg-slate-800'
+                      ? 'bg-[#3B82F6]'
+                      : 'bg-slate-700'
                   }`}>
                     {quickActionPicker === 'ORDER' ? (
                       <ShoppingBag className="w-4 h-4" />
@@ -2024,7 +2044,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     )}
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#0052FF] dark:text-blue-400">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#3B82F6] dark:text-blue-400">
                       {quickActionPicker === 'ORDER'
                         ? 'Daily Ordering'
                         : quickActionPicker === 'RECOVERY'
@@ -2042,24 +2062,35 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 <button
                   type="button"
                   onClick={() => setQuickActionPicker(null)}
-                  className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 cursor-pointer"
+                  aria-label="Close dealer picker"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 cursor-pointer shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Instant Search Bar */}
-              <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div className="p-3 border-b border-slate-100 dark:border-slate-700/80 bg-white dark:bg-[#1E293B]">
                 <div className="relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={quickPickerSearch}
                     onChange={(e) => setQuickPickerSearch(e.target.value)}
                     placeholder="Search shop name, dealer code..."
-                    className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:border-teal-600 font-medium"
+                    className="w-full min-h-[44px] pl-9 pr-11 py-2 bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-[#3B82F6] font-medium"
                     autoFocus
                   />
+                  {quickPickerSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setQuickPickerSearch('')}
+                      aria-label="Clear quick picker search"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -2085,20 +2116,20 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                           else if (action === 'INVOICES') handleOpenInvoicesForCustomer(cust);
                           else if (action === 'LEDGER') handleOpenLedgerForCustomer(cust);
                         }}
-                        className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 hover:bg-teal-50/50 dark:bg-slate-800/40 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
+                        className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 hover:bg-blue-50/50 dark:bg-[#0F172A]/70 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer transition-all active:scale-[0.98]"
                       >
                         <div className="min-w-0 flex-1">
                           <h4 className="font-black text-xs text-slate-900 dark:text-white truncate">
                             {cust.companyName}
                           </h4>
-                          <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 truncate">
                             {cust.customerCode} &bull; {cust.contactPerson || 'Proprietor'} &bull; {cust.town || cust.city}
                           </p>
                         </div>
 
                         <div className="text-right shrink-0 pl-3">
-                          <span className="font-mono font-black text-xs text-teal-800 dark:text-teal-300 block">
-                            Rs. {netBal.toLocaleString()}
+                          <span className="font-mono tabular-nums font-black text-xs text-[#3B82F6] dark:text-blue-400 block">
+                            PKR {netBal.toLocaleString()}
                           </span>
                           <span className="text-[9px] font-bold text-slate-400 block uppercase">
                             Balance
@@ -2221,7 +2252,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             null;
           return (
             <div className="space-y-3.5 pb-20 animate-in fade-in duration-200">
-              <div className="bg-white dark:bg-[#111C33] rounded-2xl border border-[#E2E8F0] dark:border-slate-800 p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Town Selection
@@ -2232,7 +2263,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                       onSelectTown(e.target.value);
                       setSelectedInvoiceDealerId('');
                     }}
-                    className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
+                    className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                   >
                     {availableTowns.map((town) => (
                       <option key={town} value={town}>
@@ -2248,7 +2279,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   <select
                     value={activeInvoiceDealer?.id || ''}
                     onChange={(e) => setSelectedInvoiceDealerId(e.target.value)}
-                    className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
+                    className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                   >
                     {displayedCustomers.length === 0 ? (
                       <option value="">No Dealers in {selectedTown}</option>
@@ -2274,7 +2305,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   onWhatsAppShareInvoice={onWhatsAppShareInvoice}
                 />
               ) : (
-                <div className="bg-white dark:bg-[#111C33] rounded-2xl p-8 text-center border border-[#E2E8F0] dark:border-slate-800 text-xs text-slate-500">
+                <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 text-center border border-[#E2E8F0] dark:border-slate-700/80 text-xs text-slate-500 dark:text-slate-400">
                   No dealers found in {selectedTown}. Select another town above.
                 </div>
               )}
@@ -2292,7 +2323,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             null;
           return (
             <div className="space-y-3.5 pb-20 animate-in fade-in duration-200">
-              <div className="bg-white dark:bg-[#111C33] rounded-2xl border border-[#E2E8F0] dark:border-slate-800 p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     Town Selection
@@ -2303,7 +2334,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                       onSelectTown(e.target.value);
                       setSelectedLedgerDealerId('');
                     }}
-                    className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
+                    className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                   >
                     {availableTowns.map((town) => (
                       <option key={town} value={town}>
@@ -2319,7 +2350,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   <select
                     value={activeLedgerDealer?.id || ''}
                     onChange={(e) => setSelectedLedgerDealerId(e.target.value)}
-                    className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
+                    className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                   >
                     {displayedCustomers.length === 0 ? (
                       <option value="">No Dealers in {selectedTown}</option>
@@ -2351,7 +2382,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   onOpenSalesAuditModal={onOpenSalesAuditModal}
                 />
               ) : (
-                <div className="bg-white dark:bg-[#111C33] rounded-2xl p-8 text-center border border-[#E2E8F0] dark:border-slate-800 text-xs text-slate-500">
+                <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 text-center border border-[#E2E8F0] dark:border-slate-700/80 text-xs text-slate-500 dark:text-slate-400">
                   No dealers found in {selectedTown}. Select another town above.
                 </div>
               )}
@@ -2365,20 +2396,20 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
         {activeTab === 'MORE' && (
           <div className="space-y-4 animate-in fade-in duration-200 text-xs">
             {/* User Profile Card with Edit Button */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-12 h-12 rounded-xl bg-[#0052FF] text-white font-bold flex items-center justify-center text-base shadow-xs shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-[#3B82F6] text-white font-bold flex items-center justify-center text-base shadow-xs shrink-0">
                     {currentUser.avatarInitials || 'NL'}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h2 className="text-base font-bold text-slate-900 dark:text-white truncate">
                       {currentUser.fullName}
                     </h2>
-                    <p className="text-[11px] text-[#0052FF] dark:text-blue-400 font-semibold">
+                    <p className="text-[11px] text-[#3B82F6] dark:text-blue-400 font-semibold">
                       {currentUser.roleTitle || currentUser.role || 'Field Officer'}
                     </p>
-                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums mt-0.5">
                       {currentUser.phone || '+92 300 1234567'} &middot; {selectedTown}
                     </p>
                   </div>
@@ -2387,7 +2418,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsEditProfileOpen(true)}
-                  className="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0052FF] dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold text-xs flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+                  className="btn-outline min-h-[44px] px-3 py-1.5 text-xs shrink-0"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>Edit Info</span>
@@ -2403,14 +2434,14 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             </div>
 
             {/* Seamless Auto-Sync Status */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <div>
                   <span className="font-bold text-slate-900 dark:text-white block text-xs">
                     Cloud Database &amp; Google Sheets Auto-Sync
                   </span>
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
                     Live Background Connectivity &middot; Encrypted
                   </span>
                 </div>
@@ -2421,19 +2452,19 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             </div>
 
             {/* Operational Navigation List */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs divide-y divide-[#E2E8F0] dark:divide-slate-700/80 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setActiveTab('DASHBOARD')}
-                className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                className="w-full min-h-[52px] p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0052FF] dark:text-blue-400 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-[#3B82F6] dark:text-blue-400 flex items-center justify-center">
                     <LayoutDashboard className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="font-semibold text-slate-900 dark:text-white block">Performance Dashboard</span>
-                    <span className="text-[11px] text-slate-500">Daily, Monthly &amp; YTD sales and recovery analytics</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Daily, Monthly &amp; YTD sales and recovery analytics</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -2445,15 +2476,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   setActiveTab('ATTENDANCE');
                   setIsAttendanceLedgerOpen(true);
                 }}
-                className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                className="w-full min-h-[52px] p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                     <Clock className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="font-semibold text-slate-900 dark:text-white block">Employee Attendance Ledger</span>
-                    <span className="text-[11px] text-slate-500">Full logs with check-in/out timestamps and GPS</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Full logs with check-in/out timestamps and GPS</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -2462,15 +2493,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
               <button
                 type="button"
                 onClick={onOpenRateCard}
-                className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                className="w-full min-h-[52px] p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#0052FF] dark:text-blue-400 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-[#3B82F6] dark:text-blue-400 flex items-center justify-center">
                     <Receipt className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="font-semibold text-slate-900 dark:text-white block">Official Rate List</span>
-                    <span className="text-[11px] text-slate-500">View SKU trade prices &amp; carton sizes</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">View SKU trade prices &amp; carton sizes</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -2481,15 +2512,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 <button
                   type="button"
                   onClick={onOpenShareModal}
-                  className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                  className="w-full min-h-[52px] p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                       <Share2 className="w-4 h-4" />
                     </div>
                     <div>
-                      <span className="font-black text-slate-900 dark:text-white block">Share Team Working Link</span>
-                      <span className="text-[11px] text-slate-500">Send WhatsApp invite link &amp; scan QR code</span>
+                      <span className="font-bold text-slate-900 dark:text-white block">Share Team Working Link</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Send WhatsApp invite link &amp; scan QR code</span>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -2501,15 +2532,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 <button
                   type="button"
                   onClick={onOpenSyncModal}
-                  className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                  className="w-full min-h-[52px] p-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center">
                       <RefreshCw className="w-4 h-4" />
                     </div>
                     <div>
-                      <span className="font-black text-slate-900 dark:text-white block">Google Sheets Console (Admin)</span>
-                      <span className="text-[11px] text-slate-500">Auto-sync status &amp; admin controls</span>
+                      <span className="font-bold text-slate-900 dark:text-white block">Google Sheets Console (Admin)</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Auto-sync status &amp; admin controls</span>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -2522,7 +2553,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
               <button
                 type="button"
                 onClick={onOpenChangePassword}
-                className="w-full py-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
+                className="btn-outline w-full min-h-[44px]"
               >
                 <KeyRound className="w-4 h-4" />
                 <span>Change Password</span>
@@ -2533,7 +2564,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             <button
               type="button"
               onClick={onSignOut}
-              className="w-full py-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
+              className="w-full min-h-[44px] py-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98"
             >
               <LogOut className="w-4 h-4" />
               <span>Log Out</span>
@@ -2546,17 +2577,18 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
 
       {/* Notification Log Modal (Auto-dismissed toasts remain inspectable here) */}
       {isNotifLogOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#111C33] w-full max-w-md max-h-[80vh] rounded-t-3xl sm:rounded-2xl border border-[#E2E8F0] dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden">
-            <div className="p-4 bg-[#1B5E3A] text-white flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#1E293B] w-full max-w-md max-h-[80vh] rounded-t-3xl sm:rounded-2xl border border-[#E2E8F0] dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden">
+            <div className="p-4 bg-[#0F172A] dark:bg-[#0B1120] border-b border-slate-800 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-[#F59E0B]" />
+                <Bell className="w-4 h-4 text-[#F97316]" />
                 <h2 className="text-sm font-bold">Notification Log</h2>
               </div>
               <button
                 type="button"
                 onClick={() => setIsNotifLogOpen(false)}
-                className="p-1 rounded-lg text-slate-300 hover:text-white cursor-pointer"
+                aria-label="Close notification log"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2571,17 +2603,17 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 notificationLog.map((n) => (
                   <div
                     key={n.id}
-                    className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-800 flex items-start justify-between gap-2"
+                    className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-800 flex items-start justify-between gap-2"
                   >
                     <span className="text-[#0F172A] dark:text-slate-200 font-medium">{n.message}</span>
-                    <span className="text-[10px] font-mono text-slate-400 shrink-0">{n.time}</span>
+                    <span className="text-[10px] font-mono tabular-nums text-slate-400 shrink-0">{n.time}</span>
                   </div>
                 ))
               )}
             </div>
 
             {notificationLog.length > 0 && (
-              <div className="p-3 border-t border-[#E2E8F0] dark:border-slate-800 flex justify-end">
+              <div className="p-3 border-t border-[#E2E8F0] dark:border-slate-700/80 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setNotificationLog([])}
@@ -2641,15 +2673,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
       {/* Etc Customer Quick Action Bottom Sheet */}
       {etcCustomer && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 duration-200 max-h-[90vh]">
+          <div className="bg-white dark:bg-[#1E293B] w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 duration-200 max-h-[90vh]">
             {/* Sheet Header */}
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between bg-slate-50/80 dark:bg-slate-800/60">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700/80 flex items-start justify-between bg-slate-50/90 dark:bg-[#0F172A]">
               <div className="min-w-0 flex-1 pr-3">
                 <div className="flex items-center gap-2 flex-wrap mb-0.5">
                   <h3 className="font-black text-sm text-slate-900 dark:text-white truncate">
                     {etcCustomer.companyName}
                   </h3>
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                     {etcCustomer.customerCode}
                   </span>
                 </div>
@@ -2661,28 +2693,29 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
               <button
                 type="button"
                 onClick={() => setEtcCustomer(null)}
-                className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer shrink-0"
+                aria-label="Close action sheet"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Quick Ledger Snapshot Bar */}
-            <div className="p-3.5 bg-teal-50/50 dark:bg-teal-950/30 border-b border-teal-100 dark:border-teal-900/40 flex items-center justify-between">
+            <div className="p-3.5 bg-blue-50/60 dark:bg-[#0B1120] border-b border-blue-100 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
+                <span className="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block">
                   Net Ledger Balance
                 </span>
-                <span className="text-base font-black font-mono text-teal-900 dark:text-teal-200">
-                  Rs. {(etcCustomer.currentBalance ?? etcCustomer.openingBalance ?? 0).toLocaleString()} PKR
+                <span className="text-base font-black font-mono tabular-nums text-[#0F172A] dark:text-white">
+                  PKR {(etcCustomer.currentBalance ?? etcCustomer.openingBalance ?? 0).toLocaleString()}
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
+                <span className="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block">
                   Sanctioned Limit
                 </span>
-                <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
-                  Rs. {(etcCustomer.creditLimit || 350000).toLocaleString()}
+                <span className="text-xs font-mono tabular-nums font-bold text-slate-600 dark:text-slate-300">
+                  PKR {(etcCustomer.creditLimit || 350000).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -2721,15 +2754,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 <a
                   href={`tel:${etcCustomer.phone}`}
                   onClick={() => setEtcCustomer(null)}
-                  className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
+                  className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-teal-800 text-white flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0">
                       <Phone className="w-4 h-4" />
                     </div>
                     <div className="text-left">
                       <span className="font-black text-xs block">Call Shop Proprietor</span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">{etcCustomer.phone}</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">{etcCustomer.phone}</span>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -2746,10 +2779,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
                   setEtcCustomer(null);
                 }}
-                className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
+                className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-sky-700 text-white flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#3B82F6] text-white flex items-center justify-center shrink-0">
                     <Navigation className="w-4 h-4" />
                   </div>
                   <div className="text-left">
@@ -2768,18 +2801,18 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   setEtcCustomer(null);
                   handleOpenInvoicesForCustomer(target);
                 }}
-                className="w-full min-h-[48px] p-3 rounded-2xl bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/60 border border-sky-200 dark:border-sky-800 flex items-center justify-between text-sky-900 dark:text-sky-200 transition-all cursor-pointer"
+                className="w-full min-h-[48px] p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800 flex items-center justify-between text-blue-900 dark:text-blue-200 transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-sky-700 text-white flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#3B82F6] text-white flex items-center justify-center shrink-0">
                     <Receipt className="w-4 h-4" />
                   </div>
                   <div className="text-left">
                     <span className="font-black text-xs block">View Invoices &amp; Bills</span>
-                    <span className="text-[10px] text-sky-700 dark:text-sky-300">Commercial bills and downloadable PDFs</span>
+                    <span className="text-[10px] text-blue-700 dark:text-blue-300">Commercial bills and downloadable PDFs</span>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-sky-500" />
+                <ChevronRight className="w-4 h-4 text-blue-500" />
               </button>
 
               {/* 5. Khata Ledger Statement */}
@@ -2790,10 +2823,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   setEtcCustomer(null);
                   handleOpenLedgerForCustomer(target);
                 }}
-                className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
+                className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-teal-800 text-white flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0">
                     <BookOpen className="w-4 h-4" />
                   </div>
                   <div className="text-left">
@@ -2812,10 +2845,10 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   setEtcCustomer(null);
                   handleOpenCustomer(target);
                 }}
-                className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
+                className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#003ECC] text-white flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#F97316] text-white flex items-center justify-center shrink-0">
                     <Eye className="w-4 h-4" />
                   </div>
                   <div className="text-left">
@@ -2862,7 +2895,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
       {/* Fixed 5-Tab Mobile Bottom Navigation Bar (<= 15% viewport height, 44px+ touch targets) */}
       <nav
         aria-label="Mobile Primary Navigation"
-        className={`lg:hidden fixed z-40 h-16 bg-white/95 dark:bg-[#0E1A14]/95 backdrop-blur-md border-[#C8E6C9] dark:border-emerald-900/50 ${
+        className={`lg:hidden fixed z-40 h-16 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-[#E2E8F0] dark:border-slate-800 ${
           isNetlifyHosted
             ? 'bottom-[58px] inset-x-2 rounded-2xl border shadow-xl'
             : 'bottom-0 inset-x-0 border-t pb-safe'
@@ -2894,8 +2927,8 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 aria-current={active ? 'page' : undefined}
                 className={`min-h-[48px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
                   active
-                    ? 'text-[#1B5E3A] dark:text-emerald-300 bg-[#D9F99D]/70 dark:bg-emerald-950/80 font-bold'
-                    : 'text-[#5F8564] dark:text-emerald-400/70 hover:text-[#1B5E3A] dark:hover:text-emerald-200 font-medium'
+                    ? 'text-[#3B82F6] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 font-bold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
                 }`}
               >
                 <Icon className="w-5 h-5" />

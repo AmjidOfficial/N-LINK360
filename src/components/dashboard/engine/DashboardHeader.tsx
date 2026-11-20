@@ -61,19 +61,23 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   onQuickAction,
 }) => {
   const quickActions = config.allowedQuickActions.slice(0, 4);
+  let primaryAssigned = false;
 
   return (
-    <header className="rounded-2xl border border-slate-200 dark:border-emerald-900/50 bg-white dark:bg-[#0E1A14] px-4 py-4 sm:px-6 sm:py-5">
+    <header className="rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 bg-white dark:bg-[#0F172A] px-4 py-4 sm:px-6 sm:py-5">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">
+          <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-[#3B82F6] dark:text-blue-400">
             {config.roleKey.replace(/_/g, ' ')} · {formatScopeBreadCrumb(scope)} · PKT (Asia/Karachi)
           </div>
-          <h1 className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
+          <h1 className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] truncate">
             {config.title}
           </h1>
-          <p className="mt-0.5 text-xs sm:text-sm text-slate-600 dark:text-emerald-200/70">
-            {userName} · {config.subtitle} · Period: <span className="font-mono font-semibold text-slate-900 dark:text-emerald-300">{dateRangeLabel}</span>
+          <p className="mt-0.5 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+            {userName} · {config.subtitle} · Period:{' '}
+            <span className="font-mono tabular-nums font-semibold text-[#0F172A] dark:text-slate-100">
+              {dateRangeLabel}
+            </span>
           </p>
         </div>
 
@@ -82,16 +86,15 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             const meta = ACTION_META[actionId];
             if (!meta) return null;
             const Icon = meta.icon;
+            const isPrimary = Boolean(meta.primary && !primaryAssigned);
+            if (isPrimary) primaryAssigned = true;
+
             return (
               <button
                 key={actionId}
                 type="button"
                 onClick={() => onQuickAction?.(actionId)}
-                className={`inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-                  meta.primary
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                    : 'border border-slate-200 dark:border-emerald-800/70 bg-slate-50 dark:bg-[#13241C] text-slate-800 dark:text-emerald-100 hover:border-emerald-500'
-                }`}
+                className={`${isPrimary ? 'btn-primary' : 'btn-outline'} min-h-[44px]`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span>{meta.label}</span>
@@ -104,7 +107,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               type="button"
               onClick={onOpenConfigDrawer}
               title="Configure role dashboard widgets"
-              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 py-2 rounded-xl border border-slate-200 dark:border-emerald-800/70 bg-slate-50 dark:bg-[#13241C] text-slate-700 dark:text-emerald-200 hover:border-emerald-500 text-xs font-semibold whitespace-nowrap shrink-0 cursor-pointer"
+              className="btn-outline min-h-[44px]"
             >
               <Settings2 className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">Customize</span>
@@ -115,9 +118,9 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             type="button"
             onClick={onToggleTheme}
             aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-xl border border-slate-200 dark:border-emerald-800/70 bg-slate-50 dark:bg-[#13241C] text-slate-700 dark:text-emerald-300 hover:border-emerald-500 transition-colors cursor-pointer shrink-0"
+            className="btn-outline min-h-[44px] min-w-[44px] px-0!"
           >
-            {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {isDarkMode ? <Sun className="w-4 h-4 text-[#F97316]" /> : <Moon className="w-4 h-4 text-[#3B82F6]" />}
           </button>
         </div>
       </div>

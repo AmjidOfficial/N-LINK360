@@ -2910,17 +2910,18 @@ export default function App() {
   }
 
   return (
-    <div className="h-dvh bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased max-w-full overflow-hidden flex flex-col relative">
+    <div className="h-dvh bg-[#F8FAFC] dark:bg-[#0B1120] text-[#0F172A] dark:text-slate-100 font-sans antialiased max-w-full overflow-hidden flex flex-col relative">
       {/* Live Toast Message */}
       {ledgerToastMessage && (
         <div
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#1B5E3A] text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-xs sm:text-sm font-semibold animate-in fade-in duration-200 border border-[#4CAF50]/60 max-w-lg w-[calc(100%-2rem)] mx-auto"
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#0F172A] dark:bg-[#1E293B] text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs sm:text-sm font-semibold animate-in fade-in duration-200 border border-[#3B82F6]/60 max-w-lg w-[calc(100%-2rem)] mx-auto"
         >
           <span className="flex-1">{ledgerToastMessage}</span>
           <button
             type="button"
             onClick={() => setLedgerToastMessage(null)}
-            className="text-white/80 hover:text-white p-1 cursor-pointer font-bold"
+            aria-label="Dismiss notification"
+            className="min-w-[44px] min-h-[44px] -mr-2 rounded-lg text-white/80 hover:text-white hover:bg-slate-800 inline-flex items-center justify-center cursor-pointer font-bold transition-colors"
           >
             ✕
           </button>

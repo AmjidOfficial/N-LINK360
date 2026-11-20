@@ -163,14 +163,14 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
           <button
             type="button"
             onClick={() => startCamera()}
-            className="flex-1 bg-[#1B5E3A] text-white p-3.5 rounded-2xl flex items-center justify-center gap-2.5 hover:bg-[#14462B] transition-all border border-[#2E6B46] shadow-xs active:scale-98"
+            className="flex-1 min-h-[52px] bg-[#0F172A] dark:bg-[#1E293B] text-white p-3.5 rounded-xl flex items-center justify-center gap-2.5 hover:bg-slate-800 transition-all border border-slate-700 shadow-xs active:scale-98 cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-xl bg-white/15 text-[#D9F99D] flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-[#3B82F6]/20 text-[#3B82F6] flex items-center justify-center shrink-0">
               <Camera className="w-5 h-5" />
             </div>
             <div className="flex flex-col text-left">
               <span className="text-xs sm:text-sm font-bold text-white">Open Camera for Direct Pic</span>
-              <span className="text-[10px] text-[#D9F99D]">Snap paper receipt or bank slip</span>
+              <span className="text-[10px] text-slate-300">Snap paper receipt or bank slip</span>
             </div>
           </button>
 
@@ -178,14 +178,14 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex-1 bg-[#F1F8E9] text-[#1B5E3A] p-3.5 rounded-2xl flex items-center justify-center gap-2.5 hover:bg-[#D9F99D]/50 transition-all border border-[#C8E6C9] shadow-xs active:scale-98"
+            className="flex-1 min-h-[52px] bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-slate-100 p-3.5 rounded-xl flex items-center justify-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-[#E2E8F0] dark:border-slate-700 shadow-xs active:scale-98 cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-xl bg-white text-[#1B5E3A] border border-[#C8E6C9] flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-white dark:bg-[#1E293B] text-[#3B82F6] border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-center shrink-0">
               <Upload className="w-5 h-5" />
             </div>
             <div className="flex flex-col text-left">
-              <span className="text-xs sm:text-sm font-bold text-[#1B5E3A]">Upload from Gallery / PDF</span>
-              <span className="text-[10px] text-[#5F8564]">Pick image or transaction PDF</span>
+              <span className="text-xs sm:text-sm font-bold text-[#0F172A] dark:text-white">Upload from Gallery / PDF</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">Pick image or transaction PDF</span>
             </div>
           </button>
         </div>
@@ -193,7 +193,7 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
 
       {/* Live Camera Viewfinder Modal */}
       {isCameraActive && (
-        <div className="relative bg-black rounded-2xl overflow-hidden border-2 border-[#006b5f] shadow-lg flex flex-col items-center">
+        <div className="relative bg-black rounded-2xl overflow-hidden border-2 border-[#3B82F6] shadow-lg flex flex-col items-center">
           <div className="relative w-full aspect-4/3 max-h-[320px] bg-slate-900 overflow-hidden flex items-center justify-center">
             <video
               ref={videoRef}
@@ -204,18 +204,18 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
             />
             {/* Target Alignment Overlay Guide */}
             <div className="absolute inset-6 border-2 border-white/40 rounded-xl pointer-events-none flex items-center justify-center">
-              <span className="text-[11px] font-bold text-white/80 bg-black/50 px-2.5 py-1 rounded-full uppercase tracking-wider backdrop-blur-xs">
+              <span className="text-[11px] font-bold text-white/90 bg-black/60 px-2.5 py-1 rounded-md uppercase tracking-wider backdrop-blur-xs">
                 Align Receipt Inside Box
               </span>
             </div>
           </div>
 
           {/* Camera Controls Bar */}
-          <div className="w-full bg-[#001428] p-3 flex items-center justify-between px-6">
+          <div className="w-full bg-[#0F172A] p-3 flex items-center justify-between px-4 border-t border-slate-800">
             <button
               type="button"
               onClick={stopCamera}
-              className="text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1"
+              className="min-h-[44px] px-3 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
             >
               <X className="w-4 h-4" />
               <span>Cancel</span>
@@ -225,16 +225,17 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
             <button
               type="button"
               onClick={capturePhoto}
-              className="w-14 h-14 rounded-full bg-white border-4 border-[#177D81] flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+              aria-label="Capture photo"
+              className="w-14 h-14 rounded-full bg-white border-4 border-[#3B82F6] flex items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer"
             >
-              <div className="w-10 h-10 rounded-full bg-[#177D81]" />
+              <div className="w-10 h-10 rounded-full bg-[#3B82F6]" />
             </button>
 
             {/* Flip Camera Button */}
             <button
               type="button"
               onClick={toggleFacingMode}
-              className="text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1"
+              className="min-h-[44px] px-3 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
             >
               <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">Flip</span>
@@ -245,11 +246,11 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
 
       {/* Display Captured or Uploaded Proof Preview */}
       {receiptImage && (
-        <div className="bg-[#f2f4f6] rounded-2xl p-3 border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-3">
+        <div className="bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl p-3 border border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3 min-w-0">
             <div
               onClick={() => setIsPreviewModalOpen(true)}
-              className="w-14 h-14 rounded-xl bg-slate-200 border border-slate-300 overflow-hidden shrink-0 cursor-pointer relative group"
+              className="w-14 h-14 rounded-xl bg-slate-200 dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 overflow-hidden shrink-0 cursor-pointer relative group"
             >
               <img
                 src={receiptImage}
@@ -261,33 +262,35 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
               </div>
             </div>
 
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#4CAF50] shrink-0" />
-                <span className="text-xs sm:text-sm font-bold text-[#1B5E3A] line-clamp-1">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span className="text-xs sm:text-sm font-bold text-[#0F172A] dark:text-white line-clamp-1">
                   {receiptFileName || 'Receipt Proof Attached'}
                 </span>
               </div>
-              <span className="text-[10px] text-[#5F8564]">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
                 Captured on {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · Ready to sync
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={() => setIsPreviewModalOpen(true)}
-              className="p-2 text-[#1B5E3A] hover:bg-[#D9F99D]/50 rounded-xl transition-all"
+              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-[#3B82F6] hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-all cursor-pointer"
               title="View full image"
+              aria-label="View full image"
             >
               <ZoomIn className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={onClear}
-              className="p-2 text-rose-600 hover:bg-rose-100 rounded-xl transition-all"
+              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all cursor-pointer"
               title="Remove receipt"
+              aria-label="Remove receipt"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -297,33 +300,34 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
 
       {/* Fullscreen Image Preview Lightbox Modal */}
       {isPreviewModalOpen && receiptImage && (
-        <div className="fixed inset-0 z-60 bg-[#1B5E3A]/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="relative max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#C8E6C9] flex flex-col">
-            <div className="p-4 bg-[#1B5E3A] text-white flex items-center justify-between border-b border-[#2E6B46]">
+        <div className="fixed inset-0 z-60 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="relative max-w-2xl w-full bg-white dark:bg-[#1E293B] rounded-2xl overflow-hidden shadow-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col">
+            <div className="p-4 bg-[#0F172A] text-white flex items-center justify-between border-b border-slate-800">
               <span className="text-xs sm:text-sm font-bold flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-[#D9F99D]" />
+                <Receipt className="w-4 h-4 text-[#3B82F6]" />
                 Receipt / Collection Proof
               </span>
               <button
                 type="button"
                 onClick={() => setIsPreviewModalOpen(false)}
-                className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center"
+                aria-label="Close preview"
+                className="min-w-[44px] min-h-[44px] -mr-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-4 flex items-center justify-center bg-black max-h-[75vh] overflow-auto">
+            <div className="p-4 flex items-center justify-center bg-[#0B1120] max-h-[75vh] overflow-auto">
               <img
                 src={receiptImage}
                 alt="Full receipt"
                 className="max-h-full max-w-full object-contain rounded-lg"
               />
             </div>
-            <div className="p-3 bg-[#001428] border-t border-slate-700 flex justify-end gap-2">
+            <div className="p-3 bg-[#0F172A] border-t border-slate-800 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsPreviewModalOpen(false)}
-                className="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl"
+                className="btn-outline min-h-[44px] border-slate-600 text-white hover:bg-slate-800 text-xs"
               >
                 Close Preview
               </button>
@@ -333,7 +337,7 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
       )}
 
       {cameraError && (
-        <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
+        <p className="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800">
           {cameraError}
         </p>
       )}

@@ -178,7 +178,7 @@ export const InventoryWarehouseModule: React.FC<InventoryWarehouseModuleProps> =
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search SKUs by name or code..."
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+                className="w-full pl-10 pr-4 py-2 min-h-[44px] rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#0F172A] text-xs font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
               />
             </div>
 
@@ -188,10 +188,10 @@ export const InventoryWarehouseModule: React.FC<InventoryWarehouseModuleProps> =
                   key={f}
                   type="button"
                   onClick={() => setStockFilter(f)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer ${
+                  className={`px-3 py-1.5 min-h-[44px] rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
                     stockFilter === f
-                      ? 'bg-[#0B132B] dark:bg-emerald-600 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      ? 'bg-[#3B82F6] text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
                   }`}
                 >
                   {f === 'ALL' ? 'All SKUs' : f === 'LOW_STOCK' ? 'Low Stock' : 'Has Damaged'}

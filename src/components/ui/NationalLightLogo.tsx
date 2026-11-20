@@ -75,19 +75,19 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
   if (variant === 'watermark') {
     return (
       <div className={`pointer-events-none select-none flex flex-col items-center justify-center opacity-6 ${className}`}>
-        <NationalLightCrestIcon className="w-56 h-56 text-[#1B5E3A]" />
-        <span className="font-extrabold tracking-widest text-3xl font-sans uppercase text-[#1B5E3A] mt-2">
+        <NationalLightCrestIcon className="w-56 h-56" />
+        <span className="font-extrabold tracking-widest text-3xl font-sans uppercase text-[#0F172A] dark:text-slate-200 mt-2">
           NATIONAL LIGHT
         </span>
-        <span className="font-mono text-sm tracking-widest text-[#3E6B48] font-bold">
+        <span className="font-mono text-sm tracking-widest text-slate-600 dark:text-slate-400 font-bold">
           EST. PAKISTAN &middot; OFFICIAL ENTERPRISE
         </span>
       </div>
     );
   }
 
-  const textColor = variant === 'white' ? 'text-white' : variant === 'dark' ? 'text-slate-900 dark:text-white' : 'text-[#1B5E3A]';
-  const subtitleColor = variant === 'white' ? 'text-emerald-100' : 'text-[#5F8564] dark:text-slate-400';
+  const textColor = variant === 'white' ? 'text-white' : 'text-[#0F172A] dark:text-white';
+  const subtitleColor = variant === 'white' ? 'text-slate-300' : 'text-slate-500 dark:text-slate-400';
 
   return (
     <div className={`flex items-center gap-2.5 min-w-0 ${sizeClasses} ${className}`}>
@@ -116,11 +116,11 @@ export const DocumentCenterWatermark: React.FC<{ title?: string; className?: str
     aria-hidden="true"
   >
     <div className="opacity-[0.05] dark:opacity-[0.07] flex flex-col items-center justify-center transform -rotate-12 scale-110 sm:scale-125">
-      <NationalLightCrestIcon className="w-64 h-64 sm:w-80 sm:h-80 text-[#1B5E3A]" />
-      <div className="font-black text-3xl sm:text-4xl uppercase tracking-[0.2em] text-[#1B5E3A] mt-2 font-sans">
+      <NationalLightCrestIcon className="w-64 h-64 sm:w-80 sm:h-80" />
+      <div className="font-black text-3xl sm:text-4xl uppercase tracking-[0.2em] text-[#0F172A] dark:text-slate-200 mt-2 font-sans">
         {title}
       </div>
-      <div className="font-mono text-xs sm:text-sm uppercase tracking-[0.3em] font-bold text-[#1B5E3A] mt-1">
+      <div className="font-mono text-xs sm:text-sm uppercase tracking-[0.3em] font-bold text-[#0F172A] dark:text-slate-300 mt-1">
         OFFICIAL REGISTERED LEDGER & INVOICE
       </div>
     </div>

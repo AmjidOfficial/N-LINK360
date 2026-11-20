@@ -142,32 +142,32 @@ export const InvoiceGenerationModule: React.FC<InvoiceGenerationModuleProps> = (
                   <div className="text-slate-700 dark:text-slate-300 font-semibold">
                     {order.customerName} &middot; {cust?.town || order.customerTown || 'Commercial Market'}
                   </div>
-                  <div className="text-[11px] text-slate-500 font-mono tabular-nums">
-                    Gross: Rs. {metrics.grossSubtotal.toLocaleString()} &middot; 15% Discount: -Rs. {metrics.discount15.toLocaleString()} &middot; Net Payable:{' '}
-                    <strong className="text-slate-900 dark:text-white">Rs. {metrics.netInvoiceTotal.toLocaleString()}</strong>
-                    {cust && ` · Prev Ledger Bal: Rs. ${prevBal.toLocaleString()}`}
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+                    Gross: PKR {metrics.grossSubtotal.toLocaleString()} &middot; 15% Discount: -PKR {metrics.discount15.toLocaleString()} CR &middot; Net Payable:{' '}
+                    <strong className="text-[#0F172A] dark:text-white">PKR {metrics.netInvoiceTotal.toLocaleString()}</strong>
+                    {cust && ` · Prev Ledger Bal: PKR ${prevBal.toLocaleString()}`}
                   </div>
-                  <div className="text-[11px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 pt-0.5">
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-3 gap-y-0.5 pt-0.5">
                     <span>
-                      Invoice Date: <strong className="text-slate-700 dark:text-slate-300">{formatKarachiDate(order.invoiceDate || order.orderDate)}</strong>
+                      Invoice Date: <strong className="text-slate-700 dark:text-slate-300 font-mono tabular-nums">{formatKarachiDate(order.invoiceDate || order.orderDate)}</strong>
                     </span>
                     <span>
-                      Entered (PKT): <strong className="text-slate-700 dark:text-slate-300">{formatKarachiDateTime(order.createdAt)}</strong>
+                      Entered (PKT): <strong className="text-slate-700 dark:text-slate-300 font-mono tabular-nums">{formatKarachiDateTime(order.createdAt)}</strong>
                     </span>
                     {(order.postedAt || order.invoicedAt || order.shahzadApprovedAt) && (
                       <span>
-                        Posted (PKT): <strong className="text-slate-700 dark:text-slate-300">{formatKarachiDateTime(order.postedAt || order.invoicedAt || order.shahzadApprovedAt)}</strong>
+                        Posted (PKT): <strong className="text-slate-700 dark:text-slate-300 font-mono tabular-nums">{formatKarachiDateTime(order.postedAt || order.invoicedAt || order.shahzadApprovedAt)}</strong>
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
                   {subTab === 'READY_TO_INVOICE' ? (
                     <button
                       type="button"
                       onClick={() => onPostInvoice(order)}
-                      className="btn-primary py-2.5 px-5 rounded-xl font-bold flex items-center gap-2 cursor-pointer"
+                      className="btn-primary min-h-[44px] py-2.5 px-5 rounded-xl font-bold inline-flex items-center gap-2 cursor-pointer"
                     >
                       <Receipt className="w-4 h-4" />
                       <span>Generate &amp; Post Invoice</span>
@@ -178,7 +178,7 @@ export const InvoiceGenerationModule: React.FC<InvoiceGenerationModuleProps> = (
                         <button
                           type="button"
                           onClick={() => onPreviewInvoicePdf(order, cust)}
-                          className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                          className="btn-outline px-3.5 min-h-[44px] py-2 rounded-xl font-semibold inline-flex items-center gap-1.5 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Preview</span>
@@ -195,7 +195,7 @@ export const InvoiceGenerationModule: React.FC<InvoiceGenerationModuleProps> = (
                               preparedByName: currentUser.fullName,
                             })
                           }
-                          className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1.5 cursor-pointer"
+                          className="btn-primary px-3.5 min-h-[44px] py-2 rounded-xl font-bold inline-flex items-center gap-1.5 cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5" />
                           <span>Download PDF</span>
@@ -217,7 +217,7 @@ export const InvoiceGenerationModule: React.FC<InvoiceGenerationModuleProps> = (
                               });
                             }
                           }}
-                          className="px-3.5 py-2 rounded-xl border border-emerald-600 dark:border-emerald-500 text-emerald-700 dark:text-emerald-300 font-semibold flex items-center gap-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer"
+                          className="btn-outline px-3.5 min-h-[44px] py-2 rounded-xl font-semibold inline-flex items-center gap-1.5 cursor-pointer"
                         >
                           <Printer className="w-3.5 h-3.5" />
                           <span>Print</span>

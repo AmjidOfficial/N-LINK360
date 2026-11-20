@@ -82,8 +82,8 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
     bulkInvoices?.reduce((sum, b) => sum + (b.order.totalAmount || 0), 0) || 0;
 
   const subtitle = isBulk
-    ? `Consolidated Dispatch · Rs. ${totalBulkAmount.toLocaleString()} PKR`
-    : `${customer?.companyName || 'Valued Customer'} · Rs. ${Number(order?.totalAmount || 0).toLocaleString()} PKR`;
+    ? `Consolidated Dispatch · PKR ${totalBulkAmount.toLocaleString()}`
+    : `${customer?.companyName || 'Valued Customer'} · PKR ${Number(order?.totalAmount || 0).toLocaleString()}`;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -113,7 +113,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
   // Email Dispatch Handler
   const handleEmailSend = () => {
     if (isBulk && bulkInvoices) {
-      const subject = `National Lights Bulk Invoices Manifest — ${bulkInvoices.length} Orders (Rs. ${totalBulkAmount.toLocaleString()} PKR)`;
+      const subject = `National Lights Bulk Invoices Manifest — ${bulkInvoices.length} Orders (PKR ${totalBulkAmount.toLocaleString()})`;
       const body = buildBulkInvoiceWhatsAppText(
         bulkInvoices.map((b) => ({ customer: b.customer, order: b.order })),
         officerName
@@ -145,22 +145,22 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
   return (
     <div
       id="invoice-pdf-preview-modal"
-      className="fixed inset-0 bg-[#1B5E3A]/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 lg:p-6 animate-fadeIn"
+      className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 lg:p-6 animate-fadeIn"
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-white border border-[#C8E6C9] w-full max-w-5xl h-[92vh] max-h-[900px] rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden text-[#1B5E3A]">
+      <div className="bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 w-full max-w-5xl h-[92vh] max-h-[900px] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[#0F172A] dark:text-slate-100">
         {/* Modal Top Header Bar */}
-        <div className="bg-[#1B5E3A] px-3.5 py-3 sm:px-5 sm:py-4 flex items-center justify-between gap-3 border-b border-[#2E6B46] shrink-0 text-white">
+        <div className="bg-[#0F172A] px-3.5 py-3 sm:px-5 sm:py-4 flex items-center justify-between gap-3 border-b border-slate-800 shrink-0 text-white">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-xl bg-white/15 border border-[#A7C957]/40 flex items-center justify-center text-[#D9F99D] shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/20 border border-[#3B82F6]/40 flex items-center justify-center text-[#3B82F6] shrink-0">
               {isBulk ? <FolderArchive className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="font-bold text-sm sm:text-lg truncate text-white leading-tight">
                 {title}
               </h2>
-              <p className="text-xs text-[#D9F99D] truncate mt-0.5">{subtitle}</p>
+              <p className="text-xs text-slate-300 font-mono tabular-nums truncate mt-0.5">{subtitle}</p>
             </div>
           </div>
 
@@ -168,7 +168,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
             type="button"
             id="close-pdf-preview-btn"
             onClick={onClose}
-            className="w-11 h-11 rounded-xl bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+            className="min-w-[44px] min-h-[44px] -mr-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 inline-flex items-center justify-center transition-colors shrink-0 cursor-pointer"
             title="Close Preview"
             aria-label="Close Preview"
           >
@@ -177,42 +177,42 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
         </div>
 
         {/* Modal Main Body */}
-        <div className="flex-1 bg-[#F1F8E9] relative overflow-y-auto flex flex-col items-center justify-start md:justify-center p-3 sm:p-4">
+        <div className="flex-1 bg-[#F8FAFC] dark:bg-[#0B1120] relative overflow-y-auto flex flex-col items-center justify-start md:justify-center p-3 sm:p-4">
           {/* Print-Optimized Official National Lights Invoice Document (Visible on mobile screen, and always active during @media print) */}
           <div
             className={`${
               isMobileViewport
-                ? 'relative w-full max-w-lg bg-white border border-[#C8E6C9] rounded-2xl p-4 space-y-4 text-[#1B5E3A] shadow-xs overflow-hidden'
-                : 'hidden print:block w-full bg-white p-4 space-y-4 text-[#1B5E3A]'
+                ? 'relative w-full max-w-lg bg-white border border-[#E2E8F0] rounded-xl p-4 space-y-4 text-[#0F172A] shadow-xs overflow-hidden'
+                : 'hidden print:block w-full bg-white p-4 space-y-4 text-[#0F172A]'
             } invoice-print-container`}
           >
             <DocumentCenterWatermark title="NATIONAL LIGHT INVOICE" />
             <div className="relative z-10 space-y-4">
-              <div className="pb-3 border-b border-[#C8E6C9] flex items-center justify-between">
+              <div className="pb-3 border-b border-[#E2E8F0] flex items-center justify-between gap-2">
                 <NationalLightHeaderBrand size="sm" />
                 <div className="text-right">
-                  <span className="text-[10px] font-mono font-bold text-[#1B5E3A] px-2 py-0.5 rounded bg-[#F1F8E9] border border-[#C8E6C9] inline-block">
+                  <span className="text-[10px] font-mono font-bold text-[#0F172A] px-2 py-0.5 rounded-md bg-[#F8FAFC] border border-[#E2E8F0] inline-block">
                     {order?.status === 'INVOICED' ? 'OFFICIAL TAX INVOICE · INVOICED' : 'OFFICIAL SALES INVOICE'}
                   </span>
-                  <div className="text-[10px] text-[#5F8564] mt-1 font-mono">
+                  <div className="text-[10px] text-slate-500 mt-1 font-mono">
                     Head Office: GF-71, Sheikh Yaseen Tower, Peshawar
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-start justify-between gap-2 pb-3 border-b border-[#C8E6C9]">
+              <div className="flex items-start justify-between gap-2 pb-3 border-b border-[#E2E8F0]">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-[#4CAF50]">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-[#3B82F6]">
                     National Lights (Pvt.) Ltd.
                   </div>
-                  <div className="text-base font-bold text-[#1B5E3A] mt-0.5">{title}</div>
-                  <div className="text-xs text-[#5F8564] mt-0.5">
+                  <div className="text-base font-bold text-[#0F172A] mt-0.5">{title}</div>
+                  <div className="text-xs text-slate-600 mt-0.5 font-mono tabular-nums">
                     Invoice Date: {formatKarachiDate(order?.invoiceDate || order?.orderDate || new Date())}
                     {' · '}Order #{order?.orderNumber || order?.id || 'N/A'}
                     {' · '}Officer: {officerName}
                   </div>
                   {order?.createdAt && (
-                    <div className="text-[10px] text-[#5F8564] font-mono mt-0.5">
+                    <div className="text-[10px] text-slate-500 font-mono tabular-nums mt-0.5">
                       Entered: {formatKarachiDateTime(order.createdAt)}
                       {(order?.postedAt || order?.invoicedAt || order?.shahzadApprovedAt) &&
                         ` · Posted: ${formatKarachiDateTime(order.postedAt || order.invoicedAt || order.shahzadApprovedAt)}`}
@@ -220,36 +220,35 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                   )}
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-[11px] text-[#5F8564]">Net Payable</div>
-                  <div className="font-mono font-bold text-base text-[#1B5E3A] tabular-nums">
-                    Rs.{' '}
-                    {(isBulk ? totalBulkAmount : netTotal).toLocaleString()}
+                  <div className="text-[11px] text-slate-500">Net Payable</div>
+                  <div className="font-mono font-bold text-base text-[#0F172A] tabular-nums">
+                    PKR {(isBulk ? totalBulkAmount : netTotal).toLocaleString()}
                   </div>
                 </div>
               </div>
 
               {isBulk && bulkInvoices ? (
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-[#3E6B48]">
+                  <div className="text-xs font-semibold text-slate-700">
                     Included Invoices ({bulkInvoices.length})
                   </div>
-                  <div className="divide-y divide-[#C8E6C9] border border-[#C8E6C9] rounded-xl overflow-hidden bg-[#F1F8E9]/60">
+                  <div className="divide-y divide-[#E2E8F0] border border-[#E2E8F0] rounded-xl overflow-hidden bg-[#F8FAFC]">
                     {bulkInvoices.map((item, idx) => (
                       <div
                         key={item.order?.id || idx}
                         className="px-3 py-2.5 flex items-center justify-between gap-2 text-xs"
                       >
                         <div className="min-w-0">
-                          <div className="font-semibold text-[#1B5E3A] truncate">
+                          <div className="font-semibold text-[#0F172A] truncate">
                             {item.customer?.companyName || 'Dealer'}
                           </div>
-                          <div className="font-mono text-[11px] text-[#5F8564]">
+                          <div className="font-mono tabular-nums text-[11px] text-slate-500">
                             {(item.order?.orderNumber || 'ORD').replace('ORD-', 'INV-')} ·{' '}
                             {item.customer?.town || ''}
                           </div>
                         </div>
-                        <div className="font-mono font-bold text-[#1B5E3A] shrink-0 tabular-nums">
-                          Rs. {Number(item.order?.totalAmount || 0).toLocaleString()}
+                        <div className="font-mono font-bold text-[#0F172A] shrink-0 tabular-nums">
+                          PKR {Number(item.order?.totalAmount || 0).toLocaleString()}
                         </div>
                       </div>
                     ))}
@@ -258,14 +257,14 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
               ) : (
                 <>
                   {customer && (
-                    <div className="bg-[#F1F8E9] border border-[#C8E6C9] rounded-xl p-3 text-xs space-y-1">
+                    <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-xs space-y-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-[#1B5E3A] text-sm">{customer.companyName}</span>
-                        <span className="font-mono text-[11px] text-[#3E6B48]">
+                        <span className="font-bold text-[#0F172A] text-sm">{customer.companyName}</span>
+                        <span className="font-mono tabular-nums text-[11px] text-slate-600">
                           {customer.customerCode || customer.id}
                         </span>
                       </div>
-                      <div className="text-[#3E6B48]">
+                      <div className="text-slate-600">
                         {customer.address ? `${customer.address} · ` : ''}
                         {customer.town || customer.city || 'Region'}
                         {customer.phone ? ` · ${customer.phone}` : ''}
@@ -274,9 +273,9 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                   )}
 
                   {orderItems.length > 0 && (
-                    <table className="w-full border border-[#C8E6C9] rounded-xl overflow-hidden bg-white text-xs">
+                    <table className="w-full border border-[#E2E8F0] rounded-xl overflow-hidden bg-white text-xs">
                       <thead>
-                        <tr className="bg-[#1B5E3A] text-white text-left">
+                        <tr className="bg-[#0F172A] text-white text-left">
                           <th className="px-3 py-2">SKU / Item</th>
                           <th className="px-2 py-2 text-center">Qty</th>
                           <th className="px-2 py-2 text-right">Rate</th>
@@ -285,24 +284,24 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                       </thead>
                       <tbody>
                         {orderItems.map((it, idx) => (
-                          <tr key={it.id || it.sku || idx} className="border-t border-[#C8E6C9]">
+                          <tr key={it.id || it.sku || idx} className="border-t border-[#E2E8F0]">
                             <td className="px-3 py-2">
-                              <div className="font-medium text-[#1B5E3A]">
+                              <div className="font-medium text-[#0F172A]">
                                 {it.skuName || it.productName || it.name || it.sku}
                               </div>
-                              <div className="font-mono text-[10px] text-[#5F8564]">
+                              <div className="font-mono tabular-nums text-[10px] text-slate-500">
                                 {it.skuCode || it.sku || 'NL-SKU'}
                               </div>
                             </td>
-                            <td className="px-2 py-2 text-center font-mono text-[#3E6B48] tabular-nums">
+                            <td className="px-2 py-2 text-center font-mono text-slate-700 tabular-nums">
                               {it.cartons ? `${it.cartons}c` : ''}
                               {it.packs ? ` ${it.packs}p` : !it.cartons ? `${it.orderedQuantity || it.quantity || 0}` : ''}
                             </td>
-                            <td className="px-2 py-2 text-right font-mono text-[#3E6B48] tabular-nums">
-                              Rs. {Number(it.unitPrice || it.rate || 0).toLocaleString()}
+                            <td className="px-2 py-2 text-right font-mono text-slate-700 tabular-nums">
+                              PKR {Number(it.unitPrice || it.rate || 0).toLocaleString()}
                             </td>
-                            <td className="px-3 py-2 text-right font-mono font-semibold text-[#1B5E3A] tabular-nums">
-                              Rs. {Number(it.lineTotal || it.totalPrice || it.total || 0).toLocaleString()}
+                            <td className="px-3 py-2 text-right font-mono font-semibold text-[#0F172A] tabular-nums">
+                              PKR {Number(it.lineTotal || it.totalPrice || it.total || 0).toLocaleString()}
                             </td>
                           </tr>
                         ))}
@@ -310,27 +309,27 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                     </table>
                   )}
 
-                  <div className="flex flex-col items-end gap-1 pt-2 border-t border-[#C8E6C9] text-xs font-mono">
+                  <div className="flex flex-col items-end gap-1 pt-2 border-t border-[#E2E8F0] text-xs font-mono tabular-nums">
                     {discountAmount > 0 && (
                       <>
-                        <div className="text-[#5F8564]">
-                          Gross Subtotal: Rs. {grossTotal.toLocaleString()}
+                        <div className="text-slate-500">
+                          Gross Subtotal: PKR {grossTotal.toLocaleString()}
                         </div>
-                        <div className="text-[#3E6B48]">
-                          Trade Discount: -Rs. {discountAmount.toLocaleString()}
+                        <div className="text-emerald-700 font-semibold">
+                          Trade Discount: -PKR {discountAmount.toLocaleString()} CR
                         </div>
                       </>
                     )}
-                    <div className="text-sm font-bold text-[#1B5E3A]">
-                      Net Invoice Payable: Rs. {netTotal.toLocaleString()}
+                    <div className="text-sm font-bold text-[#0F172A]">
+                      Net Invoice Payable: PKR {netTotal.toLocaleString()}
                     </div>
                   </div>
                 </>
               )}
 
-              <div className="pt-2 border-t border-[#C8E6C9] flex items-center justify-between text-[11px] text-[#5F8564]">
-                <span className="flex items-center gap-1.5 text-[#1B5E3A] font-medium">
-                  <ShieldCheck className="w-4 h-4 text-[#4CAF50]" />
+              <div className="pt-2 border-t border-[#E2E8F0] flex items-center justify-between text-[11px] text-slate-500">
+                <span className="flex items-center gap-1.5 text-[#0F172A] font-medium">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
                   Authorized Signatory: Shahzad Ullah (NSM)
                 </span>
                 <span className="font-mono truncate max-w-[180px]">{pdfFilename}</span>
@@ -344,11 +343,11 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                 id="pdf-preview-iframe"
                 src={pdfDataUrl}
                 title="National Lights PDF Invoice Receipt Preview"
-                className="w-full h-full rounded-xl border border-[#C8E6C9] shadow-lg bg-white print:hidden"
+                className="w-full h-full rounded-xl border border-[#E2E8F0] dark:border-slate-700 shadow-lg bg-white print:hidden"
               />
             ) : (
-              <div className="flex flex-col items-center justify-center gap-3 text-[#1B5E3A] print:hidden">
-                <div className="w-10 h-10 rounded-full border-3 border-[#4CAF50] border-t-transparent animate-spin" />
+              <div className="flex flex-col items-center justify-center gap-3 text-slate-600 dark:text-slate-300 print:hidden">
+                <div className="w-10 h-10 rounded-full border-3 border-[#3B82F6] border-t-transparent animate-spin" />
                 <p className="text-sm font-medium">Rendering vector PDF document...</p>
               </div>
             )
@@ -356,21 +355,21 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
 
           {/* Toast Notification Banner */}
           {toastMessage && (
-            <div className="absolute top-4 inset-x-4 mx-auto max-w-md bg-[#1B5E3A] border border-[#A7C957] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 justify-center z-10 animate-fadeIn">
-              <CheckCircle2 className="w-4 h-4 text-[#D9F99D] shrink-0" />
+            <div className="absolute top-4 inset-x-4 mx-auto max-w-md bg-[#0F172A] border border-[#3B82F6]/60 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 justify-center z-10 animate-fadeIn">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>{toastMessage}</span>
             </div>
           )}
         </div>
 
         {/* Modal Bottom Action Controls Toolbar */}
-        <div className="bg-white border-t border-[#C8E6C9] p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div className="bg-white dark:bg-[#0F172A] border-t border-[#E2E8F0] dark:border-slate-800 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           {/* Document metadata */}
-          <div className="hidden md:flex items-center gap-2 text-xs text-[#3E6B48]">
-            <ShieldCheck className="w-4 h-4 text-[#4CAF50]" />
+          <div className="hidden md:flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span>Auth: Shahzad Ullah</span>
-            <span className="text-[#C8E6C9]">·</span>
-            <span className="font-mono text-[#5F8564] truncate max-w-[220px]">{pdfFilename}</span>
+            <span className="text-slate-300 dark:text-slate-700">·</span>
+            <span className="font-mono text-slate-500 dark:text-slate-400 truncate max-w-[220px]">{pdfFilename}</span>
           </div>
 
           {/* Action Buttons Grid (2x2 on narrow mobile, single row on sm+) */}
@@ -379,7 +378,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
               type="button"
               id="pdf-preview-whatsapp-btn"
               onClick={handleWhatsAppSend}
-              className="min-h-[44px] px-3.5 py-2 bg-[#4CAF50] hover:bg-[#388E3C] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
+              className="min-h-[44px] px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs inline-flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
               title="Send invoice details directly to customer via WhatsApp"
             >
               <MessageCircle className="w-4 h-4 shrink-0" />
@@ -390,7 +389,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
               type="button"
               id="pdf-preview-email-btn"
               onClick={() => setShowEmailInputModal(true)}
-              className="min-h-[44px] px-3.5 py-2 bg-[#F1F8E9] hover:bg-[#D9F99D]/60 text-[#1B5E3A] border border-[#C8E6C9] rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
+              className="btn-outline min-h-[44px] text-xs whitespace-nowrap"
               title="Send invoice details via Email"
             >
               <Mail className="w-4 h-4 shrink-0" />
@@ -401,7 +400,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
               type="button"
               id="pdf-preview-print-btn"
               onClick={handlePrint}
-              className="min-h-[44px] px-3.5 py-2 bg-[#F1F8E9] hover:bg-[#D9F99D]/60 text-[#1B5E3A] rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors border border-[#C8E6C9] cursor-pointer whitespace-nowrap"
+              className="btn-outline min-h-[44px] text-xs whitespace-nowrap"
               title="Print document"
             >
               <Printer className="w-4 h-4 shrink-0" />
@@ -415,7 +414,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                 onDownload();
                 showToast(`Downloaded ${pdfFilename}`);
               }}
-              className="min-h-[44px] px-4 py-2 bg-[#1B5E3A] hover:bg-[#14462B] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-md cursor-pointer whitespace-nowrap"
+              className="btn-primary min-h-[44px] text-xs whitespace-nowrap"
             >
               <Download className="w-4 h-4 shrink-0" />
               <span>Download PDF</span>
@@ -425,24 +424,25 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
 
         {/* Email Destination Prompt Sub-modal */}
         {showEmailInputModal && (
-          <div className="absolute inset-0 bg-[#1B5E3A]/50 backdrop-blur-xs flex items-center justify-center p-4 z-20">
-            <div className="bg-white border border-[#C8E6C9] rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-20">
+            <div className="bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-[#4CAF50]" />
-                  <h3 className="font-bold text-sm text-[#1B5E3A]">Send Invoice via Email</h3>
+                  <Mail className="w-4 h-4 text-[#3B82F6]" />
+                  <h3 className="font-bold text-sm text-[#0F172A] dark:text-white">Send Invoice via Email</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowEmailInputModal(false)}
-                  className="w-9 h-9 rounded-xl bg-[#F1F8E9] text-[#1B5E3A] hover:bg-[#D9F99D] flex items-center justify-center cursor-pointer"
+                  aria-label="Close email prompt"
+                  className="min-w-[44px] min-h-[44px] -mr-2 rounded-lg text-slate-400 hover:text-[#0F172A] dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#3E6B48] mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Recipient Email Address
                 </label>
                 <input
@@ -450,7 +450,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
                   placeholder="customer@example.com"
-                  className="w-full px-3 py-2.5 bg-[#F1F8E9] border border-[#C8E6C9] rounded-xl text-sm text-[#1B5E3A] focus:outline-none focus:border-[#4CAF50]"
+                  className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-sm text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
                 />
               </div>
 
@@ -458,14 +458,14 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowEmailInputModal(false)}
-                  className="min-h-[44px] px-3.5 py-2 bg-[#F1F8E9] border border-[#C8E6C9] text-[#1B5E3A] rounded-xl text-xs font-semibold hover:bg-[#D9F99D]/50 cursor-pointer"
+                  className="btn-outline min-h-[44px] text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleEmailSend}
-                  className="min-h-[44px] px-4 py-2 bg-[#1B5E3A] hover:bg-[#14462B] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="btn-primary min-h-[44px] text-xs"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Open Email Client</span>

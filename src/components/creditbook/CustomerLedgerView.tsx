@@ -392,29 +392,38 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
     window.print();
   };
 
+  const filteredDebitTotal = useMemo(
+    () => filteredTimelineEntries.reduce((sum, e) => sum + (e.debit || 0), 0),
+    [filteredTimelineEntries]
+  );
+  const filteredCreditTotal = useMemo(
+    () => filteredTimelineEntries.reduce((sum, e) => sum + (e.credit || 0), 0),
+    [filteredTimelineEntries]
+  );
+
   return (
     <div className="w-full max-w-3xl mx-auto space-y-4 pb-12 animate-in fade-in duration-200">
       {/* Header Card */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer"
+            className="btn-outline min-h-[44px] px-3 py-2 text-xs"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Customer 360</span>
           </button>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             {onOpenSalesAuditModal && (
               <button
                 type="button"
                 onClick={onOpenSalesAuditModal}
-                className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-amber-300 font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer border border-slate-700"
+                className="btn-outline min-h-[44px] sm:min-h-[38px] px-3 py-1.5 text-xs"
                 title="Audit and verify Today's Sales Entries at Net TP (15% Less)"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Net TP Audit</span>
               </button>
             )}
@@ -422,7 +431,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
             <button
               type="button"
               onClick={handleWhatsAppStatement}
-              className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+              className="btn-outline min-h-[44px] sm:min-h-[38px] px-3 py-1.5 text-xs text-emerald-700 dark:text-emerald-300"
               title="Share statement on WhatsApp"
             >
               <MessageCircle className="w-3.5 h-3.5" />
@@ -432,79 +441,81 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
             <button
               type="button"
               onClick={handleExportExcel}
-              className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+              className="btn-outline min-h-[44px] sm:min-h-[38px] px-3 py-1.5 text-xs"
               title="Export to Excel Spreadsheet"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400" />
               <span>Excel</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="btn-outline min-h-[44px] sm:min-h-[38px] px-3 py-1.5 text-xs"
+              title="Print Ledger Statement"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print</span>
             </button>
 
             <button
               type="button"
               onClick={handleExportPdf}
               disabled={isExporting}
-              className="min-h-[38px] px-3 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+              className="btn-primary min-h-[44px] sm:min-h-[38px] px-3.5 py-1.5 text-xs"
               title="Download Vector Ledger PDF"
             >
               <Download className={`w-3.5 h-3.5 ${isExporting ? 'animate-bounce' : ''}`} />
               <span>{isExporting ? 'Exporting...' : 'PDF'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
-              title="Print Ledger Statement"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print</span>
             </button>
           </div>
         </div>
 
         {/* Title */}
         <div>
-          <h1 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-teal-700 dark:text-teal-400" />
+          <h1 className="text-xl font-bold text-[#0F172A] dark:text-white flex items-center gap-2">
+            <FileText className="w-5 h-5 text-[#3B82F6] dark:text-blue-400" />
             Customer Ledger &amp; Khata Statement
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
             Authorized financial statement for <strong>{customer.companyName}</strong> ({customer.customerCode})
           </p>
         </div>
 
         {/* Search & Filter Control Bar */}
-        <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="space-y-2.5 pt-2 border-t border-[#E2E8F0] dark:border-slate-700/80">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search transactions by reference, description, amount..."
-                className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-slate-700 focus:border-teal-600 outline-hidden"
+                aria-label="Search ledger transactions"
+                className="w-full min-h-[44px] pl-10 pr-11 py-2 text-xs bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-white rounded-xl border border-[#E2E8F0] dark:border-slate-700 focus:border-[#3B82F6] outline-hidden"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  aria-label="Clear ledger search"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-slate-400 hover:text-[#0F172A] dark:hover:text-white cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
 
             {/* Direction Filter Toggle */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl shrink-0">
+            <div className="flex items-center gap-1 p-1 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl shrink-0">
               <button
                 type="button"
                 onClick={() => setDirectionFilter('ALL')}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                className={`min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   directionFilter === 'ALL'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs'
-                    : 'text-slate-500 dark:text-slate-400'
+                    ? 'bg-[#3B82F6] text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
                 }`}
               >
                 All
@@ -512,10 +523,10 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
               <button
                 type="button"
                 onClick={() => setDirectionFilter('DEBIT_ONLY')}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                className={`min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   directionFilter === 'DEBIT_ONLY'
-                    ? 'bg-teal-700 text-white shadow-2xs'
-                    : 'text-slate-500 dark:text-slate-400'
+                    ? 'bg-[#3B82F6] text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
                 }`}
               >
                 Debits
@@ -523,10 +534,10 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
               <button
                 type="button"
                 onClick={() => setDirectionFilter('CREDIT_ONLY')}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                className={`min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   directionFilter === 'CREDIT_ONLY'
-                    ? 'bg-emerald-700 text-white shadow-2xs'
-                    : 'text-slate-500 dark:text-slate-400'
+                    ? 'bg-[#3B82F6] text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
                 }`}
               >
                 Credits
@@ -537,10 +548,10 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
             <button
               type="button"
               onClick={() => setSortOrder((prev) => (prev === 'OLDEST_FIRST' ? 'NEWEST_FIRST' : 'OLDEST_FIRST'))}
-              className="px-2.5 py-1.5 text-[11px] font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer shrink-0 flex items-center gap-1 border border-slate-200/60 dark:border-slate-700/60"
+              className="min-h-[44px] px-3 py-1.5 text-xs font-semibold rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer shrink-0 flex items-center gap-1.5 border border-[#E2E8F0] dark:border-slate-700"
               title="Toggle Oldest First vs Newest First"
             >
-              <ArrowUpDown className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+              <ArrowUpDown className="w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400" />
               <span>{sortOrder === 'OLDEST_FIRST' ? 'Oldest First' : 'Newest First'}</span>
             </button>
           </div>
@@ -555,7 +566,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-full min-h-[38px] px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-hidden focus:border-teal-600"
+                className="w-full min-h-[44px] px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-mono tabular-nums text-[#0F172A] dark:text-white outline-hidden focus:border-[#3B82F6]"
               />
             </div>
             <div>
@@ -566,108 +577,108 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="w-full min-h-[38px] px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white outline-hidden focus:border-teal-600"
+                className="w-full min-h-[44px] px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-mono tabular-nums text-[#0F172A] dark:text-white outline-hidden focus:border-[#3B82F6]"
               />
             </div>
           </div>
         </div>
 
         {/* Financial Overview Grid strictly complying with Section 2 Financial Terminology */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Opening Balance</span>
-            <span className="text-sm font-black font-mono text-slate-900 dark:text-white mt-0.5 block truncate">
-              Rs. {openingBalance.toLocaleString()}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 items-stretch">
+          <div className="h-full flex flex-col justify-between bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 min-w-0">
+            <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block">Opening Balance</span>
+            <span className="text-sm font-bold font-mono tabular-nums text-[#0F172A] dark:text-white mt-1 block truncate">
+              PKR {openingBalance.toLocaleString()}
             </span>
           </div>
 
-          <div className="bg-teal-50 dark:bg-teal-950/30 p-3 rounded-2xl border border-teal-200 dark:border-teal-900">
-            <span className="text-[10px] font-extrabold uppercase text-teal-800 dark:text-teal-300 block">
+          <div className="h-full flex flex-col justify-between bg-blue-50/70 dark:bg-blue-950/30 p-3 rounded-xl border border-blue-200 dark:border-blue-800/60 min-w-0">
+            <span className="text-[10px] font-bold uppercase text-blue-700 dark:text-blue-300 block">
               Invoices ({invoiceCount} Posted)
             </span>
-            <span className="text-sm font-black font-mono text-teal-900 dark:text-teal-200 mt-0.5 block truncate">
-              Rs. {postedInvoicesTotal.toLocaleString()}
+            <span className="text-sm font-bold font-mono tabular-nums text-blue-900 dark:text-blue-200 mt-1 block truncate">
+              PKR {postedInvoicesTotal.toLocaleString()}
             </span>
           </div>
 
-          <div className="bg-emerald-50 dark:bg-emerald-950/30 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-900">
-            <span className="text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-300 block">
+          <div className="h-full flex flex-col justify-between bg-emerald-50/70 dark:bg-emerald-950/30 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/60 min-w-0">
+            <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300 block">
               Recovery ({confirmedRecoveries.length} Confirmed)
             </span>
-            <span className="text-sm font-black font-mono text-emerald-900 dark:text-emerald-200 mt-0.5 block truncate">
-              Rs. {confirmedRecoveriesTotal.toLocaleString()}
+            <span className="text-sm font-bold font-mono tabular-nums text-emerald-800 dark:text-emerald-200 mt-1 block truncate">
+              -PKR {confirmedRecoveriesTotal.toLocaleString()} CR
             </span>
           </div>
 
-          <div className="bg-[#1A2D42] p-3 rounded-2xl text-white shadow-xs">
-            <span className="text-[10px] font-extrabold uppercase text-teal-300 block">Closing Balance</span>
-            <span className="text-sm font-black font-mono text-white mt-0.5 block truncate">
-              Rs. {closingBalance.toLocaleString()}
+          <div className="h-full flex flex-col justify-between bg-[#0F172A] dark:bg-[#0B1120] p-3 rounded-xl border border-slate-700/80 text-white shadow-xs min-w-0">
+            <span className="text-[10px] font-bold uppercase text-blue-400 block">Closing Balance</span>
+            <span className="text-sm font-bold font-mono tabular-nums text-white mt-1 block truncate">
+              PKR {closingBalance.toLocaleString()}
             </span>
           </div>
         </div>
 
         {/* Operational Credit & Health Matrix */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1">
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] text-slate-400 block font-bold uppercase">Outstanding Balance</span>
-            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-              Rs. {outstandingBalance.toLocaleString()}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1 items-stretch">
+          <div className="h-full flex flex-col justify-between p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 min-w-0">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold uppercase">Outstanding Balance</span>
+            <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-slate-100 mt-0.5 truncate">
+              PKR {outstandingBalance.toLocaleString()}
             </span>
           </div>
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] text-slate-400 block font-bold uppercase">Invoice Count</span>
-            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+          <div className="h-full flex flex-col justify-between p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 min-w-0">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold uppercase">Invoice Count</span>
+            <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-slate-100 mt-0.5 truncate">
               {invoiceCount} Posted {pendingOrders.length > 0 ? `(${pendingOrders.length} Pending)` : ''}
             </span>
           </div>
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] text-slate-400 block font-bold uppercase">Recovery Days</span>
-            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+          <div className="h-full flex flex-col justify-between p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 min-w-0">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold uppercase">Recovery Days</span>
+            <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-slate-100 mt-0.5 truncate">
               {recoveryDays} Days
             </span>
           </div>
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] text-slate-400 block font-bold uppercase">Invoice Aging</span>
-            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+          <div className="h-full flex flex-col justify-between p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 min-w-0">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold uppercase">Invoice Aging</span>
+            <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-slate-100 mt-0.5 truncate">
               {invoiceAging}
             </span>
           </div>
         </div>
 
         {/* Authoritative Financial Rule Verification Banner */}
-        <div className="px-3.5 py-2.5 rounded-xl bg-teal-50 dark:bg-teal-950/50 border border-teal-200 dark:border-teal-900/60 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono tabular-nums">
-          <span className="text-teal-900 dark:text-teal-200 font-bold flex items-center gap-1.5">
+        <div className="px-3.5 py-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/35 border border-blue-200 dark:border-blue-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono tabular-nums">
+          <span className="text-[#0F172A] dark:text-blue-200 font-semibold flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             Opening ({openingBalance.toLocaleString()}) + Invoices ({postedInvoicesTotal.toLocaleString()}) - Recovery ({confirmedRecoveriesTotal.toLocaleString()}) = Closing ({closingBalance.toLocaleString()}) PKR
           </span>
-          <span className="text-teal-700 dark:text-teal-400 font-extrabold uppercase text-[10px]">
+          <span className="text-[#3B82F6] dark:text-blue-400 font-bold uppercase text-[10px]">
             Audited Khata Rule
           </span>
         </div>
       </div>
 
       {/* Ledger Transactions Table with Centered National Light Watermark */}
-      <div className="relative bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+      <div className="relative bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs overflow-hidden">
         <DocumentCenterWatermark title="CUSTOMER KHATA LEDGER" />
         <div className="relative z-10">
-        <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-4 bg-[#F8FAFC] dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-3">
           <NationalLightHeaderBrand size="sm" />
           <div className="flex items-center gap-3">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-slate-200 tabular-nums">
               Account Statement History ({filteredTimelineEntries.length} Transactions)
             </span>
-            <span className="text-[11px] font-bold text-slate-400 hidden sm:inline">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
               Invoices (+), Recovery (-), Balance
             </span>
           </div>
         </div>
 
         {filteredTimelineEntries.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-xs">
-            <FileText className="w-10 h-10 mx-auto mb-2 opacity-40 text-[#0D9488]" />
-            <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No Ledger Entries</p>
-            <p className="mt-1">Only the opening balance of Rs. {openingBalance.toLocaleString()} is currently on file.</p>
+          <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-xs">
+            <FileText className="w-10 h-10 mx-auto mb-2 opacity-40 text-[#3B82F6]" />
+            <p className="font-bold text-sm text-[#0F172A] dark:text-slate-200">No Ledger Entries</p>
+            <p className="mt-1 tabular-nums">Only the opening balance of PKR {openingBalance.toLocaleString()} is currently on file.</p>
           </div>
         ) : (
           <div className="w-full">
@@ -675,10 +686,10 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full border-collapse text-xs text-left">
                 <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-800/60 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                    <th className="py-3 pl-4">Date</th>
+                  <tr className="bg-[#0F172A] dark:bg-[#0B1120] text-[10px] font-bold uppercase tracking-wider text-slate-300 border-b border-slate-700/80">
+                    <th className="py-3 pl-4 pr-3 frozen-first-col bg-[#0F172A] dark:bg-[#0B1120]">Date</th>
                     <th className="py-3 px-2">Reference</th>
-                    <th className="py-3 px-2">Type</th>
+                    <th className="py-3 px-2 text-center">Type</th>
                     <th className="py-3 px-2">Particulars</th>
                     <th className="py-3 px-2 text-right">Debit (+)</th>
                     <th className="py-3 px-2 text-right">Credit (-)</th>
@@ -686,7 +697,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                     <th className="py-3 pr-4 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-800">
                   {filteredTimelineEntries.map((item) => {
                     const isDebit = item.debit > 0;
                     const dateObj = new Date(item.date);
@@ -699,43 +710,44 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                       : false;
 
                     return (
-                      <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="py-4 pl-4 font-mono tabular-nums text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                      <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3.5 pl-4 pr-3 frozen-first-col font-mono tabular-nums text-slate-500 dark:text-slate-400 whitespace-nowrap">
                           {dateObj.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </td>
-                        <td className="py-4 px-2 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                        <td className="py-3.5 px-2 font-mono tabular-nums font-bold text-[#0F172A] dark:text-white whitespace-nowrap">
                           {item.reference}
                         </td>
-                        <td className="py-4 px-2">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wide border ${
+                        <td className="py-3.5 px-2 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${
                             isDebit 
-                              ? 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800' 
-                              : 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/60' 
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/60'
                           }`}>
                             {isDebit ? 'Invoice' : 'Recovery'}
                           </span>
                         </td>
-                        <td className="py-4 px-2 text-slate-500 dark:text-slate-400 max-w-[200px] truncate" title={item.description}>
+                        <td className="py-3.5 px-2 text-slate-600 dark:text-slate-300 max-w-[200px] truncate" title={item.description}>
                           {item.description}
                         </td>
-                        <td className="py-4 px-2 text-right font-mono tabular-nums font-bold text-teal-700 dark:text-teal-400">
-                          {isDebit ? `Rs. ${item.debit.toLocaleString()}` : '-'}
+                        <td className="py-3.5 px-2 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-blue-300 whitespace-nowrap">
+                          {isDebit ? `PKR ${item.debit.toLocaleString()}` : '—'}
                         </td>
-                        <td className="py-4 px-2 text-right font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400">
-                          {!isDebit ? `Rs. ${item.credit.toLocaleString()}` : '-'}
+                        <td className="py-3.5 px-2 text-right font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                          {!isDebit ? `-PKR ${item.credit.toLocaleString()} CR` : '—'}
                         </td>
-                        <td className="py-4 px-2 text-right font-mono tabular-nums font-black text-slate-900 dark:text-white">
-                          Rs. {item.runningBalance?.toLocaleString()}
+                        <td className="py-3.5 px-2 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-white whitespace-nowrap">
+                          PKR {(item.runningBalance ?? 0).toLocaleString()}
                         </td>
-                        <td className="py-4 pr-4 text-center">
+                        <td className="py-3.5 pr-4 text-center">
                           <div className="flex items-center justify-center gap-1">
                             <button
                               type="button"
                               onClick={() => setSelectedDetailEntry(item)}
-                              className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer transition-colors"
+                              aria-label="View Transaction Details"
+                              className="w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 inline-flex items-center justify-center cursor-pointer transition-colors"
                               title="View Transaction Details"
                             >
-                              <Eye className="w-3.5 h-3.5" />
+                              <Eye className="w-4 h-4" />
                             </button>
                             {canManage && (
                               <button
@@ -744,10 +756,11 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                                   type: item.type === 'INVOICE' ? 'ORDER' : 'RECOVERY',
                                   data: rawOrder || rawRecovery,
                                 })}
-                                className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer transition-colors"
+                                aria-label="Edit or Cancel Entry"
+                                className="w-10 h-10 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 inline-flex items-center justify-center cursor-pointer transition-colors"
                                 title="Edit or Cancel / Reverse Entry"
                               >
-                                <Edit3 className="w-3.5 h-3.5" />
+                                <Edit3 className="w-4 h-4" />
                               </button>
                             )}
                           </div>
@@ -756,49 +769,69 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                     );
                   })}
                 </tbody>
+                <tfoot>
+                  <tr className="bg-[#F8FAFC] dark:bg-[#0F172A] border-t-2 border-[#E2E8F0] dark:border-slate-700 font-bold text-xs">
+                    <td className="py-3.5 pl-4 pr-3 frozen-first-col bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-white uppercase tracking-wider text-[10px]">
+                      Totals ({filteredTimelineEntries.length})
+                    </td>
+                    <td className="py-3.5 px-2 text-slate-500 dark:text-slate-400" colSpan={3}>
+                      Filtered Statement Totals
+                    </td>
+                    <td className="py-3.5 px-2 text-right font-mono tabular-nums text-[#0F172A] dark:text-blue-300 whitespace-nowrap">
+                      PKR {filteredDebitTotal.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-2 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                      -PKR {filteredCreditTotal.toLocaleString()} CR
+                    </td>
+                    <td className="py-3.5 px-2 text-right font-mono tabular-nums text-[#0F172A] dark:text-white whitespace-nowrap">
+                      PKR {closingBalance.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 pr-4" />
+                  </tr>
+                </tfoot>
               </table>
             </div>
 
             {/* Mobile Card View (< md) - Zero Horizontal Scroll */}
-            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="md:hidden divide-y divide-[#E2E8F0] dark:divide-slate-800">
               {filteredTimelineEntries.map((item) => {
                 const isDebit = item.debit > 0;
                 const dateObj = new Date(item.date);
                 return (
                   <div key={item.id} className="p-4 space-y-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono tabular-nums font-bold text-xs text-slate-900 dark:text-white uppercase">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono tabular-nums font-bold text-xs text-[#0F172A] dark:text-white uppercase">
                             {item.reference}
                           </span>
-                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase border ${
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${
                             isDebit 
-                              ? 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/40' 
-                              : 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/60' 
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/60'
                           }`}>
                             {isDebit ? 'Invoiced' : 'Recovered'}
                           </span>
                         </div>
-                        <div className="text-[10px] font-mono text-slate-400">
+                        <div className="text-[11px] font-mono tabular-nums text-slate-500 dark:text-slate-400">
                           {dateObj.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className={`text-xs font-black font-mono tabular-nums ${isDebit ? 'text-teal-700 dark:text-teal-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                          {isDebit ? `+ Rs. ${item.debit.toLocaleString()}` : `- Rs. ${item.credit.toLocaleString()}`}
+                      <div className="text-right shrink-0">
+                        <div className={`text-xs font-bold font-mono tabular-nums ${isDebit ? 'text-[#0F172A] dark:text-blue-300' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                          {isDebit ? `+PKR ${item.debit.toLocaleString()}` : `-PKR ${item.credit.toLocaleString()} CR`}
                         </div>
-                        <div className="text-[10px] font-mono tabular-nums font-bold text-slate-900 dark:text-white">
-                          Bal: Rs. {item.runningBalance?.toLocaleString()}
+                        <div className="text-[11px] font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
+                          Bal: PKR {(item.runningBalance ?? 0).toLocaleString()}
                         </div>
                       </div>
                     </div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-100 dark:border-slate-800/60">
+                    <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-[#F8FAFC] dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
                       {item.description}
                     </div>
                     {item.isPending && (
-                      <div className="flex items-center justify-between pt-1">
-                        <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tighter">
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tight">
                           Pending Shahzad Approval
                         </span>
                         {isApprover && (
@@ -814,9 +847,9 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                               setTimeout(() => setApprovingId(null), 1200);
                             }}
                             disabled={approvingId === item.id}
-                            className="h-8 px-3 rounded-lg bg-[#0D9488] hover:bg-[#0F766E] text-white font-black text-[10px] flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 active:scale-95 transition-all"
+                            className="btn-primary min-h-[44px] px-3.5 text-xs"
                           >
-                            <Check className="w-3 h-3" />
+                            <Check className="w-3.5 h-3.5" />
                             <span>{approvingId === item.id ? 'Wait...' : 'Approve'}</span>
                           </button>
                         )}
@@ -834,16 +867,24 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                       if (!canManage) return null;
 
                       return (
-                        <div className="flex justify-end pt-1">
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDetailEntry(item)}
+                            className="btn-outline min-h-[44px] px-3 text-xs"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Details</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => setSelectedEntryForManage({
                               type: item.type === 'INVOICE' ? 'ORDER' : 'RECOVERY',
                               data: rawOrder || rawRecovery,
                             })}
-                            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-colors"
+                            className="btn-outline min-h-[44px] px-3 text-xs"
                           >
-                            <Edit3 className="w-3 h-3" />
+                            <Edit3 className="w-3.5 h-3.5" />
                             <span>Edit / Cancel</span>
                           </button>
                         </div>
@@ -885,50 +926,51 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
 
       {/* Transaction Details Inspector Modal */}
       {selectedDetailEntry && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-md space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xl w-full max-w-md space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0] dark:border-slate-700/80">
               <div className="flex items-center gap-2">
-                <Info className="w-5 h-5 text-teal-700 dark:text-teal-400" />
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Transaction Details</h3>
+                <Info className="w-5 h-5 text-[#3B82F6] dark:text-blue-400" />
+                <h3 className="text-base font-bold text-[#0F172A] dark:text-white">Transaction Details</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedDetailEntry(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer"
+                aria-label="Close transaction details"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-[#0F172A] dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-2 text-xs font-mono">
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-slate-400">Reference:</span>
-                <span className="font-bold text-slate-900 dark:text-white">{selectedDetailEntry.reference}</span>
+            <div className="space-y-2 text-xs font-mono tabular-nums">
+              <div className="flex justify-between py-1.5 border-b border-[#E2E8F0] dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Reference</span>
+                <span className="font-bold text-[#0F172A] dark:text-white">{selectedDetailEntry.reference}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-slate-400">Date:</span>
+              <div className="flex justify-between py-1.5 border-b border-[#E2E8F0] dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Date</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">{selectedDetailEntry.date}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-slate-400">Type:</span>
-                <span className="font-bold text-teal-700 dark:text-teal-400">{selectedDetailEntry.type}</span>
+              <div className="flex justify-between py-1.5 border-b border-[#E2E8F0] dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Type</span>
+                <span className="font-bold text-[#3B82F6] dark:text-blue-400">{selectedDetailEntry.type}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-slate-400">Debit (+):</span>
-                <span className="font-bold text-teal-700 dark:text-teal-400">PKR {selectedDetailEntry.debit?.toLocaleString()}</span>
+              <div className="flex justify-between py-1.5 border-b border-[#E2E8F0] dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Debit (+)</span>
+                <span className="font-bold text-[#0F172A] dark:text-blue-300">PKR {selectedDetailEntry.debit?.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-slate-400">Credit (-):</span>
-                <span className="font-bold text-emerald-700 dark:text-emerald-400">PKR {selectedDetailEntry.credit?.toLocaleString()}</span>
+              <div className="flex justify-between py-1.5 border-b border-[#E2E8F0] dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Credit (-)</span>
+                <span className="font-bold text-emerald-700 dark:text-emerald-400">-PKR {selectedDetailEntry.credit?.toLocaleString()} CR</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-slate-400">Running Balance:</span>
-                <span className="font-bold text-slate-900 dark:text-white">PKR {selectedDetailEntry.runningBalance?.toLocaleString()}</span>
+              <div className="flex justify-between py-1.5 border-b border-[#E2E8F0] dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Running Balance</span>
+                <span className="font-bold text-[#0F172A] dark:text-white">PKR {selectedDetailEntry.runningBalance?.toLocaleString()}</span>
               </div>
               <div className="py-2">
-                <span className="text-slate-400 block mb-1">Description / Particulars:</span>
-                <p className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400 block mb-1">Description / Particulars</span>
+                <p className="text-slate-700 dark:text-slate-300 bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 font-sans">
                   {selectedDetailEntry.description}
                 </p>
               </div>
@@ -938,7 +980,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedDetailEntry(null)}
-                className="w-full py-2.5 bg-slate-900 text-white dark:bg-slate-800 font-bold text-xs rounded-xl hover:bg-slate-800 cursor-pointer transition-colors"
+                className="btn-outline w-full min-h-[44px] text-xs"
               >
                 Close Inspector
               </button>

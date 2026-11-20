@@ -349,21 +349,21 @@ export const PriceListModule: React.FC<PriceListModuleProps> = ({ currentUser })
                         <td className="py-3 px-3 text-center font-mono">
                           {sku.uom || 'PCS'} / {sku.packSize || sku.cartonQuantity}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono text-slate-500">
+                        <td className="py-3 px-3 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400">
                           {sku.purchasePrice !== null && sku.purchasePrice !== undefined
-                            ? `Rs. ${sku.purchasePrice.toLocaleString()}`
+                            ? `PKR ${sku.purchasePrice.toLocaleString()}`
                             : 'Not Set'}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
-                          Rs. {sku.tradePrice.toLocaleString()}
+                        <td className="py-3 px-3 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
+                          PKR {sku.tradePrice.toLocaleString()}
                         </td>
-                        <td className="py-3 px-3 text-center font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+                        <td className="py-3 px-3 text-center font-mono tabular-nums text-[#3B82F6] font-bold">
                           {sku.discountPercentage || '15%'}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono font-black text-emerald-700 dark:text-emerald-300">
-                          Rs. {sku.retailPrice.toLocaleString()}
+                        <td className="py-3 px-3 text-right font-mono tabular-nums font-black text-emerald-700 dark:text-emerald-400">
+                          PKR {sku.retailPrice.toLocaleString()}
                         </td>
-                        <td className="py-3 px-3 text-center font-mono text-[11px] text-slate-500">
+                        <td className="py-3 px-3 text-center font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400">
                           {sku.effectivePriceDate || '2026-01-01'}
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -371,7 +371,7 @@ export const PriceListModule: React.FC<PriceListModuleProps> = ({ currentUser })
                             <button
                               type="button"
                               onClick={() => openEditModal(sku)}
-                              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-bold inline-flex items-center gap-1 cursor-pointer"
+                              className="px-3 min-h-[44px] py-1.5 rounded-lg border border-[#E2E8F0] dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-[#3B82F6] font-bold inline-flex items-center gap-1 cursor-pointer"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                               <span>Edit Rate</span>
@@ -392,8 +392,8 @@ export const PriceListModule: React.FC<PriceListModuleProps> = ({ currentUser })
         </>
       ) : (
         /* Price History Log */
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-800 font-bold text-slate-900 dark:text-white">
+        <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 overflow-hidden">
+          <div className="p-4 border-b border-[#E2E8F0] dark:border-slate-700/80 font-bold text-[#0F172A] dark:text-white">
             Immutable Central Price Revision History
           </div>
           {history.length === 0 ? (
@@ -401,22 +401,22 @@ export const PriceListModule: React.FC<PriceListModuleProps> = ({ currentUser })
               No post-launch price revisions recorded yet. Authorized edits appear here with effective date &amp; actor.
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
               {history.map((entry) => (
                 <div key={entry.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="space-y-0.5">
-                    <div className="font-mono font-bold text-slate-900 dark:text-white">
+                    <div className="font-mono font-bold text-[#0F172A] dark:text-white">
                       {entry.skuCode} · {entry.skuName}
                     </div>
-                    <div className="text-slate-600 dark:text-slate-300">
-                      Trade: Rs. {entry.oldTradePrice} → <strong>Rs. {entry.newTradePrice}</strong> · Net List: Rs.{' '}
-                      {entry.oldListPrice} → <strong>Rs. {entry.newListPrice}</strong>
+                    <div className="text-slate-600 dark:text-slate-300 font-mono tabular-nums">
+                      Trade: PKR {entry.oldTradePrice} → <strong>PKR {entry.newTradePrice}</strong> · Net List: PKR{' '}
+                      {entry.oldListPrice} → <strong>PKR {entry.newListPrice}</strong>
                     </div>
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
                       Reason: {entry.reason} · Changed by <strong>{entry.changedBy}</strong>
                     </div>
                   </div>
-                  <div className="text-right font-mono text-[11px] text-slate-500 shrink-0">
+                  <div className="text-right font-mono tabular-nums text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
                     <div>Effective: {entry.effectiveDate}</div>
                     <div>Logged: {formatKarachiDateTime(entry.createdAt)}</div>
                   </div>

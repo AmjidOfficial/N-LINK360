@@ -291,14 +291,14 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
   return (
     <div className="w-full space-y-4 animate-in fade-in duration-200">
       {/* Top Header Card */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-800 text-white flex items-center justify-center font-bold shadow-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#0F172A] border border-slate-700 text-[#3B82F6] flex items-center justify-center font-bold shadow-xs shrink-0">
               <Clock className="w-5 h-5" />
             </div>
-            <div>
-              <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold text-[#0F172A] dark:text-white flex items-center gap-2 truncate">
                 Employee Attendance &amp; Live Geo-Tracker
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -309,14 +309,14 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* View Mode Toggle Switch */}
-            <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex items-center gap-1 border border-slate-200 dark:border-slate-700">
+            <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-1 rounded-xl flex items-center gap-1 border border-[#E2E8F0] dark:border-slate-700/80">
               <button
                 type="button"
                 onClick={() => setViewMode('TABLE')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'TABLE'
-                    ? 'bg-teal-800 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    ? 'bg-[#3B82F6] text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white'
                 }`}
               >
                 Ledger Table
@@ -324,10 +324,10 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
               <button
                 type="button"
                 onClick={() => setViewMode('LIVE_GEO_MAP')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                   viewMode === 'LIVE_GEO_MAP'
-                    ? 'bg-teal-800 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    ? 'bg-[#3B82F6] text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white'
                 }`}
               >
                 <Radio className="w-3.5 h-3.5 text-emerald-400" />
@@ -338,9 +338,9 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
             <button
               type="button"
               onClick={handleExportCsv}
-              className="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              className="btn-outline min-h-[44px]"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" />
               <span>Export CSV</span>
             </button>
           </div>
@@ -348,39 +348,38 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
 
         {/* Real-Time Status KPI Highlights */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+          <div className="bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl p-3.5 border border-[#E2E8F0] dark:border-slate-700/80">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block">
               Total Field Staff
             </span>
-            <span className="text-xl font-black text-slate-900 dark:text-white mt-0.5 block">
+            <span className="text-xl font-bold font-mono tabular-nums text-[#0F172A] dark:text-white mt-0.5 block">
               {stats.totalStaff}
             </span>
           </div>
 
-          <div className="bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl p-3.5 border border-emerald-200 dark:border-emerald-800/40">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-700 dark:text-emerald-300 block flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <div className="bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl p-3.5 border border-emerald-200 dark:border-emerald-800/40">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-700 dark:text-emerald-300 block">
               Active (On Duty Now)
             </span>
-            <span className="text-xl font-black text-emerald-700 dark:text-emerald-300 mt-0.5 block">
+            <span className="text-xl font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-300 mt-0.5 block">
               {stats.activeOnDuty} Officers
             </span>
           </div>
 
-          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
+          <div className="bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl p-3.5 border border-[#E2E8F0] dark:border-slate-700/80">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block">
               Completed Shifts
             </span>
-            <span className="text-xl font-black text-slate-700 dark:text-slate-300 mt-0.5 block">
+            <span className="text-xl font-bold font-mono tabular-nums text-slate-700 dark:text-slate-200 mt-0.5 block">
               {stats.completed}
             </span>
           </div>
 
-          <div className="bg-amber-50/60 dark:bg-amber-950/20 rounded-2xl p-3.5 border border-amber-200 dark:border-amber-800/30">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-amber-700 dark:text-amber-300 block">
+          <div className="bg-orange-50/60 dark:bg-orange-950/20 rounded-xl p-3.5 border border-orange-200 dark:border-orange-800/30">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#EA580C] dark:text-orange-300 block">
               Idle / Off-Duty
             </span>
-            <span className="text-xl font-black text-amber-700 dark:text-amber-300 mt-0.5 block">
+            <span className="text-xl font-bold font-mono tabular-nums text-[#EA580C] dark:text-orange-300 mt-0.5 block">
               {stats.idle}
             </span>
           </div>
@@ -390,21 +389,31 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
           {/* Search */}
           <div className="relative sm:col-span-2">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Search officer name, code, or town location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-teal-600"
+              className="w-full min-h-[44px] pl-9 pr-10 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           {/* Date Filter */}
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as any)}
-            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer"
+            className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-slate-200 outline-none focus:border-[#3B82F6] cursor-pointer"
           >
             <option value="ALL">All Dates</option>
             <option value="TODAY">Today Only</option>
@@ -417,20 +426,20 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer"
+            className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-slate-200 outline-none focus:border-[#3B82F6] cursor-pointer"
           >
             <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">● Active (On Duty Now)</option>
-            <option value="COMPLETED">✓ Completed Shift</option>
-            <option value="IDLE">○ Idle / Not Checked In</option>
+            <option value="ACTIVE">Active (On Duty Now)</option>
+            <option value="COMPLETED">Completed Shift</option>
+            <option value="IDLE">Idle / Not Checked In</option>
           </select>
         </div>
 
         {/* Custom Date Range Picker Inputs */}
         {(dateFilter === 'CUSTOM' || fromDate || toDate) && (
           <div className="pt-2 flex flex-wrap items-center gap-2 text-xs">
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="text-[10px] font-black uppercase text-slate-400">From Date:</span>
+            <div className="flex items-center gap-1.5 bg-[#F8FAFC] dark:bg-[#0F172A] p-2 rounded-xl border border-[#E2E8F0] dark:border-slate-700">
+              <span className="text-[10px] font-bold uppercase text-slate-400">From Date:</span>
               <input
                 type="date"
                 value={fromDate}
@@ -438,12 +447,12 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                   setFromDate(e.target.value);
                   if (dateFilter !== 'CUSTOM') setDateFilter('CUSTOM');
                 }}
-                className="bg-transparent font-mono font-bold text-slate-800 dark:text-slate-200 outline-none"
+                className="bg-transparent font-mono tabular-nums font-bold text-[#0F172A] dark:text-slate-200 outline-none"
               />
             </div>
 
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="text-[10px] font-black uppercase text-slate-400">To Date:</span>
+            <div className="flex items-center gap-1.5 bg-[#F8FAFC] dark:bg-[#0F172A] p-2 rounded-xl border border-[#E2E8F0] dark:border-slate-700">
+              <span className="text-[10px] font-bold uppercase text-slate-400">To Date:</span>
               <input
                 type="date"
                 value={toDate}
@@ -451,7 +460,7 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                   setToDate(e.target.value);
                   if (dateFilter !== 'CUSTOM') setDateFilter('CUSTOM');
                 }}
-                className="bg-transparent font-mono font-bold text-slate-800 dark:text-slate-200 outline-none"
+                className="bg-transparent font-mono tabular-nums font-bold text-[#0F172A] dark:text-slate-200 outline-none"
               />
             </div>
 
@@ -463,9 +472,9 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                   setToDate('');
                   setDateFilter('ALL');
                 }}
-                className="px-2.5 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold text-[10px] flex items-center gap-1 border border-rose-200 dark:border-rose-900 cursor-pointer"
+                className="btn-outline min-h-[40px] text-rose-600 dark:text-rose-400"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
                 <span>Reset Range</span>
               </button>
             )}
@@ -495,36 +504,36 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                 const dayRecoveryTotal = dayRecs.reduce((sum, r) => sum + (r.amount || 0), 0);
 
                 return (
-                  <div key={rec.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 shadow-sm">
-                    <div className="flex justify-between items-start">
+                  <div key={rec.id} className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 p-4 space-y-3 shadow-xs">
+                    <div className="flex justify-between items-start gap-2">
                       <div>
-                        <div className="text-[10px] font-black text-[#0D9488] uppercase tracking-wider">{rec.date}</div>
-                        <div className="font-bold text-slate-900 dark:text-white">{rec.employeeName}</div>
-                        <div className="text-[10px] text-slate-500 font-mono">{rec.employeeCode || 'NL-STAFF'}</div>
+                        <div className="text-[10px] font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400 uppercase tracking-wider">{rec.date}</div>
+                        <div className="font-bold text-[#0F172A] dark:text-white">{rec.employeeName}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">{rec.employeeCode || 'NL-STAFF'}</div>
                       </div>
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
                           isOnDuty
                             ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                         }`}
                       >
                         <span>{isOnDuty ? 'Active' : 'Completed'}</span>
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 py-2 border-y border-slate-50 dark:border-slate-800/50">
+                    <div className="grid grid-cols-2 gap-4 py-2 border-y border-[#E2E8F0] dark:border-slate-700/80">
                       <div>
                         <div className="text-[9px] uppercase font-bold text-slate-400">Check-In</div>
-                        <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">{rec.checkInTime || '09:00 AM'}</div>
-                        <div className="text-[10px] text-slate-500 truncate mt-0.5">{inLoc}</div>
+                        <div className="text-xs font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400">{rec.checkInTime || '09:00 AM'}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{inLoc}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-[9px] uppercase font-bold text-slate-400">Check-Out</div>
                         {rec.checkOutTime ? (
                           <>
-                            <div className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400">{rec.checkOutTime}</div>
-                            <div className="text-[10px] text-slate-500 truncate mt-0.5">{rec.checkOutLocation || inLoc}</div>
+                            <div className="text-xs font-mono tabular-nums font-bold text-rose-600 dark:text-rose-400">{rec.checkOutTime}</div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{rec.checkOutLocation || inLoc}</div>
                           </>
                         ) : (
                           <div className="text-xs text-slate-400 italic">On-Duty</div>
@@ -533,17 +542,17 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                     </div>
 
                     <div className="flex justify-between items-center text-[11px]">
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 font-mono tabular-nums">
                         <div>
-                          <span className="text-slate-400">Sales: </span>
-                          <span className="font-bold text-teal-600 dark:text-teal-400">Rs. {daySalesTotal.toLocaleString()}</span>
+                          <span className="text-slate-400 font-sans">Sales: </span>
+                          <span className="font-bold text-[#3B82F6] dark:text-blue-400">PKR {daySalesTotal.toLocaleString()}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400">Rec: </span>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400">Rs. {dayRecoveryTotal.toLocaleString()}</span>
+                          <span className="text-slate-400 font-sans">Rec: </span>
+                          <span className="font-bold text-[#10B981]">PKR {dayRecoveryTotal.toLocaleString()}</span>
                         </div>
                       </div>
-                      <div className="text-slate-500 font-bold">
+                      <div className="text-slate-500 dark:text-slate-400 font-mono tabular-nums font-bold">
                         {rec.workingHours ? `${rec.workingHours}h` : isOnDuty ? 'Active' : '8h'}
                       </div>
                     </div>
@@ -552,19 +561,19 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
                       <button
                         type="button"
                         onClick={() => handleOpenPinModalForRecord(rec)}
-                        className="flex-1 btn-outline min-h-[38px] text-[11px]"
+                        className="flex-1 btn-outline min-h-[44px]"
                       >
-                        <MapPin className="w-3.5 h-3.5" />
+                        <MapPin className="w-4 h-4 text-[#3B82F6]" />
                         <span>GPS Pin</span>
                       </button>
                       {(canUserEditEntry(rec, currentUser).allowed || canUserDeleteEntry(rec, currentUser).allowed) && (
                         <button
                           type="button"
                           onClick={() => setSelectedRecordForManage(rec)}
-                          className="px-3 min-h-[38px] rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                          className="btn-outline min-h-[44px]"
                           title="Edit or Delete attendance record"
                         >
-                          <Edit3 className="w-3.5 h-3.5" />
+                          <Edit3 className="w-4 h-4" />
                           <span>Edit / Delete</span>
                         </button>
                       )}
@@ -576,23 +585,23 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
           </div>
 
           {/* Desktop Table View (>= lg) */}
-          <div className="hidden lg:block bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+          <div className="hidden lg:block bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs overflow-hidden">
+            <div className="responsive-table-container">
+              <table className="w-full text-left text-xs border-collapse frozen-first-col">
                 <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <tr className="bg-[#F8FAFC] dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-slate-700/80 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     <th className="py-3 px-4">Date</th>
                     <th className="py-3 px-4">Field Officer</th>
-                    <th className="py-3 px-4">Real-Time Status</th>
+                    <th className="py-3 px-4 text-center">Real-Time Status</th>
                     <th className="py-3 px-4">Check-In Time</th>
                     <th className="py-3 px-4">Check-In Location (GPS Pin)</th>
                     <th className="py-3 px-4">Check-Out</th>
-                    <th className="py-3 px-4">Day Sales &amp; Recovery</th>
-                    <th className="py-3 px-4">Shift Duration</th>
-                    <th className="py-3 px-4 text-right">Map Pin Action</th>
+                    <th className="py-3 px-4 text-right">Day Sales &amp; Recovery</th>
+                    <th className="py-3 px-4 text-right">Shift Duration</th>
+                    <th className="py-3 px-4 text-center">Map Pin Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-800">
                   {filteredRecords.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-12 text-center text-slate-400">
@@ -613,50 +622,50 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
 
                       return (
                         <tr key={rec.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="py-3.5 px-4 font-mono font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">{rec.date}</td>
+                          <td className="py-3.5 px-4 font-mono tabular-nums font-bold text-[#0F172A] dark:text-slate-200 whitespace-nowrap">{rec.date}</td>
                           <td className="py-3.5 px-4">
-                            <span className="font-black text-slate-900 dark:text-white block">{rec.employeeName}</span>
-                            <span className="text-[10px] font-mono text-slate-400">{rec.employeeCode || 'NL-STAFF'}</span>
+                            <span className="font-bold text-[#0F172A] dark:text-white block">{rec.employeeName}</span>
+                            <span className="text-[10px] font-mono tabular-nums text-slate-400">{rec.employeeCode || 'NL-STAFF'}</span>
                           </td>
-                          <td className="py-3.5 px-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${isOnDuty ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
-                              <span className={`w-2 h-2 rounded-full ${isOnDuty ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                              <span>{isOnDuty ? 'Active' : 'Completed'}</span>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase ${isOnDuty ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+                              {isOnDuty ? 'Active' : 'Completed'}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4"><span className="font-mono font-black text-emerald-700 dark:text-emerald-400">{rec.checkInTime || '09:00 AM'}</span></td>
+                          <td className="py-3.5 px-4 font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">{rec.checkInTime || '09:00 AM'}</td>
                           <td className="py-3.5 px-4 max-w-[200px]">
-                            <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                              <MapPin className="w-3.5 h-3.5 text-teal-600" />
-                              <span className="truncate font-bold">{inLoc}</span>
+                            <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
+                              <MapPin className="w-3.5 h-3.5 text-[#3B82F6] shrink-0" />
+                              <span className="truncate font-semibold">{inLoc}</span>
                             </div>
-                            <span className="text-[10px] font-mono text-slate-400 block">{coords.lat.toFixed(4)}°N, {coords.lng.toFixed(4)}°E</span>
+                            <span className="text-[10px] font-mono tabular-nums text-slate-400 block">{coords.lat.toFixed(4)}°N, {coords.lng.toFixed(4)}°E</span>
                           </td>
                           <td className="py-3.5 px-4">
                             {rec.checkOutTime ? (
                               <div>
-                                <span className="font-mono font-black text-rose-700 dark:text-rose-400 block">{rec.checkOutTime}</span>
+                                <span className="font-mono tabular-nums font-bold text-rose-700 dark:text-rose-400 block">{rec.checkOutTime}</span>
                                 <span className="text-[10px] text-slate-400 truncate block max-w-[120px]">{outLoc}</span>
                               </div>
                             ) : <span className="text-slate-400 text-[11px]">— On-Duty —</span>}
                           </td>
-                          <td className="py-3.5 px-4 font-mono text-[11px]">
-                            <div className="text-teal-800 dark:text-teal-300">Sales: Rs. {daySalesTotal.toLocaleString()}</div>
-                            <div className="text-emerald-700 dark:text-emerald-400">Rec: Rs. {dayRecoveryTotal.toLocaleString()}</div>
+                          <td className="py-3.5 px-4 text-right font-mono tabular-nums text-[11px] whitespace-nowrap">
+                            <div className="text-[#3B82F6] dark:text-blue-400 font-semibold">Sales: PKR {daySalesTotal.toLocaleString()}</div>
+                            <div className="text-[#10B981] font-semibold">Rec: PKR {dayRecoveryTotal.toLocaleString()}</div>
                           </td>
-                          <td className="py-3.5 px-4 font-mono font-bold text-slate-700 dark:text-slate-300">{rec.workingHours ? `${rec.workingHours} hrs` : isOnDuty ? 'Active' : '8.0 hrs'}</td>
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button onClick={() => handleOpenPinModalForRecord(rec)} className="btn-outline px-3 py-1.5 text-[11px]">
-                                <MapPin className="w-3.5 h-3.5 text-teal-600" />
+                          <td className="py-3.5 px-4 text-right font-mono tabular-nums font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">{rec.workingHours ? `${rec.workingHours} hrs` : isOnDuty ? 'Active' : '8.0 hrs'}</td>
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="inline-flex items-center justify-center gap-1.5">
+                              <button type="button" onClick={() => handleOpenPinModalForRecord(rec)} className="btn-outline px-3 py-1.5 text-[11px]">
+                                <MapPin className="w-3.5 h-3.5 text-[#3B82F6]" />
                                 <span>View Map Pin</span>
                               </button>
                               {(canUserEditEntry(rec, currentUser).allowed || canUserDeleteEntry(rec, currentUser).allowed) && (
                                 <button
                                   type="button"
                                   onClick={() => setSelectedRecordForManage(rec)}
-                                  className="btn-outline px-2.5 py-1.5 text-[11px] text-slate-600 dark:text-slate-300"
+                                  className="btn-outline px-2.5 py-1.5 text-[11px]"
                                   title="Edit or Delete attendance record"
+                                  aria-label="Edit or Delete attendance record"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
                                 </button>
@@ -678,25 +687,24 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
       {/* 2. LIVE TEAM GEO-MAP RADAR VIEW */}
       {/* ==================================================== */}
       {viewMode === 'LIVE_GEO_MAP' && (
-        <div className="bg-slate-950 text-white rounded-3xl p-6 border border-teal-800/60 shadow-xl space-y-4">
+        <div className="bg-[#0F172A] text-white rounded-2xl p-5 sm:p-6 border border-slate-700/80 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-xl bg-teal-800 text-emerald-300">
+                <span className="p-1.5 rounded-lg bg-[#3B82F6]/20 text-[#3B82F6]">
                   <Radio className="w-4 h-4" />
                 </span>
                 <h3 className="text-sm font-black text-white">
                   Live Field Force GPS Radar &amp; Check-In Pins
                 </h3>
               </div>
-              <p className="text-[11px] text-teal-200/80 mt-0.5">
+              <p className="text-[11px] text-slate-400 mt-0.5">
                 Real-time active field officers plotted across Khyber Pakhtunkhwa &amp; Punjab commercial beats.
               </p>
             </div>
 
             <div className="flex items-center gap-2 text-xs">
-              <span className="px-3 py-1 rounded-xl bg-emerald-950 border border-emerald-500/50 text-emerald-300 font-bold flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold tabular-nums">
                 {stats.activeOnDuty} Active Pins Live
               </span>
             </div>
@@ -708,45 +716,40 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
               <div
                 key={item.officer.id}
                 onClick={() => handleOpenPinModalForOfficer(item)}
-                className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-teal-500 transition-all cursor-pointer space-y-2.5 shadow-sm group"
+                className="p-4 rounded-xl bg-[#1E293B] border border-slate-700/80 hover:border-[#3B82F6] transition-all cursor-pointer space-y-2.5 shadow-sm group"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-teal-800 text-white font-bold flex items-center justify-center text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-[#3B82F6] text-white font-bold flex items-center justify-center text-xs shrink-0">
                       {item.officer.avatarInitials}
                     </div>
-                    <div>
-                      <span className="font-black text-white group-hover:text-emerald-300 transition-colors block">
+                    <div className="min-w-0">
+                      <span className="font-black text-white group-hover:text-[#60A5FA] transition-colors block truncate">
                         {item.officer.fullName}
                       </span>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-[10px] text-slate-400 block truncate">
                         {item.officer.roleTitle} &bull; {item.town}
                       </span>
                     </div>
                   </div>
 
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase flex items-center gap-1 ${
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase shrink-0 ${
                       item.status === 'ACTIVE'
                         ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                         : 'bg-slate-800 text-slate-400 border border-slate-700'
                     }`}
                   >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        item.status === 'ACTIVE' ? 'bg-emerald-400' : 'bg-slate-400'
-                      }`}
-                    />
-                    <span>{item.status}</span>
+                    {item.status}
                   </span>
                 </div>
 
-                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-300">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-emerald-400" />
+                <div className="pt-2 border-t border-slate-700/80 flex items-center justify-between text-[11px] text-slate-300 gap-2">
+                  <span className="flex items-center gap-1 min-w-0">
+                    <MapPin className="w-3 h-3 text-[#3B82F6] shrink-0" />
                     <strong className="truncate max-w-[150px]">{item.route}</strong>
                   </span>
-                  <span className="text-teal-400 font-mono text-[10px]">
+                  <span className="text-slate-300 font-mono tabular-nums text-[10px] shrink-0">
                     {item.coords.lat.toFixed(3)}°N, {item.coords.lng.toFixed(3)}°E
                   </span>
                 </div>
@@ -760,19 +763,19 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
       {/* 3. VISUAL MAP PIN & LOCATION INSPECTOR MODAL */}
       {/* ==================================================== */}
       {selectedRecordForPin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-slate-900 text-white w-full max-w-lg rounded-3xl p-6 border border-teal-800 shadow-2xl space-y-4 text-xs relative overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-[#0F172A] text-white w-full max-w-lg rounded-2xl p-5 sm:p-6 border border-slate-700/80 shadow-2xl space-y-4 text-xs relative overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-teal-800 text-white flex items-center justify-center shadow-xs">
-                  <MapPin className="w-5 h-5 text-emerald-300" />
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-[#3B82F6]/20 text-[#3B82F6] flex items-center justify-center shrink-0">
+                  <MapPin className="w-5 h-5" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-black text-white">
                     Check-In Location &amp; Visual Map Pin
                   </h3>
-                  <p className="text-[11px] text-teal-200">
+                  <p className="text-[11px] text-slate-400">
                     Exact verified GPS telemetry and perimeter radius for last check-in.
                   </p>
                 </div>
@@ -780,27 +783,28 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
               <button
                 type="button"
                 onClick={() => setSelectedRecordForPin(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white"
+                className="min-w-[44px] min-h-[44px] -mr-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors"
+                aria-label="Close Map Inspector"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Officer Identification Banner */}
-            <div className="p-3.5 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-teal-800 text-white font-bold flex items-center justify-center text-xs">
+            <div className="p-3.5 bg-[#1E293B] rounded-xl border border-slate-700/80 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-[#3B82F6] text-white font-bold flex items-center justify-center text-xs shrink-0">
                   {selectedRecordForPin.officer?.avatarInitials ||
                     selectedRecordForPin.record?.employeeName?.slice(0, 2).toUpperCase() ||
                     'NL'}
                 </div>
-                <div>
-                  <span className="font-black text-white block">
+                <div className="min-w-0">
+                  <span className="font-black text-white block truncate">
                     {selectedRecordForPin.officer?.fullName ||
                       selectedRecordForPin.record?.employeeName ||
                       'Field Officer'}
                   </span>
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-slate-400 block truncate">
                     Assigned: <strong>{selectedRecordForPin.townName}</strong> &bull; {selectedRecordForPin.routeName}
                   </span>
                 </div>
@@ -808,70 +812,60 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
 
               {/* Status Badge */}
               <span
-                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase shrink-0 ${
                   selectedRecordForPin.status === 'ACTIVE'
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50'
                     : 'bg-slate-800 text-slate-300 border border-slate-700'
                 }`}
               >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    selectedRecordForPin.status === 'ACTIVE'
-                      ? 'bg-emerald-400'
-                      : 'bg-slate-400'
-                  }`}
-                />
-                <span>{selectedRecordForPin.status}</span>
+                {selectedRecordForPin.status}
               </span>
             </div>
 
             {/* Visual Vector Radar / Map Graphic */}
-            <div className="relative flex items-center justify-center p-3 rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden shadow-inner">
+            <div className="relative flex items-center justify-center p-3 rounded-xl bg-[#0B1120] border border-slate-800 overflow-hidden shadow-inner">
               <svg width="280" height="200" viewBox="0 0 280 200" className="relative z-10">
                 {/* Grid */}
                 <line x1="0" y1="100" x2="280" y2="100" stroke="#1e293b" strokeDasharray="4 4" />
                 <line x1="140" y1="0" x2="140" y2="200" stroke="#1e293b" strokeDasharray="4 4" />
 
                 {/* Concentric Radar Rings */}
-                <circle cx="140" cy="100" r="35" fill="none" stroke="#0f766e" strokeOpacity="0.4" />
-                <circle cx="140" cy="100" r="70" fill="none" stroke="#0f766e" strokeOpacity="0.3" />
+                <circle cx="140" cy="100" r="35" fill="none" stroke="#3B82F6" strokeOpacity="0.35" />
+                <circle cx="140" cy="100" r="70" fill="none" stroke="#3B82F6" strokeOpacity="0.25" />
 
                 {/* Geofence Perimeter Area */}
                 <circle
                   cx="140"
                   cy="100"
                   r="75"
-                  fill="rgba(16, 185, 129, 0.12)"
-                  stroke="#10b981"
+                  fill="rgba(59, 130, 246, 0.1)"
+                  stroke="#3B82F6"
                   strokeWidth="2"
                   strokeDasharray="6 3"
                 />
 
                 {/* Distance Connector */}
-                <line x1="140" y1="100" x2="165" y2="78" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 3" />
+                <line x1="140" y1="100" x2="165" y2="78" stroke="#60A5FA" strokeWidth="1.5" strokeDasharray="3 3" />
 
                 {/* Town Hub Center */}
-                <circle cx="140" cy="100" r="6" fill="#0d9488" />
+                <circle cx="140" cy="100" r="6" fill="#3B82F6" />
                 <circle cx="140" cy="100" r="2.5" fill="#ffffff" />
-                <text x="140" y="118" fill="#a7f3d0" fontSize="9" fontWeight="bold" textAnchor="middle">
+                <text x="140" y="118" fill="#CBD5E1" fontSize="9" fontWeight="bold" textAnchor="middle">
                   {selectedRecordForPin.townName} Center
                 </text>
 
                 {/* Officer Pin */}
                 <g transform="translate(165, 78)">
-                  <circle r="12" fill="rgba(16, 185, 129, 0.3)">
-                    <animate attributeName="r" values="8;16;8" dur="2s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.8;0;0.8" dur="2s" repeatCount="indefinite" />
-                  </circle>
+                  <circle r="10" fill="rgba(16, 185, 129, 0.25)" />
                   <circle r="5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
                   <text x="0" y="-9" fill="#ffffff" fontSize="9" fontWeight="900" textAnchor="middle">
-                    📍 Pin Locked
+                    Pin Locked
                   </text>
                 </g>
               </svg>
 
               {/* Accuracy Overlay */}
-              <div className="absolute top-2.5 right-3 bg-teal-950/90 border border-teal-700/60 px-2 py-0.5 rounded-lg text-[10px] font-bold text-teal-300 flex items-center gap-1 z-20">
+              <div className="absolute top-2.5 right-3 bg-[#1E293B] border border-slate-700 px-2.5 py-1 rounded-md text-[10px] font-bold text-slate-200 flex items-center gap-1 z-20 tabular-nums">
                 <Radio className="w-3 h-3 text-emerald-400" />
                 <span>GPS Accuracy: ±4m Locked</span>
               </div>
@@ -879,41 +873,41 @@ export const EmployeeAttendanceLedgerView: React.FC<EmployeeAttendanceLedgerView
 
             {/* GPS Telemetry Breakdown */}
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-800">
+              <div className="p-2.5 bg-[#1E293B] rounded-xl border border-slate-700/80">
                 <span className="text-[10px] text-slate-400 block font-medium">GPS Latitude / Longitude</span>
-                <span className="font-mono font-bold text-emerald-300 block mt-0.5">
+                <span className="font-mono tabular-nums font-bold text-emerald-400 block mt-0.5">
                   {selectedRecordForPin.coords.lat.toFixed(5)}° N, {selectedRecordForPin.coords.lng.toFixed(5)}° E
                 </span>
               </div>
 
-              <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-800">
+              <div className="p-2.5 bg-[#1E293B] rounded-xl border border-slate-700/80">
                 <span className="text-[10px] text-slate-400 block font-medium">Check-In Timestamp</span>
-                <span className="font-mono font-bold text-white block mt-0.5">
+                <span className="font-mono tabular-nums font-bold text-white block mt-0.5">
                   {selectedRecordForPin.checkInTime || '09:00 AM Today'}
                 </span>
               </div>
 
-              <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-800">
+              <div className="p-2.5 bg-[#1E293B] rounded-xl border border-slate-700/80">
                 <span className="text-[10px] text-slate-400 block font-medium">Geofence Validation</span>
                 <span className="font-bold text-emerald-400 block mt-0.5 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Inside 1.5 km Perimeter
                 </span>
               </div>
 
-              <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-800">
+              <div className="p-2.5 bg-[#1E293B] rounded-xl border border-slate-700/80">
                 <span className="text-[10px] text-slate-400 block font-medium">Shift Duration</span>
-                <span className="font-bold text-white block mt-0.5">
+                <span className="font-bold font-mono tabular-nums text-white block mt-0.5">
                   {selectedRecordForPin.duration || 'Active Shift'}
                 </span>
               </div>
             </div>
 
             {/* Action Footer */}
-            <div className="flex justify-end pt-2 border-t border-slate-800">
+            <div className="flex justify-end pt-3 border-t border-slate-800">
               <button
                 type="button"
                 onClick={() => setSelectedRecordForPin(null)}
-                className="px-4 py-2 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-black cursor-pointer text-xs"
+                className="btn-outline min-h-[44px] border-slate-600 text-white hover:bg-slate-800 text-xs"
               >
                 Close Map Inspector
               </button>

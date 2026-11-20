@@ -149,16 +149,16 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
   return (
     <div className="space-y-4 pb-20 animate-in fade-in duration-200">
       {/* 1. SHIFT STATUS CARD */}
-      <div className="rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 text-xs">
+      <div className="rounded-xl p-5 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0] dark:border-slate-700/80 text-xs">
           <span className="font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
             Field Shift Status
           </span>
           <span
-            className={`text-xs font-semibold ${
+            className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
               isCheckedIn
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-amber-600 dark:text-amber-400'
+                ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60'
+                : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60'
             }`}
           >
             {isCheckedIn ? 'On Duty' : 'Shift Pending'}
@@ -167,21 +167,21 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
 
         <div className="flex items-center justify-between py-1">
           <div>
-            <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold block">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold block">
               Working Hours Elapsed
             </span>
-            <div className="text-3xl font-bold font-mono tabular-nums text-slate-900 dark:text-white mt-1">
+            <div className="text-3xl font-bold font-mono tabular-nums text-[#0F172A] dark:text-white mt-1">
               {isCheckedIn ? elapsedString : '00h 00m'}
             </div>
-            <span className="text-xs text-slate-500 mt-1 block">
+            <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block">
               {isCheckedIn
                 ? `Started at ${checkedInTime || 'Active'}`
                 : 'Check-in to start field shift'}
             </span>
           </div>
 
-          <div className="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center">
-            <Clock className="w-7 h-7 text-[#0052FF] dark:text-blue-400" />
+          <div className="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/70 flex items-center justify-center shrink-0">
+            <Clock className="w-7 h-7 text-[#3B82F6]" />
           </div>
         </div>
 
@@ -192,7 +192,7 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
               triggerHaptic('medium');
               onCheckOut(selectedTown);
             }}
-            className="w-full min-h-[44px] py-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+            className="btn-danger w-full min-h-[44px] text-xs"
           >
             <LogOut className="w-4 h-4" />
             <span>Check-Out &amp; End Shift ({selectedTown})</span>
@@ -204,7 +204,7 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
               triggerHaptic('medium');
               onCheckIn(selectedTown);
             }}
-            className="w-full min-h-[44px] py-3 rounded-lg bg-[#0052FF] hover:bg-[#003ECC] text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+            className="btn-primary w-full min-h-[44px] text-xs"
           >
             <LogIn className="w-4 h-4" />
             <span>Check-In &amp; Start Shift ({selectedTown})</span>
@@ -213,10 +213,10 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
       </div>
 
       {/* 2. REAL GPS & TERRITORY WIDGET */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
-            <Navigation className="w-4 h-4 text-[#0052FF] dark:text-blue-400" />
+      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0] dark:border-slate-700/80">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#0F172A] dark:text-white">
+            <Navigation className="w-4 h-4 text-[#3B82F6]" />
             <span>Device GPS &amp; Territory</span>
           </div>
           <button
@@ -226,7 +226,7 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
               requestDeviceGps();
             }}
             disabled={isDetectingGps}
-            className="text-xs font-semibold text-[#0052FF] dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+            className="min-h-[44px] px-2 -mr-2 text-xs font-semibold text-[#3B82F6] dark:text-blue-400 hover:underline inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <Radio className={`w-3.5 h-3.5 ${isDetectingGps ? 'animate-spin' : ''}`} />
             <span>{isDetectingGps ? 'Locating...' : 'Refresh GPS'}</span>
@@ -240,9 +240,9 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+            <div className="p-2.5 rounded-lg bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80">
               <span className="text-[10px] text-slate-400 uppercase font-semibold block">Coordinates</span>
-              <span className="font-mono font-semibold text-slate-900 dark:text-white text-[11px] block mt-0.5">
+              <span className="font-mono tabular-nums font-semibold text-[#0F172A] dark:text-white text-[11px] block mt-0.5">
                 {gpsCoordinates
                   ? `${gpsCoordinates.lat.toFixed(4)}° N, ${gpsCoordinates.lng.toFixed(4)}° E`
                   : gpsStatus === 'LOCATING'
@@ -251,9 +251,9 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
               </span>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+            <div className="p-2.5 rounded-lg bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80">
               <span className="text-[10px] text-slate-400 uppercase font-semibold block">GPS Accuracy</span>
-              <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 text-[11px] block mt-0.5">
+              <span className="font-mono tabular-nums font-semibold text-emerald-600 dark:text-emerald-400 text-[11px] block mt-0.5">
                 {gpsCoordinates ? `±${gpsCoordinates.accuracy}m Verified` : 'Waiting for fix'}
               </span>
             </div>
@@ -261,17 +261,17 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
         )}
 
         <div className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5 pt-1">
-          <MapPin className="w-3.5 h-3.5 text-[#0052FF] dark:text-blue-400 shrink-0" />
+          <MapPin className="w-3.5 h-3.5 text-[#3B82F6] shrink-0" />
           <span className="truncate font-medium">
             <strong>{selectedTown}</strong> &middot; {selectedRoute || 'Commercial Route Beat'}
           </span>
         </div>
 
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+        <div className="pt-2 border-t border-[#E2E8F0] dark:border-slate-700/80 flex gap-2">
           <select
             value={selectedTown}
             onChange={(e) => onSelectTown(e.target.value)}
-            className="flex-1 p-2 rounded-lg text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-[#0052FF] cursor-pointer"
+            className="flex-1 min-h-[44px] px-3 py-2 rounded-lg text-xs font-semibold bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6] cursor-pointer"
           >
             {availableTowns.map((t) => (
               <option key={t} value={t}>
@@ -283,7 +283,7 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
           <button
             type="button"
             onClick={() => setShowPerimeterMap(!showPerimeterMap)}
-            className="px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+            className="btn-outline min-h-[44px] text-xs"
           >
             {showPerimeterMap ? 'Hide Map' : 'Perimeter'}
           </button>
@@ -303,13 +303,13 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
       </div>
 
       {/* 3. RECENT ATTENDANCE LEDGER */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
-            <History className="w-4 h-4 text-[#0052FF] dark:text-blue-400" />
+      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0] dark:border-slate-700/80">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#0F172A] dark:text-white">
+            <History className="w-4 h-4 text-[#3B82F6]" />
             <span>Recent Attendance History</span>
           </div>
-          <span className="text-[11px] text-slate-400 font-mono font-semibold">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums font-semibold">
             {recentRecords.length} Records
           </span>
         </div>
@@ -321,20 +321,20 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
             <p className="text-[11px]">Check-in above to record your first verified attendance shift.</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-200 dark:divide-slate-800 text-xs">
+          <div className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80 text-xs">
             {recentRecords.map((rec) => (
-              <div key={rec.id} className="py-2.5 flex items-center justify-between">
-                <div>
-                  <span className="font-semibold text-slate-900 dark:text-white block">
+              <div key={rec.id} className="py-2.5 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="font-semibold text-[#0F172A] dark:text-white block truncate">
                     {rec.date} &middot; {rec.checkInLocation || selectedTown}
                   </span>
-                  <span className="text-[11px] text-slate-400 font-mono">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
                     In: {rec.checkInTime} &middot; Out: {rec.checkOutTime || 'Active'}
                   </span>
                 </div>
 
-                <div className="text-right">
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                <div className="text-right shrink-0">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Verified
                   </span>

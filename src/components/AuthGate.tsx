@@ -59,19 +59,20 @@ export const AuthGate: React.FC<AuthGateProps> = ({
 
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     if (typeof localStorage !== 'undefined') {
-      return (localStorage.getItem('nlink_auth_theme') as 'dark' | 'light') || 'dark';
+      const stored = localStorage.getItem('nlink_theme_mode') || localStorage.getItem('nlink_auth_theme');
+      return stored === 'light' ? 'light' : 'dark';
     }
     return 'dark';
   });
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('nlink_theme_mode', theme);
       localStorage.setItem('nlink_auth_theme', theme);
     }
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      document.documentElement.setAttribute('data-theme', theme);
     }
   }, [theme]);
 
@@ -142,7 +143,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({
     <main
       id="nlink-auth-gate-container"
       className={`min-h-screen ${
-        isDark ? 'bg-[#070D1F] text-slate-100' : 'bg-slate-100 text-slate-900'
+        isDark ? 'bg-[#0B1120] text-slate-100' : 'bg-[#F8FAFC] text-slate-900'
       } flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans transition-colors duration-200`}
     >
       <div className="w-full max-w-[440px] z-10 my-auto">
@@ -153,17 +154,17 @@ export const AuthGate: React.FC<AuthGateProps> = ({
           className={`w-full ${
             isDark
               ? 'bg-[#0F172A] border-slate-800 text-slate-100'
-              : 'bg-white border-slate-200 text-slate-900 shadow-xl'
-          } border rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6 relative`}
+              : 'bg-white border-[#E2E8F0] text-slate-900 shadow-lg'
+          } border rounded-2xl p-6 sm:p-8 space-y-6 relative`}
         >
           {/* Theme Switcher */}
           <div className="absolute top-5 right-5">
             <button
               type="button"
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer border ${
+              className={`min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center transition-colors cursor-pointer border ${
                 isDark
-                  ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700'
+                  ? 'bg-[#1E293B] border-slate-700 text-orange-400 hover:bg-slate-700'
                   : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
               }`}
               title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
@@ -178,7 +179,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({
             <div className="flex justify-center">
               <div
                 className={`p-3 rounded-2xl ${
-                  isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
+                  isDark ? 'bg-[#1E293B] border-slate-700/80' : 'bg-slate-50 border-slate-200'
                 } border`}
               >
                 <NationalLightLogo
@@ -192,11 +193,11 @@ export const AuthGate: React.FC<AuthGateProps> = ({
             </div>
 
             <div>
-              <p className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
+              <p className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
                 Head Office &amp; Field Portal &middot; Peshawar
               </p>
               <h1 id="nlink-login-title" className={`text-2xl font-black tracking-tight mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                NATIONAL LIGHT <span className="text-emerald-500">360</span>
+                NATIONAL LIGHT <span className="text-[#F97316]">360</span>
               </h1>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'} font-medium mt-0.5`}>
                 Enterprise Resource Planning &amp; Financial Accounting
@@ -270,9 +271,9 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                     placeholder="name@nationallight.pk"
                     className={`w-full min-h-[46px] pl-10 pr-4 py-2.5 rounded-xl border ${
                       isDark
-                        ? 'border-slate-700 bg-slate-900 text-white placeholder:text-slate-500'
+                        ? 'border-slate-700 bg-[#1E293B] text-white placeholder:text-slate-500'
                         : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400'
-                    } text-xs font-semibold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all`}
+                    } text-xs font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
                   />
                 </div>
               </div>
@@ -293,7 +294,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                       setError('');
                       setNotice('');
                     }}
-                    className="text-[11px] font-semibold text-emerald-500 hover:text-emerald-400 transition-colors cursor-pointer"
+                    className="text-[11px] font-semibold text-blue-500 hover:text-blue-400 transition-colors cursor-pointer"
                   >
                     Forgot Password?
                   </button>
@@ -308,16 +309,16 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className={`w-full min-h-[46px] pl-10 pr-10 py-2.5 rounded-xl border ${
+                    className={`w-full min-h-[46px] pl-10 pr-11 py-2.5 rounded-xl border ${
                       isDark
-                        ? 'border-slate-700 bg-slate-900 text-white placeholder:text-slate-500'
+                        ? 'border-slate-700 bg-[#1E293B] text-white placeholder:text-slate-500'
                         : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400'
-                    } text-xs font-semibold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all`}
+                    } text-xs font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 cursor-pointer"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-300 cursor-pointer"
                     tabIndex={-1}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
@@ -329,18 +330,18 @@ export const AuthGate: React.FC<AuthGateProps> = ({
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full min-h-[48px] py-3 px-4 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full min-h-[48px] py-3 px-4 rounded-xl font-bold text-xs bg-[#F97316] hover:bg-[#EA580C] active:bg-[#C2410C] text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
               >
                 {submitting ? (
                   <span className="flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 animate-spin text-emerald-100" />
+                    <RefreshCw className="w-4 h-4 animate-spin text-orange-100" />
                     Authenticating...
                   </span>
                 ) : (
                   <>
-                    <ShieldCheck className="w-4 h-4 text-emerald-100" />
+                    <ShieldCheck className="w-4 h-4 text-orange-100" />
                     <span>Login</span>
-                    <ArrowRight className="w-4 h-4 text-emerald-100" />
+                    <ArrowRight className="w-4 h-4 text-orange-100" />
                   </>
                 )}
               </button>
@@ -363,7 +364,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                       setError('');
                       setNotice('');
                     }}
-                    className="text-[11px] font-semibold text-emerald-500 hover:text-emerald-400 transition-colors cursor-pointer"
+                    className="text-[11px] font-semibold text-blue-500 hover:text-blue-400 transition-colors cursor-pointer"
                   >
                     Back to Login
                   </button>
@@ -379,29 +380,29 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                     placeholder="name@nationallight.pk"
                     className={`w-full min-h-[46px] pl-10 pr-4 py-2.5 rounded-xl border ${
                       isDark
-                        ? 'border-slate-700 bg-slate-900 text-white placeholder:text-slate-500'
+                        ? 'border-slate-700 bg-[#1E293B] text-white placeholder:text-slate-500'
                         : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400'
-                    } text-xs font-semibold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all`}
+                    } text-xs font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
                   />
                 </div>
                 <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'} pt-1`}>
-                  A verifiable password recovery request will be logged and sent to Head Office administration (<span className="font-mono text-emerald-500">nationallights2026@gmail.com</span>). Verified employees receive a one-time temporary credential requiring immediate update.
+                  A verifiable password recovery request will be logged and sent to Head Office administration (<span className="font-mono text-blue-400">nationallights2026@gmail.com</span>). Verified employees receive a one-time temporary credential requiring immediate update.
                 </p>
               </div>
 
               <button
                 type="submit"
                 disabled={submitting || resetSent}
-                className="w-full min-h-[48px] py-3 px-4 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full min-h-[48px] py-3 px-4 rounded-xl font-bold text-xs bg-[#F97316] hover:bg-[#EA580C] text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
               >
                 {submitting ? (
                   <span className="flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 animate-spin text-emerald-100" />
+                    <RefreshCw className="w-4 h-4 animate-spin text-orange-100" />
                     Logging Recovery Request...
                   </span>
                 ) : (
                   <>
-                    <KeyRound className="w-4 h-4 text-emerald-100" />
+                    <KeyRound className="w-4 h-4 text-orange-100" />
                     <span>{resetSent ? 'Recovery Request Submitted' : 'Submit Recovery Request'}</span>
                   </>
                 )}
@@ -412,14 +413,14 @@ export const AuthGate: React.FC<AuthGateProps> = ({
           {/* Corporate Office Footer */}
           <div className={`pt-4 border-t ${isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-600'} text-center space-y-1 text-[10px]`}>
             <p className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-800'} flex items-center justify-center gap-1`}>
-              <Building2 className="w-3 h-3 text-emerald-500" />
+              <Building2 className="w-3 h-3 text-blue-500" />
               Office No GF 71, Sheikh Yaseen Tower, Peshawar
             </p>
-            <p className="font-mono text-slate-500">
+            <p className="font-mono tabular-nums text-slate-500 dark:text-slate-400">
               Ph: 091-2212700 &middot; Cell: 0303-5262872 / 0312-7876620
             </p>
-            <p className="text-[10px] text-slate-500 pt-0.5">
-              Central Admin: <span className="font-mono text-emerald-500">nationallights2026@gmail.com</span>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
+              Central Admin: <span className="font-mono text-blue-500">nationallights2026@gmail.com</span>
             </p>
           </div>
         </motion.div>

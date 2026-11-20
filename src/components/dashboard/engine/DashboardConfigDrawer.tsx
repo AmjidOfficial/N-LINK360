@@ -56,21 +56,21 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex justify-end bg-slate-950/70 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md h-full bg-white dark:bg-[#0E1A14] border-l border-slate-200 dark:border-emerald-900/60 flex flex-col"
+        className="w-full max-w-md h-full bg-white dark:bg-[#0F172A] border-l border-[#E2E8F0] dark:border-slate-700 flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-emerald-900/40 flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
-            <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-[#3B82F6] dark:text-blue-400">
               Admin Dashboard Governance
             </div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
               Configure Role Visibility
             </h2>
           </div>
@@ -78,7 +78,7 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close configuration"
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-emerald-800/70 text-slate-600 dark:text-emerald-300 cursor-pointer"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl border border-[#E2E8F0] dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -86,7 +86,7 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-emerald-300 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
               Target Role Profile
             </label>
             <select
@@ -96,7 +96,7 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
                 setHiddenKpis([]);
                 setHiddenCharts([]);
               }}
-              className="w-full min-h-[44px] rounded-xl border border-slate-200 dark:border-emerald-800/70 bg-slate-50 dark:bg-[#13241C] px-3 text-sm font-medium text-slate-900 dark:text-white"
+              className="w-full min-h-[44px] rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-slate-50 dark:bg-[#1E293B] px-3 text-sm font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
             >
               {(Object.keys(DEFAULT_ROLE_DASHBOARD_CONFIGS) as DashboardRoleKey[]).map((key) => (
                 <option key={key} value={key}>
@@ -104,13 +104,13 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
                 </option>
               ))}
             </select>
-            <p className="mt-1.5 text-[11px] text-slate-500 dark:text-emerald-200/60">
+            <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
               Visibility controls only; financial formulas and data scopes remain protected by system rules.
             </p>
           </div>
 
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-emerald-300 mb-2">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
               Visible KPI Cards
             </div>
             <div className="space-y-1.5">
@@ -119,14 +119,14 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
                 return (
                   <label
                     key={kpiId}
-                    className="flex items-center justify-between min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-emerald-900/40 bg-slate-50 dark:bg-[#111E17] cursor-pointer"
+                    className="flex items-center justify-between min-h-[44px] px-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-slate-50 dark:bg-[#1E293B] cursor-pointer"
                   >
-                    <span className="text-xs font-mono text-slate-800 dark:text-emerald-100">{kpiId}</span>
+                    <span className="text-xs font-mono text-[#0F172A] dark:text-slate-100">{kpiId}</span>
                     <input
                       type="checkbox"
                       checked={visible}
                       onChange={() => toggleKpi(kpiId)}
-                      className="w-4 h-4 accent-emerald-600"
+                      className="w-4 h-4 accent-[#3B82F6]"
                     />
                   </label>
                 );
@@ -136,7 +136,7 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
 
           {base.allowedCharts.length > 0 && (
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-emerald-300 mb-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
                 Visible Charts
               </div>
               <div className="space-y-1.5">
@@ -145,14 +145,14 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
                   return (
                     <label
                       key={chartId}
-                      className="flex items-center justify-between min-h-[44px] px-3 rounded-xl border border-slate-200 dark:border-emerald-900/40 bg-slate-50 dark:bg-[#111E17] cursor-pointer"
+                      className="flex items-center justify-between min-h-[44px] px-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-slate-50 dark:bg-[#1E293B] cursor-pointer"
                     >
-                      <span className="text-xs font-mono text-slate-800 dark:text-emerald-100">{chartId}</span>
+                      <span className="text-xs font-mono text-[#0F172A] dark:text-slate-100">{chartId}</span>
                       <input
                         type="checkbox"
                         checked={visible}
                         onChange={() => toggleChart(chartId)}
-                        className="w-4 h-4 accent-emerald-600"
+                        className="w-4 h-4 accent-[#3B82F6]"
                       />
                     </label>
                   );
@@ -162,11 +162,11 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
           )}
         </div>
 
-        <div className="p-4 border-t border-slate-100 dark:border-emerald-900/40 flex items-center justify-end gap-2">
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[44px] px-4 rounded-xl border border-slate-200 dark:border-emerald-800 text-xs font-semibold text-slate-700 dark:text-emerald-200 cursor-pointer"
+            className="btn-outline min-h-[44px]"
           >
             Cancel
           </button>
@@ -174,7 +174,7 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
             type="button"
             disabled={isSaving}
             onClick={handleSave}
-            className="min-h-[44px] px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="btn-primary min-h-[44px]"
           >
             <Save className="w-4 h-4" />
             <span>{isSaving ? 'Saving...' : 'Save Configuration'}</span>

@@ -381,8 +381,8 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
   if (bookedOrder) {
     const { order, customer } = bookedOrder;
     return (
-      <div className="bg-white dark:bg-[#111C33] rounded-2xl border border-[#E2E8F0] dark:border-slate-800 p-6 text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950 text-[#10B981] mx-auto flex items-center justify-center">
+      <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 p-6 text-center space-y-4">
+        <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-950/70 text-[#10B981] mx-auto flex items-center justify-center">
           <CheckCircle2 className="w-7 h-7" />
         </div>
         <div>
@@ -394,15 +394,15 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
           </p>
         </div>
 
-        <div className="max-w-md mx-auto bg-[#F8FAFC] dark:bg-slate-800/60 rounded-xl p-3.5 border border-[#E2E8F0] dark:border-slate-700 text-xs space-y-1.5 text-left">
+        <div className="max-w-md mx-auto bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 text-xs space-y-2 text-left">
           <div className="flex justify-between">
-            <span className="text-slate-500">Order Amount</span>
+            <span className="text-slate-500 dark:text-slate-400">Order Amount</span>
             <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
-              Rs. {Number(order.totalAmount || 0).toLocaleString()}
+              PKR {Number(order.totalAmount || 0).toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">SKUs Ordered</span>
+            <span className="text-slate-500 dark:text-slate-400">SKUs Ordered</span>
             <span className="font-mono tabular-nums font-semibold text-slate-700 dark:text-slate-200">
               {order.items?.length || 0}
             </span>
@@ -456,18 +456,18 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
   return (
     <div className="space-y-3 w-full overflow-x-hidden">
       {/* Dealer / Distributor Selector & High-Visibility Full-Width Search */}
-      <div className="bg-white rounded-2xl border border-[#C8E6C9] p-3.5 space-y-3 shadow-xs">
+      <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 p-4 space-y-3 shadow-xs">
         <div className="grid grid-cols-1 gap-3">
           {/* Dealer Selector */}
           <div className="min-w-0">
-            <label className="block text-[11px] font-semibold text-[#3E6B48] mb-1">
+            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
               Dealer / Distributor
             </label>
             {preselectedCustomer ? (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#F1F8E9] border border-[#C8E6C9] text-xs font-bold text-[#1B5E3A] min-w-0">
-                <Building2 className="w-4 h-4 text-[#4CAF50] shrink-0" />
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-bold text-[#0F172A] dark:text-slate-100 min-w-0">
+                <Building2 className="w-4 h-4 text-[#3B82F6] dark:text-blue-400 shrink-0" />
                 <span className="truncate">{preselectedCustomer.companyName}</span>
-                <span className="text-[11px] font-normal text-[#5F8564] ml-auto shrink-0">
+                <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400 ml-auto shrink-0">
                   {preselectedCustomer.town || preselectedCustomer.city}
                 </span>
               </div>
@@ -475,7 +475,7 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
               <select
                 value={activeCustomer?.id || ''}
                 onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="w-full min-h-[44px] px-3 py-2.5 rounded-xl bg-[#F1F8E9] border border-[#C8E6C9] text-xs font-semibold text-[#1B5E3A] outline-none focus:border-[#4CAF50]"
+                className="w-full min-h-[44px] px-3 py-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-semibold text-[#0F172A] dark:text-slate-100 outline-none focus:border-[#3B82F6]"
               >
                 {availableCustomers.length === 0 ? (
                   <option value="">No Dealers / Distributors in Active Town</option>
@@ -492,26 +492,26 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
 
           {/* High-Visibility Full-Width Real-Time Search SKU */}
           <div className="min-w-0">
-            <label className="block text-[11px] font-semibold text-[#3E6B48] mb-1">
+            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
               Search SKU (Real-Time Filter)
             </label>
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
               <div className="relative flex-1 min-w-0">
-                <Search className="w-4 h-4 text-[#1B5E3A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-slate-400 dark:text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Type SKU name or code to filter..."
                   aria-label="Search SKU name or code"
-                  className="w-full min-h-[46px] pl-10 pr-10 py-2.5 rounded-xl bg-[#F1F8E9] border-2 border-[#4CAF50]/70 text-sm font-semibold text-[#1B5E3A] placeholder:text-[#5F8564] outline-none focus:border-[#1B5E3A] focus:bg-white transition-colors"
+                  className="w-full min-h-[46px] pl-10 pr-12 py-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-sm font-semibold text-[#0F172A] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-[#3B82F6] focus:bg-white dark:focus:bg-[#0B1120] transition-colors"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
                     aria-label="Clear search"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-[#3E6B48] hover:text-[#1B5E3A] hover:bg-[#D9F99D]/60 cursor-pointer"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800 cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -520,7 +520,7 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
               <button
                 type="button"
                 onClick={() => setSearchQuery((q) => q.trim())}
-                className="min-h-[46px] px-4 py-2 rounded-xl bg-[#1B5E3A] hover:bg-[#14462B] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 cursor-pointer transition-colors"
+                className="min-h-[46px] px-4 py-2 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-semibold flex items-center justify-center gap-2 shrink-0 cursor-pointer transition-colors"
               >
                 <Search className="w-4 h-4" />
                 <span>Search</span>
@@ -531,16 +531,16 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
       </div>
 
       {/* Keyboard Quick Navigation Hint */}
-      <div className="flex items-center justify-between px-2 text-[10px] text-[#5F8564] font-medium">
+      <div className="flex items-center justify-between px-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
         <span>↑ ↓ ← → Arrow keys move between Cartons &amp; Packs (Down wraps around to top)</span>
         <span className="hidden sm:inline">Enter key advances</span>
       </div>
 
       {/* Full Large-Screen All-SKU 5-Column CSS Grid: SKU | Rate | Ctn | Packs | Total */}
-      <div className="bg-white rounded-2xl border border-[#C8E6C9] overflow-x-hidden shadow-xs w-full min-w-0 flex flex-col">
+      <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 overflow-x-hidden shadow-xs w-full min-w-0 flex flex-col">
         <div className="w-full min-w-0 h-[70vh] sm:h-[74vh] md:h-[78vh] max-h-[calc(100dvh-200px)] overflow-y-auto overflow-x-hidden overscroll-contain">
           {/* Pinned Sticky Header Row (high z-index, zero horizontal scroll) */}
-          <div className="sticky top-0 z-30 bg-[#1B5E3A] text-white text-[10px] sm:text-xs font-bold grid grid-cols-12 items-center gap-1.5 px-2 sm:px-3 py-3 shadow-md w-full min-w-0 overflow-x-hidden select-none">
+          <div className="sticky top-0 z-30 bg-[#0F172A] dark:bg-[#0B1120] text-slate-100 border-b border-slate-700/80 text-[10px] sm:text-xs font-bold grid grid-cols-12 items-center gap-1.5 px-2 sm:px-3 py-3 shadow-md w-full min-w-0 overflow-x-hidden select-none">
             <div className="col-span-4 min-w-0 truncate">SKU ITEM</div>
             <div className="col-span-2 min-w-0 text-right truncate">RATE</div>
             <div className="col-span-2 min-w-0 text-center truncate">CTN</div>
@@ -549,9 +549,9 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
           </div>
 
           {/* Responsive SKU Grid Rows */}
-          <div className="divide-y divide-[#C8E6C9] w-full min-w-0 overflow-x-hidden">
+          <div className="divide-y divide-[#E2E8F0] dark:divide-slate-800 w-full min-w-0 overflow-x-hidden">
             {filteredSkus.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-500">
+              <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400">
                 No SKUs match your search query.
               </div>
             ) : (
@@ -570,14 +570,14 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
                   key={sku.id}
                   className={`grid grid-cols-12 items-center gap-1.5 px-2 sm:px-3 py-2.5 transition-colors w-full min-w-0 ${
                     hasQty
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900'
-                      : 'bg-white dark:bg-[#111C33] border-b border-slate-100 dark:border-slate-800'
+                      ? 'bg-blue-50/70 dark:bg-blue-950/35 border-b border-blue-200/70 dark:border-blue-800/60'
+                      : 'bg-white dark:bg-[#1E293B] border-b border-slate-100 dark:border-slate-800'
                   }`}
                 >
                   {/* Col 1: SKU Name */}
                   <div className="col-span-4 min-w-0 pr-1">
-                    <div className="font-bold text-slate-900 dark:text-white text-[11px] sm:text-xs leading-tight line-clamp-2">{sku.name}</div>
-                    <div className="text-[9px] text-slate-500 font-mono truncate">{sku.skuCode}</div>
+                    <div className="font-bold text-[#0F172A] dark:text-white text-[11px] sm:text-xs leading-tight line-clamp-2">{sku.name}</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">{sku.skuCode}</div>
                   </div>
 
                   {/* Col 2: Rate */}
@@ -599,7 +599,7 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
                       onChange={(e) => handleUnitChange(sku.id, 'cartons', e.target.value)}
                       onFocus={(e) => e.target.select()}
                       onKeyDown={(e) => handleKeyDown(e, idx, 0)}
-                      className="w-full max-w-[56px] min-h-[44px] text-center font-mono text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:border-emerald-500 outline-none"
+                      className="w-full max-w-[56px] min-h-[44px] text-center font-mono tabular-nums text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-[#0F172A] text-[#0F172A] dark:text-white focus:border-[#3B82F6] outline-none"
                     />
                   </div>
 
@@ -617,12 +617,12 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
                       onChange={(e) => handleUnitChange(sku.id, 'packs', e.target.value)}
                       onFocus={(e) => e.target.select()}
                       onKeyDown={(e) => handleKeyDown(e, idx, 1)}
-                      className="w-full max-w-[56px] min-h-[44px] text-center font-mono text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:border-emerald-500 outline-none"
+                      className="w-full max-w-[56px] min-h-[44px] text-center font-mono tabular-nums text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-[#0F172A] text-[#0F172A] dark:text-white focus:border-[#3B82F6] outline-none"
                     />
                   </div>
 
                   {/* Col 5: Total */}
-                  <div className="col-span-2 min-w-0 text-right text-[11px] sm:text-xs font-black text-emerald-700 dark:text-emerald-300 font-mono tabular-nums truncate">
+                  <div className="col-span-2 min-w-0 text-right text-[11px] sm:text-xs font-black text-[#0F172A] dark:text-blue-300 font-mono tabular-nums truncate">
                     {lineTotal > 0 ? lineTotal.toLocaleString() : '—'}
                   </div>
                 </div>
@@ -633,24 +633,24 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
         </div>
 
         {/* Sticky Order Summary & Submit Footer */}
-        <div className="p-3.5 border-t border-[#C8E6C9] bg-[#F1F8E9] rounded-b-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 border-t border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-b-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-4 text-xs">
             <div>
-              <span className="text-[#5F8564] block text-[10px]">Selected SKUs</span>
-              <span className="font-mono tabular-nums font-bold text-[#1B5E3A]">
+              <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Selected SKUs</span>
+              <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
                 {orderSummary.activeSkuCount}
               </span>
             </div>
             <div>
-              <span className="text-[#5F8564] block text-[10px]">Ctn + Packs</span>
-              <span className="font-mono tabular-nums font-bold text-[#1B5E3A]">
+              <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Ctn + Packs</span>
+              <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
                 {orderSummary.totalCartons} Ctn + {orderSummary.totalPacks} Pks
               </span>
             </div>
             <div>
-              <span className="text-[#5F8564] block text-[10px]">Total Amount</span>
-              <span className="font-mono tabular-nums font-bold text-sm text-[#4CAF50]">
-                Rs. {orderSummary.grossAmount.toLocaleString()}
+              <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Total Amount</span>
+              <span className="font-mono tabular-nums font-bold text-sm text-[#F97316] dark:text-orange-400">
+                PKR {orderSummary.grossAmount.toLocaleString()}
               </span>
             </div>
           </div>

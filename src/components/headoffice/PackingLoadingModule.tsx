@@ -138,7 +138,7 @@ export const PackingLoadingModule: React.FC<PackingLoadingModuleProps> = ({
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800">
+      <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -146,14 +146,14 @@ export const PackingLoadingModule: React.FC<PackingLoadingModuleProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search order # or customer..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+            className="w-full min-h-[44px] pl-10 pr-4 py-2 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#0F172A] text-xs font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
         {list.length === 0 ? (
-          <div className="col-span-full p-12 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs">
+          <div className="col-span-full p-12 text-center text-slate-400 bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 text-xs">
             <CheckCircle2 className="w-9 h-9 mx-auto mb-2 opacity-40 text-emerald-500" />
             <p className="font-bold text-sm text-slate-700 dark:text-slate-300">
               {viewQueue === 'AWAITING_PACKING' ? 'No approved orders awaiting packing' : 'No packed orders recorded yet'}
@@ -161,44 +161,46 @@ export const PackingLoadingModule: React.FC<PackingLoadingModuleProps> = ({
           </div>
         ) : (
           list.map((order) => (
-            <div key={order.id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 text-xs">
-              <div className="flex justify-between items-start gap-2">
-                <div>
-                  <div className="font-mono font-bold text-sm text-slate-900 dark:text-white">
-                    Order #{order.orderNumber}
+            <div key={order.id} className="bg-white dark:bg-[#1E293B] p-5 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between h-full space-y-3 text-xs">
+              <div className="space-y-3">
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <div className="font-mono tabular-nums font-bold text-sm text-[#0F172A] dark:text-white">
+                      Order #{order.orderNumber}
+                    </div>
+                    <div className="text-slate-600 dark:text-slate-300 font-semibold mt-0.5">
+                      {order.customerName}
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+                      Booked by {order.salesUserName} &middot; {order.orderDate || order.createdAt.slice(0, 10)}
+                    </div>
                   </div>
-                  <div className="text-slate-600 dark:text-slate-300 font-semibold mt-0.5">
-                    {order.customerName}
-                  </div>
-                  <div className="text-[11px] text-slate-500">
-                    Booked by {order.salesUserName} &middot; {order.orderDate || order.createdAt.slice(0, 10)}
-                  </div>
+                  <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                    {order.status}
+                  </span>
                 </div>
-                <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                  {order.status}
-                </span>
-              </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                <span className="text-slate-500">
-                  SKUs: <strong className="text-slate-900 dark:text-white font-mono">{order.items?.length || 0}</strong>
-                </span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">
-                  Rs. {(order.netAmount ?? order.totalAmount ?? 0).toLocaleString()}
-                </span>
-              </div>
-
-              {order.packingRecord && (
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Packed by <strong>{order.packingRecord.packedBy}</strong> &middot; {order.packingRecord.totalCartons} cartons &middot; {order.packingRecord.loadingRemarks}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    SKUs: <strong className="text-[#0F172A] dark:text-white font-mono tabular-nums">{order.items?.length || 0}</strong>
+                  </span>
+                  <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
+                    PKR {(order.netAmount ?? order.totalAmount ?? 0).toLocaleString()}
+                  </span>
                 </div>
-              )}
+
+                {order.packingRecord && (
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Packed by <strong>{order.packingRecord.packedBy}</strong> &middot; <span className="font-mono tabular-nums">{order.packingRecord.totalCartons} cartons</span> &middot; {order.packingRecord.loadingRemarks}
+                  </div>
+                )}
+              </div>
 
               {viewQueue === 'AWAITING_PACKING' && (
                 <button
                   type="button"
                   onClick={() => openPackingChecklist(order)}
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                  className="btn-primary w-full min-h-[44px] py-2.5 rounded-xl font-bold inline-flex items-center justify-center gap-2 cursor-pointer transition-colors mt-auto"
                 >
                   <ClipboardCheck className="w-4 h-4" />
                   <span>Verify Picking &amp; Mark PACKED</span>
@@ -212,18 +214,19 @@ export const PackingLoadingModule: React.FC<PackingLoadingModuleProps> = ({
       {/* Picking & Packing Verification Modal */}
       {activeOrder && (
         <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col text-xs">
-            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#1E293B] w-full max-w-2xl rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col text-xs">
+            <div className="p-5 bg-[#0F172A] text-white border-b border-slate-700/80 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                <h3 className="text-base font-bold text-white font-mono tabular-nums">
                   Packing Checklist &middot; Order #{activeOrder.orderNumber}
                 </h3>
-                <p className="text-slate-500">{activeOrder.customerName}</p>
+                <p className="text-slate-300">{activeOrder.customerName}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setActiveOrder(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                aria-label="Close modal"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 inline-flex items-center justify-center cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>

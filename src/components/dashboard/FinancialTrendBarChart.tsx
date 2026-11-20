@@ -61,24 +61,24 @@ export const FinancialTrendBarChart: React.FC<FinancialTrendBarChartProps> = ({
 
   return (
     <div
-      className={`rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 ${className}`}
+      className={`rounded-2xl p-5 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-4 ${className}`}
     >
       {/* Header & Legend */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/70 pb-3">
         <div>
           <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC] flex items-center gap-1.5">
-            <BarChart3 className="w-4 h-4 text-[#0D9488] dark:text-teal-400" />
+            <BarChart3 className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
             Sales &amp; Recovery Realization Trend
           </h2>
-          <p className="text-xs text-slate-500 font-normal mt-0.5">
-            6-month realization comparison (PKR) &middot; Supabase Authoritative
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
+            6-month realization comparison (PKR) &middot; Authoritative Ledger
           </p>
         </div>
 
         {/* Legend */}
         <div className="flex items-center gap-3 text-xs font-semibold">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#0B132B] dark:bg-[#0D9488]" />
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#3B82F6]" />
             <span className="text-slate-600 dark:text-slate-300 text-[11px]">Sales</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -93,7 +93,7 @@ export const FinancialTrendBarChart: React.FC<FinancialTrendBarChartProps> = ({
         <div className="h-48 flex flex-col items-center justify-center text-center text-slate-400 text-xs space-y-1">
           <BarChart3 className="w-7 h-7 opacity-40" />
           <p className="font-semibold text-slate-600 dark:text-slate-300">No 6-Month Transaction History Yet</p>
-          <p className="text-[11px]">Monthly bars populate automatically as sales orders and recoveries are recorded.</p>
+          <p className="text-[11px] dark:text-slate-400">Monthly bars populate automatically as sales orders and recoveries are recorded.</p>
         </div>
       ) : (
         <div className="pt-2">
@@ -111,22 +111,22 @@ export const FinancialTrendBarChart: React.FC<FinancialTrendBarChartProps> = ({
                   className="flex-1 flex flex-col items-center justify-end h-full relative group cursor-pointer"
                 >
                   {isHovered && (
-                    <div className="absolute -top-12 z-20 bg-slate-900 text-white text-[10px] font-mono px-2.5 py-1.5 rounded-lg shadow-lg border border-slate-700 whitespace-nowrap pointer-events-none">
-                      <div>Sales: Rs. {item.sales.toLocaleString()}</div>
-                      <div className="text-emerald-300">Rec: Rs. {item.recovery.toLocaleString()}</div>
+                    <div className="absolute -top-12 z-20 bg-[#0F172A] text-white text-[10px] font-mono tabular-nums px-2.5 py-1.5 rounded-lg shadow-lg border border-slate-700 whitespace-nowrap pointer-events-none">
+                      <div>Sales: PKR {item.sales.toLocaleString()}</div>
+                      <div className="text-emerald-400">Rec: PKR {item.recovery.toLocaleString()}</div>
                     </div>
                   )}
 
                   <div className="w-full max-w-[44px] h-full flex items-end justify-center gap-1.5">
                     <div
-                      className="flex-1 bg-[#0B132B] dark:bg-[#0D9488] hover:bg-[#0D9488] rounded-t transition-all duration-300"
+                      className="flex-1 bg-[#3B82F6] hover:bg-blue-400 rounded-t transition-all duration-300"
                       style={{ height: `${salesHeightPct}%` }}
-                      title={`Sales: Rs. ${item.sales.toLocaleString()}`}
+                      title={`Sales: PKR ${item.sales.toLocaleString()}`}
                     />
                     <div
                       className="flex-1 bg-emerald-500 hover:bg-emerald-400 rounded-t transition-all duration-300"
                       style={{ height: `${recoveryHeightPct}%` }}
-                      title={`Recovery: Rs. ${item.recovery.toLocaleString()}`}
+                      title={`Recovery: PKR ${item.recovery.toLocaleString()}`}
                     />
                   </div>
 

@@ -471,7 +471,7 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
         .attr('fill', dealerItem.riskColor)
         .attr('font-size', '7.5px')
         .attr('font-weight', '900')
-        .text(`Rs. ${(dealerItem.balance / 1000).toFixed(0)}k (${dealerItem.utilizationPercentage}%)`);
+        .text(`PKR ${(dealerItem.balance / 1000).toFixed(0)}k (${dealerItem.utilizationPercentage}%)`);
 
       // Hover and Click Interactivity
       pinGroup
@@ -533,16 +533,16 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
   return (
     <div className={`space-y-3 ${className}`}>
       {/* 1. Header Toolbar with Credit Health Metrics & Filters */}
-      <div className="bg-slate-900 text-white rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl space-y-4">
+      <div className="bg-[#0F172A] text-white rounded-3xl p-4 sm:p-5 border border-slate-700/80 shadow-xl space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-xl bg-teal-500/20 text-teal-300">
+              <span className="p-1.5 rounded-xl bg-blue-500/20 text-[#3B82F6]">
                 <Sparkles className="w-4 h-4" />
               </span>
-              <h2 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2 flex-wrap">
                 Dealer Credit Health &amp; Risk Map
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-900/60 text-teal-300 border border-teal-700/60">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-blue-950/70 text-blue-300 border border-blue-800/70">
                   D3 Geospatial
                 </span>
               </h2>
@@ -553,31 +553,31 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
           </div>
 
           {/* Quick Portfolio Health KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div className="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700/60">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs items-stretch">
+            <div className="bg-[#1E293B] p-2.5 rounded-2xl border border-slate-700/80 flex flex-col justify-between h-full">
               <span className="text-[10px] text-slate-400 uppercase font-bold block">Mapped Dealers</span>
-              <span className="font-mono font-black text-sm sm:text-base text-white">
+              <span className="font-mono tabular-nums font-black text-sm sm:text-base text-white mt-0.5">
                 {filteredDealers.length} / {customers.length}
               </span>
             </div>
 
-            <div className="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700/60">
+            <div className="bg-[#1E293B] p-2.5 rounded-2xl border border-slate-700/80 flex flex-col justify-between h-full">
               <span className="text-[10px] text-slate-400 uppercase font-bold block">Total Receivables</span>
-              <span className="font-mono font-black text-sm sm:text-base text-teal-300">
-                Rs. {(portfolioStats.totalExposure / 1000).toLocaleString()}k
+              <span className="font-mono tabular-nums font-black text-sm sm:text-base text-[#3B82F6] mt-0.5">
+                PKR {(portfolioStats.totalExposure / 1000).toLocaleString()}k
               </span>
             </div>
 
-            <div className="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700/60">
+            <div className="bg-[#1E293B] p-2.5 rounded-2xl border border-slate-700/80 flex flex-col justify-between h-full">
               <span className="text-[10px] text-slate-400 uppercase font-bold block">Avg Credit Score</span>
-              <span className="font-mono font-black text-sm sm:text-base text-emerald-400">
+              <span className="font-mono tabular-nums font-black text-sm sm:text-base text-emerald-400 mt-0.5">
                 {portfolioStats.avgScore}/100
               </span>
             </div>
 
-            <div className="bg-slate-800/80 p-2.5 rounded-2xl border border-slate-700/60">
+            <div className="bg-[#1E293B] p-2.5 rounded-2xl border border-slate-700/80 flex flex-col justify-between h-full">
               <span className="text-[10px] text-slate-400 uppercase font-bold block">Over-Limit Risk</span>
-              <span className={`font-mono font-black text-sm sm:text-base ${portfolioStats.highCount > 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+              <span className={`font-mono tabular-nums font-black text-sm sm:text-base mt-0.5 ${portfolioStats.highCount > 0 ? 'text-rose-400' : 'text-slate-300'}`}>
                 {portfolioStats.highCount} {portfolioStats.highCount === 1 ? 'Shop' : 'Shops'}
               </span>
             </div>
@@ -586,62 +586,62 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
 
         {/* Filter Controls Row */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
-          {/* Risk Level Pills */}
+          {/* Risk Level Filters */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[11px] font-bold text-slate-400 mr-1 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
+              <ShieldCheck className="w-3.5 h-3.5 text-[#3B82F6]" />
               Risk Level:
             </span>
 
             <button
               type="button"
               onClick={() => setRiskFilter('ALL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 min-h-[44px] py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 riskFilter === 'ALL'
-                  ? 'bg-teal-700 text-white shadow-xs'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  ? 'bg-[#3B82F6] text-white shadow-xs'
+                  : 'bg-[#1E293B] text-slate-300 hover:bg-slate-700'
               }`}
             >
-              All Pins ({processedDealers.length})
+              All Pins (<span className="font-mono tabular-nums">{processedDealers.length}</span>)
             </button>
 
             <button
               type="button"
               onClick={() => setRiskFilter('LOW')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 min-h-[44px] py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                 riskFilter === 'LOW'
                   ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-400/40'
-                  : 'bg-slate-800 text-emerald-300 hover:bg-slate-700'
+                  : 'bg-[#1E293B] text-emerald-300 hover:bg-slate-700'
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              Low Risk ({portfolioStats.lowCount})
+              <span>Low Risk (<span className="font-mono tabular-nums">{portfolioStats.lowCount}</span>)</span>
             </button>
 
             <button
               type="button"
               onClick={() => setRiskFilter('MODERATE')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 min-h-[44px] py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                 riskFilter === 'MODERATE'
                   ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-400/40'
-                  : 'bg-slate-800 text-amber-300 hover:bg-slate-700'
+                  : 'bg-[#1E293B] text-amber-300 hover:bg-slate-700'
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-              Moderate Risk ({portfolioStats.modCount})
+              <span>Moderate Risk (<span className="font-mono tabular-nums">{portfolioStats.modCount}</span>)</span>
             </button>
 
             <button
               type="button"
               onClick={() => setRiskFilter('HIGH')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 min-h-[44px] py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                 riskFilter === 'HIGH'
                   ? 'bg-rose-600 text-white shadow-xs ring-2 ring-rose-400/40'
-                  : 'bg-slate-800 text-rose-300 hover:bg-slate-700'
+                  : 'bg-[#1E293B] text-rose-300 hover:bg-slate-700'
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-rose-400"></span>
-              High / Over-Limit ({portfolioStats.highCount})
+              <span>High / Over-Limit (<span className="font-mono tabular-nums">{portfolioStats.highCount}</span>)</span>
             </button>
           </div>
 
@@ -650,7 +650,7 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
             <select
               value={selectedTerritory}
               onChange={(e) => setSelectedTerritory(e.target.value)}
-              className="bg-slate-800 text-slate-200 border border-slate-700 text-xs rounded-xl px-2.5 py-1.5 outline-none font-bold cursor-pointer"
+              className="bg-[#1E293B] text-slate-200 border border-slate-700 text-xs rounded-xl px-2.5 min-h-[44px] py-1.5 outline-none font-bold cursor-pointer focus:border-[#3B82F6]"
             >
               <option value="ALL">All Territories</option>
               <option value="KPK">Khyber Pakhtunkhwa (KPK)</option>
@@ -662,10 +662,10 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
             <button
               type="button"
               onClick={() => setShowHighways(!showHighways)}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1 cursor-pointer ${
+              className={`px-3 min-h-[44px] py-1.5 rounded-xl text-xs font-bold border transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                 showHighways
-                  ? 'bg-teal-950/60 border-teal-500/50 text-teal-300'
-                  : 'bg-slate-800 border-slate-700 text-slate-400'
+                  ? 'bg-blue-950/60 border-[#3B82F6]/60 text-blue-300'
+                  : 'bg-[#1E293B] border-slate-700 text-slate-400'
               }`}
               title="Toggle GT Road & Motorway Trade Corridors"
             >
@@ -679,15 +679,15 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
       {/* 2. D3 Interactive Map Canvas Container */}
       <div
         ref={containerRef}
-        className="relative w-full rounded-3xl bg-slate-950 border border-slate-800 overflow-hidden shadow-2xl"
+        className="relative w-full rounded-3xl bg-[#0B1120] border border-slate-800 overflow-hidden shadow-2xl"
         style={{ minHeight: typeof height === 'number' ? `${height}px` : height }}
       >
         {/* Floating Map Zoom Controls */}
-        <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-800 shadow-lg">
+        <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5 bg-[#0F172A]/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700/80 shadow-lg">
           <button
             type="button"
             onClick={handleZoomIn}
-            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-[#1E293B] hover:bg-slate-700 text-white flex items-center justify-center transition-colors cursor-pointer"
             title="Zoom In"
           >
             <ZoomIn className="w-4 h-4" />
@@ -695,7 +695,7 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
           <button
             type="button"
             onClick={handleZoomOut}
-            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-[#1E293B] hover:bg-slate-700 text-white flex items-center justify-center transition-colors cursor-pointer"
             title="Zoom Out"
           >
             <ZoomOut className="w-4 h-4" />
@@ -703,7 +703,7 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
           <button
             type="button"
             onClick={handleResetZoom}
-            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-[#1E293B] hover:bg-slate-700 text-white flex items-center justify-center transition-colors cursor-pointer"
             title="Fit to Pakistan Map"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -711,12 +711,12 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
         </div>
 
         {/* Top-Left Geographic Legend Badge */}
-        <div className="absolute top-4 left-4 z-20 pointer-events-none hidden sm:block bg-slate-900/85 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-800 text-[11px] text-slate-300">
+        <div className="absolute top-4 left-4 z-20 pointer-events-none hidden sm:block bg-[#0F172A]/90 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-700/80 text-[11px] text-slate-300">
           <div className="font-extrabold text-white text-xs flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping"></span>
+            <span className="w-2 h-2 rounded-full bg-[#3B82F6]"></span>
             Pakistan Electrical Trade Grid
           </div>
-          <p className="text-[10px] text-slate-400 mt-0.5">Scale: {zoomLevel}x &bull; Drag to pan, scroll to zoom</p>
+          <p className="text-[10px] text-slate-400 mt-0.5 font-mono tabular-nums">Scale: {zoomLevel}x &bull; Drag to pan, scroll to zoom</p>
         </div>
 
         {/* SVG Element where D3 renders */}
@@ -725,7 +725,7 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
         {/* Floating Dossier Preview Overlay upon Pin Hover */}
         {hoveredDealer && (
           <div
-            className="absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-md z-30 bg-slate-900/95 backdrop-blur-md border border-slate-700 p-4 rounded-3xl shadow-2xl text-white animate-in fade-in slide-in-from-bottom-2 duration-200"
+            className="absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-md z-30 bg-[#0F172A]/95 backdrop-blur-md border border-slate-700 p-4 rounded-3xl shadow-2xl text-white animate-in fade-in slide-in-from-bottom-2 duration-200"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -736,10 +736,10 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
                   {hoveredDealer.customer.companyName.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="font-black text-sm text-white flex items-center gap-2">
+                  <h3 className="font-black text-sm text-white flex items-center gap-2 flex-wrap">
                     {hoveredDealer.customer.companyName}
                     <span
-                      className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase"
+                      className="text-[9px] px-2 py-0.5 rounded-md font-bold uppercase"
                       style={{
                         backgroundColor: `${hoveredDealer.riskColor}25`,
                         color: hoveredDealer.riskColor,
@@ -758,7 +758,7 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
               <button
                 type="button"
                 onClick={() => onSelectDealer(hoveredDealer.customer)}
-                className="px-3 py-1.5 bg-teal-700 hover:bg-teal-600 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0"
+                className="btn-primary px-3 min-h-[44px] py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1 transition-all cursor-pointer shrink-0"
               >
                 <span>Open Dossier</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -767,10 +767,10 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
 
             {/* Financial Progress Bar */}
             <div className="mt-3 pt-3 border-t border-slate-800 space-y-2">
-              <div className="flex justify-between text-xs">
+              <div className="flex justify-between text-xs gap-2">
                 <span className="text-slate-400">Credit Limit Utilization:</span>
-                <span className="font-mono font-bold" style={{ color: hoveredDealer.riskColor }}>
-                  Rs. {hoveredDealer.balance.toLocaleString()} / {hoveredDealer.limit.toLocaleString()} ({hoveredDealer.utilizationPercentage}%)
+                <span className="font-mono tabular-nums font-bold" style={{ color: hoveredDealer.riskColor }}>
+                  PKR {hoveredDealer.balance.toLocaleString()} / {hoveredDealer.limit.toLocaleString()} ({hoveredDealer.utilizationPercentage}%)
                 </span>
               </div>
               <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
@@ -782,10 +782,10 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
                   }}
                 ></div>
               </div>
-              <div className="flex justify-between items-center text-[10px] text-slate-400 pt-1">
+              <div className="flex justify-between items-center text-[10px] text-slate-400 pt-1 font-mono tabular-nums">
                 <span>Credit Days: {hoveredDealer.customer.creditDays || 30} Days</span>
                 <span>Avg Delay: {hoveredDealer.creditHealth.averagePaymentDelayDays} Days</span>
-                <span className="font-bold text-teal-400">Score: {hoveredDealer.creditHealth.score}/100</span>
+                <span className="font-bold text-[#3B82F6]">Score: {hoveredDealer.creditHealth.score}/100</span>
               </div>
             </div>
           </div>
@@ -793,23 +793,23 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
       </div>
 
       {/* 3. Dealer Dossier Quick-Navigate Strip Below Map */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
+      <div className="bg-white dark:bg-[#1E293B] rounded-3xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-sm space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <Store className="w-4 h-4 text-teal-700 dark:text-teal-400" />
-            <h3 className="font-black text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider">
-              Dealer Network Dossier Direct Access ({filteredDealers.length} Mapped)
+            <Store className="w-4 h-4 text-[#3B82F6]" />
+            <h3 className="font-black text-xs sm:text-sm text-[#0F172A] dark:text-white uppercase tracking-wider">
+              Dealer Network Dossier Direct Access (<span className="font-mono tabular-nums">{filteredDealers.length}</span> Mapped)
             </h3>
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">Click any card to inspect dossier</span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Click any card to inspect dossier</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5 items-stretch">
           {filteredDealers.map((d) => (
             <div
               key={d.customer.id}
               onClick={() => onSelectDealer(d.customer)}
-              className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 hover:border-teal-500 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+              className="p-3 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#3B82F6] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between h-full group"
             >
               <div>
                 <div className="flex items-start justify-between gap-1.5 mb-1.5">
@@ -819,7 +819,7 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
                     title={d.riskLabel}
                   ></span>
                   <span
-                    className="text-[9px] px-2 py-0.5 rounded-full font-black uppercase font-mono"
+                    className="text-[9px] px-2 py-0.5 rounded-md font-black uppercase font-mono"
                     style={{
                       backgroundColor: `${d.riskColor}15`,
                       color: d.riskColor,
@@ -830,7 +830,7 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
                   </span>
                 </div>
 
-                <h4 className="font-black text-xs text-slate-900 dark:text-white truncate group-hover:text-teal-700 dark:group-hover:text-teal-300">
+                <h4 className="font-black text-xs text-[#0F172A] dark:text-white truncate group-hover:text-[#3B82F6]">
                   {d.customer.companyName}
                 </h4>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
@@ -838,14 +838,14 @@ export const DealerCreditHealthMap: React.FC<DealerCreditHealthMapProps> = ({
                 </p>
               </div>
 
-              <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs">
+              <div className="mt-auto pt-2 border-t border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between text-xs">
                 <div>
                   <span className="text-[9px] text-slate-400 uppercase font-bold block">Balance</span>
-                  <span className="font-mono font-black text-xs text-slate-900 dark:text-white">
-                    Rs. {(d.balance / 1000).toFixed(0)}k
+                  <span className="font-mono tabular-nums font-black text-xs text-[#0F172A] dark:text-white">
+                    PKR {(d.balance / 1000).toFixed(0)}k
                   </span>
                 </div>
-                <div className="text-right flex items-center gap-1 text-teal-700 dark:text-teal-400 font-bold text-[10px]">
+                <div className="text-right flex items-center gap-1 text-[#3B82F6] font-bold text-[10px]">
                   <span>Dossier</span>
                   <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </div>

@@ -65,13 +65,13 @@ export const MiniCalendarWidget: React.FC<MiniCalendarWidgetProps> = ({
 
  return (
  <div
- className={`rounded-lg p-5 bg-white dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-800 shadow-xs space-y-3 ${className}`}
+ className={`rounded-2xl p-5 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3 ${className}`}
  >
  {/* Month & Year Navigation Header */}
- <div className="flex items-center justify-between border-b border-[#E2E8F0] dark:border-slate-800 pb-2.5">
+ <div className="flex items-center justify-between border-b border-[#E2E8F0] dark:border-slate-700/70 pb-2.5">
  <div className="flex items-center gap-1.5">
- <CalendarIcon className="w-4 h-4 text-[#0D9488]" />
- <span className="text-xs font-bold uppercase tracking-wider text-[#191C1E] dark:text-slate-200">
+ <CalendarIcon className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+ <span className="text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-slate-100">
  {monthNames[month]} {year}
  </span>
  </div>
@@ -80,7 +80,7 @@ export const MiniCalendarWidget: React.FC<MiniCalendarWidgetProps> = ({
  <button
  type="button"
  onClick={prevMonth}
- className="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 cursor-pointer"
+ className="min-w-[36px] min-h-[36px] rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer"
  aria-label="Previous Month"
  >
  <ChevronLeft className="w-4 h-4" />
@@ -88,7 +88,7 @@ export const MiniCalendarWidget: React.FC<MiniCalendarWidgetProps> = ({
  <button
  type="button"
  onClick={nextMonth}
- className="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 cursor-pointer"
+ className="min-w-[36px] min-h-[36px] rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer"
  aria-label="Next Month"
  >
  <ChevronRight className="w-4 h-4" />
@@ -97,7 +97,7 @@ export const MiniCalendarWidget: React.FC<MiniCalendarWidgetProps> = ({
  </div>
 
  {/* Weekday Names */}
- <div className="grid grid-cols-7 text-center text-[10px] font-bold text-slate-400 uppercase">
+ <div className="grid grid-cols-7 text-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">
  <span>Su</span>
  <span>Mo</span>
  <span>Tu</span>
@@ -125,11 +125,11 @@ export const MiniCalendarWidget: React.FC<MiniCalendarWidgetProps> = ({
  key={idx}
  type="button"
  onClick={() => onSelectDate && onSelectDate(item.date)}
- className={`h-7 w-7 mx-auto rounded flex items-center justify-center text-xs tabular-nums transition-all cursor-pointer ${
+ className={`h-8 w-8 mx-auto rounded-lg flex items-center justify-center text-xs tabular-nums transition-all cursor-pointer ${
  isToday
- ? 'bg-[#0D9488] text-white shadow-xs font-bold'
+ ? 'bg-[#3B82F6] text-white shadow-xs font-bold'
  : isSelected
- ? 'bg-[#0B132B] dark:bg-slate-700 text-white font-bold'
+ ? 'bg-[#F97316] text-white font-bold'
  : item.isCurrentMonth
  ? 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium'
  : 'text-slate-300 dark:text-slate-600 font-normal'

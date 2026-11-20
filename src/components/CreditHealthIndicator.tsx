@@ -87,7 +87,7 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
   if (variant === 'compact') {
     return (
       <div
-        className={`p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3 ${className}`}
+        className={`p-3 rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs flex items-center justify-between gap-3 ${className}`}
       >
         <div className="flex items-center gap-3">
           <div
@@ -144,20 +144,20 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
   // Full / Card Variant: Comprehensive Credit Health Cockpit Section
   return (
     <div
-      className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-xs space-y-4 transition-all ${className}`}
+      className={`bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 p-4 sm:p-6 shadow-xs space-y-4 transition-all ${className}`}
       id="customer-credit-health-indicator"
     >
       {/* 1. Header Row */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-[#E2E8F0] dark:border-slate-700/80 pb-3.5">
         <div className="flex items-center gap-2.5">
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-xs ${
+            className={`w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0 ${
               health.tier === 'EXCELLENT'
                 ? 'bg-emerald-600'
                 : health.tier === 'GOOD'
-                ? 'bg-sky-600'
+                ? 'bg-[#3B82F6]'
                 : health.tier === 'MODERATE_RISK'
-                ? 'bg-amber-600'
+                ? 'bg-[#F97316]'
                 : 'bg-rose-600'
             }`}
           >
@@ -172,11 +172,11 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
             )}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm sm:text-base font-bold text-[#0F172A] dark:text-white tracking-tight">
                 Credit Health &amp; Payment Discipline
               </h3>
-              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${health.badgeBg}`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${health.badgeBg}`}>
                 {health.tierLabel}
               </span>
             </div>
@@ -186,11 +186,11 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
           </div>
         </div>
 
-        {/* Health Score Pill */}
-        <div className="flex items-center gap-2 self-start sm:self-auto bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+        {/* Health Score Readout */}
+        <div className="flex items-center gap-2.5 self-start sm:self-auto bg-[#F8FAFC] dark:bg-[#0F172A] px-3 py-1.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
           <div className="text-right">
-            <span className="text-[9px] uppercase font-bold text-slate-400 block leading-tight">Health Score</span>
-            <span className="font-mono text-sm font-black text-slate-900 dark:text-white">{health.score} / 100</span>
+            <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400 block leading-tight">Health Score</span>
+            <span className="font-mono tabular-nums text-sm font-bold text-[#0F172A] dark:text-white">{health.score} / 100</span>
           </div>
           <div className="w-8 h-8 relative flex items-center justify-center">
             <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 36 36">
@@ -229,10 +229,10 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
       {/* 2. Primary Highlighted Metric: Average Payment Delay Display */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
         {/* Core Metric Card 1: Average Payment Delay */}
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100/60 dark:from-slate-800/60 dark:to-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between relative overflow-hidden">
-          <div className="flex justify-between items-start">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-[#0052FF]" />
+        <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between relative overflow-hidden">
+          <div className="flex justify-between items-start gap-2">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-[#3B82F6]" />
               Average Payment Delay
             </span>
             <span
@@ -298,44 +298,44 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
         </div>
 
         {/* Core Metric Card 2: On-Time Settlement Ratio & Longest Delay */}
-        <div className="bg-white dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+        <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between">
+          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
+            <TrendingUp className="w-3.5 h-3.5 text-[#10B981]" />
             Settlement Reliability
           </span>
 
           <div className="my-2 space-y-2">
             <div className="flex justify-between items-baseline">
               <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">On-Time Clearance Rate</span>
-              <span className="font-mono text-base font-extrabold text-slate-900 dark:text-white">
+              <span className="font-mono tabular-nums text-base font-bold text-[#0F172A] dark:text-white">
                 {health.onTimePaymentPercentage}%
               </span>
             </div>
 
-            <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+            <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-700 ${
                   health.onTimePaymentPercentage >= 80
                     ? 'bg-emerald-500'
                     : health.onTimePaymentPercentage >= 60
-                    ? 'bg-amber-500'
+                    ? 'bg-[#F97316]'
                     : 'bg-rose-500'
                 }`}
                 style={{ width: `${health.onTimePaymentPercentage}%` }}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#E2E8F0] dark:border-slate-700/60 text-xs">
               <div>
-                <span className="text-[10px] text-slate-400 block">Longest Delay</span>
-                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Longest Delay</span>
+                <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-slate-200">
                   {health.longestDelayDays} Days
                 </span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 block">Delinquent Exp.</span>
-                <span className={`font-mono font-bold ${health.delinquentAmount > 0 ? 'text-rose-600' : 'text-slate-800 dark:text-slate-200'}`}>
-                  Rs. {health.delinquentAmount.toLocaleString()}
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Delinquent Exp.</span>
+                <span className={`font-mono tabular-nums font-bold ${health.delinquentAmount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-[#0F172A] dark:text-slate-200'}`}>
+                  PKR {health.delinquentAmount.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -343,21 +343,21 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
         </div>
 
         {/* Core Metric Card 3: Velocity Comparison Matrix */}
-        <div className="bg-white dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-sky-500" />
+        <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between">
+          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-[#3B82F6]" />
             Credit Terms vs Actual
           </span>
 
           <div className="my-2 space-y-2">
-            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80">
               <span className="text-xs text-slate-600 dark:text-slate-400">Approved Credit Term:</span>
-              <span className="font-mono font-bold text-slate-900 dark:text-white">{creditDays} Days</span>
+              <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">{creditDays} Days</span>
             </div>
 
-            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80">
               <span className="text-xs text-slate-600 dark:text-slate-400">Actual Turnaround:</span>
-              <span className="font-mono font-bold text-[#0052FF] dark:text-blue-400">
+              <span className="font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
                 {health.avgPaymentTurnaroundDays} Days
               </span>
             </div>
@@ -413,13 +413,13 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
 
       {/* 4. Interactive Recovery Simulation Toggle */}
       {showSimulator && customer && (
-        <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+        <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-amber-500" />
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
+            <Zap className="w-4 h-4 text-[#F97316] shrink-0" />
+            <span className="font-semibold text-slate-700 dark:text-slate-200">
               Payment Velocity Simulator:
             </span>
-            <span className="text-[11px] text-slate-500">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
               Simulate recovery to preview credit health upgrade
             </span>
           </div>
@@ -428,13 +428,13 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
             <button
               type="button"
               onClick={() => setIsSimulatingRecovery(!isSimulatingRecovery)}
-              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1 cursor-pointer ${
+              className={`min-h-[44px] px-3.5 py-2 rounded-xl font-semibold text-xs transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer ${
                 isSimulatingRecovery
                   ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-slate-100'
+                  : 'btn-outline'
               }`}
             >
-              <span>{isSimulatingRecovery ? 'Simulation Active' : 'Simulate Recovery (Rs. 50k)'}</span>
+              <span>{isSimulatingRecovery ? 'Simulation Active' : 'Simulate Recovery (PKR 50k)'}</span>
               {isSimulatingRecovery && <CheckCircle2 className="w-3.5 h-3.5" />}
             </button>
           </div>

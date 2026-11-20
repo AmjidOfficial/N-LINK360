@@ -13,27 +13,27 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
   onSelectCustomer,
 }) => {
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-emerald-900/50 bg-white dark:bg-[#0E1A14] p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-emerald-900/40">
+    <div className="rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 bg-white dark:bg-[#1E293B] p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/70">
         <div>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+          <h3 className="text-sm sm:text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
             Recent Verified Activity
           </h3>
-          <p className="text-xs text-slate-500 dark:text-emerald-200/65 mt-0.5">
-            Posted invoices & Accounts-confirmed recoveries in scope
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Posted invoices &amp; Accounts-confirmed recoveries in scope
           </p>
         </div>
-        <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-emerald-300/75">
+        <span className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400">
           {transactions.length} entries
         </span>
       </div>
 
       {transactions.length === 0 ? (
-        <div className="py-10 text-center text-sm text-slate-500 dark:text-emerald-200/65">
+        <div className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
           No posted invoices or confirmed recoveries recorded yet.
         </div>
       ) : (
-        <div className="divide-y divide-slate-100 dark:divide-emerald-900/40">
+        <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
           {transactions.map((tx) => {
             const isRecovery = tx.type === 'RECOVERY';
             return (
@@ -45,17 +45,17 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                       isRecovery
-                        ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400'
-                        : 'bg-slate-100 dark:bg-[#13241C] text-slate-700 dark:text-emerald-200'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-blue-50 dark:bg-slate-800 text-[#3B82F6] dark:text-blue-400'
                     }`}
                   >
                     {isRecovery ? <Receipt className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                    <div className="text-sm font-semibold text-[#0F172A] dark:text-white truncate">
                       {tx.partyName}
                     </div>
-                    <div className="text-xs font-mono text-slate-500 dark:text-emerald-200/65 truncate">
+                    <div className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 truncate">
                       {tx.reference} · {tx.date} · {tx.status}
                     </div>
                   </div>
@@ -65,19 +65,18 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
                   <div
                     className={`font-mono tabular-nums text-sm font-bold ${
                       isRecovery
-                        ? 'text-emerald-700 dark:text-emerald-400'
-                        : 'text-slate-900 dark:text-white'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-[#0F172A] dark:text-white'
                     }`}
                   >
-                    {isRecovery ? '+' : ''}
-                    {formatCurrencyPKR(tx.amount)}
+                    {isRecovery ? `-${formatCurrencyPKR(tx.amount)} CR` : formatCurrencyPKR(tx.amount)}
                   </div>
                   {tx.customerId && onSelectCustomer && (
                     <button
                       type="button"
                       onClick={() => onSelectCustomer(tx.customerId!)}
                       aria-label={`Inspect ${tx.partyName}`}
-                      className="min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-300 cursor-pointer"
+                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#3B82F6] dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
                       <ArrowRight className="w-4 h-4" />
                     </button>

@@ -319,17 +319,17 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
         </div>
       )}
       {/* 1. Header Banner & Action Control Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-teal-800 text-white flex items-center justify-center shadow-sm shrink-0">
-            <ArrowRightLeft className="w-6 h-6 stroke-[2.5]" />
+      <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-[#0F172A] border border-slate-700 text-[#3B82F6] flex items-center justify-center shadow-xs shrink-0">
+            <ArrowRightLeft className="w-6 h-6 stroke-[2.25]" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-black text-slate-900 dark:text-white tracking-tight">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base font-bold text-[#0F172A] dark:text-white tracking-tight">
                 Distributor Replacement &amp; Market Handover Engine
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-blue-50 dark:bg-blue-950/60 text-[#3B82F6] dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                 Enterprise Module
               </span>
             </div>
@@ -345,7 +345,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
             triggerHaptic('medium');
             setIsModalOpen(true);
           }}
-          className="px-4 py-2.5 rounded-lg bg-[#0052FF] hover:bg-[#003ECC] text-white font-semibold text-xs flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
+          className="btn-primary min-h-[44px] w-full sm:w-auto"
         >
           <Plus className="w-4 h-4" />
           <span>New Handover Request</span>
@@ -353,18 +353,18 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
       </div>
 
       {/* 2. Filters & Status Tabs */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+      <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl text-xs w-full sm:w-auto">
+          <div className="flex items-center gap-1 bg-[#F8FAFC] dark:bg-[#0F172A] p-1 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 text-xs w-full sm:w-auto overflow-x-auto">
             {(['ALL', 'PENDING', 'APPROVED', 'COMPLETED'] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setStatusFilter(tab)}
-                className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer text-[11px] ${
+                className={`min-h-[38px] flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer text-xs whitespace-nowrap ${
                   statusFilter === tab
-                    ? 'bg-white dark:bg-slate-700 text-teal-900 dark:text-teal-200 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                    ? 'bg-[#3B82F6] text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white'
                 }`}
               >
                 {tab === 'ALL'
@@ -378,15 +378,25 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
             ))}
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search transfer #, distributor, town..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold outline-none focus:border-teal-600"
+              className="w-full min-h-[44px] pl-9 pr-10 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -394,27 +404,27 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
       {/* 3. Transfer Records List */}
       <div className="space-y-3">
         {filteredTransfers.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center text-slate-400 border border-slate-200 dark:border-slate-800 space-y-2">
+          <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 text-center text-slate-400 border border-[#E2E8F0] dark:border-slate-700/80 space-y-2">
             <ArrowRightLeft className="w-8 h-8 mx-auto opacity-40 text-slate-500" />
-            <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">No distributor transfer records found</p>
-            <p className="text-xs">Click &quot;+ New Handover Request&quot; to initiate a market transfer or territory split.</p>
+            <p className="font-bold text-[#0F172A] dark:text-slate-200 text-sm">No distributor transfer records found</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Click &quot;+ New Handover Request&quot; to initiate a market transfer or territory split.</p>
           </div>
         ) : (
           filteredTransfers.map((req) => (
             <div
               key={req.id}
-              className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-teal-500 transition-all space-y-4"
+              className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs hover:border-[#3B82F6] transition-all space-y-4"
             >
               {/* Card Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <span className="px-2.5 py-1 rounded-xl text-xs font-black font-mono bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#E2E8F0] dark:border-slate-700/80">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold font-mono tabular-nums bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-[#0F172A] dark:text-slate-200">
                     {req.transferNumber}
                   </span>
-                  <span className="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
+                  <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 text-[#3B82F6] dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                     {req.transferType.replace('_', ' ')}
                   </span>
-                  <span className="text-xs text-slate-400 font-medium">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums font-medium">
                     Effective: {req.effectiveDate}
                   </span>
                 </div>
@@ -422,12 +432,12 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                 {/* Status Badge & Actions */}
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${
                       req.status === 'APPROVED' || req.status === 'COMPLETED'
                         ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                         : req.status === 'REJECTED'
                         ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                        : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                        : 'bg-orange-50 dark:bg-orange-950/60 text-[#EA580C] dark:text-orange-300 border border-orange-200 dark:border-orange-800'
                     }`}
                   >
                     {req.status}
@@ -437,7 +447,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                     <button
                       type="button"
                       onClick={() => handleApproveTransfer(req.id)}
-                      className="px-3 py-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs"
+                      className="min-h-[38px] px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs inline-flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs"
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
                       <span>Approve</span>
@@ -447,20 +457,20 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
               </div>
 
               {/* Source & Target Distributor Flow Bar */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-[#F8FAFC] dark:bg-[#0F172A] p-3.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
                     Source Distributor (Relinquishing)
                   </span>
-                  <span className="text-xs font-black text-slate-900 dark:text-white block mt-0.5">
+                  <span className="text-xs font-bold text-[#0F172A] dark:text-white block mt-0.5">
                     {req.sourceDistributorName}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
                     Target Distributor (Receiving)
                   </span>
-                  <span className="text-xs font-black text-teal-800 dark:text-teal-300 block mt-0.5">
+                  <span className="text-xs font-bold text-[#3B82F6] dark:text-blue-400 block mt-0.5">
                     {req.targetDistributorName}
                   </span>
                 </div>
@@ -468,30 +478,30 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
 
               {/* Metrics Ribbon */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block font-bold">Transferred Dealers</span>
-                  <span className="text-sm font-black font-mono text-slate-900 dark:text-white">
+                <div className="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Transferred Dealers</span>
+                  <span className="text-sm font-bold font-mono tabular-nums text-[#0F172A] dark:text-white">
                     {req.transferredDealersCount} Shops
                   </span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block font-bold">Receivables Transferred</span>
-                  <span className="text-sm font-black font-mono text-teal-800 dark:text-teal-200">
-                    Rs. {req.totalTransferredReceivables.toLocaleString()}
+                <div className="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Receivables Transferred</span>
+                  <span className="text-sm font-bold font-mono tabular-nums text-[#3B82F6] dark:text-blue-400">
+                    PKR {req.totalTransferredReceivables.toLocaleString()}
                   </span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block font-bold">Stock Valuation</span>
-                  <span className="text-sm font-black font-mono text-emerald-800 dark:text-emerald-300">
-                    Rs. {req.totalStockValuation.toLocaleString()}
+                <div className="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Stock Valuation</span>
+                  <span className="text-sm font-bold font-mono tabular-nums text-[#10B981]">
+                    PKR {req.totalStockValuation.toLocaleString()}
                   </span>
                 </div>
               </div>
 
               {/* Reason & Sign-off footer */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-[11px] text-slate-500 pt-1">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400 pt-1">
                 <span>Reason: {req.reason}</span>
-                <span className="font-bold text-teal-800 dark:text-teal-300">
+                <span className="font-semibold text-[#3B82F6] dark:text-blue-400">
                   Executive Approver: {req.executiveApprovedBy || 'Awaiting Shahzad Ullah'}
                 </span>
               </div>
@@ -506,16 +516,16 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-[#0F172A] rounded-2xl max-w-2xl w-full p-5 sm:p-6 border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0] dark:border-slate-700/80 gap-3">
               <div>
-                <h3 className="font-black text-base text-slate-900 dark:text-white">
+                <h3 className="font-bold text-base text-[#0F172A] dark:text-white">
                   Initiate Distributor Replacement &amp; Market Handover
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Step {activeStep} of 4 &bull; Preserves historical invoices &amp; double-entry ledger rules
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono tabular-nums">
+                  Step {activeStep} of 4 &middot; Preserves historical invoices &amp; double-entry ledger rules
                 </p>
               </div>
               <button
@@ -524,7 +534,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                   setIsModalOpen(false);
                   setFormError(null);
                 }}
-                className="p-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="min-w-[44px] min-h-[44px] rounded-xl text-slate-500 hover:text-[#0F172A] dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center cursor-pointer shrink-0"
                 aria-label="Close handover modal"
               >
                 <X className="w-5 h-5" />
@@ -545,13 +555,13 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
             {activeStep === 1 && (
               <div className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1.5">
                     Select Handover Mode
                   </label>
                   <select
                     value={transferType}
                     onChange={(e) => setTransferType(e.target.value as any)}
-                    className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs"
+                    className="w-full min-h-[44px] p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-semibold text-xs text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
                   >
                     <option value="TERRITORY_SPLIT">Territory Split (e.g. 60/40 Market Split)</option>
                     <option value="COMPLETE_REPLACEMENT">Complete Distributor Replacement</option>
@@ -563,19 +573,19 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1.5">
                       Source Distributor (Relinquishing)
                     </label>
                     <input
                       type="text"
                       value={sourceDistributorName}
                       onChange={(e) => setSourceDistributorName(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-semibold text-xs"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-semibold text-xs text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                    <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1.5">
                       Target Distributor (Receiving) *
                     </label>
                     <input
@@ -583,20 +593,20 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                       value={targetDistributorName}
                       onChange={(e) => setTargetDistributorName(e.target.value)}
                       placeholder="e.g. Nowshera Prime Traders"
-                      className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-semibold text-xs text-teal-800 dark:text-teal-300"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-semibold text-xs text-[#3B82F6] dark:text-blue-400 focus:outline-none focus:border-[#3B82F6]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1.5">
                     Handover Notes &amp; Reason
                   </label>
                   <textarea
                     value={reasonNotes}
                     onChange={(e) => setReasonNotes(e.target.value)}
                     placeholder="Enter reason for market handover or territory realignment..."
-                    className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold h-20"
+                    className="w-full p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 text-xs font-medium text-[#0F172A] dark:text-white h-20 focus:outline-none focus:border-[#3B82F6]"
                   />
                 </div>
               </div>
@@ -605,16 +615,16 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
             {/* Step 2: Interactive Territory Split & Dealer Selection */}
             {activeStep === 2 && (
               <div className="space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-slate-900 dark:text-white">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="font-bold text-[#0F172A] dark:text-white">
                     Select Shops to Reassign ({selectedDealerIds.length} Selected)
                   </span>
-                  <span className="text-[11px] text-teal-800 dark:text-teal-300 font-bold">
+                  <span className="text-[11px] text-[#3B82F6] dark:text-blue-400 font-semibold">
                     Checkboxes preserve historical ledger invoices
                   </span>
                 </div>
 
-                <div className="max-h-56 overflow-y-auto space-y-2 pr-1 border border-slate-100 dark:border-slate-800 rounded-2xl p-2">
+                <div className="max-h-56 overflow-y-auto space-y-2 pr-1 border border-[#E2E8F0] dark:border-slate-700/80 rounded-xl p-2 bg-[#F8FAFC] dark:bg-[#0B1120]">
                   {customers.map((c) => {
                     const isSelected = selectedDealerIds.includes(c.id);
                     return (
@@ -623,26 +633,26 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                         onClick={() => toggleDealerSelection(c.id)}
                         className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
-                            ? 'bg-teal-50 dark:bg-teal-950/60 border-teal-500 text-teal-900 dark:text-teal-200'
-                            : 'bg-white dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                            ? 'bg-blue-50 dark:bg-blue-950/40 border-[#3B82F6] text-[#0F172A] dark:text-white'
+                            : 'bg-white dark:bg-[#1E293B] border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => {}}
-                            className="rounded text-teal-800"
+                            className="rounded accent-[#3B82F6]"
                           />
-                          <div>
-                            <span className="font-bold block">{c.companyName}</span>
-                            <span className="text-[10px] text-slate-400">
-                              {c.customerCode} &bull; {c.town || c.city}
+                          <div className="min-w-0">
+                            <span className="font-bold block truncate">{c.companyName}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                              {c.customerCode} &middot; {c.town || c.city}
                             </span>
                           </div>
                         </div>
-                        <span className="font-mono font-bold text-xs">
-                          Rs. {(c.currentBalance ?? c.openingBalance ?? 0).toLocaleString()}
+                        <span className="font-mono tabular-nums font-bold text-xs shrink-0">
+                          PKR {(c.currentBalance ?? c.openingBalance ?? 0).toLocaleString()}
                         </span>
                       </div>
                     );
@@ -654,14 +664,14 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
             {/* Step 3: Market Receivables Bills Transfer */}
             {activeStep === 3 && (
               <div className="space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-slate-900 dark:text-white">
-                    Select Outstanding Invoices ({selectedBillIds.length} Bills &bull; Rs. {totalReceivablesValuation.toLocaleString()})
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="font-bold font-mono tabular-nums text-[#0F172A] dark:text-white">
+                    Select Outstanding Invoices ({selectedBillIds.length} Bills &middot; PKR {totalReceivablesValuation.toLocaleString()})
                   </span>
-                  <span className="text-[11px] text-slate-400">Original invoice # preserved</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">Original invoice # preserved</span>
                 </div>
 
-                <div className="max-h-56 overflow-y-auto space-y-2 pr-1 border border-slate-100 dark:border-slate-800 rounded-2xl p-2">
+                <div className="max-h-56 overflow-y-auto space-y-2 pr-1 border border-[#E2E8F0] dark:border-slate-700/80 rounded-xl p-2 bg-[#F8FAFC] dark:bg-[#0B1120]">
                   {availableOutstandingOrders.map((o) => {
                     const isSelected = selectedBillIds.includes(o.id);
                     return (
@@ -670,26 +680,26 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                         onClick={() => toggleBillSelection(o.id)}
                         className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
-                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-900 dark:text-emerald-200'
-                            : 'bg-white dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-[#0F172A] dark:text-white'
+                            : 'bg-white dark:bg-[#1E293B] border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => {}}
-                            className="rounded text-emerald-700"
+                            className="rounded accent-emerald-600"
                           />
-                          <div>
-                            <span className="font-bold block">Invoice #{o.orderNumber || o.id}</span>
-                            <span className="text-[10px] text-slate-400">
-                              Dealer: {o.customerName} &bull; Date: {(o.orderDate || o.createdAt || '').slice(0, 10)}
+                          <div className="min-w-0">
+                            <span className="font-bold font-mono tabular-nums block">Invoice #{o.orderNumber || o.id}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                              Dealer: {o.customerName} &middot; Date: {(o.orderDate || o.createdAt || '').slice(0, 10)}
                             </span>
                           </div>
                         </div>
-                        <span className="font-mono font-bold text-xs">
-                          Rs. {(o.totalAmount || 0).toLocaleString()}
+                        <span className="font-mono tabular-nums font-bold text-xs shrink-0">
+                          PKR {(o.totalAmount || 0).toLocaleString()}
                         </span>
                       </div>
                     );
@@ -702,16 +712,16 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
             {activeStep === 4 && (
               <div className="space-y-3 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="font-black text-slate-900 dark:text-white">
-                    Physical Stock Handover ({stockItems.length} SKUs &bull; Rs. {totalStockValuation.toLocaleString()})
+                  <span className="font-bold font-mono tabular-nums text-[#0F172A] dark:text-white">
+                    Physical Stock Handover ({stockItems.length} SKUs &middot; PKR {totalStockValuation.toLocaleString()})
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <select
                     value={selectedSkuCode}
                     onChange={(e) => setSelectedSkuCode(e.target.value)}
-                    className="flex-1 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold"
+                    className="flex-1 min-h-[44px] p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-semibold text-[#0F172A] dark:text-white"
                   >
                     <option value="">Select SKU Product...</option>
                     {NLINK_OFFICIAL_PRODUCTS.map((sku) => (
@@ -726,24 +736,24 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                     value={skuCartons}
                     onChange={(e) => setSkuCartons(parseInt(e.target.value) || 1)}
                     placeholder="Cartons"
-                    className="w-24 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold"
+                    className="w-full sm:w-24 min-h-[44px] p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-mono tabular-nums font-bold text-[#0F172A] dark:text-white"
                   />
 
                   <button
                     type="button"
                     onClick={handleAddStockItem}
-                    className="px-3 py-2.5 rounded-xl bg-teal-800 text-white font-bold cursor-pointer"
+                    className="btn-outline min-h-[44px]"
                   >
                     + Add
                   </button>
                 </div>
 
                 {stockItems.length > 0 && (
-                  <div className="space-y-1 border border-slate-100 dark:border-slate-800 p-2 rounded-2xl">
+                  <div className="space-y-1.5 border border-[#E2E8F0] dark:border-slate-700/80 p-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120]">
                     {stockItems.map((item) => (
-                      <div key={item.skuCode} className="flex items-center justify-between text-xs p-2 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                        <span>{item.skuName} ({item.cartons} Cartons = {item.totalPieces} Pcs)</span>
-                        <span className="font-mono font-bold">Rs. {item.valuationTotal.toLocaleString()}</span>
+                      <div key={item.skuCode} className="flex items-center justify-between text-xs p-2.5 bg-white dark:bg-[#1E293B] rounded-lg border border-[#E2E8F0] dark:border-slate-700">
+                        <span className="font-medium text-[#0F172A] dark:text-white">{item.skuName} ({item.cartons} Cartons = {item.totalPieces} Pcs)</span>
+                        <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">PKR {item.valuationTotal.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -752,22 +762,33 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
             )}
 
             {/* Modal Navigation Buttons */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0] dark:border-slate-700/80">
               {activeStep > 1 ? (
                 <button
                   type="button"
                   onClick={() => setActiveStep((prev) => prev - 1)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold text-xs cursor-pointer"
+                  className="btn-outline min-h-[44px]"
                 >
                   &larr; Back
                 </button>
-              ) : <div />}
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setFormError(null);
+                  }}
+                  className="btn-outline min-h-[44px]"
+                >
+                  Cancel
+                </button>
+              )}
 
               {activeStep < 4 ? (
                 <button
                   type="button"
                   onClick={() => setActiveStep((prev) => prev + 1)}
-                  className="px-4 py-2 rounded-xl bg-teal-800 text-white font-bold text-xs cursor-pointer flex items-center gap-1"
+                  className="btn-primary min-h-[44px]"
                 >
                   <span>Next Step</span>
                   <ChevronRight className="w-4 h-4" />
@@ -776,7 +797,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                 <button
                   type="button"
                   onClick={handleSubmitNewTransfer}
-                  className="px-5 py-2.5 rounded-lg bg-[#0052FF] hover:bg-[#003ECC] text-white font-semibold text-xs cursor-pointer shadow-xs transition-colors"
+                  className="btn-primary min-h-[44px]"
                 >
                   Submit Handover Request
                 </button>

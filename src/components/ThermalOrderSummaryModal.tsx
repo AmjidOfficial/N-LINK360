@@ -77,27 +77,28 @@ export const ThermalOrderSummaryModal: React.FC<ThermalOrderSummaryModalProps> =
       <div className="w-full max-w-[380px] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 print:shadow-none print:border-none print:w-full print:max-w-none">
         
         {/* Modal Header Actions (Hidden on print) */}
-        <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between print:hidden">
+        <div className="p-3.5 bg-[#0F172A] text-white flex items-center justify-between print:hidden">
           <div className="flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-teal-400" />
+            <Receipt className="w-4 h-4 text-[#3B82F6]" />
             <span className="text-xs font-bold tracking-wide uppercase">Thermal Printer Receipt View</span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close modal"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 inline-flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Thermal Receipt Paper Canvas (80mm Roll Format) */}
-        <div className="p-5 font-mono text-xs text-slate-900 bg-white space-y-3 overflow-y-auto max-h-[75vh] print:max-h-none print:p-2">
+        <div className="p-5 font-mono tabular-nums text-xs text-slate-900 bg-white space-y-3 overflow-y-auto max-h-[75vh] print:max-h-none print:p-2">
           
           {/* Header */}
           <div className="text-center space-y-1 border-b border-dashed border-slate-400 pb-3">
             <h1 className="text-sm font-black uppercase tracking-wider text-slate-900">NATIONAL LIGHTS PAKISTAN</h1>
-            <p className="text-[10px] font-bold text-slate-600">Enterprise Sales & Distribution 360</p>
+            <p className="text-[10px] font-bold text-slate-600">Enterprise Sales &amp; Distribution 360</p>
             <p className="text-[9px] text-slate-500">Official Mobile Thermal Order Summary</p>
           </div>
 
@@ -159,17 +160,17 @@ export const ThermalOrderSummaryModal: React.FC<ThermalOrderSummaryModalProps> =
             </div>
             <div className="flex justify-between text-slate-600">
               <span>Gross Total Amount:</span>
-              <span className="font-bold">Rs. {totals.grossSubtotal.toLocaleString()}</span>
+              <span className="font-bold">PKR {totals.grossSubtotal.toLocaleString()}</span>
             </div>
             {totals.discountAmount > 0 && (
               <div className="flex justify-between text-emerald-700">
                 <span>Trade Discount ({overallDiscountPercent}%):</span>
-                <span className="font-bold">- Rs. {totals.discountAmount.toLocaleString()}</span>
+                <span className="font-bold">-PKR {totals.discountAmount.toLocaleString()}</span>
               </div>
             )}
             <div className="flex justify-between text-sm font-black pt-1 border-t border-slate-900">
               <span>GRAND TOTAL:</span>
-              <span className="text-teal-700">Rs. {totals.grandTotal.toLocaleString()}</span>
+              <span className="text-[#0F172A]">PKR {totals.grandTotal.toLocaleString()}</span>
             </div>
           </div>
 
@@ -195,18 +196,18 @@ export const ThermalOrderSummaryModal: React.FC<ThermalOrderSummaryModalProps> =
         </div>
 
         {/* Modal Footer Action Buttons (Hidden on print) */}
-        <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center gap-2 print:hidden">
+        <div className="p-3 bg-[#F8FAFC] dark:bg-[#0F172A] border-t border-[#E2E8F0] dark:border-slate-700/80 flex items-center gap-2 print:hidden">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 cursor-pointer transition-colors"
+            className="btn-outline flex-1 min-h-[44px] font-bold text-xs rounded-xl cursor-pointer transition-colors"
           >
             Close
           </button>
           <button
             type="button"
             onClick={handlePrint}
-            className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+            className="btn-primary flex-1 min-h-[44px] active:scale-[0.98] font-extrabold text-xs rounded-xl shadow-md inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Thermal Receipt</span>

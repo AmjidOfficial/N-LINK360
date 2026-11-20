@@ -29,11 +29,11 @@ export const KPIGrid: React.FC<KPIGridProps> = ({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" aria-busy="true">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 items-stretch" aria-busy="true">
         {[1, 2, 3, 4].map((idx) => (
           <div
             key={idx}
-            className="h-28 rounded-2xl border border-slate-200 dark:border-emerald-900/40 bg-slate-100 dark:bg-[#111E17] animate-pulse"
+            className="h-full min-h-[116px] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 bg-slate-100 dark:bg-[#1E293B] animate-pulse"
           />
         ))}
       </div>
@@ -42,7 +42,7 @@ export const KPIGrid: React.FC<KPIGridProps> = ({
 
   if (visibleMetrics.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 dark:border-emerald-900/40 bg-white dark:bg-[#111E17] p-6 text-center text-sm text-slate-500 dark:text-emerald-300/70">
+      <div className="rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 bg-white dark:bg-[#1E293B] p-6 text-center text-sm text-slate-500 dark:text-slate-400">
         No KPI cards are enabled for this role configuration.
       </div>
     );
@@ -53,7 +53,7 @@ export const KPIGrid: React.FC<KPIGridProps> = ({
   return (
     <div className="space-y-3">
       {/* Mobile 2-Column Priority Grid (shows 4-6 key KPIs + View All toggle) */}
-      <div className="grid grid-cols-2 gap-3 sm:hidden">
+      <div className="grid grid-cols-2 gap-3 sm:hidden items-stretch">
         {mobileMetrics.map((metric) => (
           <KPICard key={metric.id} metric={metric} onSelect={onSelectKpi} compact />
         ))}
@@ -64,7 +64,7 @@ export const KPIGrid: React.FC<KPIGridProps> = ({
           <button
             type="button"
             onClick={() => setShowAllMobile((v) => !v)}
-            className="w-full min-h-[44px] rounded-xl border border-slate-200 dark:border-emerald-800/70 bg-white dark:bg-[#111E17] px-4 py-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-1.5 cursor-pointer"
+            className="btn-outline w-full min-h-[44px] text-[#3B82F6] dark:text-blue-400"
           >
             {showAllMobile ? (
               <>
@@ -82,7 +82,7 @@ export const KPIGrid: React.FC<KPIGridProps> = ({
       )}
 
       {/* Tablet & Desktop Multi-Column Grid */}
-      <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-stretch">
         {visibleMetrics.map((metric) => (
           <KPICard key={metric.id} metric={metric} onSelect={onSelectKpi} />
         ))}

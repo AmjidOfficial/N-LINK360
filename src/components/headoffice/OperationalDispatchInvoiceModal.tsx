@@ -227,26 +227,26 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
   };
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-4xl max-h-[94vh] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+      <div className="bg-white dark:bg-[#0F172A] w-full max-w-4xl max-h-[94vh] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Modal Header */}
-        <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-800 text-white flex items-center justify-center shadow-md">
-              <Truck className="w-5 h-5 text-emerald-300" />
+        <div className="p-4 sm:p-5 border-b border-[#E2E8F0] dark:border-slate-700/80 bg-[#0F172A] text-white flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/20 border border-[#3B82F6]/40 text-[#3B82F6] flex items-center justify-center shrink-0">
+              <Truck className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base sm:text-lg font-bold text-white truncate">
                   5-Step Dispatch &amp; Invoicing Pipeline
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-100 text-teal-800 border border-teal-300">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-[#3B82F6]/20 text-blue-200 border border-[#3B82F6]/40">
                   National Lights ERP
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Order <strong>#{order.orderNumber}</strong> &bull; Dealer: <strong>{customer.companyName}</strong> ({customer.town || customer.city})
+              <p className="text-xs text-slate-300 font-medium truncate mt-0.5">
+                Order <strong className="font-mono tabular-nums text-white">#{order.orderNumber}</strong> &middot; Dealer: <strong>{customer.companyName}</strong> ({customer.town || customer.city})
               </p>
             </div>
           </div>
@@ -254,93 +254,94 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+            aria-label="Close dispatch pipeline modal"
+            className="min-w-[44px] min-h-[44px] rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* 5-Step Stepper Header */}
-        <div className="bg-blue-50/70 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 px-5 py-3">
-          <div className="flex items-center justify-between max-w-3xl mx-auto text-xs">
+        <div className="bg-[#F8FAFC] dark:bg-[#1E293B] border-b border-[#E2E8F0] dark:border-slate-700/80 px-4 sm:px-5 py-3 overflow-x-auto">
+          <div className="flex items-center justify-between min-w-[540px] max-w-3xl mx-auto text-xs gap-2">
             {/* Step 1 */}
-            <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-400 font-bold">
-              <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">
+            <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-semibold whitespace-nowrap">
+              <span className="w-5 h-5 rounded-md bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">
                 ✓
               </span>
-              <span className="hidden sm:inline">1. Sales Entry</span>
+              <span>1. Sales Entry</span>
             </div>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
 
             {/* Step 2 */}
             <button
               type="button"
               onClick={() => setCurrentStep(2)}
-              className={`flex items-center gap-1.5 font-bold cursor-pointer transition-colors ${
+              className={`min-h-[36px] flex items-center gap-1.5 font-semibold cursor-pointer transition-colors whitespace-nowrap ${
                 currentStep === 2
-                  ? 'text-teal-900 dark:text-teal-200'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  ? 'text-[#3B82F6] dark:text-blue-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                currentStep === 2 ? 'bg-teal-800 text-white shadow-xs' : 'bg-slate-200 text-slate-700'
+              <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
+                currentStep === 2 ? 'bg-[#3B82F6] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
               }`}>
                 2
               </span>
               <span>2. Dispatch Note</span>
             </button>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
 
             {/* Step 3 */}
             <button
               type="button"
               onClick={() => setCurrentStep(3)}
-              className={`flex items-center gap-1.5 font-bold cursor-pointer transition-colors ${
+              className={`min-h-[36px] flex items-center gap-1.5 font-semibold cursor-pointer transition-colors whitespace-nowrap ${
                 currentStep === 3
-                  ? 'text-teal-900 dark:text-teal-200'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  ? 'text-[#3B82F6] dark:text-blue-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                currentStep === 3 ? 'bg-teal-800 text-white shadow-xs' : 'bg-slate-200 text-slate-700'
+              <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
+                currentStep === 3 ? 'bg-[#3B82F6] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
               }`}>
                 3
               </span>
               <span>3. Stock Check</span>
             </button>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
 
             {/* Step 4 */}
             <button
               type="button"
               onClick={() => setCurrentStep(4)}
-              className={`flex items-center gap-1.5 font-bold cursor-pointer transition-colors ${
+              className={`min-h-[36px] flex items-center gap-1.5 font-semibold cursor-pointer transition-colors whitespace-nowrap ${
                 currentStep === 4
-                  ? 'text-teal-900 dark:text-teal-200'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  ? 'text-[#3B82F6] dark:text-blue-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                currentStep === 4 ? 'bg-teal-800 text-white shadow-xs' : 'bg-slate-200 text-slate-700'
+              <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
+                currentStep === 4 ? 'bg-[#3B82F6] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
               }`}>
                 4
               </span>
               <span>4. Invoice (-15%)</span>
             </button>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
 
             {/* Step 5 */}
             <button
               type="button"
               onClick={() => setCurrentStep(5)}
-              className={`flex items-center gap-1.5 font-bold cursor-pointer transition-colors ${
+              className={`min-h-[36px] flex items-center gap-1.5 font-semibold cursor-pointer transition-colors whitespace-nowrap ${
                 currentStep === 5
-                  ? 'text-teal-900 dark:text-teal-200'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  ? 'text-[#3B82F6] dark:text-blue-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                currentStep === 5 ? 'bg-teal-800 text-white shadow-xs' : 'bg-slate-200 text-slate-700'
+              <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
+                currentStep === 5 ? 'bg-[#3B82F6] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
               }`}>
                 5
               </span>
@@ -366,32 +367,32 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
           {/* ========================================================================= */}
           {currentStep === 2 && (
             <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between bg-teal-50 dark:bg-teal-950/40 p-4 rounded-2xl border border-teal-200 dark:border-teal-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-blue-50/70 dark:bg-[#1E293B] p-4 rounded-2xl border border-blue-200 dark:border-slate-700/80">
                 <div className="flex items-center gap-3">
-                  <Warehouse className="w-6 h-6 text-teal-800 dark:text-teal-300" />
+                  <Warehouse className="w-6 h-6 text-[#3B82F6] shrink-0" />
                   <div>
-                    <h3 className="text-sm font-black text-teal-950 dark:text-teal-200">
+                    <h3 className="text-sm font-bold text-[#0F172A] dark:text-white">
                       Step 2: Create Commercial Dispatch Note
                     </h3>
-                    <p className="text-xs text-teal-800 dark:text-teal-400">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
                       Configure delivery logistics, transport vehicle, and warehouse fulfillment origin.
                     </p>
                   </div>
                 </div>
-                <span className="font-mono font-bold text-xs bg-white dark:bg-slate-900 px-3 py-1 rounded-lg border border-teal-200 dark:border-teal-800 text-teal-900 dark:text-teal-200">
+                <span className="font-mono tabular-nums font-bold text-xs bg-white dark:bg-[#0F172A] px-3 py-1.5 rounded-lg border border-[#E2E8F0] dark:border-slate-700 text-[#0F172A] dark:text-blue-300 self-start sm:self-auto">
                   {dispatchNoteNumber}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Fulfillment Warehouse
                   </label>
                   <select
                     value={warehouseName}
                     onChange={(e) => setWarehouseName(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold text-slate-900 dark:text-white"
+                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-semibold text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
                   >
                     <option value="Central Peshawar Warehouse">Central Peshawar Warehouse</option>
                     <option value="Rawalpindi Regional Depot">Rawalpindi Regional Depot</option>
@@ -401,53 +402,53 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Transporter / Goods Carrier
                   </label>
                   <input
                     type="text"
                     value={transporterName}
                     onChange={(e) => setTransporterName(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold text-slate-900 dark:text-white"
+                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-semibold text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Commercial Vehicle Number
                   </label>
                   <input
                     type="text"
                     value={vehicleNumber}
                     onChange={(e) => setVehicleNumber(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono font-bold text-slate-900 dark:text-white uppercase"
+                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-mono tabular-nums font-bold text-[#0F172A] dark:text-white uppercase focus:outline-none focus:border-[#3B82F6]"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Freight Bility / Consignment Number
                   </label>
                   <input
                     type="text"
                     value={bilityNumber}
                     onChange={(e) => setBilityNumber(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono font-bold text-slate-900 dark:text-white uppercase"
+                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-mono tabular-nums font-bold text-[#0F172A] dark:text-white uppercase focus:outline-none focus:border-[#3B82F6]"
                   />
                 </div>
               </div>
 
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <div className="bg-[#F8FAFC] dark:bg-[#1E293B] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                   {order.items?.length || 0} Order Line Items prepared for physical verification.
                 </span>
                 <button
                   type="button"
                   onClick={() => setCurrentStep(3)}
-                  className="px-4 py-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="btn-primary min-h-[44px]"
                 >
                   <span>Proceed to Stock Check (Step 3)</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -458,14 +459,14 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
           {/* ========================================================================= */}
           {currentStep === 3 && (
             <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="flex items-start sm:items-center justify-between gap-3 bg-amber-50 dark:bg-amber-950/40 p-4 rounded-2xl border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start sm:items-center justify-between gap-3 bg-orange-50 dark:bg-[#1E293B] p-4 rounded-2xl border border-orange-200 dark:border-orange-500/40">
                 <div className="flex items-center gap-3">
-                  <PackageCheck className="w-6 h-6 text-amber-700 dark:text-amber-400 shrink-0" />
+                  <PackageCheck className="w-6 h-6 text-[#F97316] shrink-0" />
                   <div>
-                    <h3 className="text-sm font-black text-amber-950 dark:text-amber-200">
+                    <h3 className="text-sm font-bold text-[#0F172A] dark:text-white">
                       Step 3: Dispatched Team Stock Availability Check
                     </h3>
-                    <p className="text-xs text-amber-900/80 dark:text-amber-300/80">
+                    <p className="text-xs text-slate-600 dark:text-slate-300">
                       Operational Rule: If any SKU is missing or not available, <strong>leave this SKU</strong> and proceed with available stocks for Invoicing &amp; Stocks Dispatched.
                     </p>
                   </div>
@@ -473,18 +474,18 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
               </div>
 
               {/* SKU Stock Verification Table */}
-              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-[10px] uppercase">
+              <div className="responsive-table-container border border-[#E2E8F0] dark:border-slate-700/80 rounded-2xl shadow-xs">
+                <table className="w-full text-left text-xs border-collapse frozen-first-col">
+                  <thead className="bg-[#F8FAFC] dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 font-bold text-[10px] uppercase">
                     <tr>
                       <th className="py-2.5 px-3">SKU &amp; Description</th>
-                      <th className="py-2.5 px-3 text-center">Ordered</th>
-                      <th className="py-2.5 px-3 text-center">In Warehouse</th>
+                      <th className="py-2.5 px-3 text-right">Ordered</th>
+                      <th className="py-2.5 px-3 text-right">In Warehouse</th>
                       <th className="py-2.5 px-3 text-center">Availability</th>
-                      <th className="py-2.5 px-3 text-right">Action</th>
+                      <th className="py-2.5 px-3 text-center">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-800">
                     {processedItems.map((item) => (
                       <tr
                         key={item.key}
@@ -495,47 +496,47 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                         }`}
                       >
                         <td className="py-3 px-3">
-                          <span className="font-mono font-bold text-slate-900 dark:text-white block">
+                          <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white block">
                             {item.skuCode}
                           </span>
-                          <span className="text-[11px] text-slate-500">
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
                             {item.skuName}
                           </span>
                         </td>
 
-                        <td className="py-3 px-3 text-center font-mono font-bold text-slate-900 dark:text-white">
+                        <td className="py-3 px-3 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-white whitespace-nowrap">
                           {item.qty} pcs
                           <span className="block text-[10px] text-slate-400 font-normal">
                             {item.cartons || Math.floor(item.qty / 20)} ctn
                           </span>
                         </td>
 
-                        <td className="py-3 px-3 text-center font-mono font-bold">
-                          <span className={item.availableQty > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600'}>
+                        <td className="py-3 px-3 text-right font-mono tabular-nums font-bold whitespace-nowrap">
+                          <span className={item.availableQty > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
                             {item.availableQty.toLocaleString()} pcs
                           </span>
                         </td>
 
-                        <td className="py-3 px-3 text-center">
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
                           {item.availableQty >= item.qty ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
                               ✓ Available
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300">
-                              ⚠️ Out of Stock
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
+                              Out of Stock
                             </span>
                           )}
                         </td>
 
-                        <td className="py-3 px-3 text-right">
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => handleToggleSku(item.key)}
-                            className={`px-3 py-1.5 rounded-xl font-bold text-xs cursor-pointer transition-all active:scale-95 ${
+                            className={`min-h-[38px] px-3 py-1.5 rounded-xl font-semibold text-xs cursor-pointer transition-all active:scale-95 ${
                               item.accepted
-                                ? 'bg-teal-800 text-white hover:bg-teal-900 shadow-xs'
-                                : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300'
+                                ? 'bg-[#3B82F6] text-white hover:bg-[#2563EB] shadow-xs'
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'
                             }`}
                           >
                             {item.accepted ? '✓ Dispatched' : 'Omitted (Leave SKU)'}
@@ -548,13 +549,13 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
               </div>
 
               {/* Status Breakdown Bar */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <div className="p-4 rounded-2xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
                 <div>
-                  <span className="font-bold text-slate-900 dark:text-white block">
+                  <span className="font-bold text-[#0F172A] dark:text-white block">
                     Stock Verification Summary:
                   </span>
-                  <span className="text-slate-500">
-                    {acceptedItems.length} SKUs Accepted for Invoicing &bull; {omittedItems.length} SKUs Left Behind (Out of Stock / Missing)
+                  <span className="text-slate-500 dark:text-slate-400">
+                    {acceptedItems.length} SKUs Accepted for Invoicing &middot; {omittedItems.length} SKUs Left Behind (Out of Stock / Missing)
                   </span>
                 </div>
 
@@ -562,7 +563,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
+                    className="btn-outline min-h-[44px]"
                   >
                     Back
                   </button>
@@ -570,10 +571,10 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                   <button
                     type="button"
                     onClick={() => setCurrentStep(4)}
-                    className="px-4 py-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    className="btn-primary min-h-[44px]"
                   >
-                    <span>Proceed to Invoice (-15%) (Step 4)</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>Proceed to Invoice (-15%)</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -585,14 +586,14 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
           {/* ========================================================================= */}
           {currentStep === 4 && (
             <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="bg-emerald-50 dark:bg-emerald-950/40 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+              <div className="bg-emerald-50/70 dark:bg-[#1E293B] p-4 rounded-2xl border border-emerald-200 dark:border-emerald-700/60 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Receipt className="w-6 h-6 text-emerald-800 dark:text-emerald-300" />
+                  <Receipt className="w-6 h-6 text-[#10B981] shrink-0" />
                   <div>
-                    <h3 className="text-sm font-black text-emerald-950 dark:text-emerald-200">
+                    <h3 className="text-sm font-bold text-[#0F172A] dark:text-white">
                       Step 4: Create Commercial Invoice (15% Less on All Products)
                     </h3>
-                    <p className="text-xs text-emerald-800 dark:text-emerald-400">
+                    <p className="text-xs text-slate-600 dark:text-slate-300">
                       Official policy applied: 15% trade discount deducted from gross catalog rates across all fulfilled SKUs.
                     </p>
                   </div>
@@ -600,66 +601,79 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
               </div>
 
               {/* Invoice Breakdown Table */}
-              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-[#0052FF] text-white font-bold text-[10px] uppercase">
+              <div className="responsive-table-container border border-[#E2E8F0] dark:border-slate-700/80 rounded-2xl shadow-xs">
+                <table className="w-full text-left text-xs border-collapse frozen-first-col">
+                  <thead className="bg-[#0F172A] text-white font-bold text-[10px] uppercase">
                     <tr>
                       <th className="py-2.5 px-3">SKU &amp; Description</th>
-                      <th className="py-2.5 px-3 text-center">Qty (Pcs)</th>
+                      <th className="py-2.5 px-3 text-right">Qty (Pcs)</th>
                       <th className="py-2.5 px-3 text-right">Trade Rate</th>
                       <th className="py-2.5 px-3 text-right">Less 15% Disc</th>
                       <th className="py-2.5 px-3 text-right">Net Line Total</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-800">
                     {acceptedItems.map((item) => (
                       <tr key={item.key} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                         <td className="py-2.5 px-3">
-                          <span className="font-mono font-bold text-slate-900 dark:text-white block">
+                          <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white block">
                             {item.skuCode}
                           </span>
-                          <span className="text-[11px] text-slate-500">
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
                             {item.skuName}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-900 dark:text-white">
+                        <td className="py-2.5 px-3 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-white whitespace-nowrap">
                           {item.qty.toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-600 dark:text-slate-300">
-                          Rs. {item.unitPrice.toLocaleString()}
+                        <td className="py-2.5 px-3 text-right font-mono tabular-nums text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                          PKR {item.unitPrice.toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-rose-600 font-bold">
-                          - Rs. {item.lineDiscount.toLocaleString()}
+                        <td className="py-2.5 px-3 text-right font-mono tabular-nums text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">
+                          -PKR {item.lineDiscount.toLocaleString()} CR
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-black text-slate-900 dark:text-white">
-                          Rs. {item.lineNet.toLocaleString()}
+                        <td className="py-2.5 px-3 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-white whitespace-nowrap">
+                          PKR {item.lineNet.toLocaleString()}
                         </td>
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="bg-[#F8FAFC] dark:bg-[#1E293B] border-t border-[#E2E8F0] dark:border-slate-700 font-mono tabular-nums text-xs font-bold">
+                    <tr>
+                      <td colSpan={3} className="py-2.5 px-3 text-slate-700 dark:text-slate-200">
+                        Invoice Totals ({acceptedItems.length} SKUs)
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                        -PKR {discount15.toLocaleString()} CR
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-[#0F172A] dark:text-white whitespace-nowrap">
+                        PKR {netInvoiceTotal.toLocaleString()}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
 
               {/* Invoice Financial Summary Box */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Gross Merchandise Subtotal</span>
-                  <span className="text-base font-black font-mono text-slate-900 dark:text-white">
-                    Rs. {grossSubtotal.toLocaleString()}
+              <div className="p-4 rounded-2xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="bg-white dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold block">Gross Merchandise Subtotal</span>
+                  <span className="text-base font-bold font-mono tabular-nums text-[#0F172A] dark:text-white">
+                    PKR {grossSubtotal.toLocaleString()}
                   </span>
                 </div>
 
-                <div className="bg-rose-50 dark:bg-rose-950/40 p-3 rounded-xl border border-rose-200 dark:border-rose-900">
-                  <span className="text-[10px] text-rose-700 dark:text-rose-300 uppercase font-bold block">Invoice Discount (Less 15%)</span>
-                  <span className="text-base font-black font-mono text-rose-700 dark:text-rose-300">
-                    - Rs. {discount15.toLocaleString()}
+                <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/80">
+                  <span className="text-[10px] text-emerald-700 dark:text-emerald-300 uppercase font-bold block">Invoice Discount (Less 15%)</span>
+                  <span className="text-base font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-300">
+                    -PKR {discount15.toLocaleString()} CR
                   </span>
                 </div>
 
-                <div className="bg-teal-50 dark:bg-teal-950/60 p-3 rounded-xl border border-teal-200 dark:border-teal-800">
-                  <span className="text-[10px] text-teal-800 dark:text-teal-300 uppercase font-black block">Net Invoice Total (Payable)</span>
-                  <span className="text-base font-black font-mono text-teal-900 dark:text-teal-200">
-                    Rs. {netInvoiceTotal.toLocaleString()} PKR
+                <div className="bg-blue-50/70 dark:bg-[#0F172A] p-3 rounded-xl border border-blue-200 dark:border-[#3B82F6]/50">
+                  <span className="text-[10px] text-[#3B82F6] dark:text-blue-400 uppercase font-bold block">Net Invoice Total (Payable)</span>
+                  <span className="text-base font-bold font-mono tabular-nums text-[#0F172A] dark:text-white">
+                    PKR {netInvoiceTotal.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -668,7 +682,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                 <button
                   type="button"
                   onClick={() => setCurrentStep(3)}
-                  className="px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
+                  className="btn-outline min-h-[44px]"
                 >
                   Back to Stock Check
                 </button>
@@ -676,10 +690,10 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                 <button
                   type="button"
                   onClick={() => setCurrentStep(5)}
-                  className="px-4 py-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="btn-primary min-h-[44px]"
                 >
-                  <span>Proceed to Ledger Posting (Step 5)</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>Proceed to Ledger Posting</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -690,60 +704,60 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
           {/* ========================================================================= */}
           {currentStep === 5 && (
             <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="bg-teal-50 dark:bg-teal-950/40 p-4 rounded-2xl border border-teal-200 dark:border-teal-800 flex items-center justify-between">
+              <div className="bg-blue-50/70 dark:bg-[#1E293B] p-4 rounded-2xl border border-blue-200 dark:border-slate-700/80 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <BookOpen className="w-6 h-6 text-teal-800 dark:text-teal-300" />
+                  <BookOpen className="w-6 h-6 text-[#3B82F6] shrink-0" />
                   <div>
-                    <h3 className="text-sm font-black text-teal-950 dark:text-teal-200">
+                    <h3 className="text-sm font-bold text-[#0F172A] dark:text-white">
                       Step 5: Post Invoice to Customer Ledger
                     </h3>
-                    <p className="text-xs text-teal-800 dark:text-teal-400">
+                    <p className="text-xs text-slate-600 dark:text-slate-300">
                       The Net Invoice Amount (after 15% discount) will be debited to {customer.companyName}&apos;s account.
                     </p>
                   </div>
                 </div>
-                <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                <ShieldCheck className="w-6 h-6 text-[#10B981] shrink-0" />
               </div>
 
               {/* Ledger Math Box */}
-              <div className="bg-slate-50 dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3 text-xs">
-                <div className="flex justify-between items-center py-1.5 border-b border-slate-200 dark:border-slate-700">
+              <div className="bg-[#F8FAFC] dark:bg-[#1E293B] p-5 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 space-y-3 text-xs">
+                <div className="flex justify-between items-center py-1.5 border-b border-[#E2E8F0] dark:border-slate-700">
                   <span className="text-slate-600 dark:text-slate-400">Previous Account Balance:</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-white">
-                    Rs. {previousBalance.toLocaleString()}
+                  <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
+                    PKR {previousBalance.toLocaleString()}
                   </span>
                 </div>
 
-                <div className="flex justify-between items-center py-1.5 border-b border-slate-200 dark:border-slate-700">
-                  <span className="text-emerald-800 dark:text-emerald-400 font-bold">
+                <div className="flex justify-between items-center py-1.5 border-b border-[#E2E8F0] dark:border-slate-700">
+                  <span className="text-[#3B82F6] dark:text-blue-400 font-bold">
                     + New Invoice Debit (15% Less on All Products):
                   </span>
-                  <span className="font-mono font-black text-teal-900 dark:text-teal-300">
-                    + Rs. {netInvoiceTotal.toLocaleString()}
+                  <span className="font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
+                    +PKR {netInvoiceTotal.toLocaleString()}
                   </span>
                 </div>
 
-                <div className="flex justify-between items-center py-2 bg-teal-100/60 dark:bg-teal-900/30 px-3 rounded-xl font-bold">
-                  <span className="text-teal-950 dark:text-teal-200">
+                <div className="flex justify-between items-center py-2.5 bg-white dark:bg-[#0F172A] px-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700 font-bold">
+                  <span className="text-[#0F172A] dark:text-white">
                     Projected Customer Ledger Balance:
                   </span>
-                  <span className="font-mono font-black text-base text-teal-950 dark:text-teal-100">
-                    Rs. {projectedBalance.toLocaleString()} PKR
+                  <span className="font-mono tabular-nums font-bold text-base text-[#0F172A] dark:text-white">
+                    PKR {projectedBalance.toLocaleString()}
                   </span>
                 </div>
               </div>
 
               {/* Operational Rule Audit Notice */}
-              <div className="bg-slate-100 dark:bg-slate-800/80 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+              <div className="bg-[#F8FAFC] dark:bg-[#1E293B] p-3.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
                 <strong>Audit Compliance Check:</strong> Dispatched stocks ({acceptedItems.length} SKUs) will be automatically deducted from {warehouseName}. {omittedItems.length > 0 ? `${omittedItems.length} missing SKU(s) are excluded from this invoice.` : 'All ordered SKUs fulfilled.'}
               </div>
 
               {/* Final Execution Button */}
-              <div className="flex items-center justify-between pt-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-3">
                 <button
                   type="button"
                   onClick={() => setCurrentStep(4)}
-                  className="px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
+                  className="btn-outline min-h-[44px]"
                 >
                   Back to Invoice
                 </button>
@@ -751,9 +765,9 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                 <button
                   type="button"
                   onClick={handleExecuteFulfillment}
-                  className="px-6 py-3 rounded-2xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg cursor-pointer active:scale-95 transition-all"
+                  className="btn-primary min-h-[44px]"
                 >
-                  <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+                  <CheckCircle2 className="w-4 h-4" />
                   <span>Accept Available Stocks, Dispatch &amp; Post to Ledger</span>
                 </button>
               </div>

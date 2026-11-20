@@ -173,10 +173,10 @@ export const NationalLightHeaderBrand: React.FC<{ size?: 'sm' | 'md' | 'lg'; cla
   <div className={`flex items-center gap-2.5 min-w-0 ${className}`}>
     <NationalLightLogo size={size} showGlow />
     <div className="min-w-0 flex flex-col justify-center leading-none">
-      <span className="font-extrabold tracking-tight uppercase text-[#1B5E3A] dark:text-white text-sm sm:text-base font-sans truncate">
+      <span className="font-extrabold tracking-tight uppercase text-[#0F172A] dark:text-white text-sm sm:text-base font-sans truncate">
         NATIONAL LIGHT
       </span>
-      <span className="font-mono font-bold tracking-widest text-[9px] sm:text-[10px] text-[#5F8564] dark:text-emerald-400 uppercase truncate mt-0.5">
+      <span className="font-mono font-bold tracking-widest text-[9px] sm:text-[10px] text-slate-500 dark:text-[#3B82F6] uppercase truncate mt-0.5">
         N-LINK 360 ENTERPRISE
       </span>
     </div>
@@ -196,10 +196,10 @@ export const DocumentCenterWatermark: React.FC<{ title?: string; className?: str
   >
     <div className="opacity-[0.05] dark:opacity-[0.07] flex flex-col items-center justify-center transform -rotate-12 scale-110 sm:scale-125">
       <NationalLightLogo size={120} />
-      <div className="font-black text-3xl sm:text-4xl uppercase tracking-[0.2em] text-[#1B5E3A] mt-3 font-sans">
+      <div className="font-black text-3xl sm:text-4xl uppercase tracking-[0.2em] text-[#0F172A] dark:text-slate-200 mt-3 font-sans">
         {title}
       </div>
-      <div className="font-mono text-xs sm:text-sm uppercase tracking-[0.3em] font-bold text-[#1B5E3A] mt-1">
+      <div className="font-mono text-xs sm:text-sm uppercase tracking-[0.3em] font-bold text-[#0F172A] dark:text-slate-300 mt-1">
         OFFICIAL REGISTERED LEDGER & INVOICE
       </div>
     </div>

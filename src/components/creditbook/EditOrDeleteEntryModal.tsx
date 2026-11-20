@@ -176,21 +176,21 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white dark:bg-[#111C33] rounded-2xl border border-[#E2E8F0] dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="w-full max-w-lg bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Header */}
-        <div className="p-4 bg-[#1B5E3A] text-white flex items-center justify-between shrink-0">
+        <div className="p-4 bg-[#0F172A] text-white flex items-center justify-between shrink-0 border-b border-slate-800">
           <div className="flex items-center gap-2.5 min-w-0">
             {entryType === 'ORDER' ? (
-              <ShoppingBag className="w-5 h-5 text-[#F59E0B] shrink-0" />
+              <ShoppingBag className="w-5 h-5 text-[#F97316] shrink-0" />
             ) : entryType === 'RECOVERY' ? (
-              <Receipt className="w-5 h-5 text-[#10B981] shrink-0" />
+              <Receipt className="w-5 h-5 text-emerald-400 shrink-0" />
             ) : (
-              <Clock className="w-5 h-5 text-[#0D9488] shrink-0" />
+              <Clock className="w-5 h-5 text-[#3B82F6] shrink-0" />
             )}
             <div className="min-w-0">
               <h3 className="text-sm font-bold truncate">{getEntryTitle()}</h3>
-              <p className="text-[11px] font-mono text-slate-300">
+              <p className="text-[11px] font-mono tabular-nums text-slate-300">
                 Created: {entryData.orderDate || entryData.collectionDate || entryData.date || entryData.createdAt?.slice(0, 10)} &middot; Status: {entryData.status}
               </p>
             </div>
@@ -198,7 +198,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg text-slate-300 hover:text-white flex items-center justify-center cursor-pointer"
+            className="min-w-[44px] min-h-[44px] -mr-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 inline-flex items-center justify-center cursor-pointer transition-colors"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -206,20 +206,20 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
         </div>
 
         {/* Action Mode Toggle (Edit vs Cancel/Reverse) */}
-        <div className="p-3 bg-[#F8FAFC] dark:bg-slate-900 border-b border-[#E2E8F0] dark:border-slate-800 grid grid-cols-2 gap-2">
+        <div className="p-3 bg-[#F8FAFC] dark:bg-[#0F172A] border-b border-[#E2E8F0] dark:border-slate-700/80 grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => {
               setActiveMode('EDIT');
               setValidationError(null);
             }}
-            className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors ${
+            className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 cursor-pointer transition-colors ${
               activeMode === 'EDIT'
-                ? 'bg-[#1B5E3A] text-white shadow-xs'
+                ? 'bg-[#3B82F6] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
             }`}
           >
-            <Edit3 className="w-4 h-4 text-[#0D9488]" />
+            <Edit3 className={`w-4 h-4 ${activeMode === 'EDIT' ? 'text-white' : 'text-[#3B82F6]'}`} />
             <span>Edit Entry</span>
           </button>
 
@@ -229,9 +229,9 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
               setActiveMode('DELETE');
               setValidationError(null);
             }}
-            className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors ${
+            className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 cursor-pointer transition-colors ${
               activeMode === 'DELETE'
-                ? 'bg-rose-700 text-white shadow-xs'
+                ? 'bg-rose-600 text-white shadow-xs'
                 : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
             }`}
           >
@@ -267,12 +267,12 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
             <div className="space-y-3.5">
               {entryType === 'ORDER' && (
                 <div>
-                  <div className="mb-2 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="mb-3 p-3 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
                     <span className="text-[10px] text-slate-400 uppercase font-bold block">Current Order Total</span>
-                    <span className="text-base font-bold font-mono text-[#0F172A] dark:text-white">
-                      Rs. {Number(entryData.totalAmount || 0).toLocaleString()}
+                    <span className="text-base font-bold font-mono tabular-nums text-[#0F172A] dark:text-white">
+                      PKR {Number(entryData.totalAmount || 0).toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">
                       {entryData.items?.length || 0} SKUs booked for {entryData.customerName}
                     </span>
                   </div>
@@ -286,7 +286,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                       value={orderNotes}
                       onChange={(e) => setOrderNotes(e.target.value)}
                       placeholder="Add dispatch instructions or delivery notes..."
-                      className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
+                      className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                     />
                   </div>
                 </div>
@@ -303,7 +303,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                       min={1}
                       value={recoveryAmount}
                       onChange={(e) => setRecoveryAmount(Number(e.target.value))}
-                      className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-sm font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] font-mono tabular-nums text-sm font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                     />
                   </div>
 
@@ -314,7 +314,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                     <select
                       value={recoveryMode}
                       onChange={(e) => setRecoveryMode(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#0D9488]"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                     >
                       <option value="CASH">Cash in Hand</option>
                       <option value="ONLINE_TRANSFER">Online Bank Transfer</option>
@@ -334,7 +334,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                           value={bankName}
                           onChange={(e) => setBankName(e.target.value)}
                           placeholder="e.g. Meezan, HBL"
-                          className="w-full p-2 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+                          className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                         />
                       </div>
                       <div>
@@ -346,7 +346,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                           value={instrumentNumber}
                           onChange={(e) => setInstrumentNumber(e.target.value)}
                           placeholder="e.g. 1092837"
-                          className="w-full p-2 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono"
+                          className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-mono tabular-nums text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                         />
                       </div>
                     </div>
@@ -361,7 +361,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                       value={recoveryRemarks}
                       onChange={(e) => setRecoveryRemarks(e.target.value)}
                       placeholder="e.g. Booked at Shop Counter"
-                      className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                     />
                   </div>
                 </div>
@@ -379,7 +379,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                         value={checkInTime}
                         onChange={(e) => setCheckInTime(e.target.value)}
                         placeholder="09:00 AM"
-                        className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-bold"
+                        className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                       />
                     </div>
                     <div>
@@ -391,7 +391,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                         value={checkOutTime}
                         onChange={(e) => setCheckOutTime(e.target.value)}
                         placeholder="05:30 PM"
-                        className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-bold"
+                        className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                       />
                     </div>
                   </div>
@@ -405,7 +405,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                       value={attendanceRemarks}
                       onChange={(e) => setAttendanceRemarks(e.target.value)}
                       placeholder="e.g. Commercial Beat Covered"
-                      className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
                     />
                   </div>
                 </div>
@@ -445,7 +445,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                     if (validationError) setValidationError(null);
                   }}
                   placeholder="Explain why this entry is being cancelled (required for audit)..."
-                  className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-[#0F172A] dark:text-white outline-none focus:border-rose-500"
+                  className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-rose-500"
                 />
               </div>
 
@@ -463,11 +463,11 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3.5 bg-[#F8FAFC] dark:bg-slate-900 border-t border-[#E2E8F0] dark:border-slate-800 flex items-center justify-end gap-2.5 shrink-0">
+        <div className="p-3.5 bg-[#F8FAFC] dark:bg-[#0F172A] border-t border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-end gap-2.5 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="btn-outline min-h-[40px] text-xs"
+            className="btn-outline min-h-[44px] text-xs"
           >
             Cancel
           </button>
@@ -477,7 +477,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
               type="button"
               disabled={!permissions.allowed || isSubmitting}
               onClick={handleSaveEdit}
-              className="btn-primary min-h-[40px] text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary min-h-[44px] text-xs disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{isSubmitting ? 'Saving...' : 'Save Changes'}</span>
@@ -487,7 +487,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
               type="button"
               disabled={!permissions.allowed || (permissions.requiresReversal && !reason.trim()) || isSubmitting}
               onClick={handleConfirmDeleteOrReverse}
-              className="btn-danger min-h-[40px] text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-danger min-h-[44px] text-xs disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-4 h-4" />
               <span>{isSubmitting ? 'Processing...' : permissions.requiresReversal ? 'Authorize Reversal' : 'Confirm Cancel'}</span>

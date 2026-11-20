@@ -313,34 +313,34 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
       </div>
 
       {/* Live Aggregate KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[11px] text-slate-500 font-semibold block">Filtered Sales Volume</span>
-          <span className="text-lg font-black font-mono tabular-nums text-slate-900 dark:text-white mt-1 block">
-            Rs. {summary.totalSales.toLocaleString()}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 items-stretch">
+        <div className="bg-white dark:bg-[#1E293B] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between h-full">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Filtered Sales Volume</span>
+          <span className="text-lg font-black font-mono tabular-nums text-[#0F172A] dark:text-white mt-1 block">
+            PKR {summary.totalSales.toLocaleString()}
           </span>
-          <span className="text-[10px] text-slate-400">{summary.orderCount} orders &middot; {summary.invoicedCount} invoiced</span>
+          <span className="text-[10px] text-slate-400 mt-auto pt-1 font-mono tabular-nums">{summary.orderCount} orders &middot; {summary.invoicedCount} invoiced</span>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[11px] text-slate-500 font-semibold block">Filtered Recoveries</span>
+        <div className="bg-white dark:bg-[#1E293B] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between h-full">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Filtered Recoveries</span>
           <span className="text-lg font-black font-mono tabular-nums text-emerald-600 dark:text-emerald-400 mt-1 block">
-            Rs. {summary.totalRecovery.toLocaleString()}
+            PKR {summary.totalRecovery.toLocaleString()}
           </span>
-          <span className="text-[10px] text-slate-400">{filteredRecoveries.length} receipts</span>
+          <span className="text-[10px] text-slate-400 mt-auto pt-1 font-mono tabular-nums">{filteredRecoveries.length} receipts</span>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[11px] text-slate-500 font-semibold block">Total Receivables</span>
+        <div className="bg-white dark:bg-[#1E293B] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between h-full">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Total Receivables</span>
           <span className="text-lg font-black font-mono tabular-nums text-amber-600 dark:text-amber-400 mt-1 block">
-            Rs. {summary.totalOutstanding.toLocaleString()}
+            PKR {summary.totalOutstanding.toLocaleString()}
           </span>
-          <span className="text-[10px] text-slate-400">{customers.length} active accounts</span>
+          <span className="text-[10px] text-slate-400 mt-auto pt-1 font-mono tabular-nums">{customers.length} active accounts</span>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <span className="text-[11px] text-slate-500 font-semibold block">Audit Events Logged</span>
-          <span className="text-lg font-black font-mono tabular-nums text-slate-900 dark:text-white mt-1 block">
+        <div className="bg-white dark:bg-[#1E293B] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between h-full">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Audit Events Logged</span>
+          <span className="text-lg font-black font-mono tabular-nums text-[#0F172A] dark:text-white mt-1 block">
             {filteredAudits.length}
           </span>
-          <span className="text-[10px] text-slate-400">Immutable security &amp; ledger trail</span>
+          <span className="text-[10px] text-slate-400 mt-auto pt-1">Immutable security &amp; ledger trail</span>
         </div>
       </div>
 
@@ -359,10 +359,10 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
             key={t.id}
             type="button"
             onClick={() => setActiveTab(t.id)}
-            className={`px-3.5 py-2 rounded-xl font-bold whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-2 min-h-[44px] rounded-xl font-bold whitespace-nowrap cursor-pointer transition-colors ${
               activeTab === t.id
-                ? 'bg-[#0B132B] dark:bg-emerald-600 text-white'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                ? 'bg-[#3B82F6] text-white shadow-sm'
+                : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             {t.label}
@@ -405,8 +405,8 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
                     <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">{o.customerName}</div>
                     <div className="flex items-center justify-between text-[11px] text-slate-500">
                       <span className="truncate pr-2">{o.salesUserName} &middot; {(o.orderDate || o.createdAt).slice(0, 10)}</span>
-                      <span className="font-mono font-bold text-slate-900 dark:text-white shrink-0">
-                        Rs. {(o.netAmount ?? o.totalAmount ?? 0).toLocaleString()}
+                      <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white shrink-0">
+                        PKR {(o.netAmount ?? o.totalAmount ?? 0).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -414,11 +414,11 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
               )}
             </div>
             {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block responsive-table-container">
               <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-bold">
+                <thead className="bg-[#0F172A] text-slate-300 uppercase text-[10px] font-bold">
                   <tr>
-                    <th className="py-2.5 px-4">Order / Invoice</th>
+                    <th className="py-2.5 px-4 frozen-first-col bg-[#0F172A]">Order / Invoice</th>
                     <th className="py-2.5 px-4">Date</th>
                     <th className="py-2.5 px-4">Customer</th>
                     <th className="py-2.5 px-4">Officer</th>
@@ -426,7 +426,7 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
                     <th className="py-2.5 px-4">Stage</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
                   {pagedOrders.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="text-center py-8 text-slate-400">
@@ -436,14 +436,14 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
                   ) : (
                     pagedOrders.map((o) => (
                       <tr key={o.id}>
-                        <td className="py-2.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                        <td className="py-2.5 px-4 font-mono tabular-nums font-bold text-[#0F172A] dark:text-white frozen-first-col bg-white dark:bg-[#1E293B]">
                           #{o.orderNumber} {o.invoiceNumber ? `· ${o.invoiceNumber}` : ''}
                         </td>
-                        <td className="py-2.5 px-4 font-mono text-slate-500">{(o.orderDate || o.createdAt).slice(0, 10)}</td>
+                        <td className="py-2.5 px-4 font-mono tabular-nums text-slate-500 dark:text-slate-400">{(o.orderDate || o.createdAt).slice(0, 10)}</td>
                         <td className="py-2.5 px-4 font-semibold text-slate-800 dark:text-slate-200">{o.customerName}</td>
                         <td className="py-2.5 px-4 text-slate-600 dark:text-slate-300">{o.salesUserName}</td>
-                        <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
-                          Rs. {(o.netAmount ?? o.totalAmount ?? 0).toLocaleString()}
+                        <td className="py-2.5 px-4 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
+                          PKR {(o.netAmount ?? o.totalAmount ?? 0).toLocaleString()}
                         </td>
                         <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">{o.status}</td>
                       </tr>
@@ -461,29 +461,29 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
       {activeTab === 'FINANCE' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="bg-white dark:bg-[#1E293B] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-2">
               <div>
-                <div className="font-bold text-slate-900 dark:text-white">Recovery &amp; Collections Audit</div>
-                <div className="text-[11px] text-slate-500">{filteredRecoveries.length} receipts matched</div>
+                <div className="font-bold text-[#0F172A] dark:text-white">Recovery &amp; Collections Audit</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">{filteredRecoveries.length} receipts matched</div>
               </div>
               <button
                 type="button"
                 onClick={() => exportRecoveryAuditCsv(filteredRecoveries)}
-                className="btn-primary py-2 px-3.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer"
+                className="btn-outline min-h-[44px] py-2 px-3.5 rounded-xl font-bold inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Recovery CSV</span>
               </button>
             </div>
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="bg-white dark:bg-[#1E293B] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-2">
               <div>
-                <div className="font-bold text-slate-900 dark:text-white">Dealer Outstanding Aging</div>
-                <div className="text-[11px] text-slate-500">Total Receivable: Rs. {summary.totalOutstanding.toLocaleString()}</div>
+                <div className="font-bold text-[#0F172A] dark:text-white">Dealer Outstanding Aging</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">Total Receivable: PKR {summary.totalOutstanding.toLocaleString()}</div>
               </div>
               <button
                 type="button"
                 onClick={() => exportAgingReportCsv(customers)}
-                className="btn-primary py-2 px-3.5 rounded-xl font-bold flex items-center gap-1.5 cursor-pointer"
+                className="btn-primary min-h-[44px] py-2 px-3.5 rounded-xl font-bold inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Aging CSV</span>
@@ -494,9 +494,9 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
           {(() => {
             const pagedCustomers = customers.slice((financePage - 1) * PAGE_SIZE, financePage * PAGE_SIZE);
             return (
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 overflow-hidden">
                 {/* Mobile Cards */}
-                <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="md:hidden divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
                   {pagedCustomers.map((c) => {
                     const bal = c.currentBalance ?? c.openingBalance ?? 0;
                     const limit = c.creditLimit || 0;
@@ -504,43 +504,43 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
                     return (
                       <div key={c.id} className="p-3.5 space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-slate-900 dark:text-white truncate">{c.companyName}</span>
-                          <span className={`font-mono font-bold shrink-0 ${pct > 100 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          <span className="font-semibold text-[#0F172A] dark:text-white truncate">{c.companyName}</span>
+                          <span className={`font-mono tabular-nums font-bold shrink-0 ${pct > 100 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                             {pct}%
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-slate-500">
-                          <span>{c.town || c.city} &middot; Limit Rs. {limit.toLocaleString()}</span>
-                          <span className="font-mono font-bold text-slate-900 dark:text-white">Rs. {bal.toLocaleString()}</span>
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+                          <span>{c.town || c.city} &middot; Limit PKR {limit.toLocaleString()}</span>
+                          <span className="font-bold text-[#0F172A] dark:text-white">PKR {bal.toLocaleString()}</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
                 {/* Desktop Table */}
-                <div className="hidden md:block overflow-x-auto">
+                <div className="hidden md:block responsive-table-container">
                   <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase text-[10px] font-bold">
+                    <thead className="bg-[#0F172A] text-slate-300 uppercase text-[10px] font-bold">
                       <tr>
-                        <th className="py-2.5 px-4">Dealer</th>
+                        <th className="py-2.5 px-4 frozen-first-col bg-[#0F172A]">Dealer</th>
                         <th className="py-2.5 px-4">Town</th>
                         <th className="py-2.5 px-4 text-right">Credit Limit</th>
                         <th className="py-2.5 px-4 text-right">Current Balance</th>
                         <th className="py-2.5 px-4 text-right">Utilization</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
                       {pagedCustomers.map((c) => {
                         const bal = c.currentBalance ?? c.openingBalance ?? 0;
                         const limit = c.creditLimit || 0;
                         const pct = limit > 0 ? Math.round((bal / limit) * 100) : 0;
                         return (
                           <tr key={c.id}>
-                            <td className="py-2.5 px-4 font-semibold text-slate-900 dark:text-white">{c.companyName}</td>
-                            <td className="py-2.5 px-4 text-slate-500">{c.town || c.city}</td>
-                            <td className="py-2.5 px-4 text-right font-mono text-slate-500">Rs. {limit.toLocaleString()}</td>
-                            <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">Rs. {bal.toLocaleString()}</td>
-                            <td className={`py-2.5 px-4 text-right font-mono font-bold ${pct > 100 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            <td className="py-2.5 px-4 font-semibold text-[#0F172A] dark:text-white frozen-first-col bg-white dark:bg-[#1E293B]">{c.companyName}</td>
+                            <td className="py-2.5 px-4 text-slate-500 dark:text-slate-400">{c.town || c.city}</td>
+                            <td className="py-2.5 px-4 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400">PKR {limit.toLocaleString()}</td>
+                            <td className="py-2.5 px-4 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">PKR {bal.toLocaleString()}</td>
+                            <td className={`py-2.5 px-4 text-right font-mono tabular-nums font-bold ${pct > 100 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                               {pct}%
                             </td>
                           </tr>

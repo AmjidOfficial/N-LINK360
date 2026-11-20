@@ -632,11 +632,11 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   };
 
   return (
-    <div className="flex-1 min-h-0 h-full bg-slate-50 dark:bg-[#070E0B] text-slate-900 dark:text-emerald-50 flex overflow-hidden antialiased">
+    <div className="flex-1 min-h-0 h-full bg-[#F8FAFC] dark:bg-[#0B1120] text-[#0F172A] dark:text-[#F8FAFC] flex overflow-hidden antialiased">
       {/* Tablet / Mobile Drawer Backdrop */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -646,20 +646,20 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
         aria-label="ERP Sidebar Navigation"
         className={`fixed inset-y-0 left-0 z-50 w-64 ${
           isSidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-64'
-        } bg-white dark:bg-[#0B1610] border-r border-slate-200 dark:border-emerald-900/50 flex flex-col shrink-0 transition-all duration-200 lg:relative lg:h-full lg:translate-x-0 ${
+        } bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-slate-800 flex flex-col shrink-0 transition-all duration-200 lg:relative lg:h-full lg:translate-x-0 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header & Desktop Collapse Toggle */}
-        <div className="h-14 px-3 border-b border-slate-200 dark:border-emerald-900/50 flex items-center justify-between shrink-0">
+        <div className="h-14 px-3 bg-[#0F172A] dark:bg-[#0B1120] border-b border-slate-800 flex items-center justify-between shrink-0 text-white">
           {!isSidebarCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
               <NationalLightLogo size="sm" showGlow={false} />
               <div className="flex flex-col leading-tight min-w-0">
-                <span className="font-bold text-sm tracking-tight text-[#0B132B] dark:text-white font-display whitespace-nowrap">
+                <span className="font-bold text-sm tracking-tight text-white font-display whitespace-nowrap">
                   N-Link 360
                 </span>
-                <span className="text-[10px] font-semibold text-[#F59E0B] whitespace-nowrap">
+                <span className="text-[10px] font-semibold text-[#F97316] whitespace-nowrap">
                   Head Office
                 </span>
               </div>
@@ -669,7 +669,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-              className="hidden lg:flex w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-300 items-center justify-center cursor-pointer"
+              className="hidden lg:flex w-10 h-10 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white items-center justify-center cursor-pointer"
               title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
               aria-label={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             >
@@ -678,10 +678,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
             <button
               type="button"
               onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white"
+              className="lg:hidden w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer"
               aria-label="Close navigation"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -705,23 +705,23 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       type="button"
                       onClick={() => handleSidebarNav(item.id)}
                       title={item.label}
-                      className={`w-full ${
+                      className={`w-full min-h-[40px] ${
                         isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-3'
-                      } py-2.5 rounded-xl text-xs font-semibold flex items-center transition-colors cursor-pointer ${
+                      } py-2 rounded-xl text-xs font-semibold flex items-center transition-colors cursor-pointer ${
                         active
-                          ? 'bg-[#0B132B] dark:bg-[#0D9488] text-white'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                          ? 'bg-[#3B82F6] text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-2.5 min-w-0'}`}>
-                        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-[#F59E0B] dark:text-white' : 'text-[#0D9488]'}`} />
+                        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
                         {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                       </div>
                       {!isSidebarCollapsed && 'badge' in item && item.badge !== undefined && (
-                        <span className="text-[11px] font-mono text-slate-400">{item.badge}</span>
+                        <span className={`text-[11px] font-mono tabular-nums ${active ? 'text-blue-100' : 'text-slate-400'}`}>{item.badge}</span>
                       )}
                       {!isSidebarCollapsed && 'alertBadge' in item && item.alertBadge !== undefined && item.alertBadge > 0 && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#F59E0B] text-[#0B132B]">
+                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono tabular-nums font-bold bg-[#F97316] text-white">
                           {item.alertBadge}
                         </span>
                       )}
@@ -734,10 +734,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
         </nav>
 
         {/* Sidebar Footer: Account & Mode Switch */}
-        <div className="p-2.5 border-t border-slate-200 dark:border-slate-800 space-y-2 shrink-0">
+        <div className="p-2.5 border-t border-[#E2E8F0] dark:border-slate-800 space-y-2 shrink-0">
           {!isSidebarCollapsed && (
-            <div className="px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#0B132B] text-white font-bold text-xs flex items-center justify-center shrink-0">
+            <div className="px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#3B82F6] text-white font-bold text-xs flex items-center justify-center shrink-0">
                 {currentUser.avatarInitials || 'NL'}
               </div>
               <div className="min-w-0 flex-1">
@@ -760,9 +760,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   if (ok) setIsSidebarOpen(false);
                 }}
                 title="Install N-LINK 360 App"
-                className="min-h-[40px] py-2 px-2.5 rounded-lg bg-[#1B5E3A] hover:bg-[#14472B] text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="btn-primary min-h-[44px] py-2 px-2.5 text-xs"
               >
-                <Download className="w-3.5 h-3.5 text-[#F59E0B]" />
+                <Download className="w-3.5 h-3.5" />
                 {!isSidebarCollapsed && <span>Install Desktop App</span>}
               </button>
             )}
@@ -771,7 +771,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 type="button"
                 onClick={onOpenChangePassword}
                 title="Change Password"
-                className="min-h-[40px] py-2 px-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="min-h-[44px] py-2 px-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:text-[#3B82F6] hover:bg-blue-50 dark:hover:bg-blue-950/40 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <KeyRound className="w-3.5 h-3.5" />
                 {!isSidebarCollapsed && <span>Change Password</span>}
@@ -781,7 +781,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               type="button"
               onClick={onSignOut}
               title="Sign Out"
-              className="min-h-[40px] py-2 px-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="min-h-[44px] py-2 px-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               {!isSidebarCollapsed && <span>Sign Out</span>}
@@ -793,21 +793,21 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
       {/* 2. MAIN CONTENT VIEWPORT */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         {/* Frozen 3-Zone Top App Bar */}
-        <header className="shrink-0 z-30 h-14 bg-white/95 dark:bg-[#0E1A14]/95 backdrop-blur-md border-b border-slate-200 dark:border-emerald-900/50 px-4 lg:px-6 flex items-center justify-between gap-4">
+        <header className="shrink-0 z-30 h-14 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-slate-800 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-3">
           {/* Left: Tablet Menu Trigger + Contextual Breadcrumb */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <button
               type="button"
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden btn-ghost px-2"
+              className="lg:hidden w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shrink-0"
               aria-label="Open navigation menu"
             >
               <SlidersHorizontal className="w-4 h-4" />
             </button>
             <div className="flex items-baseline gap-2 truncate">
-              <span className="text-xs text-slate-500 hidden sm:inline">N-Link</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">N-Link</span>
               <span className="text-xs text-slate-400 hidden sm:inline">/</span>
-              <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A] dark:text-[#F8FAFC] capitalize truncate tracking-tight">
+              <h1 className="text-lg sm:text-xl font-bold text-[#0F172A] dark:text-[#F8FAFC] capitalize truncate tracking-tight">
                 {activeTab.toLowerCase().replace(/_/g, ' ')}
               </h1>
             </div>
@@ -829,23 +829,22 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
             <button
               type="button"
               onClick={handleToggleTheme}
-              className="btn-outline px-2.5"
-              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Executive Dark Mode'}
-              aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Executive Dark Mode'}
+              className="btn-outline px-2.5 min-h-[44px]"
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              {isDarkMode ? <Sun className="w-4 h-4 text-[#F59E0B]" /> : <Moon className="w-4 h-4 text-[#0B132B]" />}
+              {isDarkMode ? <Sun className="w-4 h-4 text-[#F97316]" /> : <Moon className="w-4 h-4 text-[#0F172A]" />}
             </button>
-
 
             {onSyncGoogleSheet && (
               <button
                 type="button"
                 onClick={() => onSyncGoogleSheet()}
                 disabled={isSyncingSheet}
-                className="btn-outline"
+                className="btn-outline min-h-[44px]"
                 title="Sync Google Sheets"
               >
-                <RefreshCw className={`w-3.5 h-3.5 text-[#0D9488] dark:text-blue-400 ${isSyncingSheet ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400 ${isSyncingSheet ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">{isSyncingSheet ? 'Syncing...' : 'Sync'}</span>
               </button>
             )}
@@ -853,7 +852,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
             <button
               type="button"
               onClick={() => setIsAddCustomerModalOpen(true)}
-              className="btn-primary"
+              className="btn-primary min-h-[44px]"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Customer</span>
@@ -1051,14 +1050,14 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               {/* ==================================================== */}
               {activeTab === 'APPROVALS' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                        <CheckSquare className="w-5 h-5 text-teal-700 dark:text-teal-400" />
+                        <CheckSquare className="w-5 h-5 text-[#3B82F6]" />
                         Executive Approval Center
                       </h2>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">
-                        Sole Signing Authority: <strong>Shahzad Ullah (Executive Director)</strong>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                        Sole Signing Authority: <strong className="text-slate-800 dark:text-slate-200">Shahzad Ullah (Executive Director)</strong>
                       </p>
                     </div>
 
@@ -1066,10 +1065,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <button
                         type="button"
                         onClick={() => setApprovalsSubTab('ORDERS')}
-                        className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer tabular-nums ${
                           approvalsSubTab === 'ORDERS'
-                            ? 'bg-teal-800 text-white shadow-xs'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
                         Orders Waiting ({pendingOrders.length})
@@ -1078,10 +1077,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <button
                         type="button"
                         onClick={() => setApprovalsSubTab('RECOVERIES')}
-                        className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer tabular-nums ${
                           approvalsSubTab === 'RECOVERIES'
-                            ? 'bg-teal-800 text-white shadow-xs'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
                         Payments Waiting ({pendingRecoveries.length})
@@ -1090,10 +1089,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <button
                         type="button"
                         onClick={() => setApprovalsSubTab('CUSTOMERS')}
-                        className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer tabular-nums ${
                           approvalsSubTab === 'CUSTOMERS'
-                            ? 'bg-teal-800 text-white shadow-xs'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
                         New Customers ({pendingCustomers.length})
@@ -1102,10 +1101,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <button
                         type="button"
                         onClick={() => setApprovalsSubTab('PROFILE_EDITS')}
-                        className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer tabular-nums ${
                           approvalsSubTab === 'PROFILE_EDITS'
-                            ? 'bg-teal-800 text-white shadow-xs'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
                         Profile Edits ({pendingProfileRequests.length})
@@ -1117,9 +1116,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   {approvalsSubTab === 'ORDERS' && (
                     <div className="space-y-3">
                       {pendingOrders.length === 0 ? (
-                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-10 border border-slate-200 dark:border-slate-800 text-center text-slate-400 text-xs">
+                        <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-10 border border-[#E2E8F0] dark:border-slate-700/80 text-center text-slate-400 text-xs">
                           <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-500 opacity-60" />
-                          <p className="font-bold text-sm text-slate-700 dark:text-slate-300">All Orders Processed</p>
+                          <p className="font-bold text-sm text-slate-700 dark:text-slate-200">All Orders Processed</p>
                           <p className="mt-1">No pending orders awaiting Shahzad Ullah&apos;s review.</p>
                         </div>
                       ) : (
@@ -1130,22 +1129,23 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                           const projectedBalance = oldBalance + ordAmount;
                           const creditLimit = cust?.creditLimit || 250000;
                           const isWarning = projectedBalance > creditLimit;
+                          const projectedPct = creditLimit > 0 ? Math.min(100, Math.round((projectedBalance / creditLimit) * 100)) : 0;
 
                           return (
                             <div
                               key={ord.id || ord.orderNumber}
-                              className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
+                              className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3.5"
                             >
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/80 pb-3">
                                 <div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-mono tabular-nums font-bold text-sm text-slate-900 dark:text-white">
                                       Order #{ord.orderNumber || ord.id?.slice(-6)}
                                     </span>
                                     {isWarning && (
-                                      <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                                      <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border border-orange-500/20 flex items-center gap-1">
                                         <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                                        <span>Credit Limit Warning</span>
+                                        <span>Credit Limit Warning ({projectedPct}%)</span>
                                       </span>
                                     )}
                                   </div>
@@ -1161,56 +1161,100 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
                               {/* Financial Matrix */}
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                                <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <div className="bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                                   <span className="text-[10px] text-slate-400 block font-medium">Old Balance</span>
                                   <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
-                                    Rs. {oldBalance.toLocaleString()}
+                                    PKR {oldBalance.toLocaleString()}
                                   </span>
                                 </div>
-                                <div className="bg-emerald-50/60 dark:bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/40">
-                                  <span className="text-[10px] text-emerald-800 dark:text-emerald-400 block font-medium">Order Amount</span>
-                                  <span className="font-mono tabular-nums font-bold text-emerald-900 dark:text-emerald-200">
-                                    Rs. {ordAmount.toLocaleString()}
+                                <div className="bg-blue-50/70 dark:bg-blue-950/30 p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60">
+                                  <span className="text-[10px] text-[#3B82F6] dark:text-blue-400 block font-medium">Order Amount</span>
+                                  <span className="font-mono tabular-nums font-bold text-slate-900 dark:text-white">
+                                    PKR {ordAmount.toLocaleString()}
                                   </span>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <div className="bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                                   <span className="text-[10px] text-slate-400 block font-medium">Projected Balance</span>
-                                  <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
-                                    Rs. {projectedBalance.toLocaleString()}
+                                  <span className={`font-mono tabular-nums font-bold ${isWarning ? 'text-[#F97316]' : 'text-slate-800 dark:text-slate-200'}`}>
+                                    PKR {projectedBalance.toLocaleString()}
                                   </span>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <div className="bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                                   <span className="text-[10px] text-slate-400 block font-medium">Credit Limit</span>
                                   <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
-                                    Rs. {creditLimit.toLocaleString()}
+                                    PKR {creditLimit.toLocaleString()}
                                   </span>
                                 </div>
                               </div>
 
-                              {/* Operational 5-Step Flow Stepper */}
-                              <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
-                                <span className="font-semibold text-emerald-700 dark:text-emerald-400">1. Sales Entry</span>
-                                <span className="text-slate-300 dark:text-slate-600" aria-hidden="true">&rarr;</span>
-                                <span className="font-semibold text-slate-700 dark:text-slate-300">2. Dispatch Note</span>
-                                <span className="text-slate-300 dark:text-slate-600" aria-hidden="true">&rarr;</span>
-                                <span className="font-semibold text-slate-700 dark:text-slate-300">3. Stock Availability</span>
-                                <span className="text-slate-300 dark:text-slate-600" aria-hidden="true">&rarr;</span>
-                                <span className="font-semibold text-emerald-800 dark:text-emerald-400">4. Invoice (-15%)</span>
-                                <span className="text-slate-300 dark:text-slate-600" aria-hidden="true">&rarr;</span>
-                                <span className="font-bold text-slate-900 dark:text-white">5. Ledger Post</span>
+                              {/* Credit Utilization Meter */}
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                  <span>Projected Credit Exposure</span>
+                                  <span className={`font-mono tabular-nums font-bold ${isWarning ? 'text-[#F97316]' : projectedPct >= 80 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                    {projectedPct}% of limit
+                                  </span>
+                                </div>
+                                <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${
+                                      isWarning ? 'bg-rose-500' : projectedPct >= 80 ? 'bg-[#F97316]' : 'bg-emerald-500'
+                                    }`}
+                                    style={{ width: `${projectedPct}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Connected 5-Step Operational Pipeline Stepper */}
+                              <div className="bg-slate-50 dark:bg-[#0F172A] px-3 py-3 rounded-xl border border-[#E2E8F0] dark:border-slate-800 overflow-x-auto">
+                                <div className="flex items-center justify-between min-w-[460px] gap-1 text-[11px]">
+                                  {[
+                                    { step: 1, label: 'Sales Entry', done: true },
+                                    { step: 2, label: 'Dispatch Note', done: Boolean(ord.dispatchNoteNumber || ord.dispatchedAt) },
+                                    { step: 3, label: 'Stock Check', done: Boolean(ord.packingRecord) },
+                                    { step: 4, label: 'Invoice (-15%)', done: ord.status === 'APPROVED' },
+                                    { step: 5, label: 'Ledger Post', done: ord.status === 'APPROVED' },
+                                  ].map((st, idx, arr) => (
+                                    <React.Fragment key={st.step}>
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        <span className={`w-5 h-5 rounded-md font-mono tabular-nums font-bold flex items-center justify-center text-[10px] ${
+                                          st.done
+                                            ? 'bg-emerald-500 text-white'
+                                            : idx === 1
+                                            ? 'bg-[#3B82F6] text-white'
+                                            : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                                        }`}>
+                                          {st.step}
+                                        </span>
+                                        <span className={`font-semibold whitespace-nowrap ${
+                                          st.done
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : idx === 1
+                                            ? 'text-[#3B82F6] dark:text-blue-400'
+                                            : 'text-slate-500 dark:text-slate-400'
+                                        }`}>
+                                          {st.label}
+                                        </span>
+                                      </div>
+                                      {idx < arr.length - 1 && (
+                                        <div className={`flex-1 h-0.5 min-w-[16px] ${st.done ? 'bg-emerald-500/60' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </div>
                               </div>
 
                               {/* Approver Action Bar */}
-                              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                <span className="text-[11px] text-slate-500 font-medium">
+                              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-700/80">
+                                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium font-mono tabular-nums">
                                   Items: {ord.items?.length || 1} SKUs <span aria-hidden="true">&middot;</span> Cartons: {ord.items?.reduce((s, i) => s + (i.cartons || 0), 0) || 0}
                                 </span>
 
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                   <button
                                     type="button"
                                     onClick={() => setRejectionTarget({ id: ord.id || ord.orderNumber, type: 'ORDER', code: ord.orderNumber })}
-                                    className="min-h-[40px] px-3.5 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 font-semibold text-xs hover:bg-rose-100 dark:hover:bg-rose-900 transition-colors cursor-pointer"
+                                    className="btn-danger min-h-[44px] px-3.5 text-xs"
                                   >
                                     Reject
                                   </button>
@@ -1218,10 +1262,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => setDispatchModalOrder(ord)}
-                                    className="min-h-[40px] px-4 py-2 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-bold text-xs flex items-center gap-1.5 hover:bg-teal-100 dark:hover:bg-teal-900 transition-colors cursor-pointer shadow-xs active:scale-95"
+                                    className="btn-outline min-h-[44px] px-3.5 text-xs"
                                     title="Run 5-Step Operational Flow: Sales Entry -> Dispatch Note -> Stock Availability Check -> Invoice (-15%) -> Ledger"
                                   >
-                                    <Truck className="w-4 h-4 text-teal-700 dark:text-teal-400 shrink-0" />
+                                    <Truck className="w-4 h-4 text-[#3B82F6] shrink-0" />
                                     <span>5-Step Dispatch &amp; Invoice</span>
                                   </button>
 
@@ -1229,12 +1273,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                     type="button"
                                     disabled={!isShahzad}
                                     onClick={() => onApproveOrder(ord.id || ord.orderNumber, 'SHAHZAD')}
-                                    className={`min-h-[40px] px-4 py-2 rounded-lg bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer ${
-                                      !isShahzad ? 'opacity-40 cursor-not-allowed hover:bg-[#0D9488]' : ''
-                                    }`}
+                                    className="btn-primary min-h-[44px] px-4 text-xs"
                                     title={!isShahzad ? 'Approval authority strictly restricted to Shahzad Ullah' : 'Approve & Post to Ledger with 15% discount'}
                                   >
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
+                                    <CheckCircle2 className="w-4 h-4 shrink-0" />
                                     <span>Approve (Shahzad Ullah)</span>
                                   </button>
                                 </div>
@@ -1250,9 +1292,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   {approvalsSubTab === 'RECOVERIES' && (
                     <div className="space-y-3">
                       {pendingRecoveries.length === 0 ? (
-                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-10 border border-slate-200 dark:border-slate-800 text-center text-slate-400 text-xs">
+                        <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-10 border border-[#E2E8F0] dark:border-slate-700/80 text-center text-slate-400 text-xs">
                           <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-500 opacity-60" />
-                          <p className="font-bold text-sm text-slate-700 dark:text-slate-300">All Payments Confirmed</p>
+                          <p className="font-bold text-sm text-slate-700 dark:text-slate-200">All Payments Confirmed</p>
                           <p className="mt-1">No pending recoveries awaiting Shahzad Ullah&apos;s verification.</p>
                         </div>
                       ) : (
@@ -1264,16 +1306,16 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                           return (
                             <div
                               key={rec.id}
-                              className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
+                              className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3"
                             >
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/80 pb-3">
                                 <div>
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="font-mono tabular-nums font-bold text-sm text-slate-900 dark:text-white block">
                                       Recovery #{rec.id}
                                     </span>
-                                    <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                                      Status: Pending Confirmation <span className="text-slate-400 font-normal">(Not in Ledger)</span>
+                                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border border-orange-500/20">
+                                      Pending Confirmation (Not in Ledger)
                                     </span>
                                   </div>
                                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -1282,8 +1324,8 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 </div>
 
                                 <div className="text-right">
-                                  <span className="text-base font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-400 block">
-                                    Rs. {rec.amount.toLocaleString()} PKR
+                                  <span className="text-base font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 block">
+                                    -PKR {rec.amount.toLocaleString()} CR
                                   </span>
                                   <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                                     {rec.paymentMode} {rec.bankName ? `(${rec.bankName})` : ''}
@@ -1291,23 +1333,23 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                              <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                                 <div>
                                   <span className="text-[10px] text-slate-400 block font-medium">Balance Before</span>
                                   <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
-                                    Rs. {balBefore.toLocaleString()}
+                                    PKR {balBefore.toLocaleString()}
                                   </span>
                                 </div>
                                 <div className="text-right">
                                   <span className="text-[10px] text-slate-400 block font-medium">Balance After Confirmation</span>
-                                  <span className="font-mono tabular-nums font-bold text-emerald-800 dark:text-emerald-300">
-                                    Rs. {balAfter.toLocaleString()}
+                                  <span className="font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                                    PKR {balAfter.toLocaleString()}
                                   </span>
                                 </div>
                               </div>
 
-                              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                <span className="text-[11px] text-slate-500 font-medium">
+                              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-700/80">
+                                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium font-mono">
                                   Ref: {rec.instrumentNumber || 'Direct Payment'}
                                 </span>
 
@@ -1315,7 +1357,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => setRejectionTarget({ id: rec.id, type: 'RECOVERY', code: rec.id })}
-                                    className="min-h-[40px] px-3.5 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 font-semibold text-xs hover:bg-rose-100 dark:hover:bg-rose-900 transition-colors cursor-pointer"
+                                    className="btn-danger min-h-[44px] px-3.5 text-xs"
                                   >
                                     Reject
                                   </button>
@@ -1324,12 +1366,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                     type="button"
                                     disabled={!isShahzad}
                                     onClick={() => onApproveRecovery(rec.id, 'SHAHZAD')}
-                                    className={`min-h-[40px] px-4 py-2 rounded-lg bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer active:scale-95 ${
-                                      !isShahzad ? 'opacity-40 cursor-not-allowed hover:bg-[#0D9488]' : ''
-                                    }`}
+                                    className="btn-primary min-h-[44px] px-4 text-xs"
                                     title={!isShahzad ? 'Confirmation authority strictly restricted to Shahzad Ullah' : 'Confirm Payment & Credit Ledger'}
                                   >
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
+                                    <CheckCircle2 className="w-4 h-4 shrink-0" />
                                     <span>Confirm (ShahzadUllah)</span>
                                   </button>
                                 </div>
@@ -1345,78 +1385,78 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   {approvalsSubTab === 'CUSTOMERS' && (
                     <div className="space-y-3">
                       {pendingCustomers.length === 0 ? (
-                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-10 border border-slate-200 dark:border-slate-800 text-center text-slate-400 text-xs">
+                        <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-10 border border-[#E2E8F0] dark:border-slate-700/80 text-center text-slate-400 text-xs">
                           <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-500 opacity-60" />
-                          <p className="font-bold text-sm text-slate-700 dark:text-slate-300">All Customers Approved</p>
+                          <p className="font-bold text-sm text-slate-700 dark:text-slate-200">All Customers Approved</p>
                           <p className="mt-1">No pending dealer registrations awaiting Shahzad Ullah&apos;s review.</p>
                         </div>
                       ) : (
                         pendingCustomers.map((cust) => (
                           <div
                             key={cust.id || cust.customerCode}
-                            className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
+                            className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3"
                           >
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/80 pb-3">
                               <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono font-black text-sm text-slate-900 dark:text-white">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-mono tabular-nums font-black text-sm text-slate-900 dark:text-white">
                                     {cust.customerCode || cust.id}
                                   </span>
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300">
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-blue-500/10 text-[#3B82F6] dark:text-blue-400 border border-blue-500/20">
                                     {cust.type || cust.customerType || 'DEALER'}
                                   </span>
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border border-orange-500/20">
                                     Awaiting Shahzad Ullah
                                   </span>
                                 </div>
                                 <h3 className="text-base font-black text-slate-900 dark:text-white mt-1">
                                   {cust.companyName || cust.name}
                                 </h3>
-                                <p className="text-xs text-slate-500 mt-0.5">
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                   Contact: <strong>{cust.contactPerson}</strong> &bull; Phone: {cust.phone} &bull; Town: <strong>{cust.town || cust.city}</strong>
                                 </p>
                               </div>
 
                               <div className="text-right">
                                 <span className="text-xs text-slate-400 block font-bold">Requested Credit Limit</span>
-                                <span className="text-base font-black font-mono text-teal-800 dark:text-teal-300">
-                                  Rs. {(cust.creditLimit || 500000).toLocaleString()} PKR
+                                <span className="text-base font-black font-mono tabular-nums text-[#3B82F6] dark:text-blue-400">
+                                  PKR {(cust.creditLimit || 500000).toLocaleString()}
                                 </span>
-                                <span className="text-[10px] text-slate-400 block font-bold">
+                                <span className="text-[10px] text-slate-400 block font-bold tabular-nums">
                                   {cust.creditDays || 30} Days Terms
                                 </span>
                               </div>
                             </div>
 
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                              <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl">
+                              <div className="bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                                 <span className="text-[10px] text-slate-400 block font-bold">Opening Balance</span>
-                                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                                  Rs. {(cust.openingBalance || 0).toLocaleString()}
+                                <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
+                                  PKR {(cust.openingBalance || 0).toLocaleString()}
                                 </span>
                               </div>
-                              <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl">
+                              <div className="bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                                 <span className="text-[10px] text-slate-400 block font-bold">Address / Route</span>
                                 <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
                                   {cust.address || 'Main Market'}
                                 </span>
                               </div>
-                              <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl">
+                              <div className="bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                                 <span className="text-[10px] text-slate-400 block font-bold">Registered By</span>
                                 <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
                                   {cust.registeredBy || cust.submittedBy || 'Field Force'}
                                 </span>
                               </div>
-                              <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl">
+                              <div className="bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                                 <span className="text-[10px] text-slate-400 block font-bold">Submitted Date</span>
-                                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                                <span className="font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">
                                   {(cust.createdAt || new Date().toISOString()).slice(0, 10)}
                                 </span>
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                              <span className="text-[11px] text-amber-700 dark:text-amber-400 font-bold">
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/80">
+                              <span className="text-[11px] text-[#EA580C] dark:text-[#F97316] font-bold">
                                 Requires executive approval before credit invoices can be booked
                               </span>
 
@@ -1424,7 +1464,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => setRejectionTarget({ id: cust.id, type: 'CUSTOMER', code: cust.customerCode || cust.companyName })}
-                                  className="px-3.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 font-bold text-xs hover:bg-rose-100 cursor-pointer"
+                                  className="btn-danger min-h-[44px] px-3.5 text-xs"
                                 >
                                   Reject
                                 </button>
@@ -1432,9 +1472,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => onApproveCustomer?.(cust.id)}
-                                  className="px-4 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                                  className="btn-primary min-h-[44px] px-4 text-xs"
                                 >
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                                  <CheckCircle2 className="w-4 h-4 shrink-0" />
                                   <span>Approve Dealer (ShahzadUllah)</span>
                                 </button>
                               </div>
@@ -1449,38 +1489,38 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   {approvalsSubTab === 'PROFILE_EDITS' && (
                     <div className="space-y-3">
                       {pendingProfileRequests.length === 0 ? (
-                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-10 border border-slate-200 dark:border-slate-800 text-center text-slate-400 text-xs">
+                        <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-10 border border-[#E2E8F0] dark:border-slate-700/80 text-center text-slate-400 text-xs">
                           <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-500 opacity-60" />
-                          <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No Profile Change Requests</p>
+                          <p className="font-bold text-sm text-slate-700 dark:text-slate-200">No Profile Change Requests</p>
                           <p className="mt-1">All employee profile information is up to date.</p>
                         </div>
                       ) : (
                         pendingProfileRequests.map((req) => (
                           <div
                             key={req.id}
-                            className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
+                            className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3"
                           >
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/80 pb-3">
                               <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono font-black text-sm text-slate-900 dark:text-white">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-mono tabular-nums font-black text-sm text-slate-900 dark:text-white">
                                     Request #{req.id}
                                   </span>
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border border-orange-500/20">
                                     Awaiting Approval
                                   </span>
                                 </div>
                                 <h3 className="text-base font-black text-slate-900 dark:text-white mt-1">
                                   {req.requestedChanges.fullName || req.currentInfo.fullName}
                                 </h3>
-                                <p className="text-xs text-slate-500 mt-0.5">
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                   Requested by: <strong>{req.currentInfo.fullName}</strong> ({req.userEmail}) &bull; Date: {req.requestedAt?.slice(0, 10)}
                                 </p>
                               </div>
                             </div>
 
                             {/* Comparison Table */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                               <div className="space-y-1">
                                 <span className="text-[10px] font-extrabold uppercase text-slate-400 block">Current Info</span>
                                 <p className="font-bold text-slate-800 dark:text-slate-200">Name: {req.currentInfo.fullName}</p>
@@ -1490,28 +1530,28 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                               </div>
 
                               <div className="space-y-1 sm:border-l sm:border-slate-200 dark:sm:border-slate-700 sm:pl-3">
-                                <span className="text-[10px] font-extrabold uppercase text-emerald-600 dark:text-emerald-400 block">Requested Updates</span>
-                                <p className="font-bold text-emerald-700 dark:text-emerald-300">
+                                <span className="text-[10px] font-extrabold uppercase text-[#3B82F6] dark:text-blue-400 block">Requested Updates</span>
+                                <p className="font-bold text-emerald-600 dark:text-emerald-400">
                                   Name: {req.requestedChanges.fullName || req.currentInfo.fullName}
                                 </p>
-                                <p className="text-emerald-700 dark:text-emerald-300">
+                                <p className="text-emerald-600 dark:text-emerald-400">
                                   Phone: {req.requestedChanges.phone || req.currentInfo.phone || 'N/A'}
                                 </p>
-                                <p className="text-emerald-700 dark:text-emerald-300">
+                                <p className="text-emerald-600 dark:text-emerald-400">
                                   Role: {req.requestedChanges.roleTitle || req.currentInfo.roleTitle}
                                 </p>
-                                <p className="text-emerald-700 dark:text-emerald-300">
+                                <p className="text-emerald-600 dark:text-emerald-400">
                                   Towns: {(req.requestedChanges.assignedTowns || req.currentInfo.assignedTowns || []).join(', ')}
                                 </p>
                                 {req.requestedChanges.reason && (
-                                  <p className="text-[11px] text-amber-700 dark:text-amber-300 italic pt-1">
+                                  <p className="text-[11px] text-[#F97316] italic pt-1">
                                     Reason: &ldquo;{req.requestedChanges.reason}&rdquo;
                                   </p>
                                 )}
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/80">
                               <span className="text-[11px] text-slate-400">
                                 Approving updates this user&apos;s identity credentials across all system records.
                               </span>
@@ -1520,7 +1560,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => setRejectionTarget({ id: req.id, type: 'PROFILE', code: req.id })}
-                                  className="px-3.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 font-bold text-xs hover:bg-rose-100 cursor-pointer"
+                                  className="btn-danger min-h-[44px] px-3.5 text-xs"
                                 >
                                   Reject
                                 </button>
@@ -1528,9 +1568,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => onApproveProfileRequest?.(req.id)}
-                                  className="px-4 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                                  className="btn-primary min-h-[44px] px-4 text-xs"
                                 >
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                                  <CheckCircle2 className="w-4 h-4 shrink-0" />
                                   <span>Approve Profile Update (Shahzad)</span>
                                 </button>
                               </div>
@@ -1549,16 +1589,16 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               {activeTab === 'CUSTOMERS' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
                   {/* Top Bar: Title, Search, Town Filter, View Modes, Add Dealer */}
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-4">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       <div>
-                        <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                        <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
                           <span>Dealer Accounts &amp; Customer Khata</span>
-                          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 font-bold">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-blue-500/10 text-[#3B82F6] dark:text-blue-400 border border-blue-500/20 font-bold">
                             Live Ledger
                           </span>
                         </h2>
-                        <p className="text-xs text-slate-500 font-medium">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                           {customers.length} Authorized Dealers &amp; Distributors &bull; Direct 1-click Recovery, Ordering, Invoices &amp; Khata
                         </p>
                       </div>
@@ -1568,7 +1608,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         <select
                           value={townFilter}
                           onChange={(e) => setTownFilter(e.target.value)}
-                          className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+                          className="min-h-[44px] px-3 py-2 bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-[#3B82F6] cursor-pointer"
                         >
                           <option value="ALL">All Towns ({customers.length})</option>
                           {Array.from(new Set(customers.map((c) => c.town || c.city).filter(Boolean))).map((t) => (
@@ -1577,61 +1617,74 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         </select>
 
                         {/* View Mode Switcher */}
-                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs">
+                        <div className="flex items-center bg-slate-100 dark:bg-[#0F172A] p-1 rounded-xl border border-[#E2E8F0] dark:border-slate-700 text-xs">
                           <button
                             type="button"
                             onClick={() => setDealersViewMode('CARDS')}
-                            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                            className={`min-h-[36px] px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                               dealersViewMode === 'CARDS'
-                                ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-300 shadow-xs'
-                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                ? 'bg-[#3B82F6] text-white shadow-xs'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                             }`}
                           >
-                            🗂️ Cards View
+                            <LayoutDashboard className="w-3.5 h-3.5" />
+                            <span>Cards</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setDealersViewMode('TABLE')}
-                            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                            className={`min-h-[36px] px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                               dealersViewMode === 'TABLE'
-                                ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-300 shadow-xs'
-                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                ? 'bg-[#3B82F6] text-white shadow-xs'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                             }`}
                           >
-                            📋 Table View
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Table</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setDealersViewMode('MAP')}
-                            className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                            className={`min-h-[36px] px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                               dealersViewMode === 'MAP'
-                                ? 'bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-300 shadow-xs'
-                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                ? 'bg-[#3B82F6] text-white shadow-xs'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                             }`}
                           >
-                            🗺️ D3 Map
+                            <MapPin className="w-3.5 h-3.5" />
+                            <span>Map</span>
                           </button>
                         </div>
 
                         {/* Search Input */}
-                        <div className="relative w-full sm:w-60">
-                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <div className="relative w-full sm:w-64">
+                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                           <input
                             type="text"
                             placeholder="Search dealer, shop, code..."
                             value={customerFilterQuery}
                             onChange={(e) => setCustomerFilterQuery(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:border-teal-600"
+                            className="w-full min-h-[44px] pl-9 pr-10 py-2 bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-[#3B82F6]"
                           />
+                          {customerFilterQuery && (
+                            <button
+                              type="button"
+                              onClick={() => setCustomerFilterQuery('')}
+                              aria-label="Clear dealer filter"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
 
                         <button
                           type="button"
                           onClick={() => setIsAddCustomerModalOpen(true)}
-                          className="px-3.5 py-2 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-black text-xs flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
+                          className="btn-primary min-h-[44px] px-3.5 text-xs whitespace-nowrap"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>+ Add Dealer</span>
+                          <span>Add Dealer</span>
                         </button>
                       </div>
                     </div>
@@ -1671,27 +1724,27 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                           return (
                             <div
                               key={c.id}
-                              className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-teal-500/80 transition-all space-y-3.5 flex flex-col justify-between"
+                              className="h-full bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs hover:border-[#3B82F6]/60 transition-all space-y-3.5 flex flex-col justify-between"
                             >
                               <div>
                                 {/* Card Header */}
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex items-start gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 font-black text-xs flex items-center justify-center shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-[#3B82F6] dark:text-blue-400 font-black text-xs flex items-center justify-center shrink-0">
                                       {c.companyName.slice(0, 2).toUpperCase()}
                                     </div>
                                     <div className="min-w-0">
                                       <h3
                                         onClick={() => handleOpen360ForCustomer(c)}
-                                        className="font-black text-sm text-slate-900 dark:text-white truncate cursor-pointer hover:text-teal-700 transition-colors"
+                                        className="font-black text-sm text-slate-900 dark:text-white truncate cursor-pointer hover:text-[#3B82F6] transition-colors"
                                       >
                                         {c.companyName}
                                       </h3>
                                       <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                        <span className="text-[10px] font-mono tabular-nums font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-slate-300">
                                           {c.customerCode}
                                         </span>
-                                        <span className="text-[10px] font-bold text-slate-500">
+                                        <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
                                           &bull; {c.contactPerson || 'Proprietor'} &bull; {c.town || c.city}
                                         </span>
                                       </div>
@@ -1701,71 +1754,81 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   {hasPhone && (
                                     <a
                                       href={`tel:${c.phone}`}
-                                      className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 text-slate-600 hover:text-teal-700 flex items-center justify-center border border-slate-200/60 dark:border-slate-700/60 shrink-0"
+                                      aria-label={`Call ${c.companyName}`}
+                                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-blue-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-[#3B82F6] flex items-center justify-center border border-[#E2E8F0] dark:border-slate-700 shrink-0"
                                       title="Call Dealer"
                                     >
-                                      <Phone className="w-3.5 h-3.5" />
+                                      <Phone className="w-4 h-4" />
                                     </a>
                                   )}
                                 </div>
 
                                 {/* Financial Balance Strip */}
-                                <div className="mt-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                                  <div>
-                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
-                                      Net Ledger Balance
-                                    </span>
-                                    <div className="flex items-baseline gap-1 mt-0.5">
-                                      <span className={`text-base font-black font-mono ${netBal > 0 ? 'text-teal-900 dark:text-teal-200' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                                        Rs. {netBal.toLocaleString()}
+                                <div className="mt-3 bg-slate-50 dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-800 space-y-2">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                                        Net Ledger Balance
                                       </span>
-                                      <span className="text-[9px] font-mono text-slate-400">PKR</span>
+                                      <div className="mt-0.5">
+                                        <span className={`text-base font-black font-mono tabular-nums ${netBal < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
+                                          {netBal < 0 ? `-PKR ${Math.abs(netBal).toLocaleString()} CR` : `PKR ${netBal.toLocaleString()}`}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-right shrink-0">
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                                        Credit Limit
+                                      </span>
+                                      <span className="text-xs font-mono tabular-nums font-bold text-slate-600 dark:text-slate-300 block mt-0.5">
+                                        PKR {creditLimit.toLocaleString()} ({limitUtil}%)
+                                      </span>
                                     </div>
                                   </div>
-
-                                  <div className="text-right">
-                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
-                                      Credit Limit
-                                    </span>
-                                    <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300 block mt-0.5">
-                                      Rs. {creditLimit.toLocaleString()} ({limitUtil}%)
-                                    </span>
+                                  <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${
+                                        limitUtil >= 95 ? 'bg-rose-500' : limitUtil >= 75 ? 'bg-[#F97316]' : 'bg-emerald-500'
+                                      }`}
+                                      style={{ width: `${limitUtil}%` }}
+                                    />
                                   </div>
                                 </div>
                               </div>
 
                               {/* 5 Prominent Clickable Action Buttons */}
-                              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
-                                {/* Button 1: Daily Recovery */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleOpenRecoveryForCustomer(c, e)}
-                                  className="min-h-[40px] px-2.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
-                                  title="Log daily payment recovery"
-                                >
-                                  <Wallet className="w-3.5 h-3.5" />
-                                  <span>Daily Recovery</span>
-                                </button>
-
-                                {/* Button 2: Daily Ordering */}
+                              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/80 mt-auto">
+                                {/* Button 1: Daily Ordering (Primary CTA) */}
                                 <button
                                   type="button"
                                   onClick={(e) => handleOpenOrderForCustomer(c, e)}
-                                  className="min-h-[40px] px-2.5 py-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                                  className="btn-primary min-h-[44px] px-2.5 text-xs"
                                   title="Book sales order"
                                 >
                                   <ShoppingBag className="w-3.5 h-3.5" />
                                   <span>Daily Ordering</span>
                                 </button>
 
+                                {/* Button 2: Daily Recovery (Secondary) */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenRecoveryForCustomer(c, e)}
+                                  className="btn-outline min-h-[44px] px-2.5 text-xs"
+                                  title="Log daily payment recovery"
+                                >
+                                  <Wallet className="w-3.5 h-3.5 text-emerald-500" />
+                                  <span>Daily Recovery</span>
+                                </button>
+
                                 {/* Button 3: Invoices */}
                                 <button
                                   type="button"
                                   onClick={(e) => handleOpenInvoicesForCustomer(c, e)}
-                                  className="min-h-[40px] px-2.5 py-2 rounded-xl bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900 text-sky-800 dark:text-sky-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-sky-200 dark:border-sky-800 transition-all active:scale-95 cursor-pointer"
+                                  className="btn-outline min-h-[44px] px-2.5 text-xs"
                                   title="View bills and invoices"
                                 >
-                                  <Receipt className="w-3.5 h-3.5 text-sky-700 dark:text-sky-400" />
+                                  <Receipt className="w-3.5 h-3.5 text-[#3B82F6]" />
                                   <span>Invoices</span>
                                 </button>
 
@@ -1773,10 +1836,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 <button
                                   type="button"
                                   onClick={(e) => handleOpenLedgerForCustomer(c, e)}
-                                  className="min-h-[40px] px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-200/80 dark:border-slate-700/80 transition-all active:scale-95 cursor-pointer"
+                                  className="btn-outline min-h-[44px] px-2.5 text-xs"
                                   title="View Khata ledger statement"
                                 >
-                                  <BookOpen className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
+                                  <BookOpen className="w-3.5 h-3.5 text-[#3B82F6]" />
                                   <span>Khata Ledger</span>
                                 </button>
 
@@ -1784,10 +1847,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => setDesktopEtcCustomer(c)}
-                                  className="col-span-2 min-h-[38px] px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700 transition-all active:scale-95 cursor-pointer"
+                                  className="col-span-2 btn-ghost min-h-[40px] px-2.5 text-xs border border-[#E2E8F0] dark:border-slate-700"
                                   title="WhatsApp statement, map, dossier"
                                 >
-                                  <MoreHorizontal className="w-3.5 h-3.5 text-slate-500" />
+                                  <MoreHorizontal className="w-3.5 h-3.5 text-slate-400" />
                                   <span>Etc: WhatsApp &bull; Directions &bull; Dossier</span>
                                 </button>
                               </div>
@@ -1799,21 +1862,21 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
                   {/* 2. TABLE VIEW */}
                   {dealersViewMode === 'TABLE' && (
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
-                          <thead className="bg-[#F2F4F6] dark:bg-slate-800/80 text-slate-500 uppercase tracking-wider text-[10px] font-bold border-b border-[#E2E8F0] dark:border-slate-800">
+                          <thead className="bg-[#0F172A] text-white uppercase tracking-wider text-[10px] font-bold border-b border-slate-800">
                             <tr>
-                              <th className="py-2 px-3">Code</th>
-                              <th className="py-2 px-3">Dealer / Shop Name</th>
-                              <th className="py-2 px-3">Proprietor &amp; Town</th>
-                              <th className="py-2 px-3">Phone</th>
-                              <th className="py-2 px-3 text-right">Net Balance</th>
-                              <th className="py-2 px-3 text-right">Credit Limit</th>
-                              <th className="py-2 px-3 text-center">Clickable Actions</th>
+                              <th className="frozen-first-col bg-[#0F172A] py-2.5 px-3">Code</th>
+                              <th className="py-2.5 px-3">Dealer / Shop Name</th>
+                              <th className="py-2.5 px-3">Proprietor &amp; Town</th>
+                              <th className="py-2.5 px-3">Phone</th>
+                              <th className="py-2.5 px-3 text-right">Net Balance</th>
+                              <th className="py-2.5 px-3 text-right">Credit Limit</th>
+                              <th className="py-2.5 px-3 text-center">Actions</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-800">
+                          <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
                             {customers
                               .filter(
                                 (c) =>
@@ -1829,14 +1892,14 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 const creditLimit = c.creditLimit || 350000;
 
                                 return (
-                                  <tr key={c.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                                    <td className="py-2 px-3 font-mono tabular-nums font-bold text-[#0D9488] dark:text-blue-400">
+                                  <tr key={c.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                                    <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-2.5 px-3 font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
                                       {c.customerCode}
                                     </td>
-                                    <td className="py-2 px-3">
+                                    <td className="py-2.5 px-3">
                                       <span
                                         onClick={() => handleOpen360ForCustomer(c)}
-                                        className="font-bold text-slate-900 dark:text-white cursor-pointer hover:text-[#0D9488] dark:hover:text-blue-400 block"
+                                        className="font-bold text-slate-900 dark:text-white cursor-pointer hover:text-[#3B82F6] block"
                                       >
                                         {c.companyName}
                                       </span>
@@ -1844,25 +1907,25 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                         {c.type || 'DEALER'}
                                       </span>
                                     </td>
-                                    <td className="py-2 px-3 text-slate-600 dark:text-slate-300">
+                                    <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">
                                       <span className="block font-medium">{c.contactPerson || 'Proprietor'}</span>
                                       <span className="text-[10px] text-slate-400">{c.town || c.city}</span>
                                     </td>
-                                    <td className="py-2 px-3 font-mono tabular-nums text-slate-500">
+                                    <td className="py-2.5 px-3 font-mono tabular-nums text-slate-500 dark:text-slate-400">
                                       {c.phone || '-'}
                                     </td>
-                                    <td className="py-2 px-3 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">
-                                      Rs. {netBal.toLocaleString()}
+                                    <td className={`py-2.5 px-3 text-right font-mono tabular-nums font-bold ${netBal < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
+                                      {netBal < 0 ? `-PKR ${Math.abs(netBal).toLocaleString()} CR` : `PKR ${netBal.toLocaleString()}`}
                                     </td>
-                                    <td className="py-2 px-3 text-right font-mono tabular-nums text-slate-500">
-                                      Rs. {creditLimit.toLocaleString()}
+                                    <td className="py-2.5 px-3 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400">
+                                      PKR {creditLimit.toLocaleString()}
                                     </td>
-                                    <td className="py-2 px-3">
+                                    <td className="py-2.5 px-3">
                                       <div className="flex items-center justify-center gap-1.5">
                                         <button
                                           type="button"
                                           onClick={(e) => handleOpenOrderForCustomer(c, e)}
-                                          className="px-2.5 py-1.5 rounded-lg bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold text-xs flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap"
+                                          className="btn-primary min-h-[36px] px-2.5 py-1.5 text-xs whitespace-nowrap"
                                         >
                                           <ShoppingBag className="w-3.5 h-3.5" />
                                           <span>+ Order</span>
@@ -1872,7 +1935,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                           items={[
                                             {
                                               label: 'Record Recovery',
-                                              icon: <Wallet className="w-3.5 h-3.5 text-emerald-600" />,
+                                              icon: <Wallet className="w-3.5 h-3.5 text-emerald-500" />,
                                               onClick: () => {
                                                 setSelectedCustomerIdFor360(c.id);
                                                 setIsRecoveryDrawerOpen(true);
@@ -1880,7 +1943,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                             },
                                             {
                                               label: 'View Invoices',
-                                              icon: <Receipt className="w-3.5 h-3.5 text-[#0D9488]" />,
+                                              icon: <Receipt className="w-3.5 h-3.5 text-[#3B82F6]" />,
                                               onClick: () => {
                                                 setSelectedCustomerIdFor360(c.id);
                                                 setCustomer360SubView('INVOICES');
@@ -1888,7 +1951,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                             },
                                             {
                                               label: 'Khata Ledger',
-                                              icon: <BookOpen className="w-3.5 h-3.5 text-slate-600" />,
+                                              icon: <BookOpen className="w-3.5 h-3.5 text-slate-500" />,
                                               onClick: () => {
                                                 setSelectedCustomerIdFor360(c.id);
                                                 setCustomer360SubView('LEDGER');
@@ -1919,15 +1982,15 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               {/* ==================================================== */}
               {activeTab === 'SALES' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
+                  <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-[#0F172A] rounded-xl w-fit">
                       <button
                         type="button"
                         onClick={() => setSalesOrderView('ORDER_FORM')}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                        className={`min-h-[40px] px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                           salesOrderView === 'ORDER_FORM'
-                            ? 'bg-[#0B132B] text-white'
-                            : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                            ? 'bg-[#3B82F6] text-white'
+                            : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
                         Order Form
@@ -1935,10 +1998,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <button
                         type="button"
                         onClick={() => setSalesOrderView('ORDER_LIST')}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                        className={`min-h-[40px] px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer tabular-nums ${
                           salesOrderView === 'ORDER_LIST'
-                            ? 'bg-[#0B132B] text-white'
-                            : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                            ? 'bg-[#3B82F6] text-white'
+                            : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
                         Order List ({orders.length})
@@ -1948,9 +2011,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                     <button
                       type="button"
                       onClick={onOpenRateCard}
-                      className="btn-primary text-xs w-fit"
+                      className="btn-outline min-h-[40px] text-xs w-fit"
                     >
-                      <Receipt className="w-3.5 h-3.5" />
+                      <Receipt className="w-3.5 h-3.5 text-[#3B82F6]" />
                       <span>Rate List</span>
                     </button>
                   </div>
@@ -1971,51 +2034,53 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       onPreviewPdf={onPreviewInvoicePdf}
                     />
                   ) : (
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 overflow-hidden">
                       {/* Desktop Table View (>= lg) */}
                       <div className="hidden lg:block overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
-                          <thead className="bg-[#F2F4F6] dark:bg-slate-800/80 text-slate-500 uppercase tracking-wider text-[10px] font-bold border-b border-[#E2E8F0] dark:border-slate-800">
+                          <thead className="bg-[#0F172A] text-white uppercase tracking-wider text-[10px] font-bold border-b border-slate-800">
                             <tr>
-                              <th className="py-2.5 px-4">Order #</th>
+                              <th className="frozen-first-col bg-[#0F172A] py-2.5 px-4">Order #</th>
                               <th className="py-2.5 px-4">Dealer / Client</th>
                               <th className="py-2.5 px-4">Booking Date</th>
                               <th className="py-2.5 px-4">Sales Officer</th>
-                              <th className="py-2.5 px-4 text-center">SKUs</th>
+                              <th className="py-2.5 px-4 text-right">SKUs</th>
                               <th className="py-2.5 px-4 text-right">Order Amount</th>
                               <th className="py-2.5 px-4 text-center">Status</th>
                               <th className="py-2.5 px-4 text-center">Actions</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-800">
+                          <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
                             {orders.map((o) => {
                               const c = customers.find((cust) => cust.id === o.customerId || cust.companyName === o.customerName);
                               return (
-                                <tr key={o.id || o.orderNumber} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                                  <td className="py-3 px-4 font-mono tabular-nums font-bold text-[#0D9488] dark:text-blue-400">
+                                <tr key={o.id || o.orderNumber} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                                  <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-3 px-4 font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
                                     #{o.orderNumber || o.id?.slice(-6)}
                                   </td>
                                   <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
                                     {o.customerName}
                                   </td>
-                                  <td className="py-3 px-4 text-slate-500 font-mono tabular-nums text-[11px]">
+                                  <td className="py-3 px-4 text-slate-500 dark:text-slate-400 font-mono tabular-nums text-[11px]">
                                     {o.orderDate || o.createdAt?.slice(0, 10)}
                                   </td>
                                   <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
                                     {o.salesUserName}
                                   </td>
-                                  <td className="py-3 px-4 text-center font-mono tabular-nums text-slate-500">
+                                  <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400">
                                     {o.items?.length || 1}
                                   </td>
                                   <td className="py-3 px-4 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">
-                                    Rs. {Number(o.totalAmount || 0).toLocaleString()}
+                                    PKR {Number(o.totalAmount || 0).toLocaleString()}
                                   </td>
                                   <td className="py-3 px-4 text-center">
                                     <span
-                                      className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg border ${
+                                      className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
                                         o.status === 'APPROVED'
-                                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                                          : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400'
+                                          : o.status === 'REJECTED'
+                                          ? 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400'
+                                          : 'bg-orange-500/10 text-[#EA580C] border-orange-500/20 dark:text-[#F97316]'
                                       }`}
                                     >
                                       {o.status || 'SUBMITTED'}
@@ -2027,7 +2092,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                         <button
                                           type="button"
                                           onClick={() => setDispatchModalOrder(o)}
-                                          className="px-2.5 py-1.5 rounded-lg bg-[#0D9488] hover:bg-[#0F766E] text-white cursor-pointer inline-flex items-center gap-1 text-[11px] font-bold transition-colors whitespace-nowrap active:scale-95"
+                                          className="btn-primary min-h-[36px] px-2.5 py-1.5 text-[11px] whitespace-nowrap"
                                           title="Execute 5-Step Operational Flow"
                                         >
                                           <Truck className="w-3.5 h-3.5" />
@@ -2046,9 +2111,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                               });
                                             }
                                           }}
-                                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 cursor-pointer inline-flex items-center gap-1 text-[11px] font-bold transition-colors whitespace-nowrap active:scale-95"
+                                          className="btn-outline min-h-[36px] px-2.5 py-1.5 text-[11px] whitespace-nowrap"
                                         >
-                                          <Download className="w-3.5 h-3.5 text-[#0D9488]" />
+                                          <Download className="w-3.5 h-3.5 text-[#3B82F6]" />
                                           <span>PDF</span>
                                         </button>
                                       )}
@@ -2057,7 +2122,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                         items={[
                                           {
                                             label: 'Download Invoice PDF',
-                                            icon: <Download className="w-3.5 h-3.5 text-[#0D9488]" />,
+                                            icon: <Download className="w-3.5 h-3.5 text-[#3B82F6]" />,
                                             disabled: !c,
                                             onClick: () => {
                                               if (c) {
@@ -2080,7 +2145,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                           },
                                           {
                                             label: 'Edit / Reverse Order',
-                                            icon: <Edit3 className="w-3.5 h-3.5 text-amber-500" />,
+                                            icon: <Edit3 className="w-3.5 h-3.5 text-[#F97316]" />,
                                             onClick: () => setEntryManageTarget({ type: 'ORDER', data: o }),
                                           },
                                         ]}
@@ -2095,31 +2160,35 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       </div>
 
                       {/* Mobile/Tablet Card View (< lg) */}
-                      <div className="lg:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                      <div className="lg:hidden divide-y divide-slate-100 dark:divide-slate-700/80">
                         {orders.map((o) => {
                           const c = customers.find((cust) => cust.id === o.customerId || cust.companyName === o.customerName);
                           return (
                             <div key={o.id || o.orderNumber} className="p-4 space-y-3">
-                              <div className="flex justify-between items-start">
-                                <div className="space-y-0.5">
-                                  <div className="font-mono font-bold text-xs text-[#0D9488]">#{o.orderNumber || o.id?.slice(-6)}</div>
-                                  <div className="font-bold text-slate-900 dark:text-white text-[13px]">{o.customerName}</div>
-                                  <div className="text-[10px] text-slate-500 font-medium">By {o.salesUserName} &bull; {o.orderDate || o.createdAt?.slice(0, 10)}</div>
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="space-y-0.5 min-w-0">
+                                  <div className="font-mono tabular-nums font-bold text-xs text-[#3B82F6] dark:text-blue-400">#{o.orderNumber || o.id?.slice(-6)}</div>
+                                  <div className="font-bold text-slate-900 dark:text-white text-[13px] truncate">{o.customerName}</div>
+                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">By {o.salesUserName} &bull; {o.orderDate || o.createdAt?.slice(0, 10)}</div>
                                 </div>
-                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg border ${
-                                  o.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'
+                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border shrink-0 ${
+                                  o.status === 'APPROVED'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                    : o.status === 'REJECTED'
+                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                    : 'bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border-orange-500/20'
                                 }`}>
                                   {o.status || 'SUBMITTED'}
                                 </span>
                               </div>
-                              <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                              <div className="flex justify-between items-center bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                                 <div>
                                   <div className="text-[9px] uppercase font-bold text-slate-400">Total Amount</div>
-                                  <div className="text-sm font-mono font-black text-slate-900 dark:text-white">Rs. {Number(o.totalAmount || 0).toLocaleString()}</div>
+                                  <div className="text-sm font-mono tabular-nums font-black text-slate-900 dark:text-white">PKR {Number(o.totalAmount || 0).toLocaleString()}</div>
                                 </div>
                                 <div className="text-right">
                                   <div className="text-[9px] uppercase font-bold text-slate-400">SKUs</div>
-                                  <div className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300">{o.items?.length || 1} SKUs</div>
+                                  <div className="text-sm font-mono tabular-nums font-bold text-slate-700 dark:text-slate-300">{o.items?.length || 1} SKUs</div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
@@ -2127,7 +2196,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => setDispatchModalOrder(o)}
-                                    className="flex-1 min-h-[38px] rounded-xl bg-[#0D9488] text-white font-bold text-xs flex items-center justify-center gap-2 active:scale-95"
+                                    className="flex-1 btn-primary min-h-[44px] text-xs"
                                   >
                                     <Truck className="w-3.5 h-3.5" />
                                     <span>Dispatch Flow</span>
@@ -2145,25 +2214,27 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                         });
                                       }
                                     }}
-                                    className="flex-1 min-h-[38px] rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 active:scale-95"
+                                    className="flex-1 btn-outline min-h-[44px] text-xs"
                                   >
-                                    <Download className="w-3.5 h-3.5 text-[#0D9488]" />
+                                    <Download className="w-3.5 h-3.5 text-[#3B82F6]" />
                                     <span>Download PDF</span>
                                   </button>
                                 )}
                                 <button
                                   type="button"
                                   onClick={() => c && handleOpen360ForCustomer(c)}
-                                  className="w-10 h-[38px] rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 active:scale-95"
+                                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer"
                                   title="View Customer 360"
+                                  aria-label="View Customer 360"
                                 >
                                   <Eye className="w-4 h-4" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setEntryManageTarget({ type: 'ORDER', data: o })}
-                                  className="w-10 h-[38px] rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-amber-600 dark:text-amber-400 active:scale-95 cursor-pointer"
+                                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-center text-[#F97316] cursor-pointer"
                                   title="Edit or Cancel / Reverse Order"
+                                  aria-label="Edit or Cancel Order"
                                 >
                                   <Edit3 className="w-4 h-4" />
                                 </button>
@@ -2182,22 +2253,22 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               {/* ==================================================== */}
               {activeTab === 'FINANCE' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white">
                       Finance &amp; Collections
                     </h2>
-                    <p className="text-xs text-slate-500 font-medium">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium tabular-nums">
                       {recoveries.length} Recovery Transactions Logged
                     </p>
                   </div>
 
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                  <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs overflow-hidden">
                     {/* Desktop Table View (>= lg) */}
                     <div className="hidden lg:block overflow-x-auto">
                       <table className="w-full text-left text-xs border-collapse">
-                        <thead className="bg-[#F2F4F6] dark:bg-slate-800/80 text-slate-500 uppercase tracking-wider text-[10px] font-bold border-b border-[#E2E8F0] dark:border-slate-800">
+                        <thead className="bg-[#0F172A] text-white uppercase tracking-wider text-[10px] font-bold border-b border-slate-800">
                           <tr>
-                            <th className="py-2.5 px-4">Receipt #</th>
+                            <th className="frozen-first-col bg-[#0F172A] py-2.5 px-4">Receipt #</th>
                             <th className="py-2.5 px-4">Dealer / Client</th>
                             <th className="py-2.5 px-4">Collection Date</th>
                             <th className="py-2.5 px-4">Payment Mode</th>
@@ -2207,35 +2278,37 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             <th className="py-2.5 px-4 text-center">Action</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-800">
+                        <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
                           {recoveries.map((r) => (
-                            <tr key={r.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                              <td className="py-3 px-4 font-mono tabular-nums font-bold text-[#0D9488] dark:text-blue-400">
+                            <tr key={r.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                              <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-3 px-4 font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
                                 #{r.id}
                               </td>
                               <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
                                 {r.customerName}
                               </td>
-                              <td className="py-3 px-4 text-slate-500 font-mono tabular-nums text-[11px]">
+                              <td className="py-3 px-4 text-slate-500 dark:text-slate-400 font-mono tabular-nums text-[11px]">
                                 {r.recordedAt?.slice(0, 10)}
                               </td>
                               <td className="py-3 px-4">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-[#0F172A] dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700">
                                   {r.paymentMode}
                                 </span>
                               </td>
                               <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
                                 {r.salesUserName}
                               </td>
-                              <td className="py-3 px-4 text-right font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400">
-                                Rs. {r.amount.toLocaleString()}
+                              <td className="py-3 px-4 text-right font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                                -PKR {r.amount.toLocaleString()} CR
                               </td>
                               <td className="py-3 px-4 text-center">
                                 <span
-                                  className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg border ${
-                                    r.status === 'APPROVED'
-                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                                      : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                                  className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
+                                    r.status === 'APPROVED' || r.status === 'VERIFIED'
+                                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400'
+                                      : r.status === 'REJECTED'
+                                      ? 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400'
+                                      : 'bg-orange-500/10 text-[#EA580C] border-orange-500/20 dark:text-[#F97316]'
                                   }`}
                                 >
                                   {r.status || 'PENDING'}
@@ -2245,8 +2318,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => setEntryManageTarget({ type: 'RECOVERY', data: r })}
-                                  className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer transition-colors"
+                                  className="min-w-[36px] min-h-[36px] p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer transition-colors inline-flex items-center justify-center"
                                   title="Edit or Cancel / Reverse Recovery"
+                                  aria-label="Manage recovery entry"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
                                 </button>
@@ -2258,27 +2332,29 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                     </div>
 
                     {/* Mobile/Tablet Card View (< lg) */}
-                    <div className="lg:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                    <div className="lg:hidden divide-y divide-slate-100 dark:divide-slate-700/80">
                       {recoveries.map((r) => {
                         const c = customers.find((cust) => cust.id === r.customerId || cust.companyName === r.customerName);
                         return (
                           <div key={r.id} className="p-4 space-y-3">
-                            <div className="flex justify-between items-start">
-                              <div className="space-y-0.5">
-                                <div className="font-mono font-bold text-xs text-[#0D9488]">#{r.id}</div>
-                                <div className="font-bold text-slate-900 dark:text-white text-[13px]">{r.customerName}</div>
-                                <div className="text-[10px] text-slate-500 font-medium">{r.salesUserName} &bull; {r.recordedAt?.slice(0, 10)}</div>
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="space-y-0.5 min-w-0">
+                                <div className="font-mono tabular-nums font-bold text-xs text-[#3B82F6] dark:text-blue-400">#{r.id}</div>
+                                <div className="font-bold text-slate-900 dark:text-white text-[13px] truncate">{r.customerName}</div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{r.salesUserName} &bull; {r.recordedAt?.slice(0, 10)}</div>
                               </div>
-                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg border ${
-                                r.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'
+                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border shrink-0 ${
+                                r.status === 'APPROVED' || r.status === 'VERIFIED'
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                  : 'bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border-orange-500/20'
                               }`}>
                                 {r.status || 'PENDING'}
                               </span>
                             </div>
-                            <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <div className="flex justify-between items-center bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                               <div>
                                 <div className="text-[9px] uppercase font-bold text-slate-400">Recovery Amount</div>
-                                <div className="text-sm font-mono font-black text-emerald-700 dark:text-emerald-400">Rs. {r.amount.toLocaleString()}</div>
+                                <div className="text-sm font-mono tabular-nums font-black text-emerald-600 dark:text-emerald-400">-PKR {r.amount.toLocaleString()} CR</div>
                               </div>
                               <div className="text-right">
                                 <div className="text-[9px] uppercase font-bold text-slate-400">Payment Mode</div>
@@ -2289,7 +2365,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                               <button
                                 type="button"
                                 onClick={() => c && handleOpen360ForCustomer(c)}
-                                className="flex-1 min-h-[38px] rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 active:scale-95"
+                                className="flex-1 btn-outline min-h-[44px] text-xs"
                               >
                                 <Eye className="w-4 h-4 text-slate-500" />
                                 <span>View Customer 360</span>
@@ -2297,8 +2373,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                               <button
                                 type="button"
                                 onClick={() => setEntryManageTarget({ type: 'RECOVERY', data: r })}
-                                className="w-10 h-[38px] rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-amber-600 dark:text-amber-400 active:scale-95 cursor-pointer"
+                                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-center text-[#F97316] cursor-pointer"
                                 title="Edit or Cancel / Reverse Recovery"
+                                aria-label="Edit recovery"
                               >
                                 <Edit3 className="w-4 h-4" />
                               </button>
@@ -2316,12 +2393,12 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               {/* ==================================================== */}
               {activeTab === 'FIELD_FORCE' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h2 className="text-lg font-black text-slate-900 dark:text-white">
                         Field Force Operations &amp; Shifts
                       </h2>
-                      <p className="text-xs text-slate-500 font-medium">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                         Attendance logs, geo-locations, and live performance analytics
                       </p>
                     </div>
@@ -2330,10 +2407,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <button
                         type="button"
                         onClick={() => setFieldForceSubTab('ROSTER')}
-                        className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                           fieldForceSubTab === 'ROSTER'
-                            ? 'bg-teal-800 text-white shadow-xs'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
                         Team Roster
@@ -2342,10 +2419,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <button
                         type="button"
                         onClick={() => setFieldForceSubTab('ATTENDANCE_LEDGER')}
-                        className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer tabular-nums ${
                           fieldForceSubTab === 'ATTENDANCE_LEDGER'
-                            ? 'bg-teal-800 text-white shadow-xs'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
                         Attendance Ledger ({attendanceRecords.length})
@@ -2354,10 +2431,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <button
                         type="button"
                         onClick={() => setFieldForceSubTab('PERFORMANCE_DASHBOARD')}
-                        className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                           fieldForceSubTab === 'PERFORMANCE_DASHBOARD'
-                            ? 'bg-teal-800 text-white shadow-xs'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
                         Performance Dashboard
@@ -2367,21 +2444,21 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
                   {/* Sub-view: Team Roster */}
                   {fieldForceSubTab === 'ROSTER' && (
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
+                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs divide-y divide-[#E2E8F0] dark:divide-slate-700/80 overflow-hidden">
                       {NLINK_TEAM_ROSTER.map((u) => (
-                        <div key={u.id} className="p-4 flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-teal-800 text-white font-black flex items-center justify-center text-xs">
+                        <div key={u.id} className="p-4 flex items-center justify-between gap-2 text-xs">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-[#3B82F6] text-white font-black flex items-center justify-center text-xs shrink-0">
                               {u.avatarInitials}
                             </div>
-                            <div>
-                              <span className="font-bold text-slate-900 dark:text-white block">{u.fullName}</span>
-                              <span className="text-[11px] text-slate-400">{u.roleTitle} &bull; {u.assignedTowns?.join(', ')}</span>
+                            <div className="min-w-0">
+                              <span className="font-bold text-slate-900 dark:text-white block truncate">{u.fullName}</span>
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate block">{u.roleTitle} &bull; {u.assignedTowns?.join(', ')}</span>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                               Active Shift &bull; Checked In
                             </span>
                           </div>
@@ -2439,56 +2516,56 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               {/* ==================================================== */}
               {activeTab === 'SETTINGS' && (
                 <div className="space-y-4 animate-in fade-in duration-200 text-xs">
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white">
                       System Settings &amp; Cloud Sync
                     </h2>
-                    <p className="text-xs text-slate-500 font-medium">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                       Maintain database integrity and two-way Google Sheets sync
                     </p>
                   </div>
 
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 space-y-3">
                     {/* Manage Towns Quick Access */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <span className="font-black text-slate-900 dark:text-white block">Town Nodes &amp; Geographic Route Configuration</span>
-                        <span className="text-[11px] text-slate-500">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
                           Add, edit, or deactivate commercial towns and configure officer beats across all provinces.
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setActiveTab('MANAGE_TOWNS')}
-                        className="px-4 py-2 rounded-xl bg-teal-800 hover:bg-teal-700 text-white font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                        className="btn-outline min-h-[44px] px-4 text-xs shrink-0"
                       >
-                        <MapPin className="w-3.5 h-3.5" />
+                        <MapPin className="w-3.5 h-3.5 text-[#3B82F6]" />
                         <span>Manage Towns ({effectiveTownNodes.filter(t => t.isActive).length} Active)</span>
                       </button>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <span className="font-bold text-slate-900 dark:text-white block">Automatic Background Sync &amp; Reconciliation</span>
-                        <span className="text-[11px] text-slate-500">Orders, recoveries and ledgers sync automatically in the background</span>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">Orders, recoveries and ledgers sync automatically in the background</span>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         {isManagementOrSuperAdmin && (
                           <button
                             type="button"
                             onClick={() => setActiveTab('SYNC_MONITORING')}
-                            className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                            className="btn-outline min-h-[40px] px-3 text-xs"
                           >
-                            <Activity className="w-3.5 h-3.5" />
+                            <Activity className="w-3.5 h-3.5 text-[#3B82F6]" />
                             <span>System Sync</span>
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={() => setActiveTab('PRICE_LIST')}
-                          className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                          className="btn-outline min-h-[40px] px-3 text-xs"
                         >
-                          <Tag className="w-3.5 h-3.5" />
+                          <Tag className="w-3.5 h-3.5 text-[#3B82F6]" />
                           <span>Price List ({skus?.length || 30} SKUs)</span>
                         </button>
                         {onSyncGoogleSheet && (
@@ -2496,7 +2573,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             type="button"
                             onClick={() => onSyncGoogleSheet()}
                             disabled={isSyncingSheet}
-                            className="btn-primary text-xs"
+                            className="btn-primary min-h-[40px] text-xs"
                           >
                             <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheet ? 'animate-spin' : ''}`} />
                             <span>{isSyncingSheet ? 'Syncing...' : 'Sync'}</span>
@@ -2506,11 +2583,11 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                     </div>
 
                     {/* Global Session Invalidation Action */}
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-700/80 space-y-2.5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
-                          <span className="font-black text-rose-700 dark:text-rose-400 block">Invalidate All Sessions Globally</span>
-                          <span className="text-[11px] text-slate-500">
+                          <span className="font-black text-rose-600 dark:text-rose-400 block">Invalidate All Sessions Globally</span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
                             Force all users &amp; devices to re-authenticate immediately without deleting accounts or records.
                           </span>
                         </div>
@@ -2521,7 +2598,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                               setConfirmInvalidateSessions(true);
                               setSettingsNotice(null);
                             }}
-                            className="min-h-[40px] px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs cursor-pointer shrink-0"
+                            className="btn-danger min-h-[44px] px-4 text-xs shrink-0"
                           >
                             Invalidate Sessions
                           </button>
@@ -2529,21 +2606,21 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                           <div className="flex items-center gap-2 shrink-0 flex-wrap">
                             <button
                               type="button"
+                              onClick={() => setConfirmInvalidateSessions(false)}
+                              className="btn-outline min-h-[44px] px-3 text-xs"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => {
                                 invalidateAllSessionsGlobally();
                                 setConfirmInvalidateSessions(false);
                                 setSettingsNotice('All active sessions have been globally invalidated.');
                               }}
-                              className="min-h-[40px] px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs cursor-pointer"
+                              className="btn-danger min-h-[44px] px-4 text-xs"
                             >
                               Confirm Global Sign-Out
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmInvalidateSessions(false)}
-                              className="min-h-[40px] px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer"
-                            >
-                              Cancel
                             </button>
                           </div>
                         )}
@@ -2561,15 +2638,15 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                     </div>
 
                     {onPurgeMockData && (
-                      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <div className="pt-3 border-t border-slate-100 dark:border-slate-700/80 flex items-center justify-between gap-2">
                         <div>
-                          <span className="font-black text-rose-700 block">Purge Mock / Demo Data</span>
-                          <span className="text-[11px] text-slate-500">Remove any residual dummy records</span>
+                          <span className="font-black text-rose-600 dark:text-rose-400 block">Purge Mock / Demo Data</span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">Remove any residual dummy records</span>
                         </div>
                         <button
                           type="button"
                           onClick={onPurgeMockData}
-                          className="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 font-bold hover:bg-rose-100"
+                          className="btn-danger min-h-[44px] px-4 text-xs"
                         >
                           Purge Demo Data
                         </button>
@@ -2659,11 +2736,11 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
       {/* Rejection Modal */}
       {rejectionTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 text-xs">
-            <h3 className="text-base font-black text-rose-700 dark:text-rose-400">
+          <div className="bg-white dark:bg-[#1E293B] w-full max-w-md rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700 shadow-2xl space-y-4 text-xs">
+            <h3 className="text-base font-black text-rose-600 dark:text-rose-400">
               Decline {rejectionTarget.type === 'ORDER' ? 'Order' : rejectionTarget.type === 'CUSTOMER' ? 'Customer' : 'Recovery'} #{rejectionTarget.code}
             </h3>
-            <p className="text-slate-500">
+            <p className="text-slate-500 dark:text-slate-400">
               Please enter the official reason for rejection before declining:
             </p>
 
@@ -2675,7 +2752,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 setRejectionReasonInput(e.target.value);
                 if (rejectionError) setRejectionError(null);
               }}
-              className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
+              className="w-full p-2.5 bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-[#3B82F6]"
             />
 
             {rejectionError && (
@@ -2695,14 +2772,14 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   setRejectionTarget(null);
                   setRejectionError(null);
                 }}
-                className="min-h-[40px] px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold cursor-pointer"
+                className="btn-outline min-h-[44px] px-4 text-xs"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmRejection}
-                className="min-h-[40px] px-4 py-2 rounded-xl bg-rose-600 text-white font-bold cursor-pointer"
+                className="btn-danger min-h-[44px] px-4 text-xs"
               >
                 Confirm Rejection
               </button>
@@ -2751,15 +2828,15 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
       {/* Desktop Etc Quick Actions Modal */}
       {desktopEtcCustomer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-[#1E293B] w-full max-w-md rounded-2xl border border-[#E2E8F0] dark:border-slate-700 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between bg-slate-50/80 dark:bg-slate-800/60">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-700/80 flex items-start justify-between bg-slate-50/80 dark:bg-[#0F172A]">
               <div className="min-w-0 flex-1 pr-3">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <h3 className="font-black text-base text-slate-900 dark:text-white truncate">
                     {desktopEtcCustomer.companyName}
                   </h3>
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                     {desktopEtcCustomer.customerCode}
                   </span>
                 </div>
@@ -2771,28 +2848,29 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               <button
                 type="button"
                 onClick={() => setDesktopEtcCustomer(null)}
-                className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer shrink-0"
+                aria-label="Close quick actions modal"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 cursor-pointer shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Financial Ledger Snapshot */}
-            <div className="p-4 bg-teal-50/50 dark:bg-teal-950/30 border-b border-teal-100 dark:border-teal-900/40 flex items-center justify-between">
+            <div className="p-4 bg-blue-50/50 dark:bg-[#0B1120] border-b border-blue-100 dark:border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
                   Net Ledger Balance
                 </span>
-                <span className="text-base font-black font-mono text-teal-900 dark:text-teal-200">
-                  Rs. {(desktopEtcCustomer.currentBalance ?? desktopEtcCustomer.openingBalance ?? 0).toLocaleString()} PKR
+                <span className="text-base font-black font-mono tabular-nums text-slate-900 dark:text-white">
+                  PKR {(desktopEtcCustomer.currentBalance ?? desktopEtcCustomer.openingBalance ?? 0).toLocaleString()}
                 </span>
               </div>
               <div className="text-right">
                 <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
                   Credit Limit
                 </span>
-                <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
-                  Rs. {(desktopEtcCustomer.creditLimit || 350000).toLocaleString()}
+                <span className="text-xs font-mono tabular-nums font-bold text-slate-600 dark:text-slate-300">
+                  PKR {(desktopEtcCustomer.creditLimit || 350000).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -2812,7 +2890,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   window.open(url, '_blank');
                   setDesktopEtcCustomer(null);
                 }}
-                className="w-full p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-emerald-900 dark:text-emerald-200 transition-all cursor-pointer"
+                className="w-full min-h-[48px] p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-emerald-900 dark:text-emerald-200 transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
@@ -2831,15 +2909,15 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 <a
                   href={`tel:${desktopEtcCustomer.phone}`}
                   onClick={() => setDesktopEtcCustomer(null)}
-                  className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
+                  className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-teal-800 text-white flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0">
                       <Phone className="w-4 h-4" />
                     </div>
                     <div className="text-left">
                       <span className="font-black text-xs block">Call Shop Proprietor</span>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">{desktopEtcCustomer.phone}</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">{desktopEtcCustomer.phone}</span>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -2856,10 +2934,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
                   setDesktopEtcCustomer(null);
                 }}
-                className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
+                className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-sky-700 text-white flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#3B82F6] text-white flex items-center justify-center shrink-0">
                     <Navigation className="w-4 h-4" />
                   </div>
                   <div className="text-left">
@@ -2878,10 +2956,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   setDesktopEtcCustomer(null);
                   handleOpen360ForCustomer(target);
                 }}
-                className="w-full p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
+                className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#003ECC] text-white flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#F97316] text-white flex items-center justify-center shrink-0">
                     <Eye className="w-4 h-4" />
                   </div>
                   <div className="text-left">
@@ -2940,20 +3018,20 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
       {/* Scoped Attendance Ledger Modal (Field Sales & Departmental Quick Action) */}
       {isAttendanceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-[#0E1A14] w-full max-w-4xl max-h-[88vh] rounded-2xl border border-slate-200 dark:border-emerald-900/60 shadow-2xl flex flex-col overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-200 dark:border-emerald-900/50 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#1E293B] w-full max-w-4xl max-h-[88vh] rounded-2xl border border-[#E2E8F0] dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden">
+            <div className="px-5 py-3.5 bg-[#0F172A] border-b border-slate-800 flex items-center justify-between text-white">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-emerald-50">
+                <h3 className="text-sm font-bold text-white">
                   Attendance Ledger — {currentUser.fullName}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-emerald-300/70">
+                <p className="text-xs text-slate-400">
                   Personal check-in &amp; field shift history
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsAttendanceModalOpen(false)}
-                className="min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center text-slate-500 dark:text-emerald-200 hover:bg-slate-100 dark:hover:bg-emerald-950/60 cursor-pointer"
+                className="min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 cursor-pointer"
                 aria-label="Close attendance ledger"
               >
                 <X className="w-4 h-4" />

@@ -3,56 +3,60 @@
 @import "leaflet/dist/leaflet.css";
 
 :root {
-  /* Nature Tones Palette: #1B5E3A, #4CAF50, #A7C957, #D9F99D, #F1F8E9 */
-  --deep-navy: #1B5E3A;
-  --deep-obsidian: #1B5E3A;
-  --slate-teal: #A7C957;
-  --action-teal: #4CAF50;
-  --action-teal-hover: #388E3C;
-  --accent-mint: #D9F99D;
+  /* N-LINK 360 Enterprise Design System — Clean Daylight Light Tokens */
+  --deep-navy: #0F172A;
+  --deep-obsidian: #0B1120;
+  --slate-teal: #3B82F6;
+  --action-orange: #F97316;
+  --action-orange-hover: #EA580C;
+  --action-teal: #F97316;
+  --action-teal-hover: #EA580C;
+  --accent-blue: #3B82F6;
+  --accent-blue-hover: #2563EB;
+  --accent-mint: #DBEAFE;
   --illumination-amber: #F59E0B;
-  --info-sky: #1B5E3A;
+  --info-sky: #0EA5E9;
 
-  /* Legacy Variable Aliases (mapped to Nature Tones palette) */
-  --primary-blue: var(--action-teal);
-  --primary-blue-hover: var(--action-teal-hover);
-  --accent-cyan: var(--accent-mint);
-  --luminous-orange: var(--illumination-amber);
+  /* Legacy Variable Aliases (mapped cleanly without Nature Green drift) */
+  --primary-blue: var(--accent-blue);
+  --primary-blue-hover: var(--accent-blue-hover);
+  --accent-cyan: var(--info-sky);
+  --luminous-orange: var(--action-orange);
 
-  /* Default Nature Tones Light Surfaces */
-  --bg-canvas: #F1F8E9;
+  /* Crisp Daylight Light Mode Surfaces */
+  --bg-canvas: #F8FAFC;
   --bg-surface: #FFFFFF;
-  --bg-elevated: #F1F8E9;
-  --bg-glass: rgba(241, 248, 233, 0.94);
-  --text-primary: #1B5E3A;
-  --text-secondary: #3E6B48;
-  --text-muted: #5F8564;
-  --border-hairline: #C8E6C9;
+  --bg-elevated: #F1F5F9;
+  --bg-glass: rgba(255, 255, 255, 0.94);
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --border-hairline: #E2E8F0;
 
   /* Semantic Ledger & KPI Colors */
-  --status-credit: #1B5E3A;
+  --status-credit: #10B981;
   --status-debit: #DC2626;
-  --status-warning: #D97706;
+  --status-warning: #F97316;
 
   /* Typography (2-Typeface System: Plus Jakarta Sans + JetBrains Mono) */
   --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* 8px Spatial Grid & Elevation */
+  /* 8pt Spatial Grid & Elevation */
   --space-1: 0.5rem;   /* 8px */
   --space-2: 1rem;     /* 16px */
   --space-3: 1.5rem;   /* 24px */
   --space-4: 2rem;     /* 32px */
   --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --shadow-card: 0 8px 24px -4px rgba(27, 94, 58, 0.08), 0 2px 6px -1px rgba(27, 94, 58, 0.04);
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
   --transition-smooth: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Aliases */
-  --primary: var(--action-teal);
-  --primary-hover: var(--action-teal-hover);
+  --primary: var(--action-orange);
+  --primary-hover: var(--action-orange-hover);
   --background: var(--bg-canvas);
   --surface: var(--bg-surface);
   --border: var(--border-hairline);
@@ -60,21 +64,22 @@
   font-family: var(--font-sans);
   color: var(--text-primary);
   background-color: var(--bg-canvas);
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   font-feature-settings: 'tnum' 1, 'cv02', 'cv03', 'cv04';
 }
 
 [data-theme="light"] {
-  --bg-canvas: #F1F8E9;
+  --bg-canvas: #F8FAFC;
   --bg-surface: #FFFFFF;
-  --bg-elevated: #F1F8E9;
-  --bg-glass: rgba(241, 248, 233, 0.94);
-  --text-primary: #1B5E3A;
-  --text-secondary: #3E6B48;
-  --text-muted: #5F8564;
-  --border-hairline: #C8E6C9;
-  --shadow-card: 0 8px 24px -4px rgba(27, 94, 58, 0.08), 0 2px 6px -1px rgba(27, 94, 58, 0.04);
+  --bg-elevated: #F1F5F9;
+  --bg-glass: rgba(255, 255, 255, 0.94);
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --border-hairline: #E2E8F0;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
 
   --background: var(--bg-canvas);
   --surface: var(--bg-surface);
@@ -82,19 +87,20 @@
 
   color: var(--text-primary);
   background-color: var(--bg-canvas);
+  color-scheme: light;
 }
 
 [data-theme="dark"],
 .dark {
-  --bg-canvas: #0F2417;
-  --bg-surface: #163322;
-  --bg-elevated: #1B5E3A;
-  --bg-glass: rgba(22, 51, 34, 0.92);
-  --text-primary: #F1F8E9;
-  --text-secondary: #D9F99D;
-  --text-muted: #A7C957;
-  --border-hairline: #2E6B46;
-  --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+  --bg-canvas: #0B1120;
+  --bg-surface: #0F172A;
+  --bg-elevated: #1E293B;
+  --bg-glass: rgba(15, 23, 42, 0.92);
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  --border-hairline: #334155;
+  --shadow-card: 0 10px 30px -5px rgba(2, 6, 23, 0.55);
 
   --background: var(--bg-canvas);
   --surface: var(--bg-surface);
@@ -102,6 +108,7 @@
 
   color: var(--text-primary);
   background-color: var(--bg-canvas);
+  color-scheme: dark;
 }
 
 *, *::before, *::after {
@@ -139,9 +146,13 @@ h1, h2, h3, h4, .font-display {
   font-family: var(--font-display);
 }
 
+.font-mono,
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 .font-mono {
   font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
 }
 
 img, svg, video, canvas, audio, iframe, embed, object {
@@ -161,13 +172,13 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Accessible focus ring */
+/* Accessible focus ring (High contrast on both Slate Dark & Crisp Light) */
 *:focus-visible {
-  outline: 2px solid var(--action-teal);
+  outline: 2px solid #F97316;
   outline-offset: 2px;
 }
 
-/* Clean Scrollbar */
+/* Clean Scrollbar (Zero white flash in dark mode) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -185,6 +196,9 @@ button {
 
 .dark ::-webkit-scrollbar-thumb {
   background: #334155;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -249,9 +263,9 @@ button {
     margin: 0 auto !important;
     padding: 10mm 8mm !important;
     background: #ffffff !important;
-    color: #111827 !important;
+    color: #0F172A !important;
     box-shadow: none !important;
-    border: 1px solid #1B5E3A !important;
+    border: 1px solid #0F172A !important;
     border-radius: 4px !important;
     page-break-inside: avoid;
     font-size: 10pt !important;
@@ -264,11 +278,11 @@ button {
   }
 
   .invoice-print-container th {
-    background-color: #F1F8E9 !important;
-    color: #1B5E3A !important;
+    background-color: #F8FAFC !important;
+    color: #0F172A !important;
     font-size: 9pt !important;
     font-weight: 700 !important;
-    border-bottom: 2px solid #1B5E3A !important;
+    border-bottom: 2px solid #0F172A !important;
     padding: 4px 6px !important;
   }
 
@@ -326,7 +340,7 @@ button {
   position: sticky;
   top: 0;
   z-index: 20;
-  background-color: var(--bg-surface);
+  background-color: var(--bg-elevated);
   box-shadow: 0 1px 0 var(--border-hairline);
 }
 
@@ -334,12 +348,19 @@ button {
 .frozen-first-col td:first-child {
   position: sticky;
   left: 0;
-  z-index: 10;
+  z-index: 15;
   background-color: var(--bg-surface);
+  box-shadow: 4px 0 10px -4px rgba(15, 23, 42, 0.14);
 }
 
-.frozen-first-col th:first-child {
+.dark .frozen-first-col th:first-child,
+.dark .frozen-first-col td:first-child {
+  box-shadow: 4px 0 12px -4px rgba(2, 6, 23, 0.65);
+}
+
+.frozen-first-col thead th:first-child {
   z-index: 30;
+  background-color: var(--bg-elevated);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -351,7 +372,7 @@ button {
   }
 }
 
-/* 5 Unified Enterprise Button Variants */
+/* Unified B2B ERP Button Variants (Single Dominant Vibrant Orange Primary CTA) */
 .btn-primary,
 .btn-secondary,
 .btn-outline,
@@ -368,26 +389,46 @@ button {
   font-weight: 600;
   line-height: 1.25;
   white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+
+.btn-primary:active,
+.btn-secondary:active,
+.btn-outline:active,
+.btn-ghost:active,
+.btn-danger:active {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-outline:disabled,
+.btn-ghost:disabled,
+.btn-danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .btn-primary {
-  background-color: var(--action-teal);
-  color: #ffffff;
+  background-color: #F97316;
+  color: #FFFFFF;
   border: 1px solid transparent;
+  box-shadow: 0 1px 2px rgba(234, 88, 12, 0.25);
 }
-.btn-primary:hover {
-  background-color: var(--action-teal-hover);
+.btn-primary:hover:not(:disabled) {
+  background-color: #EA580C;
 }
 
 .btn-secondary {
-  background-color: var(--deep-navy);
-  color: #ffffff;
-  border: 1px solid transparent;
+  background-color: #1E293B;
+  color: #F8FAFC;
+  border: 1px solid #334155;
 }
-.btn-secondary:hover {
-  background-color: #162447;
+.btn-secondary:hover:not(:disabled) {
+  background-color: #334155;
 }
 
 .btn-outline {
@@ -395,8 +436,9 @@ button {
   color: var(--text-primary);
   border: 1px solid var(--border-hairline);
 }
-.btn-outline:hover {
-  border-color: var(--action-teal);
+.btn-outline:hover:not(:disabled) {
+  border-color: #3B82F6;
+  background-color: var(--bg-elevated);
 }
 
 .btn-ghost {
@@ -404,16 +446,16 @@ button {
   color: var(--text-secondary);
   border: 1px solid transparent;
 }
-.btn-ghost:hover {
-  background-color: rgba(13, 148, 136, 0.08);
+.btn-ghost:hover:not(:disabled) {
+  background-color: var(--bg-elevated);
   color: var(--text-primary);
 }
 
 .btn-danger {
-  background-color: var(--status-debit);
-  color: #ffffff;
+  background-color: #DC2626;
+  color: #FFFFFF;
   border: 1px solid transparent;
 }
-.btn-danger:hover {
-  background-color: #dc2626;
+.btn-danger:hover:not(:disabled) {
+  background-color: #B91C1C;
 }

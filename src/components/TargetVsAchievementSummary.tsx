@@ -129,27 +129,23 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
         return {
           label: 'Target Achieved',
           bg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-          dot: 'bg-emerald-500',
         };
       }
       if (diff >= 5) {
         return {
           label: 'Ahead of Pace',
-          bg: 'bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300 border-teal-200 dark:border-teal-800',
-          dot: 'bg-teal-500',
+          bg: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800',
         };
       }
       if (diff >= -10) {
         return {
           label: 'On Track',
-          bg: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-          dot: 'bg-blue-500',
+          bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
         };
       }
       return {
         label: 'Needs Catch-up',
         bg: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-        dot: 'bg-amber-500',
       };
     };
 
@@ -172,24 +168,24 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
   return (
     <div
       id="target-vs-achievement-summary"
-      className={`bg-white dark:bg-[#0c1420] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-2xs p-5 transition-all ${className}`}
+      className={`bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xs p-5 transition-all ${className}`}
     >
       {/* Header with Title, Month, and Officer Badge */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 mb-4 border-b border-slate-100 dark:border-slate-800/60 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 mb-4 border-b border-[#E2E8F0] dark:border-slate-700/80 gap-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-[#006b5f] dark:text-[#76f4e0] flex items-center justify-center border border-teal-200/60 dark:border-teal-800/40 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#3B82F6] flex items-center justify-center border border-blue-200/70 dark:border-blue-800/50 shrink-0">
             <Target className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black tracking-tight text-slate-900 dark:text-white uppercase">
+              <h3 className="text-sm font-black tracking-tight text-[#0F172A] dark:text-white uppercase">
                 Target vs Achievement
               </h3>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700">
                 MTD
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5 font-mono tabular-nums">
               <Calendar className="w-3 h-3 text-slate-400" />
               <span>{currentMonthName}</span>
               <span>•</span>
@@ -199,14 +195,14 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono">
+          <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700 font-mono">
             {currentUser.fullName}
           </span>
           {onViewDetails && (
             <button
               type="button"
               onClick={onViewDetails}
-              className="text-[11px] font-bold text-[#006b5f] dark:text-[#76f4e0] hover:underline flex items-center gap-0.5 cursor-pointer"
+              className="text-[11px] font-bold text-[#3B82F6] hover:underline inline-flex items-center gap-0.5 min-h-[36px] px-1.5 cursor-pointer"
             >
               <span>View Report</span>
               <ArrowUpRight className="w-3 h-3" />
@@ -216,21 +212,20 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
       </div>
 
       {/* Main Dual Metric Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         {/* 1. SALES BOOKING PROGRESS CARD */}
-        <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800/60 flex flex-col justify-between space-y-3.5">
+        <div className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between h-full space-y-3.5">
           {/* Top Row: Metric Title & Pace Status */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-[#006b5f] dark:text-[#76f4e0]" />
-              <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+              <TrendingUp className="w-4 h-4 text-[#3B82F6]" />
+              <span className="text-xs font-black uppercase tracking-wider text-[#0F172A] dark:text-slate-200">
                 FMCG Sales Booking
               </span>
             </div>
             <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${salesPaceStatus.bg}`}
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-md border inline-flex items-center ${salesPaceStatus.bg}`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${salesPaceStatus.dot}`} />
               {salesPaceStatus.label}
             </span>
           </div>
@@ -238,15 +233,15 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
           {/* Value Achieved vs Target */}
           <div className="flex items-baseline justify-between gap-2">
             <div>
-              <div className="text-xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
-                Rs. {salesAchieved.toLocaleString()}
+              <div className="text-xl font-black text-[#0F172A] dark:text-white font-mono tabular-nums tracking-tight">
+                PKR {salesAchieved.toLocaleString()}
               </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                Goal: <span className="font-mono font-bold text-slate-700 dark:text-slate-300">Rs. {salesTarget.toLocaleString()}</span>
+                Goal: <span className="font-mono tabular-nums font-bold text-slate-700 dark:text-slate-300">PKR {salesTarget.toLocaleString()}</span>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-black text-[#006b5f] dark:text-[#76f4e0] font-mono leading-none">
+              <div className="text-2xl font-black text-[#3B82F6] font-mono tabular-nums leading-none">
                 {salesPercent}%
               </div>
               <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">
@@ -257,48 +252,49 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
 
           {/* Progress Bar Container */}
           <div className="space-y-1">
-            <div className="relative w-full h-2.5 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
+            <div className="relative w-full h-2.5 bg-slate-200/80 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
               <div
-                className="h-full bg-gradient-to-r from-[#006b5f] to-teal-400 rounded-full transition-all duration-700 relative"
+                className="h-full bg-gradient-to-r from-[#3B82F6] to-sky-400 rounded-full transition-all duration-700 relative"
                 style={{ width: `${Math.min(100, Math.max(2, salesPercent))}%` }}
               />
             </div>
           </div>
 
           {/* Footer Info: Remaining & Daily Run-rate */}
-          <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400">
+          <div className="pt-2 mt-auto border-t border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-2 text-[10px] text-slate-600 dark:text-slate-400">
             <div className="flex items-center gap-1">
               <Clock className="w-3 h-3 text-slate-400 shrink-0" />
               <span>
                 {salesRemaining > 0 ? (
-                  <>Deficit: <strong className="font-mono text-slate-800 dark:text-slate-200">Rs. {salesRemaining.toLocaleString()}</strong></>
+                  <>Deficit: <strong className="font-mono tabular-nums text-[#0F172A] dark:text-slate-200">PKR {salesRemaining.toLocaleString()}</strong></>
                 ) : (
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Target Completed</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold inline-flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Target Completed
+                  </span>
                 )}
               </span>
             </div>
             {salesRemaining > 0 && (
-              <div className="font-mono font-medium text-slate-500 dark:text-slate-400">
-                Run-rate: <strong className="text-slate-700 dark:text-slate-300">Rs. {dailyRequiredSales.toLocaleString()}</strong>/day
+              <div className="font-mono tabular-nums font-medium text-slate-500 dark:text-slate-400">
+                Run-rate: <strong className="text-slate-700 dark:text-slate-300">PKR {dailyRequiredSales.toLocaleString()}</strong>/day
               </div>
             )}
           </div>
         </div>
 
         {/* 2. RECOVERY & COLLECTION PROGRESS CARD */}
-        <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800/60 flex flex-col justify-between space-y-3.5">
+        <div className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between h-full space-y-3.5">
           {/* Top Row: Metric Title & Pace Status */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                Recovery & Collection
+              <span className="text-xs font-black uppercase tracking-wider text-[#0F172A] dark:text-slate-200">
+                Recovery &amp; Collection
               </span>
             </div>
             <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${recoveryPaceStatus.bg}`}
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-md border inline-flex items-center ${recoveryPaceStatus.bg}`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${recoveryPaceStatus.dot}`} />
               {recoveryPaceStatus.label}
             </span>
           </div>
@@ -306,15 +302,15 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
           {/* Value Achieved vs Target */}
           <div className="flex items-baseline justify-between gap-2">
             <div>
-              <div className="text-xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
-                Rs. {recoveryAchieved.toLocaleString()}
+              <div className="text-xl font-black text-[#0F172A] dark:text-white font-mono tabular-nums tracking-tight">
+                PKR {recoveryAchieved.toLocaleString()}
               </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                Goal: <span className="font-mono font-bold text-slate-700 dark:text-slate-300">Rs. {recoveryTarget.toLocaleString()}</span>
+                Goal: <span className="font-mono tabular-nums font-bold text-slate-700 dark:text-slate-300">PKR {recoveryTarget.toLocaleString()}</span>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono leading-none">
+              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums leading-none">
                 {recoveryPercent}%
               </div>
               <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">
@@ -325,29 +321,31 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
 
           {/* Progress Bar Container */}
           <div className="space-y-1">
-            <div className="relative w-full h-2.5 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
+            <div className="relative w-full h-2.5 bg-slate-200/80 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
               <div
-                className="h-full bg-gradient-to-r from-emerald-600 to-green-400 rounded-full transition-all duration-700 relative"
+                className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-700 relative"
                 style={{ width: `${Math.min(100, Math.max(2, recoveryPercent))}%` }}
               />
             </div>
           </div>
 
           {/* Footer Info: Remaining & Daily Run-rate */}
-          <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400">
+          <div className="pt-2 mt-auto border-t border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-2 text-[10px] text-slate-600 dark:text-slate-400">
             <div className="flex items-center gap-1">
-              <Zap className="w-3 h-3 text-amber-500 shrink-0" />
+              <Zap className="w-3 h-3 text-[#F97316] shrink-0" />
               <span>
                 {recoveryRemaining > 0 ? (
-                  <>Deficit: <strong className="font-mono text-slate-800 dark:text-slate-200">Rs. {recoveryRemaining.toLocaleString()}</strong></>
+                  <>Deficit: <strong className="font-mono tabular-nums text-[#0F172A] dark:text-slate-200">PKR {recoveryRemaining.toLocaleString()}</strong></>
                 ) : (
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Target Completed</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold inline-flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Target Completed
+                  </span>
                 )}
               </span>
             </div>
             {recoveryRemaining > 0 && (
-              <div className="font-mono font-medium text-slate-500 dark:text-slate-400">
-                Run-rate: <strong className="text-slate-700 dark:text-slate-300">Rs. {dailyRequiredRecovery.toLocaleString()}</strong>/day
+              <div className="font-mono tabular-nums font-medium text-slate-500 dark:text-slate-400">
+                Run-rate: <strong className="text-slate-700 dark:text-slate-300">PKR {dailyRequiredRecovery.toLocaleString()}</strong>/day
               </div>
             )}
           </div>
