@@ -1714,7 +1714,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                         setQuickActionPicker('ORDER');
                         setQuickPickerSearch('');
                       }}
-                      className="min-h-[46px] p-2.5 rounded-xl bg-[#3B82F6] hover:bg-blue-600 active:scale-[0.98] text-white flex items-center gap-2.5 shadow-xs cursor-pointer transition-all touch-manipulation"
+                      className="min-h-[46px] p-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white flex items-center gap-2.5 shadow-xs cursor-pointer transition-all touch-manipulation"
                       title="Book daily sales order"
                     >
                       <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
