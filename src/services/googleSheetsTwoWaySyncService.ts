@@ -38,6 +38,16 @@ import type { SupabaseAppData } from './supabase-data';
 import { getGoogleSheetsWebhookUrl, syncToGoogleSheetsWebhook } from './google-sheets';
 import { safeApiFetch } from '../lib/safeFetch';
 import type { Customer, SalesOrder, Recovery } from '../types';
+import {
+  IncomingWebhookPayload,
+  PayloadValidationOptions,
+  PayloadValidationResult,
+  validatePayloadSignature,
+} from '../utils/transactionSignature';
+import {
+  incrementDuplicatesPrevented,
+  recordSyncLifecycleEvent,
+} from './autoSaveSyncService';
 
 export { TARGET_SPREADSHEET_ID, getActiveSpreadsheetId };
 
@@ -684,6 +694,17 @@ export async function executeTwoWaySync(
     try {
       console.log('[Google Sheets TwoWaySync] Executing zero-auth synchronization via permanent Webhook channel...');
       const webhookRes = await syncToGoogleSheetsWebhook(webhookUrl, appData);
+
+      recordSyncLifecycleEvent({
+        module: 'GOOGLE_SHEETS',
+        recordType: 'GOOGLE_SHEETS_WEBHOOK',
+        databaseId: spreadsheetId,
+        transactionId: `GS-SYNC-${Date.now()}`,
+        idempotencyKey: `gs-sync-${Date.now()}`,
+        syncStatus: 'SUCCESSFULLY_SYNCED',
+        externalSheetId: spreadsheetId,
+        summary: webhookRes.message,
+      });
       
       // Flush pending queue since we did a full authoritative database sync
       const pending = getPendingUploads();
@@ -1078,3 +1099,72 @@ export async function triggerLedgerApprovalSync(
     message: `Ledger balance updated automatically for ${customerName}. Google Sheets sync active.`,
   };
 }
+
+/**
+ * Validates and processes any incoming Google Sheets webhook payload.
+ * Enforces strict payload structure, cryptographic signature verification,
+ * and idempotency checks against Supabase `processed_transactions` (with local fallback)
+ * before invoking the mutation handler.
+ */
+export async function processIncomingGoogleSheetsWebhook<T = void>(
+  payload: IncomingWebhookPayload | unknown,
+  handler: (validatedPayload: IncomingWebhookPayload) => Promise<T>,
+  options: PayloadValidationOptions = {}
+): Promise<{
+  accepted: boolean;
+  validation: PayloadValidationResult;
+  result?: T;
+}> {
+  const validation = await validatePayloadSignature(payload, options);
+  const rawObj = (payload && typeof payload === 'object' ? payload : {}) as IncomingWebhookPayload;
+  const txnId = String(rawObj.transactionId || validation.idempotencyKey || `GS-WH-${Date.now()}`);
+
+  if (!validation.valid) {
+    if (validation.isDuplicate) {
+      incrementDuplicatesPrevented(validation.error);
+    }
+    recordSyncLifecycleEvent({
+      module: 'GOOGLE_SHEETS',
+      recordType: validation.payloadType || 'GOOGLE_SHEETS_WEBHOOK',
+      databaseId: txnId,
+      transactionId: txnId,
+      idempotencyKey: validation.idempotencyKey || `rejected-${Date.now()}`,
+      syncStatus: validation.isDuplicate ? 'REQUIRES_RECONCILIATION' : 'SYNC_FAILED',
+      sourceSystem: String(rawObj.sourceSystem || 'GOOGLE_SHEETS_WEBHOOK'),
+      summary: validation.isDuplicate
+        ? `Blocked duplicate webhook payload (${validation.idempotencyKey})`
+        : `Rejected incoming webhook payload (${validation.errorCode})`,
+      errorMessage: validation.error,
+    });
+    return { accepted: false, validation };
+  }
+
+  try {
+    const result = await handler(rawObj);
+    recordSyncLifecycleEvent({
+      module: 'GOOGLE_SHEETS',
+      recordType: validation.payloadType,
+      databaseId: txnId,
+      transactionId: txnId,
+      idempotencyKey: validation.idempotencyKey,
+      syncStatus: 'SUCCESSFULLY_SYNCED',
+      sourceSystem: String(rawObj.sourceSystem || 'GOOGLE_SHEETS_WEBHOOK'),
+      summary: `Validated & processed ${validation.payloadType} (${validation.checkedSource})`,
+    });
+    return { accepted: true, validation, result };
+  } catch (err: any) {
+    recordSyncLifecycleEvent({
+      module: 'GOOGLE_SHEETS',
+      recordType: validation.payloadType,
+      databaseId: txnId,
+      transactionId: txnId,
+      idempotencyKey: validation.idempotencyKey,
+      syncStatus: 'SYNC_FAILED',
+      sourceSystem: String(rawObj.sourceSystem || 'GOOGLE_SHEETS_WEBHOOK'),
+      summary: `Webhook processing failed for ${validation.payloadType}`,
+      errorMessage: err?.message || 'Webhook handler error',
+    });
+    throw err;
+  }
+}
+

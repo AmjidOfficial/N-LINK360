@@ -210,6 +210,33 @@ DROP POLICY IF EXISTS "Allow authenticated read/write attendance_routes" ON publ
 CREATE POLICY "Allow authenticated read/write attendance_routes" ON public.attendance_routes FOR ALL USING (auth.role() = 'authenticated');
 
 -- ============================================================================
+-- PROCESSED TRANSACTIONS AUDIT LOG (WEBHOOK & SYNC IDEMPOTENCY GUARD)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.processed_transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  idempotency_key TEXT UNIQUE NOT NULL,
+  transaction_id TEXT,
+  payload_type TEXT NOT NULL,
+  payload_hash TEXT NOT NULL,
+  signature TEXT,
+  source_system TEXT NOT NULL DEFAULT 'GOOGLE_SHEETS_WEBHOOK',
+  status TEXT NOT NULL DEFAULT 'PROCESSED',
+  error_reason TEXT,
+  processed_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_processed_transactions_idempotency_key
+  ON public.processed_transactions(idempotency_key);
+
+ALTER TABLE public.processed_transactions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow authenticated read/write processed_transactions" ON public.processed_transactions;
+CREATE POLICY "Allow authenticated read/write processed_transactions"
+  ON public.processed_transactions
+  FOR ALL
+  USING (auth.role() = 'authenticated');
+
+-- ============================================================================
 -- REAL-TIME PUBLICATION CONFIGURATION
 -- ============================================================================
 DO $$

@@ -323,7 +323,7 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
       },
     });
 
-    // 3. Head Office UI Navigation: Price List & SKUs (30 SKUs + Integrity Banner) & Sync Monitoring (3 Tabs)
+    // 3. Head Office UI Navigation: Price List & SKUs (30 SKUs + Integrity Banner) & System Sync (Transaction History Table + Retry Control + 3 Tabs)
     await page.setViewportSize({ width: 1280, height: 800 });
     await signInAs(page, 'amjid.bisconni@gmail.com', 'Amjid@1947');
     const sidebar = page.getByLabel('ERP Sidebar Navigation');
@@ -334,8 +334,20 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
     await expect(page.getByText(/Catalog Rate-Card Integrity Diagnostics/i)).toBeVisible();
     await expect(page.getByText('NL-CP-12W', { exact: true })).toBeVisible();
 
-    await sidebar.getByRole('button', { name: /Sync Monitoring/i }).click();
-    await expect(page.getByText(/Sync Monitoring & Reconciliation Center/i)).toBeVisible({ timeout: 10_000 });
+    await sidebar.getByRole('button', { name: /System Sync/i }).click();
+    await expect(page.getByText(/System Sync Monitoring & Reconciliation Center/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('button', { name: /Retry All Failed Syncs/i })).toBeVisible();
+
+    const historyTable = page.getByRole('table', { name: /Transaction Sync History/i });
+    await expect(historyTable).toBeVisible();
+    await expect(historyTable.getByRole('columnheader', { name: 'Timestamp' })).toBeVisible();
+    await expect(historyTable.getByRole('columnheader', { name: 'Type' })).toBeVisible();
+    await expect(historyTable.getByRole('columnheader', { name: 'Status' })).toBeVisible();
+    await expect(historyTable.getByRole('columnheader', { name: 'Error Details' })).toBeVisible();
+
+    await page.getByRole('button', { name: /Retry All Failed Syncs/i }).click();
+    await expect(page.getByText(/0 failed sync operations|Retried|Pending queue records flushed/i)).toBeVisible({ timeout: 5_000 });
+
     const ghaffarTab = page.getByRole('button', { name: /M Ghaffar Tools & Date Forensics/i });
     await expect(ghaffarTab).toBeVisible();
     await ghaffarTab.click();

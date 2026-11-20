@@ -1,7 +1,7 @@
 {
-  "lastDbSavedAt": "2026-11-15T14:18:34.749Z",
+  "lastDbSavedAt": "2026-11-18T08:57:10.454Z",
   "lastGoogleSyncedAt": null,
-  "duplicatesPrevented": 9,
+  "duplicatesPrevented": 12,
   "seenSignatures": {
     "idem:ab55492c-1d69-4b56-8599-9f572402d447": {
       "transactionId": "SO-IDEM-01",
@@ -83,9 +83,61 @@
         "recordId": "NLINK-PAY-20261115-373663",
         "transactionId": "NLINK-PAY-20261115-373663"
       }
+    },
+    "idem:9c3cf44c-edae-4a5b-83d8-e81bbb5befbc": {
+      "transactionId": "SO-IDEM-01",
+      "receivedAt": "2026-11-18T08:55:10.983Z",
+      "payloadSummary": {
+        "type": "ORDER",
+        "recordId": "SO-IDEM-01",
+        "transactionId": "SO-IDEM-01"
+      }
+    },
+    "idem:4342624c-d17e-4229-b6c0-bb739410b92d": {
+      "transactionId": "SO-IDEM-01",
+      "receivedAt": "2026-11-18T08:56:58.283Z",
+      "payloadSummary": {
+        "type": "ORDER",
+        "recordId": "SO-IDEM-01",
+        "transactionId": "SO-IDEM-01"
+      }
+    },
+    "fp:fp_e2e_1794992230439": {
+      "transactionId": "NLINK-PAY-20261115-266864",
+      "receivedAt": "2026-11-18T08:57:10.454Z",
+      "payloadSummary": {
+        "type": "PAYMENT_RECOVERY",
+        "recordId": "NLINK-PAY-20261115-266864",
+        "transactionId": "NLINK-PAY-20261115-266864"
+      }
     }
   },
   "events": [
+    {
+      "id": "SEV-1794992230454-lldh",
+      "type": "PAYMENT_RECOVERY",
+      "transactionId": "NLINK-PAY-20261115-266864",
+      "fingerprintHash": "fp_e2e_1794992230439",
+      "idempotencyKey": "d14ee246-1103-4469-846e-3c7f8258d34f",
+      "syncStatus": "SAVED_IN_DB",
+      "receivedAt": "2026-11-18T08:57:10.454Z"
+    },
+    {
+      "id": "SEV-1794992218283-qotv",
+      "type": "ORDER",
+      "transactionId": "SO-IDEM-01",
+      "idempotencyKey": "4342624c-d17e-4229-b6c0-bb739410b92d",
+      "syncStatus": "SAVED_IN_DB",
+      "receivedAt": "2026-11-18T08:56:58.283Z"
+    },
+    {
+      "id": "SEV-1794992110983-ncx8",
+      "type": "ORDER",
+      "transactionId": "SO-IDEM-01",
+      "idempotencyKey": "9c3cf44c-edae-4a5b-83d8-e81bbb5befbc",
+      "syncStatus": "SAVED_IN_DB",
+      "receivedAt": "2026-11-18T08:55:10.983Z"
+    },
     {
       "id": "SEV-1794752314749-o8et",
       "type": "PAYMENT_RECOVERY",

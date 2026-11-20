@@ -30,7 +30,7 @@ npx firebase-tools deploy --only hosting
 ---
 
 ## 3. GitHub Pages (Automated CI/CD Mirror — $0/Month Forever)
-Pre-configured in `.github/workflows/deploy-pages.yml` (`VITE_BASE_PATH=/N-LINK360/`):
+Pre-configured in `.github/workflows/deploy-pages.yml` (`npx vite build --mode gh-pages` -> `/N-LINK360/`):
 
 1. Open GitHub repo **`AmjidOfficial/N-LINK360`** -> **Settings** -> **Pages**.
 2. Set **Source** to **GitHub Actions**.

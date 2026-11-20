@@ -33,7 +33,7 @@ import {
   UserProfileUpdateRequest,
 } from '../../types';
 import { NLinkUser, NLINK_TEAM_ROSTER } from '../../data/nlink-users-team';
-import { hasPermission, Permission } from '../../lib/permissions';
+import { getEffectivePermissionGroup, hasPermission, Permission } from '../../lib/permissions';
 import { isAuthorizedApproverEmail, invalidateAllSessionsGlobally } from '../../services/production-users';
 import { Customer360Screen } from '../creditbook/Customer360Screen';
 import { CustomerInvoicesView } from '../creditbook/CustomerInvoicesView';
@@ -525,10 +525,18 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
   const pendingTotalCount = pendingOrders.length + pendingRecoveries.length + pendingCustomers.length;
 
-  const canViewItem = (perms?: Permission[]) => {
+  const canViewItem = (perms?: Permission[], allowedRoles?: string[]) => {
+    if (allowedRoles && allowedRoles.length > 0) {
+      const effectiveGroup = getEffectivePermissionGroup(currentUser.role);
+      if (!allowedRoles.includes(effectiveGroup)) return false;
+    }
     if (!perms || perms.length === 0) return true;
     return perms.some((p) => hasPermission(currentUser.role, p));
   };
+
+  const isManagementOrSuperAdmin = ['SUPER_ADMIN', 'MANAGEMENT'].includes(
+    getEffectivePermissionGroup(currentUser.role)
+  );
 
   const rawSidebarGroups: Array<{
     title: string;
@@ -539,6 +547,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
       badge?: number;
       alertBadge?: number;
       requiredPermissions?: Permission[];
+      allowedRoles?: string[];
     }>;
   }> = [
     {
@@ -581,7 +590,13 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
         { id: 'EMPLOYEE_MANAGEMENT' as const, label: 'Employee Management', icon: Users2, requiredPermissions: ['users.manage'] },
         { id: 'HR_ADMIN' as const, label: 'HR & Administration', icon: FileText, requiredPermissions: ['hr.manage'] },
         { id: 'APPROVALS' as const, label: 'Approvals Hub', icon: CheckSquare, alertBadge: pendingTotalCount, requiredPermissions: ['recovery.verify'] },
-        { id: 'SYNC_MONITORING' as const, label: 'Sync Monitoring', icon: Activity, requiredPermissions: ['settings.manage', 'reports.view', 'ledger.manage'] },
+        {
+          id: 'SYNC_MONITORING' as const,
+          label: 'System Sync',
+          icon: Activity,
+          requiredPermissions: ['reports.view', 'settings.manage'],
+          allowedRoles: ['SUPER_ADMIN', 'MANAGEMENT'],
+        },
         { id: 'SETTINGS' as const, label: 'Settings & Sync', icon: Settings, requiredPermissions: ['settings.manage'] },
       ],
     },
@@ -590,7 +605,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   const sidebarGroups = rawSidebarGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => canViewItem(item.requiredPermissions)),
+      items: group.items.filter((item) => canViewItem(item.requiredPermissions, item.allowedRoles)),
     }))
     .filter((group) => group.items.length > 0);
 
@@ -2458,14 +2473,16 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         <span className="text-[11px] text-slate-500">Orders, recoveries and ledgers sync automatically in the background</span>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('SYNC_MONITORING')}
-                          className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <Activity className="w-3.5 h-3.5" />
-                          <span>Sync Monitoring</span>
-                        </button>
+                        {isManagementOrSuperAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('SYNC_MONITORING')}
+                            className="px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Activity className="w-3.5 h-3.5" />
+                            <span>System Sync</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setActiveTab('PRICE_LIST')}
@@ -2598,22 +2615,28 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               )}
 
               {/* ==================================================== */}
-              {/* 11. CENTRAL SYNC MONITORING & RECONCILIATION CENTER */}
+              {/* 11. CENTRAL SYSTEM SYNC MONITORING & RECONCILIATION CENTER */}
               {/* ==================================================== */}
               {activeTab === 'SYNC_MONITORING' && (
                 <div className="animate-in fade-in duration-200">
-                  <Suspense fallback={<NatureSkeleton variant="card" count={3} />}>
-                    <SyncMonitoringModule
-                      customers={customers}
-                      orders={orders}
-                      recoveries={recoveries}
-                      ledgerEntries={ledgerEntries}
-                      skus={skus}
-                      isOnline={isOnline}
-                      isSyncingSheet={isSyncingSheet}
-                      onSyncGoogleSheet={onSyncGoogleSheet}
-                    />
-                  </Suspense>
+                  {isManagementOrSuperAdmin ? (
+                    <Suspense fallback={<NatureSkeleton variant="card" count={3} />}>
+                      <SyncMonitoringModule
+                        customers={customers}
+                        orders={orders}
+                        recoveries={recoveries}
+                        ledgerEntries={ledgerEntries}
+                        skus={skus}
+                        isOnline={isOnline}
+                        isSyncingSheet={isSyncingSheet}
+                        onSyncGoogleSheet={onSyncGoogleSheet}
+                      />
+                    </Suspense>
+                  ) : (
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-semibold text-sm">
+                      Access Denied: System Sync Monitoring is restricted to Management and Super Admin roles only.
+                    </div>
+                  )}
                 </div>
               )}
 

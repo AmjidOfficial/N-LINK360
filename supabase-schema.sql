@@ -112,3 +112,25 @@ FROM public.roles r, public.permissions p
 WHERE r.name = 'ACCOUNTS'
   AND p.name IN ('dashboard.view', 'ledger.view', 'ledger.manage', 'recovery.verify', 'recovery.collect', 'reports.view')
 ON CONFLICT DO NOTHING;
+
+-- 5. Processed Transactions Audit Log (Webhook & Google Sheets Sync Idempotency)
+CREATE TABLE IF NOT EXISTS public.processed_transactions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    idempotency_key TEXT UNIQUE NOT NULL,
+    transaction_id TEXT,
+    payload_type VARCHAR(100) NOT NULL,
+    payload_hash TEXT NOT NULL,
+    signature TEXT,
+    source_system VARCHAR(100) NOT NULL DEFAULT 'GOOGLE_SHEETS_WEBHOOK',
+    status VARCHAR(40) NOT NULL DEFAULT 'PROCESSED',
+    error_reason TEXT,
+    processed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_processed_transactions_idem_key
+    ON public.processed_transactions(idempotency_key);
+
+ALTER TABLE public.processed_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow authenticated read/write processed_transactions" ON public.processed_transactions;
+CREATE POLICY "Allow authenticated read/write processed_transactions"
+    ON public.processed_transactions FOR ALL USING (auth.role() = 'authenticated');

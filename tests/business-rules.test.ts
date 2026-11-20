@@ -67,6 +67,9 @@ import {
   generateDeterministicTransactionId,
   buildTransactionFingerprint,
   detectDuplicateTransaction,
+  computeWebhookSignature,
+  validatePayloadSignature,
+  resetProcessedTransactionsCacheForTests,
 } from '../src/utils/transactionSignature';
 import {
   getCentralPriceList,
@@ -85,6 +88,8 @@ import {
   getSyncMonitorSnapshot,
   resetSyncMonitorStoreForTests,
 } from '../src/services/autoSaveSyncService';
+import { SyncService } from '../src/services/SyncService';
+import { processIncomingGoogleSheetsWebhook } from '../src/services/googleSheetsTwoWaySyncService';
 import { buildReconciliationReport } from '../src/services/reconciliationService';
 import type {
   CreditNote,
@@ -3150,6 +3155,227 @@ console.log('\n🔄 [31/31] Testing Global Auto-Save, Transaction Signatures, PK
   resetSyncMonitorStoreForTests();
 }
 
+// ==============================================================================
+// MODULE 32: SyncService Queue, RetryAllFailed & Webhook Payload Signature Guard
+// ==============================================================================
+console.log('\n📋 MODULE 32: SyncService Queue, Real-Time Progress, Discrepancies & Webhook Signature Validation');
+{
+  const svc = new SyncService({ bridgeLegacyStores: false });
+  const observedPercents: number[] = [];
+  const unsub = svc.subscribe((snap) => {
+    observedPercents.push(snap.progress.progressPercent);
+  });
+
+  svc.enqueueOperation(
+    {
+      id: 'OP-FAIL-1',
+      idempotencyKey: 'idem-sync-fail-1',
+      transactionId: 'NLINK-ORD-20261118-000001',
+      type: 'ORDER',
+      status: 'FAILED',
+      errorDetails: 'Network timeout pushing to Google Sheet',
+      module: 'SALES',
+      recordType: 'Order',
+      databaseId: 'ORD-101',
+    },
+    async () => {
+      // Resolves cleanly on retry
+    }
+  );
+
+  let shouldKeepFailing = true;
+  svc.enqueueOperation(
+    {
+      id: 'OP-FAIL-2',
+      idempotencyKey: 'idem-sync-fail-2',
+      transactionId: 'NLINK-PAY-20261118-000002',
+      type: 'RECOVERY',
+      status: 'FAILED',
+      errorDetails: 'Webhook 502 Bad Gateway',
+      module: 'ACCOUNTS',
+      recordType: 'Recovery',
+      databaseId: 'REC-202',
+    },
+    async () => {
+      if (shouldKeepFailing) throw new Error('Still unreachable 502');
+    }
+  );
+
+  svc.enqueueOperation({
+    id: 'OP-PEND-3',
+    idempotencyKey: 'idem-sync-pend-3',
+    transactionId: 'NLINK-INV-20261118-000003',
+    type: 'INVOICE',
+    status: 'PENDING',
+    module: 'BILLING',
+    recordType: 'Invoice',
+    databaseId: 'INV-303',
+  });
+
+  assert(
+    svc.getFailedOperations().length === 2 && svc.getPendingQueue().length === 1 && svc.getTransactionHistory().length === 3,
+    'SyncService accurately tracks pending queue, failed operations, and complete history'
+  );
+
+  const firstBatch = await svc.retryAllFailed();
+  assert(
+    firstBatch.totalAttempted === 2 &&
+      firstBatch.succeededCount === 1 &&
+      firstBatch.failedCount === 1 &&
+      firstBatch.remainingFailedIds[0] === 'OP-FAIL-2',
+    'retryAllFailed retries all failed operations cleanly and preserves remaining error details'
+  );
+  assert(
+    observedPercents.includes(50) && observedPercents.includes(100),
+    'SyncService emits real-time progress updates (50% -> 100%) to subscribed UI listeners'
+  );
+
+  shouldKeepFailing = false;
+  const secondBatch = await svc.retryAllFailed();
+  assert(
+    secondBatch.succeededCount === 1 && svc.getFailedOperations().length === 0,
+    'Second retryAllFailed clears remaining failed operation once remote gateway recovers'
+  );
+
+  const disc = svc.recordDiscrepancy({
+    operationId: 'OP-PEND-3',
+    transactionId: 'NLINK-INV-20261118-000003',
+    module: 'GOOGLE_SHEETS',
+    recordId: 'INV-303',
+    severity: 'HIGH',
+    title: 'Sheet row total mismatch',
+    description: 'Database total Rs. 42,500 differs from external Sheet row Rs. 41,000',
+    databaseValue: '42500',
+    externalValue: '41000',
+  });
+  assert(
+    svc.getDiscrepancies(true).length === 1 &&
+      svc.getTransactionHistory().find((o) => o.id === 'OP-PEND-3')?.status === 'RECONCILIATION_REQUIRED',
+    'recordDiscrepancy logs discrepancy and flags linked operation as RECONCILIATION_REQUIRED'
+  );
+  svc.resolveDiscrepancy(disc.id, 'Verified by Accounts');
+  assert(
+    svc.getDiscrepancies(true).length === 0 &&
+      svc.getTransactionHistory().find((o) => o.id === 'OP-PEND-3')?.status === 'SYNCED',
+    'resolveDiscrepancy closes discrepancy and restores operation status cleanly'
+  );
+  unsub();
+  svc.dispose();
+
+  // Webhook validatePayloadSignature & processed_transactions deduplication tests
+  resetProcessedTransactionsCacheForTests();
+  resetSyncMonitorStoreForTests();
+
+  const invalidNull = await validatePayloadSignature(null);
+  assert(!invalidNull.valid && invalidNull.errorCode === 'INVALID_PAYLOAD', 'validatePayloadSignature rejects null/non-object payloads');
+
+  const missingKey = await validatePayloadSignature({ type: 'RECOVERY' });
+  assert(!missingKey.valid && missingKey.errorCode === 'MISSING_IDEMPOTENCY_KEY', 'validatePayloadSignature enforces required idempotencyKey');
+
+  const negAmt = await validatePayloadSignature({
+    idempotencyKey: 'wh-neg-amt-001',
+    type: 'RECOVERY',
+    amount: -500,
+  });
+  assert(!negAmt.valid && negAmt.errorCode === 'INVALID_AMOUNT', 'validatePayloadSignature rejects negative monetary amounts');
+
+  const secret = 'nlink-webhook-hmac-secret';
+  const unsignedBody = {
+    idempotencyKey: 'wh-valid-001',
+    transactionId: 'NLINK-SYN-20261118-000101',
+    type: 'GOOGLE_SHEETS_RECOVERY',
+    timestamp: new Date().toISOString(),
+    amount: 25000,
+    data: { customerCode: 'DLR-01', amount: 25000 },
+  };
+  const validSig = await computeWebhookSignature(unsignedBody, secret);
+
+  const forged = await validatePayloadSignature(
+    { ...unsignedBody, signature: 'hmac-sha256=deadbeef' },
+    { expectedSecret: secret, requireSignature: true }
+  );
+  assert(!forged.valid && forged.errorCode === 'INVALID_SIGNATURE', 'validatePayloadSignature rejects forged/tampered webhook signature');
+
+  // Verify Supabase check is consulted when reachable
+  const seenInMockSupabase = new Set<string>();
+  const firstAccepted = await validatePayloadSignature(
+    { ...unsignedBody, signature: validSig },
+    {
+      expectedSecret: secret,
+      requireSignature: true,
+      checkSupabase: async (k) => ({ exists: seenInMockSupabase.has(k) }),
+      recordSupabase: async (entry) => {
+        seenInMockSupabase.add(entry.idempotency_key);
+      },
+    }
+  );
+  assert(
+    firstAccepted.valid && !firstAccepted.isDuplicate && firstAccepted.checkedSource === 'SUPABASE',
+    'Valid HMAC-signed webhook payload passes validatePayloadSignature and records processed_transactions in Supabase'
+  );
+
+  const supabaseReplay = await validatePayloadSignature(
+    { ...unsignedBody, signature: validSig },
+    {
+      expectedSecret: secret,
+      requireSignature: true,
+      checkSupabase: async (k) => ({ exists: seenInMockSupabase.has(k) }),
+    }
+  );
+  assert(
+    !supabaseReplay.valid &&
+      supabaseReplay.isDuplicate &&
+      supabaseReplay.errorCode === 'DUPLICATE_TRANSACTION' &&
+      supabaseReplay.checkedSource === 'SUPABASE',
+    'Replay of processed idempotencyKey is blocked via Supabase processed_transactions audit check'
+  );
+
+  // Verify local fallback blocks replays even when Supabase is temporarily unreachable
+  const offlineUnsigned = {
+    idempotencyKey: 'wh-offline-002',
+    transactionId: 'NLINK-SYN-20261118-000102',
+    type: 'GOOGLE_SHEETS_ORDER',
+    timestamp: new Date().toISOString(),
+    amount: 12000,
+  };
+  const offlineRes1 = await processIncomingGoogleSheetsWebhook(
+    offlineUnsigned,
+    async () => 'PROCESSED',
+    {
+      checkSupabase: async () => {
+        throw new Error('Supabase temporarily unreachable');
+      },
+      recordSupabase: async () => {
+        throw new Error('Supabase temporarily unreachable');
+      },
+    }
+  );
+  assert(
+    offlineRes1.accepted && offlineRes1.validation.checkedSource === 'LOCAL_FALLBACK',
+    'processIncomingGoogleSheetsWebhook falls back cleanly to local processed_transactions cache when Supabase is unreachable'
+  );
+
+  const offlineReplay = await processIncomingGoogleSheetsWebhook(
+    offlineUnsigned,
+    async () => 'SHOULD_NOT_RUN',
+    {
+      checkSupabase: async () => {
+        throw new Error('Supabase temporarily unreachable');
+      },
+    }
+  );
+  assert(
+    !offlineReplay.accepted &&
+      offlineReplay.validation.isDuplicate &&
+      offlineReplay.validation.checkedSource === 'LOCAL_FALLBACK' &&
+      getSyncMonitorSnapshot().duplicatesPreventedCount === 1,
+    'Offline local fallback blocks replayed webhook idempotencyKey and increments duplicate prevention telemetry'
+  );
+
+  resetProcessedTransactionsCacheForTests();
+  resetSyncMonitorStoreForTests();
+}
+
 console.log('\n================================================================');
 console.log(`🎉 TEST SUMMARY: ${passed} Passed, ${failed} Failed`);
 console.log('================================================================\n');
@@ -3157,6 +3383,6 @@ console.log('================================================================\n'
 if (failed > 0) {
   process.exit(1);
 } else {
-  console.log('🚀 ALL 31 MODULES PASSED VERIFICATION!');
+  console.log('🚀 ALL 32 MODULES PASSED VERIFICATION!');
   process.exit(0);
 }

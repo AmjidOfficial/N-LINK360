@@ -1,6 +1,7 @@
 import { readSpreadsheetRange, fetchSpreadsheetMetadata } from './googleSheetsLiveService';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { toUUID } from './dbSync';
+import { IncomingWebhookPayload, validatePayloadSignature } from '../utils/transactionSignature';
 
 export interface ImportSummary {
   timestamp: string;
@@ -328,8 +329,18 @@ export async function syncCustomersFromGoogleSheet(
 export async function executeGoogleSheetImport(
   spreadsheetId: string,
   accessToken: string,
-  scope: 'USERS' | 'CUSTOMERS' | 'ALL'
+  scope: 'USERS' | 'CUSTOMERS' | 'ALL',
+  webhookContext?: { payload: IncomingWebhookPayload; expectedSecret?: string }
 ): Promise<ImportSummary> {
+  if (webhookContext?.payload) {
+    const validation = await validatePayloadSignature(webhookContext.payload, {
+      expectedSecret: webhookContext.expectedSecret,
+    });
+    if (!validation.valid) {
+      throw new Error(validation.error || `Google Sheets import rejected (${validation.errorCode})`);
+    }
+  }
+
   const summary: ImportSummary = {
     timestamp: new Date().toISOString(),
     target: scope,

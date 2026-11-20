@@ -5,11 +5,39 @@
       "listPrice": 110,
       "discountPercentage": "15%",
       "purchasePrice": null,
-      "effectivePriceDate": "2026-11-15",
-      "updatedAt": "2026-11-15T14:18:34.828Z"
+      "effectivePriceDate": "2026-11-18",
+      "updatedAt": "2026-11-18T08:57:10.544Z"
     }
   },
   "history": [
+    {
+      "id": "PH-SRV-1794992230545",
+      "skuId": "NL-BULB-05W",
+      "skuCode": "NL-BLB-05W",
+      "skuName": "5W BULB",
+      "oldTradePrice": 400,
+      "newTradePrice": 130,
+      "oldListPrice": 340,
+      "newListPrice": 110,
+      "effectiveDate": "2026-11-18",
+      "changedBy": "amjid.bisconni@gmail.com",
+      "reason": "E2E Restoration",
+      "createdAt": "2026-11-18T08:57:10.544Z"
+    },
+    {
+      "id": "PH-SRV-1794992230539",
+      "skuId": "NL-BULB-05W",
+      "skuCode": "NL-BLB-05W",
+      "skuName": "5W BULB",
+      "oldTradePrice": 130,
+      "newTradePrice": 400,
+      "oldListPrice": 110,
+      "newListPrice": 340,
+      "effectiveDate": "2026-11-18",
+      "changedBy": "amjid.bisconni@gmail.com",
+      "reason": "E2E Verification Rate Test",
+      "createdAt": "2026-11-18T08:57:10.539Z"
+    },
     {
       "id": "PH-SRV-1794752314828",
       "skuId": "NL-BULB-05W",

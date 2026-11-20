@@ -11,8 +11,22 @@ function normalizeBasePath(raw?: string): string {
   return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
 }
 
-export default defineConfig(() => {
-  const basePath = normalizeBasePath(process.env.VITE_BASE_PATH);
+function resolveCliBaseArg(argv: string[]): string | undefined {
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg.startsWith('--base=')) {
+      return arg.slice('--base='.length);
+    }
+    if (arg === '--base' && i + 1 < argv.length) {
+      return argv[i + 1];
+    }
+  }
+  return undefined;
+}
+
+export default defineConfig(({ mode }) => {
+  const cliBase = resolveCliBaseArg(process.argv);
+  const basePath = normalizeBasePath(cliBase ?? (mode === 'gh-pages' ? '/N-LINK360/' : '/'));
   return {
     plugins: [
       react(), 
