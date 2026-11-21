@@ -22,9 +22,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        # The current AI Studio package.json is ahead of the committed lockfile.
-        # npm install resolves the declared versions and refreshes the lock in CI.
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: TypeScript check
         run: npm run lint
