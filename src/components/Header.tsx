@@ -45,6 +45,12 @@ const roleLabel: Record<User['role'], string> = {
   FACTORY: 'Factory Operations',
   WAREHOUSE: 'Warehouse Operations',
   DISPATCH: 'Dispatch Operations',
+  NATIONAL_MANAGER: 'National Manager',
+  NSM: 'National Sales Manager',
+  FIELD_SALES_USER: 'Field Sales User',
+  HR_ADMIN: 'HR Administrator',
+  DISTRIBUTOR: 'Distributor',
+  DEALER: 'Dealer',
 };
 
 export const Header: React.FC<HeaderProps> = ({
