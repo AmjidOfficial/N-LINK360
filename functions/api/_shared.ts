@@ -77,7 +77,10 @@ function fromBase64Url(b64u: string): string {
 }
 
 async function getHmacKey(secret: string): Promise<CryptoKey> {
-  const raw = new TextEncoder().encode(secret || 'nlink-360-cloudflare-edge-default-key');
+  if (!secret || secret.length < 32) {
+    throw new Error('NLINK_SESSION_SECRET must be configured with at least 32 characters.');
+  }
+  const raw = new TextEncoder().encode(secret);
   return crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
@@ -101,16 +104,23 @@ export async function verifyEdgeSessionToken(
   token: string,
   secret: string
 ): Promise<{ sub: string; email: string; role: string } | null> {
-  if (!token || !token.startsWith('nlink_sec_')) return null;
+  if (!secret || secret.length < 32 || !token || !token.startsWith('nlink_sec_')) return null;
   const raw = token.slice('nlink_sec_'.length);
   const parts = raw.split('.');
   if (parts.length !== 2) return null;
   const [encoded, sig] = parts;
   try {
     const key = await getHmacKey(secret);
-    const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(encoded));
-    const expectedSig = toBase64Url(new Uint8Array(sigBuf));
-    if (sig !== expectedSig) return null;
+    const signatureBytes = new Uint8Array(
+      Array.from(fromBase64Url(sig), (character) => character.charCodeAt(0))
+    );
+    const isValid = await crypto.subtle.verify(
+      'HMAC',
+      key,
+      signatureBytes,
+      new TextEncoder().encode(encoded)
+    );
+    if (!isValid) return null;
     const decoded = JSON.parse(fromBase64Url(encoded));
     if (!decoded || typeof decoded.exp !== 'number' || Date.now() > decoded.exp) {
       return null;
