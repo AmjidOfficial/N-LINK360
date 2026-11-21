@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -238,9 +239,10 @@ async function startServer() {
 
   const AUTH_STORE_PATH = path.join(process.cwd(), '.nlink-auth-store.json');
   const DASHBOARD_CONFIG_STORE_PATH = path.join(process.cwd(), '.nlink-dashboard-config.json');
-  const SESSION_SIGNING_SECRET =
-    process.env.NLINK_SESSION_SECRET ||
-    crypto.randomBytes(32).toString('hex');
+  const SESSION_SIGNING_SECRET = String(process.env.NLINK_SESSION_SECRET || '').trim();
+  if (SESSION_SIGNING_SECRET.length < 32) {
+    throw new Error('NLINK_SESSION_SECRET must be configured with at least 32 characters.');
+  }
 
   function signSessionToken(account: ServerAuthAccount): string {
     const payload = {
@@ -281,8 +283,13 @@ async function startServer() {
   }
 
   function buildInitialAccounts(): Map<string, ServerAuthAccount> {
-    const superAdminHash = hashPassword(process.env.NLINK_SUPERADMIN_PASS || 'Amjid@1947');
-    const tempResetHash = hashPassword(process.env.NLINK_TEMP_RESET_PASS || 'National@link360');
+    const superAdminPassword = String(process.env.NLINK_SUPERADMIN_PASS || '');
+    const temporaryResetPassword = String(process.env.NLINK_TEMP_RESET_PASS || '');
+    if (superAdminPassword.length < 12 || temporaryResetPassword.length < 12) {
+      throw new Error('NLINK_SUPERADMIN_PASS and NLINK_TEMP_RESET_PASS must both be configured with at least 12 characters.');
+    }
+    const superAdminHash = hashPassword(superAdminPassword);
+    const tempResetHash = hashPassword(temporaryResetPassword);
     return new Map<string, ServerAuthAccount>([
       ['amjid.bisconni@gmail.com', {
         id: 'USR-003',
