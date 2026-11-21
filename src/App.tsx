@@ -744,12 +744,17 @@ export default function App() {
 
   // Synchronize state changes to cache
   const syncToCache = (newCusts: Customer[], newOrds: SalesOrder[], newRecs: Recovery[]) => {
+    // Preserve operational datasets that this helper does not own. Passing empty
+    // arrays here previously erased cached visits and attendance on every order,
+    // recovery, or customer save.
+    const previousCache = getLocalDatabaseCache();
     saveLocalDatabaseCache({
+      ...previousCache,
       customers: newCusts,
       orders: newOrds,
       recoveries: newRecs,
-      visits: [],
-      attendance: [],
+      visits: previousCache.visits || [],
+      attendance: previousCache.attendance || [],
       lastUpdated: new Date().toISOString(),
     });
   };
