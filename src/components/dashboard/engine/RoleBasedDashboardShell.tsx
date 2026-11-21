@@ -35,6 +35,7 @@ import { HierarchyBreakdownPanel } from './HierarchyBreakdownPanel';
 import { ExecutiveStockExpensePanel } from './ExecutiveStockExpensePanel';
 import { FieldOperationsPanel, type FieldLiveContext } from './FieldOperationsPanel';
 import { ExecutiveBiGraphicsPanel } from './ExecutiveBiGraphicsPanel';
+import { ThirtyDaySalesRecoverySection } from './ThirtyDaySalesRecoverySection';
 
 export interface RoleBasedDashboardShellProps {
   currentUser: NLinkUser;
@@ -236,6 +237,18 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
             onSelectCustomer={onSelectCustomer}
           />
         )}
+
+        {summary.config.layoutSections.includes('CHARTS') &&
+          showTrendChart &&
+          summary.thirtyDayTrendSeries &&
+          summary.thirtyDaySummary &&
+          summary.config.roleKey !== 'FIELD_SALES_USER' && (
+            <ThirtyDaySalesRecoverySection
+              series={summary.thirtyDayTrendSeries}
+              summary={summary.thirtyDaySummary}
+              scopeTitle={summary.config.title}
+            />
+          )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           <div className="lg:col-span-8 space-y-5">

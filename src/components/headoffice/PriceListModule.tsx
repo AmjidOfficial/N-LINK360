@@ -357,7 +357,7 @@ export const PriceListModule: React.FC<PriceListModuleProps> = ({ currentUser })
                         <td className="py-3 px-3 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
                           PKR {sku.tradePrice.toLocaleString()}
                         </td>
-                        <td className="py-3 px-3 text-center font-mono tabular-nums text-[#3B82F6] font-bold">
+                        <td className="py-3 px-3 text-center font-mono tabular-nums text-[#EA580C] dark:text-orange-400 font-bold">
                           {sku.discountPercentage || '15%'}
                         </td>
                         <td className="py-3 px-3 text-right font-mono tabular-nums font-black text-emerald-700 dark:text-emerald-400">
@@ -371,7 +371,7 @@ export const PriceListModule: React.FC<PriceListModuleProps> = ({ currentUser })
                             <button
                               type="button"
                               onClick={() => openEditModal(sku)}
-                              className="px-3 min-h-[44px] py-1.5 rounded-lg border border-[#E2E8F0] dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-[#3B82F6] font-bold inline-flex items-center gap-1 cursor-pointer"
+                              className="px-3 min-h-[44px] py-1.5 rounded-lg border border-[#E2E8F0] dark:border-slate-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-[#16A34A] dark:text-emerald-400 font-bold inline-flex items-center gap-1 cursor-pointer"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                               <span>Edit Rate</span>

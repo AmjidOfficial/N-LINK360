@@ -38,10 +38,10 @@ export const ExecutiveSpotlightCard: React.FC<ExecutiveSpotlightCardProps> = ({
  {/* Top Header */}
  <div className="flex items-center justify-between text-xs pb-3 border-b border-slate-100 dark:border-slate-700/70">
  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
- <ShieldCheck className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+ <ShieldCheck className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
  Executive Authority
  </span>
- <span className="text-[11px] font-semibold text-[#3B82F6] dark:text-blue-400">
+ <span className="text-[11px] font-semibold text-[#16A34A] dark:text-emerald-400">
  Active Signing Authority
  </span>
  </div>
@@ -62,7 +62,7 @@ export const ExecutiveSpotlightCard: React.FC<ExecutiveSpotlightCardProps> = ({
  {approverRole}
  </p>
  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 mt-1 tabular-nums">
- <Clock className="w-3 h-3 text-[#3B82F6] dark:text-blue-400" />
+ <Clock className="w-3 h-3 text-[#16A34A] dark:text-emerald-400" />
  <span>09:00 AM – 07:00 PM PKT · Executive Desk</span>
  </div>
  </div>

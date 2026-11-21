@@ -186,7 +186,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
             ) : entryType === 'RECOVERY' ? (
               <Receipt className="w-5 h-5 text-emerald-400 shrink-0" />
             ) : (
-              <Clock className="w-5 h-5 text-[#3B82F6] shrink-0" />
+              <Clock className="w-5 h-5 text-emerald-400 shrink-0" />
             )}
             <div className="min-w-0">
               <h3 className="text-sm font-bold truncate">{getEntryTitle()}</h3>
@@ -215,11 +215,11 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
             }}
             className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold inline-flex items-center justify-center gap-2 cursor-pointer transition-colors ${
               activeMode === 'EDIT'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
             }`}
           >
-            <Edit3 className={`w-4 h-4 ${activeMode === 'EDIT' ? 'text-white' : 'text-[#3B82F6]'}`} />
+            <Edit3 className={`w-4 h-4 ${activeMode === 'EDIT' ? 'text-white' : 'text-[#16A34A]'}`} />
             <span>Edit Entry</span>
           </button>
 
@@ -286,7 +286,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                       value={orderNotes}
                       onChange={(e) => setOrderNotes(e.target.value)}
                       placeholder="Add dispatch instructions or delivery notes..."
-                      className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                      className="w-full p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                     />
                   </div>
                 </div>
@@ -303,7 +303,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                       min={1}
                       value={recoveryAmount}
                       onChange={(e) => setRecoveryAmount(Number(e.target.value))}
-                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] font-mono tabular-nums text-sm font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] font-mono tabular-nums text-sm font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                     />
                   </div>
 
@@ -314,7 +314,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                     <select
                       value={recoveryMode}
                       onChange={(e) => setRecoveryMode(e.target.value)}
-                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-semibold text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                     >
                       <option value="CASH">Cash in Hand</option>
                       <option value="ONLINE_TRANSFER">Online Bank Transfer</option>
@@ -334,7 +334,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                           value={bankName}
                           onChange={(e) => setBankName(e.target.value)}
                           placeholder="e.g. Meezan, HBL"
-                          className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                          className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                         />
                       </div>
                       <div>
@@ -346,7 +346,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                           value={instrumentNumber}
                           onChange={(e) => setInstrumentNumber(e.target.value)}
                           placeholder="e.g. 1092837"
-                          className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-mono tabular-nums text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                          className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-mono tabular-nums text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                         />
                       </div>
                     </div>
@@ -361,7 +361,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                       value={recoveryRemarks}
                       onChange={(e) => setRecoveryRemarks(e.target.value)}
                       placeholder="e.g. Booked at Shop Counter"
-                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                     />
                   </div>
                 </div>
@@ -379,7 +379,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                         value={checkInTime}
                         onChange={(e) => setCheckInTime(e.target.value)}
                         placeholder="09:00 AM"
-                        className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                        className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                       />
                     </div>
                     <div>
@@ -391,7 +391,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                         value={checkOutTime}
                         onChange={(e) => setCheckOutTime(e.target.value)}
                         placeholder="05:30 PM"
-                        className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                        className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                       />
                     </div>
                   </div>
@@ -405,7 +405,7 @@ export const EditOrDeleteEntryModal: React.FC<EditOrDeleteEntryModalProps> = ({
                       value={attendanceRemarks}
                       onChange={(e) => setAttendanceRemarks(e.target.value)}
                       placeholder="e.g. Commercial Beat Covered"
-                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#0F172A] text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                     />
                   </div>
                 </div>

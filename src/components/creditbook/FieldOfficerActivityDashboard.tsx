@@ -222,7 +222,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
                   onClick={() => setPeriod(t)}
                   className={`min-h-[40px] px-2 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center justify-center ${
                     active
-                      ? 'bg-[#3B82F6] text-white shadow-xs'
+                      ? 'bg-[#16A34A] text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white'
                   }`}
                 >
@@ -261,7 +261,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
             className="btn-outline min-h-[44px] w-full"
             title="View bills and invoices"
           >
-            <Receipt className="w-4 h-4 shrink-0 text-[#3B82F6]" />
+            <Receipt className="w-4 h-4 shrink-0 text-[#EA580C]" />
             <span>Invoices</span>
           </button>
 
@@ -271,7 +271,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
             className="btn-outline min-h-[44px] w-full"
             title="View Khata Ledgers"
           >
-            <BookOpen className="w-4 h-4 shrink-0 text-[#3B82F6]" />
+            <BookOpen className="w-4 h-4 shrink-0 text-[#16A34A]" />
             <span>Khata</span>
           </button>
         </div>
@@ -285,8 +285,8 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Total Sales Booked
                 </span>
-                <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center shrink-0">
-                  <TrendingUp className="w-4 h-4 text-[#3B82F6]" />
+                <div className="w-7 h-7 rounded-lg bg-orange-50 dark:bg-orange-950/60 flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-4 h-4 text-[#EA580C]" />
                 </div>
               </div>
               <div className="text-xl sm:text-2xl font-bold font-mono tabular-nums tracking-tight mt-2 text-[#0F172A] dark:text-white truncate">
@@ -327,7 +327,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
                 <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Collection Efficiency
                 </span>
-                <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center text-[#3B82F6] font-bold text-xs shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-[#16A34A] font-bold text-xs shrink-0">
                   %
                 </div>
               </div>
@@ -360,7 +360,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
             </div>
             <div className="mt-auto pt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 border-t border-[#E2E8F0] dark:border-slate-800">
               <span className="truncate">{currentUser.assignedTowns?.[0] || 'Peshawar'}</span>
-              <span className="font-semibold text-[#3B82F6] dark:text-blue-400 font-mono tabular-nums shrink-0">
+              <span className="font-semibold text-[#16A34A] dark:text-emerald-400 font-mono tabular-nums shrink-0">
                 {customers.length > 0 ? `${Math.round((uniqueBilledDealers / customers.length) * 100)}% reach` : '100%'}
               </span>
             </div>
@@ -387,7 +387,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
             <div className="h-3 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex">
               <div
                 style={{ width: `${recoveryByMode.cashPct}%` }}
-                className="bg-[#3B82F6] transition-all"
+                className="bg-[#15803D] transition-all"
                 title={`Cash: ${recoveryByMode.cashPct}%`}
               />
               <div
@@ -404,7 +404,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
 
             <div className="grid grid-cols-3 gap-2 pt-1 text-center text-xs">
               <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
-                <span className="text-[10px] font-semibold text-[#3B82F6] dark:text-blue-400 block">
+                <span className="text-[10px] font-semibold text-[#15803D] dark:text-emerald-400 block">
                   Cash ({recoveryByMode.cashPct}%)
                 </span>
                 <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white block mt-0.5 text-[11px] truncate">
@@ -437,7 +437,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
         <div className="h-full bg-white dark:bg-[#1E293B] rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] dark:border-slate-700/80 space-y-4 shadow-xs">
           <div className="flex items-center justify-between border-b border-[#E2E8F0] dark:border-slate-700/80 pb-3">
             <span className="text-xs font-bold text-[#0F172A] dark:text-white flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-[#3B82F6]" />
+              <MapPin className="w-4 h-4 text-[#16A34A]" />
               Town &amp; Route Performance
             </span>
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
@@ -448,7 +448,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
           <div className="space-y-2.5">
             {salesByTown.length === 0 ? (
               <div className="py-6 text-center text-slate-400 text-xs">
-                <MapPin className="w-6 h-6 mx-auto mb-1 opacity-40 text-[#3B82F6]" />
+                <MapPin className="w-6 h-6 mx-auto mb-1 opacity-40 text-[#16A34A]" />
                 <p>No territory sales recorded for this time period.</p>
               </div>
             ) : (
@@ -458,7 +458,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
                   <div key={townName} className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold gap-2">
                       <span className="text-[#0F172A] dark:text-white flex items-center gap-1.5 truncate">
-                        <Building2 className="w-3.5 h-3.5 text-[#3B82F6] shrink-0" />
+                        <Building2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
                         <span className="truncate">{townName}</span>
                       </span>
                       <span className="font-mono tabular-nums text-slate-700 dark:text-slate-300 shrink-0">
@@ -468,7 +468,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
                     <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                       <div
                         style={{ width: `${townPct}%` }}
-                        className="h-full bg-[#3B82F6] rounded-full transition-all"
+                        className="h-full bg-[#16A34A] rounded-full transition-all"
                       />
                     </div>
                   </div>
@@ -495,7 +495,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
           {filteredOrders.slice(0, 5).map((ord) => (
             <div key={ord.id} className="py-2.5 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-[#3B82F6] flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950/60 text-[#EA580C] flex items-center justify-center shrink-0">
                   <Receipt className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
@@ -508,7 +508,7 @@ export const FieldOfficerActivityDashboard: React.FC<FieldOfficerActivityDashboa
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <span className="font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400 block">
+                <span className="font-mono tabular-nums font-bold text-[#EA580C] dark:text-orange-400 block">
                   PKR {Number(ord.totalAmount || 0).toLocaleString()}
                 </span>
                 <span className="text-[10px] text-slate-400 font-mono tabular-nums">

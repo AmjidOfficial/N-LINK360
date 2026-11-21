@@ -9,19 +9,21 @@
  * SOLE SIGNING AUTHORITY: Shahzad Ullah (Executive Director)
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { NLinkUser, TEAM_USERS, getStoredUsers, NLINK_TEAM_ROSTER } from './data/nlink-users-team';
 import { Customer, SalesOrder, Recovery, User, EmployeeAttendance, UserProfileUpdateRequest, TownNode, LedgerEntry, InventoryBalance, InventoryTransaction, InventoryTransactionType, LeaveRequest } from './types';
 import { AuthGate } from './components/AuthGate';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
-import { FieldMobileExperience } from './components/creditbook/FieldMobileExperience';
-import { HeadOfficeExperience } from './components/headoffice/HeadOfficeExperience';
 import { BrandHeader } from './components/BrandHeader';
-import { DispatchInvoiceCompletionPayload } from './components/headoffice/OperationalDispatchInvoiceModal';
-import { NationalLightRateListModal } from './components/stitch/NationalLightRateListModal';
-import { GoogleSheetSyncModal } from './components/GoogleSheetSyncModal';
-import { InvoicePdfPreviewModal } from './components/stitch/InvoicePdfPreviewModal';
-import { TodaySalesAuditModal } from './components/creditbook/TodaySalesAuditModal';
+import { NatureSkeleton } from './components/ui/NatureSkeleton';
+import type { DispatchInvoiceCompletionPayload } from './components/headoffice/OperationalDispatchInvoiceModal';
+
+const FieldMobileExperience = React.lazy(() => import('./components/creditbook/FieldMobileExperience').then((m) => ({ default: m.FieldMobileExperience })));
+const HeadOfficeExperience = React.lazy(() => import('./components/headoffice/HeadOfficeExperience').then((m) => ({ default: m.HeadOfficeExperience })));
+const NationalLightRateListModal = React.lazy(() => import('./components/stitch/NationalLightRateListModal').then((m) => ({ default: m.NationalLightRateListModal })));
+const GoogleSheetSyncModal = React.lazy(() => import('./components/GoogleSheetSyncModal').then((m) => ({ default: m.GoogleSheetSyncModal })));
+const InvoicePdfPreviewModal = React.lazy(() => import('./components/stitch/InvoicePdfPreviewModal').then((m) => ({ default: m.InvoicePdfPreviewModal })));
+const TodaySalesAuditModal = React.lazy(() => import('./components/creditbook/TodaySalesAuditModal').then((m) => ({ default: m.TodaySalesAuditModal })));
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { calculateInvoiceMetrics } from './hooks/useSkuInvoicePricing';
 import { fallbackAppData, SupabaseAppData, loadSupabaseAppData } from './services/supabase-data';
@@ -71,6 +73,7 @@ import {
   markAllPendingEventsSynced,
   incrementDuplicatesPrevented,
   registerGlobalUnloadFlush,
+  getSyncMonitorSnapshot,
 } from './services/autoSaveSyncService';
 import { getCentralPriceList, subscribePriceList } from './services/priceListService';
 
@@ -104,9 +107,17 @@ export default function App() {
       setCatalogSkus(getCentralPriceList());
     });
     const unregisterUnloadFlush = registerGlobalUnloadFlush();
+    const handleUnsavedGuard = (event: BeforeUnloadEvent) => {
+      if (getSyncMonitorSnapshot().hasUnsavedDrafts) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleUnsavedGuard);
     return () => {
       unsubscribePrices();
       unregisterUnloadFlush();
+      window.removeEventListener('beforeunload', handleUnsavedGuard);
     };
   }, []);
 
@@ -2952,6 +2963,7 @@ export default function App() {
 
       {/* Viewport-Locked Experience Workspace Container */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <Suspense fallback={<NatureSkeleton variant="full" className="m-2 sm:m-4" />}>
         {experienceMode === 'FIELD_MOBILE' ? (
           <FieldMobileExperience
             currentUser={currentUser}
@@ -3053,6 +3065,7 @@ export default function App() {
             onOpenChangePassword={() => setIsChangePasswordOpen(true)}
           />
         )}
+        </Suspense>
       </div>
 
       {/* Forced First-Login / Reset or Self-Service Change Password Modal */}
@@ -3088,45 +3101,52 @@ export default function App() {
         currentUser={currentUser}
       />
 
-      {/* Official Rate List Modal */}
-      <NationalLightRateListModal
-        isOpen={isRateCardOpen}
-        onClose={() => setIsRateCardOpen(false)}
-      />
+      {/* Lazy Modals (loaded on demand when opened) */}
+      <Suspense fallback={null}>
+        {isRateCardOpen && (
+          <NationalLightRateListModal
+            isOpen={isRateCardOpen}
+            onClose={() => setIsRateCardOpen(false)}
+          />
+        )}
 
-      {/* Google Sheets Sync Modal */}
-      <GoogleSheetSyncModal
-        isOpen={isSyncModalOpen}
-        onClose={() => setIsSyncModalOpen(false)}
-        appData={currentAppData}
-        onSyncComplete={(msg) => setLedgerToastMessage(msg)}
-      />
+        {isSyncModalOpen && (
+          <GoogleSheetSyncModal
+            isOpen={isSyncModalOpen}
+            onClose={() => setIsSyncModalOpen(false)}
+            appData={currentAppData}
+            onSyncComplete={(msg) => setLedgerToastMessage(msg)}
+          />
+        )}
 
-      {/* Today's Sales Audit Modal */}
-      <TodaySalesAuditModal
-        isOpen={isSalesAuditModalOpen}
-        onClose={() => setIsSalesAuditModalOpen(false)}
-        orders={orders}
-        ledgerEntries={ledgerEntries}
-        customers={customers}
-        onApplyAuditResult={handleApplySalesAudit}
-      />
+        {isSalesAuditModalOpen && (
+          <TodaySalesAuditModal
+            isOpen={isSalesAuditModalOpen}
+            onClose={() => setIsSalesAuditModalOpen(false)}
+            orders={orders}
+            ledgerEntries={ledgerEntries}
+            customers={customers}
+            onApplyAuditResult={handleApplySalesAudit}
+          />
+        )}
 
-      {/* Live PDF Preview Modal */}
-      <InvoicePdfPreviewModal
-        isOpen={previewPdfData.isOpen}
-        onClose={() => setPreviewPdfData((prev) => ({ ...prev, isOpen: false }))}
-        pdfDataUrl={previewPdfData.dataUrl}
-        pdfFilename={previewPdfData.filename}
-        order={previewPdfData.order}
-        customer={previewPdfData.customer}
-        officerName={currentUser?.fullName}
-        onDownload={() => {
-          if (previewPdfData.order && previewPdfData.customer) {
-            handleDownloadInvoicePdf(previewPdfData.order, previewPdfData.customer);
-          }
-        }}
-      />
+        {previewPdfData.isOpen && (
+          <InvoicePdfPreviewModal
+            isOpen={previewPdfData.isOpen}
+            onClose={() => setPreviewPdfData((prev) => ({ ...prev, isOpen: false }))}
+            pdfDataUrl={previewPdfData.dataUrl}
+            pdfFilename={previewPdfData.filename}
+            order={previewPdfData.order}
+            customer={previewPdfData.customer}
+            officerName={currentUser?.fullName}
+            onDownload={() => {
+              if (previewPdfData.order && previewPdfData.customer) {
+                handleDownloadInvoicePdf(previewPdfData.order, previewPdfData.customer);
+              }
+            }}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

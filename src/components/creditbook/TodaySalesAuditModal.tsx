@@ -70,15 +70,15 @@ export const TodaySalesAuditModal: React.FC<TodaySalesAuditModalProps> = ({
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-700/80 bg-[#0F172A] text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-[#3B82F6] border border-blue-500/30 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-[#4ADE80] border border-emerald-500/30 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-blue-400">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
                   Sales Entry Audit Engine
                 </span>
-                <span className="text-[10px] bg-blue-950/60 text-blue-300 px-2 py-0.5 rounded-md border border-blue-800/70 font-mono">
+                <span className="text-[10px] bg-emerald-950/60 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-800/70 font-mono">
                   Net TP @ 15% Less
                 </span>
               </div>
@@ -110,7 +110,7 @@ export const TodaySalesAuditModal: React.FC<TodaySalesAuditModalProps> = ({
                 onClick={() => setFilterTodayOnly(false)}
                 className={`px-3.5 min-h-[44px] rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                   !filterTodayOnly
-                    ? 'bg-[#3B82F6] text-white shadow-xs'
+                    ? 'bg-[#16A34A] text-white shadow-xs'
                     : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
               >
@@ -121,7 +121,7 @@ export const TodaySalesAuditModal: React.FC<TodaySalesAuditModalProps> = ({
                 onClick={() => setFilterTodayOnly(true)}
                 className={`px-3.5 min-h-[44px] rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                   filterTodayOnly
-                    ? 'bg-[#3B82F6] text-white shadow-xs'
+                    ? 'bg-[#16A34A] text-white shadow-xs'
                     : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
               >

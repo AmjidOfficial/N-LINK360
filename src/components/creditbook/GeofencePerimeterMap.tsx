@@ -344,8 +344,8 @@ export const GeofencePerimeterMap: React.FC<GeofencePerimeterMapProps> = ({
         </div>
 
         {/* Accuracy Tag */}
-        <div className="absolute top-2.5 right-3 bg-slate-900/90 border border-slate-700 px-2.5 py-1 rounded-lg text-[10px] font-semibold text-blue-300 flex items-center gap-1 z-20">
-          <Radio className="w-3 h-3 text-blue-400" />
+        <div className="absolute top-2.5 right-3 bg-slate-900/90 border border-slate-700 px-2.5 py-1 rounded-lg text-[10px] font-semibold text-emerald-300 flex items-center gap-1 z-20">
+          <Radio className="w-3 h-3 text-emerald-400" />
           <span>GPS Accuracy: ±4m Locked</span>
         </div>
       </div>

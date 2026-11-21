@@ -162,15 +162,35 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
-    // Ensure clean initial password state before first-login rotation check
-    await request.post('/api/employees/admin-reset-password', {
+    // Verify unauthenticated admin reset is strictly rejected (401)
+    const unauthReset = await request.post('/api/employees/admin-reset-password', {
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.43' },
+      data: { email: 'syedzain@nationallight.pk', temporaryPassword: 'National@link360' },
+    });
+    expect(unauthReset.status()).toBe(401);
+
+    // Authenticate as Super Admin before triggering admin password reset setup
+    const adminLoginRes = await request.post('/api/auth/login', {
       headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.44' },
+      data: { email: 'amjid.bisconni@gmail.com', password: 'Amjid@1947' },
+    });
+    expect(adminLoginRes.ok()).toBeTruthy();
+    const adminLoginJson = await adminLoginRes.json();
+
+    // Ensure clean initial password state before first-login rotation check
+    const setupResetRes = await request.post('/api/employees/admin-reset-password', {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminLoginJson.sessionToken}`,
+        'X-Forwarded-For': '198.51.100.44',
+      },
       data: {
         email: 'syedzain@nationallight.pk',
         temporaryPassword: 'National@link360',
         resetBy: 'E2E Test Setup',
       },
     });
+    expect(setupResetRes.ok()).toBeTruthy();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -233,7 +253,11 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
 
     // Restore initial temporary credential so management onboarding credential stays valid
     await request.post('/api/employees/admin-reset-password', {
-      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.45' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminLoginJson.sessionToken}`,
+        'X-Forwarded-For': '198.51.100.45',
+      },
       data: {
         email: 'syedzain@nationallight.pk',
         temporaryPassword: 'National@link360',

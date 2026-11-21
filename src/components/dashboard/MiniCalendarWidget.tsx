@@ -70,7 +70,7 @@ export const MiniCalendarWidget: React.FC<MiniCalendarWidgetProps> = ({
  {/* Month & Year Navigation Header */}
  <div className="flex items-center justify-between border-b border-[#E2E8F0] dark:border-slate-700/70 pb-2.5">
  <div className="flex items-center gap-1.5">
- <CalendarIcon className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+ <CalendarIcon className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
  <span className="text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-slate-100">
  {monthNames[month]} {year}
  </span>
@@ -127,7 +127,7 @@ export const MiniCalendarWidget: React.FC<MiniCalendarWidgetProps> = ({
  onClick={() => onSelectDate && onSelectDate(item.date)}
  className={`h-8 w-8 mx-auto rounded-lg flex items-center justify-center text-xs tabular-nums transition-all cursor-pointer ${
  isToday
- ? 'bg-[#3B82F6] text-white shadow-xs font-bold'
+ ? 'bg-[#16A34A] text-white shadow-xs font-bold'
  : isSelected
  ? 'bg-[#F97316] text-white font-bold'
  : item.isCurrentMonth

@@ -22,6 +22,8 @@ import type {
   DashboardComputationResult,
   DashboardDataset,
   DashboardPendingAction,
+  DashboardThirtyDaySummary,
+  DashboardThirtyDayTrendPoint,
   DashboardTrendPoint,
   DrillDownRecord,
   ExpenseLineItem,
@@ -1170,6 +1172,100 @@ export function computeDashboardMetrics(params: {
     });
   }
 
+  // 30-day Daily Sales Trends & Recovery Progress Series (Asia/Karachi PKT)
+  const shortMonthDayFmt = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+  const fullDayFmt = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+
+  const thirtyDayTrendSeries: DashboardThirtyDayTrendPoint[] = [];
+  let runningSales30 = 0;
+  let runningRecovery30 = 0;
+  let activeSalesDays = 0;
+  let activeRecoveryDays = 0;
+  let peakSalesAmount = 0;
+  let peakSalesLabel = '';
+  let peakRecoveryAmount = 0;
+  let peakRecoveryLabel = '';
+  const thirtyDayStart = shiftIsoDate(todayIso, -29);
+
+  for (let i = 29; i >= 0; i--) {
+    const dIso = shiftIsoDate(todayIso, -i);
+    const [yy, mm, dd] = dIso.split('-').map(Number);
+    const utcDate = new Date(Date.UTC(yy, mm - 1, dd));
+    const shortDate = i === 0 ? 'Today' : shortMonthDayFmt.format(utcDate);
+    const dayLabel = fullDayFmt.format(utcDate);
+
+    const daySales = roundTo2(sumSalesInRange(dIso, dIso).netAmount);
+    const dayRec = roundTo2(sumRecoveryInRange(dIso, dIso).amount);
+    const dayGap = roundTo2(daySales - dayRec);
+
+    if (daySales > 0) activeSalesDays += 1;
+    if (dayRec > 0) activeRecoveryDays += 1;
+
+    runningSales30 = roundTo2(runningSales30 + daySales);
+    runningRecovery30 = roundTo2(runningRecovery30 + dayRec);
+
+    if (daySales > peakSalesAmount) {
+      peakSalesAmount = daySales;
+      peakSalesLabel = shortMonthDayFmt.format(utcDate);
+    }
+    if (dayRec > peakRecoveryAmount) {
+      peakRecoveryAmount = dayRec;
+      peakRecoveryLabel = shortMonthDayFmt.format(utcDate);
+    }
+
+    const dailyRecoveryPct =
+      daySales > 0 ? roundTo2((dayRec / daySales) * 100) : dayRec > 0 ? 100 : 0;
+    const cumulativeRecoveryPct =
+      runningSales30 > 0
+        ? roundTo2((runningRecovery30 / runningSales30) * 100)
+        : runningRecovery30 > 0
+        ? 100
+        : 0;
+
+    thirtyDayTrendSeries.push({
+      date: dIso,
+      shortDate,
+      dayLabel,
+      sales: daySales,
+      recovery: dayRec,
+      netGap: dayGap,
+      cumulativeSales: runningSales30,
+      cumulativeRecovery: runningRecovery30,
+      dailyRecoveryPct,
+      cumulativeRecoveryPct,
+    });
+  }
+
+  const thirtyDaySummary: DashboardThirtyDaySummary = {
+    startDate: thirtyDayStart,
+    endDate: todayIso,
+    totalSales: runningSales30,
+    totalRecovery: runningRecovery30,
+    netGap: roundTo2(runningSales30 - runningRecovery30),
+    overallRecoveryPct:
+      runningSales30 > 0
+        ? roundTo2((runningRecovery30 / runningSales30) * 100)
+        : runningRecovery30 > 0
+        ? 100
+        : 0,
+    targetRecoveryPct: 85,
+    activeSalesDays,
+    activeRecoveryDays,
+    peakSalesLabel,
+    peakSalesAmount,
+    peakRecoveryLabel,
+    peakRecoveryAmount,
+  };
+
   // Reusable level breakdown builder (National / Region / Zone / Territory / Town)
   const customerLookupByIdOrCode = new Map<string, Customer>();
   for (const c of customerList) {
@@ -1727,6 +1823,8 @@ export function computeDashboardMetrics(params: {
     pendingCustomerRegistrationsCount: pendingCustomers.length,
     alerts,
     trendSeries,
+    thirtyDayTrendSeries,
+    thirtyDaySummary,
     hierarchyBreakdown,
     hierarchyBreakdowns,
     stockOverview,

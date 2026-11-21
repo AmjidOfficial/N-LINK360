@@ -180,7 +180,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-[#0F172A] dark:text-white flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-[#3B82F6] dark:text-blue-400" />
+              <Receipt className="w-5 h-5 text-[#16A34A] dark:text-emerald-400" />
               Invoices &amp; Bills
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
@@ -196,7 +196,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
               aria-label="Search invoice number"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full min-h-[44px] pl-10 pr-11 py-2 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white focus:border-[#3B82F6] outline-none"
+              className="w-full min-h-[44px] pl-10 pr-11 py-2 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white focus:border-[#16A34A] outline-none"
             />
             {searchQuery && (
               <button
@@ -218,7 +218,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
             onClick={() => setStatusFilter('ALL')}
             className={`min-h-[40px] px-3 py-1.5 rounded-xl font-semibold text-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
               statusFilter === 'ALL'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'bg-[#F8FAFC] dark:bg-[#0F172A] text-slate-600 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -323,7 +323,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
       <div className="space-y-3">
         {filteredOrders.length === 0 ? (
           <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-8 border border-[#E2E8F0] dark:border-slate-700/80 text-center text-slate-500 dark:text-slate-400 text-xs">
-            <Receipt className="w-10 h-10 mx-auto mb-2 opacity-40 text-[#3B82F6]" />
+            <Receipt className="w-10 h-10 mx-auto mb-2 opacity-40 text-[#16A34A]" />
             <p className="font-bold text-sm text-[#0F172A] dark:text-slate-200">No Invoices Found</p>
             <p className="mt-1">No sales orders or invoices match your filter.</p>
           </div>
@@ -336,7 +336,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
               <div
                 key={order.id || order.orderNumber}
                 onClick={() => setSelectedInvoice(order)}
-                className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs hover:border-[#3B82F6] dark:hover:border-blue-500/70 transition-all space-y-3 cursor-pointer"
+                className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs hover:border-[#16A34A] dark:hover:border-emerald-500/70 transition-all space-y-3 cursor-pointer"
               >
                 {/* Top Row: Invoice #, Date & Status */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -408,7 +408,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
 
                   <div className="text-left sm:text-right shrink-0">
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold block">Invoice Amount</span>
-                    <span className="text-base font-bold font-mono tabular-nums text-[#0F172A] dark:text-blue-300">
+                    <span className="text-base font-bold font-mono tabular-nums text-[#EA580C] dark:text-orange-400">
                       PKR {Number(order.totalAmount || 0).toLocaleString()}
                     </span>
                   </div>
@@ -424,7 +424,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                     onClick={() => setSelectedInvoice(order)}
                     className="btn-outline min-h-[44px] sm:min-h-[40px] px-3 py-1.5 text-xs"
                   >
-                    <Eye className="w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400" />
+                    <Eye className="w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400" />
                     <span>View Bill</span>
                   </button>
 
@@ -441,7 +441,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                     <button
                       type="button"
                       onClick={() => handleSms(order)}
-                      className="btn-outline min-h-[44px] sm:min-h-[40px] px-3 py-1.5 text-xs text-[#3B82F6] dark:text-blue-300"
+                      className="btn-outline min-h-[44px] sm:min-h-[40px] px-3 py-1.5 text-xs text-[#EA580C] dark:text-orange-400"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
                       <span>Msg</span>
@@ -471,7 +471,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
             {/* Modal Header */}
             <div className="bg-[#0F172A] dark:bg-[#0B1120] border-b border-slate-800 p-4 sm:p-5 text-white flex items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                <Receipt className="w-6 h-6 text-[#3B82F6] shrink-0" />
+                <Receipt className="w-6 h-6 text-[#4ADE80] shrink-0" />
                 <div className="min-w-0">
                   <h2 className="text-base font-bold text-white truncate font-mono tabular-nums">
                     Invoice #{selectedInvoice.orderNumber}
@@ -495,7 +495,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
               <div className="relative z-10 space-y-4">
               <div className="pb-3 border-b border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-2">
                 <NationalLightHeaderBrand size="sm" />
-                <span className="text-[10px] font-mono font-bold text-[#3B82F6] dark:text-blue-300 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/60">
+                <span className="text-[10px] font-mono font-bold text-[#16A34A] dark:text-emerald-300 px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60">
                   OFFICIAL TAX INVOICE
                 </span>
               </div>
@@ -557,7 +557,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSms(selectedInvoice)}
-                  className="btn-outline min-h-[44px] px-3.5 text-xs text-[#3B82F6] dark:text-blue-300"
+                  className="btn-outline min-h-[44px] px-3.5 text-xs text-[#EA580C] dark:text-orange-400"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>Msg</span>

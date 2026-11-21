@@ -17,7 +17,7 @@ export const Card: React.FC<CardProps> = ({
   const variantStyles = {
     default: 'bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-700/80 shadow-xs',
     illuminated: 'bg-white dark:bg-[#1E293B] border-orange-500/40 shadow-sm',
-    elevated: 'bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-700 shadow-md hover:border-blue-500/50',
+    elevated: 'bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-700 shadow-md hover:border-emerald-500/50',
     glass: 'bg-white/95 dark:bg-[#0F172A]/90 backdrop-blur-md border-slate-200 dark:border-slate-800 shadow-xs',
   };
 
@@ -56,7 +56,7 @@ export const Button: React.FC<ButtonProps> = ({
     primary: 'bg-[#F97316] hover:bg-[#EA580C] active:bg-[#C2410C] text-white shadow-xs border border-transparent',
     amber: 'bg-[#F97316] hover:bg-[#EA580C] text-white font-bold shadow-xs border border-transparent',
     secondary: 'bg-[#0F172A] hover:bg-[#1E293B] dark:bg-[#1E293B] dark:hover:bg-slate-700 text-white border border-slate-700',
-    outline: 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0F172A] hover:bg-slate-50 dark:hover:bg-[#1E293B] hover:border-blue-500/60 text-slate-800 dark:text-slate-100',
+    outline: 'border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0F172A] hover:bg-slate-50 dark:hover:bg-[#1E293B] hover:border-emerald-500/60 text-slate-800 dark:text-slate-100',
     danger: 'bg-[#DC2626] hover:bg-[#B91C1C] text-white shadow-xs border border-transparent',
     ghost: 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-transparent',
   };
@@ -92,7 +92,7 @@ export const StatusBadge: React.FC<BadgeProps> = ({
     emerald: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25',
     amber: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/25',
     crimson: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/25',
-    sky: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/25',
+    sky: 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/25',
     navy: 'bg-slate-900 dark:bg-slate-800 text-white border-slate-700',
     slate: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
   };
@@ -141,7 +141,7 @@ export const KPICard: React.FC<KPICardProps> = ({
           {title}
         </p>
         {Icon && (
-          <div className={`p-2 rounded-lg shrink-0 ${variant === 'navy' ? 'bg-slate-800 text-blue-400' : variant === 'amber' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : variant === 'emerald' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'}`}>
+          <div className={`p-2 rounded-lg shrink-0 ${variant === 'navy' ? 'bg-slate-800 text-emerald-400' : variant === 'amber' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : variant === 'emerald' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
             <Icon className="h-4 w-4" />
           </div>
         )}

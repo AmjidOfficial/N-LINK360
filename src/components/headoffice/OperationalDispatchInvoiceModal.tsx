@@ -233,7 +233,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-[#E2E8F0] dark:border-slate-700/80 bg-[#0F172A] text-white flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/20 border border-[#3B82F6]/40 text-[#3B82F6] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#16A34A]/20 border border-[#16A34A]/40 text-[#4ADE80] flex items-center justify-center shrink-0">
               <Truck className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -241,7 +241,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                 <h2 className="text-base sm:text-lg font-bold text-white truncate">
                   5-Step Dispatch &amp; Invoicing Pipeline
                 </h2>
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-[#3B82F6]/20 text-blue-200 border border-[#3B82F6]/40">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-[#16A34A]/20 text-emerald-200 border border-[#16A34A]/40">
                   National Lights ERP
                 </span>
               </div>
@@ -279,12 +279,12 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
               onClick={() => setCurrentStep(2)}
               className={`min-h-[36px] flex items-center gap-1.5 font-semibold cursor-pointer transition-colors whitespace-nowrap ${
                 currentStep === 2
-                  ? 'text-[#3B82F6] dark:text-blue-400'
+                  ? 'text-[#16A34A] dark:text-emerald-400'
                   : 'text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
               <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
-                currentStep === 2 ? 'bg-[#3B82F6] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                currentStep === 2 ? 'bg-[#16A34A] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
               }`}>
                 2
               </span>
@@ -298,12 +298,12 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
               onClick={() => setCurrentStep(3)}
               className={`min-h-[36px] flex items-center gap-1.5 font-semibold cursor-pointer transition-colors whitespace-nowrap ${
                 currentStep === 3
-                  ? 'text-[#3B82F6] dark:text-blue-400'
+                  ? 'text-[#16A34A] dark:text-emerald-400'
                   : 'text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
               <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
-                currentStep === 3 ? 'bg-[#3B82F6] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                currentStep === 3 ? 'bg-[#16A34A] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
               }`}>
                 3
               </span>
@@ -317,12 +317,12 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
               onClick={() => setCurrentStep(4)}
               className={`min-h-[36px] flex items-center gap-1.5 font-semibold cursor-pointer transition-colors whitespace-nowrap ${
                 currentStep === 4
-                  ? 'text-[#3B82F6] dark:text-blue-400'
+                  ? 'text-[#16A34A] dark:text-emerald-400'
                   : 'text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
               <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
-                currentStep === 4 ? 'bg-[#3B82F6] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                currentStep === 4 ? 'bg-[#16A34A] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
               }`}>
                 4
               </span>
@@ -336,12 +336,12 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
               onClick={() => setCurrentStep(5)}
               className={`min-h-[36px] flex items-center gap-1.5 font-semibold cursor-pointer transition-colors whitespace-nowrap ${
                 currentStep === 5
-                  ? 'text-[#3B82F6] dark:text-blue-400'
+                  ? 'text-[#16A34A] dark:text-emerald-400'
                   : 'text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
               <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
-                currentStep === 5 ? 'bg-[#3B82F6] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                currentStep === 5 ? 'bg-[#16A34A] text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
               }`}>
                 5
               </span>
@@ -367,9 +367,9 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
           {/* ========================================================================= */}
           {currentStep === 2 && (
             <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-blue-50/70 dark:bg-[#1E293B] p-4 rounded-2xl border border-blue-200 dark:border-slate-700/80">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-emerald-50/70 dark:bg-[#1E293B] p-4 rounded-2xl border border-emerald-200 dark:border-slate-700/80">
                 <div className="flex items-center gap-3">
-                  <Warehouse className="w-6 h-6 text-[#3B82F6] shrink-0" />
+                  <Warehouse className="w-6 h-6 text-[#16A34A] shrink-0" />
                   <div>
                     <h3 className="text-sm font-bold text-[#0F172A] dark:text-white">
                       Step 2: Create Commercial Dispatch Note
@@ -379,7 +379,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                     </p>
                   </div>
                 </div>
-                <span className="font-mono tabular-nums font-bold text-xs bg-white dark:bg-[#0F172A] px-3 py-1.5 rounded-lg border border-[#E2E8F0] dark:border-slate-700 text-[#0F172A] dark:text-blue-300 self-start sm:self-auto">
+                <span className="font-mono tabular-nums font-bold text-xs bg-white dark:bg-[#0F172A] px-3 py-1.5 rounded-lg border border-[#E2E8F0] dark:border-slate-700 text-[#0F172A] dark:text-emerald-300 self-start sm:self-auto">
                   {dispatchNoteNumber}
                 </span>
               </div>
@@ -392,7 +392,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                   <select
                     value={warehouseName}
                     onChange={(e) => setWarehouseName(e.target.value)}
-                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-semibold text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
+                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-semibold text-[#0F172A] dark:text-white focus:outline-none focus:border-[#16A34A]"
                   >
                     <option value="Central Peshawar Warehouse">Central Peshawar Warehouse</option>
                     <option value="Rawalpindi Regional Depot">Rawalpindi Regional Depot</option>
@@ -409,7 +409,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                     type="text"
                     value={transporterName}
                     onChange={(e) => setTransporterName(e.target.value)}
-                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-semibold text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
+                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-semibold text-[#0F172A] dark:text-white focus:outline-none focus:border-[#16A34A]"
                   />
                 </div>
 
@@ -421,7 +421,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                     type="text"
                     value={vehicleNumber}
                     onChange={(e) => setVehicleNumber(e.target.value)}
-                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-mono tabular-nums font-bold text-[#0F172A] dark:text-white uppercase focus:outline-none focus:border-[#3B82F6]"
+                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-mono tabular-nums font-bold text-[#0F172A] dark:text-white uppercase focus:outline-none focus:border-[#16A34A]"
                   />
                 </div>
 
@@ -433,7 +433,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                     type="text"
                     value={bilityNumber}
                     onChange={(e) => setBilityNumber(e.target.value)}
-                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-mono tabular-nums font-bold text-[#0F172A] dark:text-white uppercase focus:outline-none focus:border-[#3B82F6]"
+                    className="w-full min-h-[44px] px-3 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] font-mono tabular-nums font-bold text-[#0F172A] dark:text-white uppercase focus:outline-none focus:border-[#16A34A]"
                   />
                 </div>
               </div>
@@ -535,7 +535,7 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                             onClick={() => handleToggleSku(item.key)}
                             className={`min-h-[38px] px-3 py-1.5 rounded-xl font-semibold text-xs cursor-pointer transition-all active:scale-95 ${
                               item.accepted
-                                ? 'bg-[#3B82F6] text-white hover:bg-[#2563EB] shadow-xs'
+                                ? 'bg-[#16A34A] text-white hover:bg-[#15803D] shadow-xs'
                                 : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'
                             }`}
                           >
@@ -670,8 +670,8 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                   </span>
                 </div>
 
-                <div className="bg-blue-50/70 dark:bg-[#0F172A] p-3 rounded-xl border border-blue-200 dark:border-[#3B82F6]/50">
-                  <span className="text-[10px] text-[#3B82F6] dark:text-blue-400 uppercase font-bold block">Net Invoice Total (Payable)</span>
+                <div className="bg-orange-50/70 dark:bg-[#0F172A] p-3 rounded-xl border border-orange-200 dark:border-[#EA580C]/50">
+                  <span className="text-[10px] text-[#EA580C] dark:text-orange-400 uppercase font-bold block">Net Invoice Total (Payable)</span>
                   <span className="text-base font-bold font-mono tabular-nums text-[#0F172A] dark:text-white">
                     PKR {netInvoiceTotal.toLocaleString()}
                   </span>
@@ -704,9 +704,9 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
           {/* ========================================================================= */}
           {currentStep === 5 && (
             <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="bg-blue-50/70 dark:bg-[#1E293B] p-4 rounded-2xl border border-blue-200 dark:border-slate-700/80 flex items-center justify-between">
+              <div className="bg-emerald-50/70 dark:bg-[#1E293B] p-4 rounded-2xl border border-emerald-200 dark:border-slate-700/80 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <BookOpen className="w-6 h-6 text-[#3B82F6] shrink-0" />
+                  <BookOpen className="w-6 h-6 text-[#16A34A] shrink-0" />
                   <div>
                     <h3 className="text-sm font-bold text-[#0F172A] dark:text-white">
                       Step 5: Post Invoice to Customer Ledger
@@ -729,10 +729,10 @@ export const OperationalDispatchInvoiceModal: React.FC<OperationalDispatchInvoic
                 </div>
 
                 <div className="flex justify-between items-center py-1.5 border-b border-[#E2E8F0] dark:border-slate-700">
-                  <span className="text-[#3B82F6] dark:text-blue-400 font-bold">
+                  <span className="text-[#EA580C] dark:text-orange-400 font-bold">
                     + New Invoice Debit (15% Less on All Products):
                   </span>
-                  <span className="font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
+                  <span className="font-mono tabular-nums font-bold text-[#EA580C] dark:text-orange-400">
                     +PKR {netInvoiceTotal.toLocaleString()}
                   </span>
                 </div>

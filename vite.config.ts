@@ -39,8 +39,8 @@ export default defineConfig(({ mode }) => {
           name: 'National Light Pakistan - N-LINK 360',
           short_name: 'N-LINK 360',
           description: 'Enterprise Field Intelligence, Order Booking, and Payment Recovery App for National Light Pakistan.',
-          theme_color: '#001428',
-          background_color: '#001428',
+          theme_color: '#16A34A',
+          background_color: '#F8FAFC',
           display: 'standalone',
           start_url: basePath,
           scope: basePath,
@@ -122,7 +122,39 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       sourcemap: false,
-      chunkSizeWarningLimit: 3000,
+      chunkSizeWarningLimit: 1200,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            if (id.includes('recharts') || id.includes('d3') || id.includes('victory-vendor')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('leaflet')) {
+              return 'vendor-maps';
+            }
+            if (id.includes('jspdf') || id.includes('html2canvas')) {
+              return 'vendor-pdf';
+            }
+            if (id.includes('@supabase')) {
+              return 'vendor-supabase';
+            }
+            if (id.includes('firebase')) {
+              return 'vendor-firebase';
+            }
+            if (id.includes('motion')) {
+              return 'vendor-motion';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('react-dom') || id.includes('/react/') || id.includes('scheduler')) {
+              return 'vendor-react';
+            }
+            return 'vendor-core';
+          },
+        },
+      },
     },
     server: {
       port: 3000,

@@ -89,7 +89,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <div className="pt-2 flex items-center justify-center gap-1.5 text-[10px] text-slate-400 font-semibold">
-              <ShieldAlert className="w-3.5 h-3.5 text-[#3B82F6]" />
+              <ShieldAlert className="w-3.5 h-3.5 text-[#16A34A]" />
               <span>National Lights • N-LINK 360 Self-Healing Engine</span>
             </div>
           </div>

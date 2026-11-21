@@ -42,7 +42,7 @@ export const NationalLightRateListModal: React.FC<NationalLightRateListModalProp
         {/* Header */}
         <div className="bg-[#0F172A] text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/20 border border-[#3B82F6]/40 flex items-center justify-center text-[#3B82F6] shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#16A34A]/20 border border-[#16A34A]/40 flex items-center justify-center text-[#4ADE80] shrink-0">
               <Tag className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -74,7 +74,7 @@ export const NationalLightRateListModal: React.FC<NationalLightRateListModalProp
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by SKU, item name, wattage (e.g. 12W, COB, Flood)..."
-              className="w-full min-h-[44px] pl-9 pr-11 py-2 bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-slate-700 text-xs sm:text-sm text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+              className="w-full min-h-[44px] pl-9 pr-11 py-2 bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-slate-700 text-xs sm:text-sm text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
             />
             {search && (
               <button
@@ -106,7 +106,7 @@ export const NationalLightRateListModal: React.FC<NationalLightRateListModalProp
                 onClick={() => setSelectedGroup(g.id)}
                 className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                   selectedGroup === g.id
-                    ? 'bg-[#3B82F6] text-white shadow-xs'
+                    ? 'bg-[#16A34A] text-white shadow-xs'
                     : 'bg-white dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >

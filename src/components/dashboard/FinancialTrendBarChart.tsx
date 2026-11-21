@@ -67,7 +67,7 @@ export const FinancialTrendBarChart: React.FC<FinancialTrendBarChartProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/70 pb-3">
         <div>
           <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC] flex items-center gap-1.5">
-            <BarChart3 className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+            <BarChart3 className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
             Sales &amp; Recovery Realization Trend
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
@@ -78,7 +78,7 @@ export const FinancialTrendBarChart: React.FC<FinancialTrendBarChartProps> = ({
         {/* Legend */}
         <div className="flex items-center gap-3 text-xs font-semibold">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#3B82F6]" />
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#F97316]" />
             <span className="text-slate-600 dark:text-slate-300 text-[11px]">Sales</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -119,7 +119,7 @@ export const FinancialTrendBarChart: React.FC<FinancialTrendBarChartProps> = ({
 
                   <div className="w-full max-w-[44px] h-full flex items-end justify-center gap-1.5">
                     <div
-                      className="flex-1 bg-[#3B82F6] hover:bg-blue-400 rounded-t transition-all duration-300"
+                      className="flex-1 bg-[#F97316] hover:bg-orange-400 rounded-t transition-all duration-300"
                       style={{ height: `${salesHeightPct}%` }}
                       title={`Sales: PKR ${item.sales.toLocaleString()}`}
                     />

@@ -13,4 +13,5 @@ export * from './HierarchyBreakdownPanel';
 export * from './ExecutiveStockExpensePanel';
 export * from './FieldOperationsPanel';
 export * from './ExecutiveBiGraphicsPanel';
+export * from './ThirtyDaySalesRecoverySection';
 export * from './RoleBasedDashboardShell';

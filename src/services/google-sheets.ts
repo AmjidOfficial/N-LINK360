@@ -402,30 +402,38 @@ export async function syncToGoogleSheetsWebhook(
     errMsg = 'Static hosting active — using direct Google Sheets webhook channel';
   }
 
-  // 2. Fall back to direct browser fetch if server proxy failed and we have a local webhookUrl
-  if (!success && finalWebhookUrl) {
-    if (!finalWebhookUrl.startsWith('https://script.google.com')) {
-      throw new Error(
-        'Invalid Google Apps Script Webhook URL. It must start with https://script.google.com/macros/s/.../exec'
-      );
-    }
+  // 2. Fallback to authenticated Supabase Edge Function if server gateway is unavailable (static Netlify SPA)
+  if (!success) {
     try {
-      await fetch(finalWebhookUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify(payload),
-      });
-      success = true; // Google Apps Script redirects with no-cors allow the background execution to complete cleanly
-    } catch (directErr: any) {
-      console.warn('[Google Sheet Webhook] Direct browser sync note:', directErr);
-      // In browser no-cors mode, even if opaque, the payload was transmitted
-      success = true;
+      const { supabase, isSupabaseConfigured } = await import('./supabase');
+      if (supabase && isSupabaseConfigured) {
+        const edgeRes = await supabase.functions.invoke('sync-google-sheets', {
+          body: {
+            mode: 'BATCH_UPSERT',
+            source: 'N-LINK 360 Static SPA',
+            records: [
+              ...(payload.customers || []).map((r) => ({ sheetTab: 'Customers', entityType: 'CUSTOMER', entityId: r.code, record: r })),
+              ...(payload.salesOrders || []).map((r) => ({ sheetTab: 'Sales_Orders', entityType: 'ORDER', entityId: r.orderId, record: r })),
+              ...(payload.recoveries || []).map((r) => ({ sheetTab: 'Recoveries', entityType: 'RECOVERY', entityId: r.id, record: r })),
+            ],
+            ...payload,
+          },
+        });
+        if (!edgeRes.error && edgeRes.data?.success !== false) {
+          success = true;
+        } else if (edgeRes.error) {
+          errMsg = edgeRes.error.message || errMsg;
+        }
+      }
+    } catch (edgeErr: any) {
+      errMsg = edgeErr?.message || errMsg;
     }
-  } else if (!success) {
-    throw new Error(`Google Sheets Webhook Sync failed: ${errMsg || 'Webhook URL is not configured'}`);
+  }
+
+  if (!success) {
+    throw new Error(
+      `Google Sheets Sync failed: ${errMsg || 'No authenticated Google Sheets gateway or Edge Function available.'}`
+    );
   }
 
   const nowIso = new Date().toLocaleString();
@@ -486,100 +494,90 @@ export function exportGoogleSheetsCsv(appData: SupabaseAppData): void {
 }
 
 /**
- * The Google Apps Script template code that powers the Google Sheet Web App
+ * The Google Apps Script template code that powers the Google Sheet Web App (Keyed Non-Destructive UPSERT)
  */
 export const GOOGLE_APPS_SCRIPT_CODE = `/**
- * N-LINK 360 — Google Sheet Webhook Sync Engine
+ * N-LINK 360 — Authenticated Google Sheet Keyed UPSERT Engine
  * Paste this into Google Sheets > Extensions > Apps Script
- * Click Deploy > New deployment > Web app (Execute as: Me, Who has access: Anyone)
+ * Script Property Required: NLINK_SHEET_TOKEN
  */
 
 function doPost(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet();
-    var payload = JSON.parse(e.postData.contents);
-    
-    // 1. Sync Customers Sheet
-    var custSheet = sheet.getSheetByName("Customers") || sheet.insertSheet("Customers");
-    if (custSheet.getLastRow() === 0) {
-      custSheet.appendRow(["Customer Code", "Business Name", "Type", "Town / City", "Route", "Contact Person", "Phone", "Credit Limit (PKR)", "Current Balance (PKR)", "Status", "Last Synced"]);
-    }
-    if (payload.customers && payload.customers.length > 0) {
-      if (custSheet.getLastRow() > 1) {
-        custSheet.getRange(2, 1, custSheet.getLastRow() - 1, 11).clearContent();
-      }
-      var custRows = payload.customers.map(function(c) {
-        return [c.code, c.name, c.type, c.town, c.route || c.region || '', c.contactPerson || '', c.phone || '', c.creditLimit, c.currentBalance, c.status, payload.timestamp];
-      });
-      custSheet.getRange(2, 1, custRows.length, 11).setValues(custRows);
+    var payload = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+    var expected = PropertiesService.getScriptProperties().getProperty("NLINK_SHEET_TOKEN");
+    if (expected && payload.sheetToken !== expected && (!e.parameter || e.parameter.token !== expected)) {
+      return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Unauthorized NLINK_SHEET_TOKEN" }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 2. Sync Sales Orders Sheet (With Shahzad Ullah Executive Approval Columns)
-    var orderSheet = sheet.getSheetByName("Sales_Orders") || sheet.insertSheet("Sales_Orders");
-    if (orderSheet.getLastRow() === 0) {
-      orderSheet.appendRow(["Order ID", "Customer Name", "Sales Officer", "Order Date", "Total Amount (PKR)", "Status", "Approval Status", "Shahzad Ullah", "Items Count", "Last Synced"]);
-    }
-    if (payload.salesOrders && payload.salesOrders.length > 0) {
-      if (orderSheet.getLastRow() > 1) {
-        orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, 10).clearContent();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var nowIso = payload.timestamp || new Date().toISOString();
+
+    function upsertByKey(tabName, headers, rows) {
+      if (!rows || rows.length === 0) return { inserted: 0, updated: 0 };
+      var sheet = ss.getSheetByName(tabName) || ss.insertSheet(tabName);
+      if (sheet.getLastRow() === 0) sheet.appendRow(headers);
+      var keyMap = {};
+      var lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        var existingKeys = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+        for (var i = 0; i < existingKeys.length; i++) {
+          var keyVal = String(existingKeys[i][0] || "").trim();
+          if (keyVal) keyMap[keyVal] = i + 2;
+        }
       }
-      var orderRows = payload.salesOrders.map(function(o) {
-        return [o.orderId, o.customerName, o.salesUserName, o.orderDate, o.totalAmount, o.status, o.dualApprovalStatus, o.shahzadApproval, o.itemsCount, payload.timestamp];
-      });
-      orderSheet.getRange(2, 1, orderRows.length, 10).setValues(orderRows);
+      var appendBatch = [];
+      var updated = 0;
+      for (var r = 0; r < rows.length; r++) {
+        var k = String(rows[r][0] || "").trim();
+        if (!k) continue;
+        if (keyMap[k]) {
+          sheet.getRange(keyMap[k], 1, 1, headers.length).setValues([rows[r]]);
+          updated++;
+        } else {
+          appendBatch.push(rows[r]);
+          keyMap[k] = lastRow + appendBatch.length;
+        }
+      }
+      if (appendBatch.length > 0) {
+        sheet.getRange(sheet.getLastRow() + 1, 1, appendBatch.length, headers.length).setValues(appendBatch);
+      }
+      return { inserted: appendBatch.length, updated: updated };
     }
 
-    // 3. Sync Recoveries Sheet (With Shahzad Ullah Executive Confirmation Columns)
-    var recSheet = sheet.getSheetByName("Recoveries") || sheet.insertSheet("Recoveries");
-    if (recSheet.getLastRow() === 0) {
-      recSheet.appendRow(["Recovery Code", "Customer Name", "Sales Officer", "Amount (PKR)", "Mode", "Instrument Ref", "Bank", "Confirmation Status", "Shahzad Ullah", "Date Recorded", "Last Synced"]);
+    var summary = {};
+    if (payload.customers) {
+      summary.Customers = upsertByKey("Customers", ["Customer Code", "Business Name", "Type", "Town / City", "Route", "Contact Person", "Phone", "Credit Limit (PKR)", "Current Balance (PKR)", "Status", "Last Synced"],
+        payload.customers.map(function(c) { return [c.code, c.name, c.type, c.town, c.route || "", c.contactPerson || "", c.phone || "", c.creditLimit, c.currentBalance, c.status, nowIso]; }));
     }
-    if (payload.recoveries && payload.recoveries.length > 0) {
-      if (recSheet.getLastRow() > 1) {
-        recSheet.getRange(2, 1, recSheet.getLastRow() - 1, 11).clearContent();
-      }
-      var recRows = payload.recoveries.map(function(r) {
-        return [r.id, r.customerName, r.salesUserName, r.amount, r.paymentMode, r.instrumentNumber, r.bankName, r.dualApprovalStatus, r.shahzadApproval, r.recordedAt, payload.timestamp];
-      });
-      recSheet.getRange(2, 1, recRows.length, 11).setValues(recRows);
+    if (payload.salesOrders) {
+      summary.Sales_Orders = upsertByKey("Sales_Orders", ["Order ID", "Customer Name", "Sales Officer", "Order Date", "Total Amount (PKR)", "Status", "Approval Status", "Shahzad Ullah", "Items Count", "Last Synced"],
+        payload.salesOrders.map(function(o) { return [o.orderId, o.customerName, o.salesUserName, o.orderDate, o.totalAmount, o.status, o.dualApprovalStatus, o.shahzadApproval, o.itemsCount, nowIso]; }));
     }
-
-    // 4. Sync Ledgers Sheet (Permanent Running Balance from Transaction History)
-    var ledgerSheet = sheet.getSheetByName("Ledgers") || sheet.insertSheet("Ledgers");
-    if (ledgerSheet.getLastRow() === 0) {
-      ledgerSheet.appendRow(["Customer Code", "Customer Name", "Date", "Transaction Type", "Reference #", "Debit / Invoice (PKR)", "Credit / Recovery (PKR)", "Running Balance (PKR)", "Dual Approval Status", "Last Synced"]);
+    if (payload.recoveries) {
+      summary.Recoveries = upsertByKey("Recoveries", ["Recovery Code", "Customer Name", "Sales Officer", "Amount (PKR)", "Mode", "Instrument Ref", "Bank", "Confirmation Status", "Shahzad Ullah", "Date Recorded", "Last Synced"],
+        payload.recoveries.map(function(r) { return [r.id, r.customerName, r.salesUserName, r.amount, r.paymentMode, r.instrumentNumber, r.bankName, r.dualApprovalStatus, r.shahzadApproval, r.recordedAt, nowIso]; }));
     }
-    if (payload.ledgers && payload.ledgers.length > 0) {
-      if (ledgerSheet.getLastRow() > 1) {
-        ledgerSheet.getRange(2, 1, ledgerSheet.getLastRow() - 1, 10).clearContent();
-      }
-      var ledgerRows = payload.ledgers.map(function(l) {
-        return [l.customerCode, l.customerName, l.date, l.type, l.referenceNumber, l.debit, l.credit, l.runningBalance, l.dualApprovalStatus, payload.timestamp];
-      });
-      ledgerSheet.getRange(2, 1, ledgerRows.length, 10).setValues(ledgerRows);
+    if (payload.ledgers) {
+      summary.Ledger = upsertByKey("Ledger", ["Reference #", "Customer Code", "Customer Name", "Date", "Transaction Type", "Debit / Invoice (PKR)", "Credit / Recovery (PKR)", "Running Balance (PKR)", "Dual Approval Status", "Last Synced"],
+        payload.ledgers.map(function(l) { return [l.referenceNumber, l.customerCode, l.customerName, l.date, l.type, l.debit, l.credit, l.runningBalance, l.dualApprovalStatus, nowIso]; }));
+    }
+    if (payload.inventory) {
+      summary.Inventory_Stock = upsertByKey("Inventory_Stock", ["SKU Code", "SKU Name", "Category", "Available Stock (Pcs)", "Trade Price (PKR)", "Valuation (PKR)", "Last Synced"],
+        payload.inventory.map(function(i) { return [i.skuCode, i.skuName, i.category, i.stockPieces, i.tradePrice, i.stockValuation, nowIso]; }));
     }
 
-    // 5. Sync Inventory Sheet
-    var invSheet = sheet.getSheetByName("Inventory_Stock") || sheet.insertSheet("Inventory_Stock");
-    if (invSheet.getLastRow() === 0) {
-      invSheet.appendRow(["SKU Code", "SKU Name", "Category", "Available Stock (Pcs)", "Trade Price (PKR)", "Valuation (PKR)", "Last Synced"]);
-    }
-    if (payload.inventory && payload.inventory.length > 0) {
-      if (invSheet.getLastRow() > 1) {
-        invSheet.getRange(2, 1, invSheet.getLastRow() - 1, 7).clearContent();
-      }
-      var invRows = payload.inventory.map(function(i) {
-        return [i.skuCode, i.skuName, i.category, i.stockPieces, i.tradePrice, i.stockValuation, payload.timestamp];
-      });
-      invSheet.getRange(2, 1, invRows.length, 7).setValues(invRows);
-    }
+    var logSheet = ss.getSheetByName("Sync_Log") || ss.insertSheet("Sync_Log");
+    if (logSheet.getLastRow() === 0) logSheet.appendRow(["Timestamp", "Direction", "Summary"]);
+    logSheet.appendRow([nowIso, "OUTBOUND_UPSERT", JSON.stringify(summary)]);
 
-    return ContentService.createTextOutput(JSON.stringify({ status: "success", received: payload.summary }))
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", summary: summary }))
       .setMimeType(ContentService.MimeType.JSON);
-
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
 `;
+

@@ -469,7 +469,7 @@ export const EmployeeManagementModule: React.FC<EmployeeManagementModuleProps> =
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name, ID, identity, territory..."
-                className="w-full pl-10 pr-4 py-2 min-h-[44px] rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#0F172A] text-xs font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                className="w-full pl-10 pr-4 py-2 min-h-[44px] rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#0F172A] text-xs font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
               />
             </div>
 
@@ -481,7 +481,7 @@ export const EmployeeManagementModule: React.FC<EmployeeManagementModuleProps> =
                   onClick={() => setDepartmentFilter(dept)}
                   className={`px-3 py-1.5 min-h-[44px] rounded-xl text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer ${
                     departmentFilter === dept
-                      ? 'bg-[#3B82F6] text-white shadow-sm'
+                      ? 'bg-[#16A34A] text-white shadow-sm'
                       : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
                   }`}
                 >

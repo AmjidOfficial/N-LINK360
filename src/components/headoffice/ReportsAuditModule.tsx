@@ -361,7 +361,7 @@ export const ReportsAuditModule: React.FC<ReportsAuditModuleProps> = ({
             onClick={() => setActiveTab(t.id)}
             className={`px-3.5 py-2 min-h-[44px] rounded-xl font-bold whitespace-nowrap cursor-pointer transition-colors ${
               activeTab === t.id
-                ? 'bg-[#3B82F6] text-white shadow-sm'
+                ? 'bg-[#16A34A] text-white shadow-sm'
                 : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >

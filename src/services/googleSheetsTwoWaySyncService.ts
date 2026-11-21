@@ -970,17 +970,15 @@ export function startAutoSyncEngine(appDataProvider?: () => SupabaseAppData): vo
   if (autoSyncTimer) clearInterval(autoSyncTimer);
   if (countdownTimer) clearInterval(countdownTimer);
 
-  // Countdown heartbeat every second to update UI countdown timers
+  // Check interval every 60 seconds instead of 1-second churn; background retry runs via universalSubmissionService
   countdownTimer = setInterval(() => {
     const next = getNextSyncTarget();
     if (Date.now() >= next) {
-      triggerAutoSyncCycle();
-    } else {
-      notifyStatusChange();
+      void triggerAutoSyncCycle();
     }
-  }, 1000);
+  }, 60_000);
 
-  console.log('[N-LINK 360] 30-minute Google Sheets Auto-Sync Engine active.');
+  console.log('[N-LINK 360] Consolidated 30-minute Google Sheets Auto-Sync scheduler active.');
 }
 
 export function stopAutoSyncEngine(): void {
@@ -999,7 +997,7 @@ async function triggerAutoSyncCycle(): Promise<void> {
   const token = getAccessToken();
 
   if (!token) {
-    console.log('[Auto-Sync] 30-minute interval reached. All data is safe in Local Storage. Google sign-in required for cloud replication.');
+    console.log('[Auto-Sync] 30-minute interval reached. Queued records safely persisted; awaiting Google Sheets gateway/OAuth.');
     resetNextSyncTarget();
     notifyStatusChange();
     return;

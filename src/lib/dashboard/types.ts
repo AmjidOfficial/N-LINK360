@@ -277,6 +277,35 @@ export interface DashboardTrendPoint {
   recovery: number;
 }
 
+export interface DashboardThirtyDayTrendPoint {
+  date: string;
+  shortDate: string;
+  dayLabel: string;
+  sales: number;
+  recovery: number;
+  netGap: number;
+  cumulativeSales: number;
+  cumulativeRecovery: number;
+  dailyRecoveryPct: number;
+  cumulativeRecoveryPct: number;
+}
+
+export interface DashboardThirtyDaySummary {
+  startDate: string;
+  endDate: string;
+  totalSales: number;
+  totalRecovery: number;
+  netGap: number;
+  overallRecoveryPct: number;
+  targetRecoveryPct: number;
+  activeSalesDays: number;
+  activeRecoveryDays: number;
+  peakSalesLabel: string;
+  peakSalesAmount: number;
+  peakRecoveryLabel: string;
+  peakRecoveryAmount: number;
+}
+
 export interface HierarchyPerformanceRow {
   key: string;
   name: string;
@@ -473,6 +502,8 @@ export interface DashboardComputationResult {
   pendingCustomerRegistrationsCount: number;
   alerts: DashboardAlertItem[];
   trendSeries: DashboardTrendPoint[];
+  thirtyDayTrendSeries?: DashboardThirtyDayTrendPoint[];
+  thirtyDaySummary?: DashboardThirtyDaySummary;
   hierarchyBreakdown: HierarchyPerformanceRow[];
   hierarchyBreakdowns: HierarchyBreakdowns;
   stockOverview: StockOverviewSummary;

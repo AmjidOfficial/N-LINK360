@@ -166,11 +166,11 @@ Shared by: ${officerName}`;
                 }}
                 className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
                   selectedMode === 'desktop'
-                    ? 'bg-blue-50 dark:bg-blue-950/60 border-blue-600 text-blue-900 dark:text-blue-200 font-black shadow-xs ring-1 ring-blue-500'
+                    ? 'bg-orange-50 dark:bg-orange-950/60 border-orange-600 text-orange-900 dark:text-orange-200 font-black shadow-xs ring-1 ring-orange-500'
                     : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-100'
                 }`}
               >
-                <Laptop className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <Laptop className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                 <span className="text-[11px]">Direct Desktop</span>
                 <span className="text-[9px] font-normal text-slate-500">Command Center</span>
               </button>

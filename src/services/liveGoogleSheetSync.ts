@@ -7,7 +7,9 @@
  */
 
 import { Customer, SalesOrder, Recovery, UserRole } from '../types';
-import { NLinkUser, NLINK_TEAM_ROSTER, getStoredUsers, saveStoredUsers } from '../data/nlink-users-team';
+import { NLinkUser, getStoredUsers, saveStoredUsers } from '../data/nlink-users-team';
+import { ensureFreshGoogleAccessToken, getAccessToken } from './googleAuth';
+import { readSpreadsheetRange } from './googleSheetsLiveService';
 
 export const TARGET_SPREADSHEET_ID = '1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo';
 
@@ -23,39 +25,7 @@ export interface LiveSheetSyncResult {
 }
 
 /**
- * Parses Google Visualization Query API response string into an array of objects
- */
-function parseGVizResponse(text: string): Record<string, any>[] {
-  const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\((.*)\);/s);
-  if (!jsonMatch || !jsonMatch[1]) return [];
-  try {
-    const data = JSON.parse(jsonMatch[1]);
-    if (!data.table || !data.table.rows) return [];
-    const cols = (data.table.cols || []).map((c: any) => (c?.label || '').trim());
-    
-    return data.table.rows.map((r: any) => {
-      const rowObj: Record<string, any> = {};
-      (r.c || []).forEach((cell: any, idx: number) => {
-        const key = cols[idx] || `col_${idx}`;
-        if (cell) {
-          rowObj[key] = cell.v !== undefined ? cell.v : cell.f;
-          if (cell.f && !rowObj[`${key}_formatted`]) {
-            rowObj[`${key}_formatted`] = cell.f;
-          }
-        } else {
-          rowObj[key] = null;
-        }
-      });
-      return rowObj;
-    });
-  } catch (err) {
-    console.warn('Failed to parse GViz JSON:', err);
-    return [];
-  }
-}
-
-/**
- * Parses GViz date format: Date(yyyy,m,d) or standard date string
+ * Parses Sheet date format cleanly
  */
 function parseGVizDate(val: any): string {
   if (!val) return new Date().toISOString().slice(0, 10);
@@ -72,20 +42,34 @@ function parseGVizDate(val: any): string {
 }
 
 /**
- * Fetches sheet data via GViz JSON endpoint
+ * Fetches sheet rows via AUTHENTICATED Google Sheets API v4 (never unauthenticated public GViz).
  */
 async function fetchSheetData(spreadsheetId: string, sheetName: string): Promise<Record<string, any>[]> {
-  const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch sheet "${sheetName}": ${res.statusText}`);
+  const token = getAccessToken() || (await ensureFreshGoogleAccessToken());
+  if (!token) {
+    throw new Error('Authenticated Google OAuth token is required to read live Google Sheets tabs.');
   }
-  const text = await res.text();
-  return parseGVizResponse(text);
+
+  const matrix = await readSpreadsheetRange(spreadsheetId, `${sheetName}!A1:Z2000`, token);
+  if (!Array.isArray(matrix) || matrix.length < 2) {
+    return [];
+  }
+
+  const headers = matrix[0].map((h) => String(h || '').trim());
+  return matrix
+    .slice(1)
+    .filter((row) => Array.isArray(row) && row.some((cell) => String(cell ?? '').trim() !== ''))
+    .map((row) => {
+      const rowObj: Record<string, any> = {};
+      headers.forEach((key, idx) => {
+        if (key) rowObj[key] = row[idx] ?? null;
+      });
+      return rowObj;
+    });
 }
 
 /**
- * Fetches all Customers, Orders/Invoices, and Recoveries from the live Google Sheet
+ * Fetches all Customers, Orders/Invoices, and Recoveries from the live Google Sheet using authenticated API
  */
 export async function fetchLiveGoogleSheetData(
   spreadsheetId = TARGET_SPREADSHEET_ID

@@ -35,14 +35,14 @@ import {
 import { NLinkUser, NLINK_TEAM_ROSTER } from '../../data/nlink-users-team';
 import { getEffectivePermissionGroup, hasPermission, Permission } from '../../lib/permissions';
 import { isAuthorizedApproverEmail, invalidateAllSessionsGlobally } from '../../services/production-users';
-import { Customer360Screen } from '../creditbook/Customer360Screen';
-import { CustomerInvoicesView } from '../creditbook/CustomerInvoicesView';
-import { CustomerLedgerView } from '../creditbook/CustomerLedgerView';
+const Customer360Screen = React.lazy(() => import('../creditbook/Customer360Screen').then((m) => ({ default: m.Customer360Screen })));
+const CustomerInvoicesView = React.lazy(() => import('../creditbook/CustomerInvoicesView').then((m) => ({ default: m.CustomerInvoicesView })));
+const CustomerLedgerView = React.lazy(() => import('../creditbook/CustomerLedgerView').then((m) => ({ default: m.CustomerLedgerView })));
 import { SimpleOrderEntryDrawer } from '../creditbook/SimpleOrderEntryDrawer';
-import { BulkSkuOrderForm } from '../creditbook/BulkSkuOrderForm';
+const BulkSkuOrderForm = React.lazy(() => import('../creditbook/BulkSkuOrderForm').then((m) => ({ default: m.BulkSkuOrderForm })));
 import { SimpleRecoveryDrawer } from '../creditbook/SimpleRecoveryDrawer';
-import { FieldOfficerActivityDashboard } from '../creditbook/FieldOfficerActivityDashboard';
-import { EmployeeAttendanceLedgerView } from '../creditbook/EmployeeAttendanceLedgerView';
+const FieldOfficerActivityDashboard = React.lazy(() => import('../creditbook/FieldOfficerActivityDashboard').then((m) => ({ default: m.FieldOfficerActivityDashboard })));
+const EmployeeAttendanceLedgerView = React.lazy(() => import('../creditbook/EmployeeAttendanceLedgerView').then((m) => ({ default: m.EmployeeAttendanceLedgerView })));
 import { NationalLightLogo } from '../NationalLightLogo';
 import { ExecutiveSpotlightCard } from '../dashboard/ExecutiveSpotlightCard';
 import { FinancialTrendBarChart } from '../dashboard/FinancialTrendBarChart';
@@ -870,6 +870,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
           {/* CUSTOMER 360 OVERLAY IF SELECTED */}
           {/* ==================================================== */}
           {selectedCustomerObj ? (
+            <Suspense fallback={<NatureSkeleton variant="full" />}>
             <div className="space-y-4 animate-in fade-in duration-200">
               {customer360SubView === '360' && (
                 <Customer360Screen
@@ -912,6 +913,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 />
               )}
             </div>
+            </Suspense>
           ) : (
             <>
               {/* ==================================================== */}
@@ -2019,20 +2021,22 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   </div>
 
                   {salesOrderView === 'ORDER_FORM' ? (
-                    <BulkSkuOrderForm
-                      currentUser={currentUser}
-                      availableCustomers={customers}
-                      onPlaceOrder={onPlaceOrder}
-                      onDownloadPdf={(o, c) =>
-                        downloadSalesInvoicePdf({
-                          customer: c,
-                          order: o,
-                          previousBalance: c.currentBalance ?? c.openingBalance ?? 0,
-                          preparedByName: currentUser.fullName,
-                        })
-                      }
-                      onPreviewPdf={onPreviewInvoicePdf}
-                    />
+                    <Suspense fallback={<NatureSkeleton variant="card" count={2} />}>
+                      <BulkSkuOrderForm
+                        currentUser={currentUser}
+                        availableCustomers={customers}
+                        onPlaceOrder={onPlaceOrder}
+                        onDownloadPdf={(o, c) =>
+                          downloadSalesInvoicePdf({
+                            customer: c,
+                            order: o,
+                            previousBalance: c.currentBalance ?? c.openingBalance ?? 0,
+                            preparedByName: currentUser.fullName,
+                          })
+                        }
+                        onPreviewPdf={onPreviewInvoicePdf}
+                      />
+                    </Suspense>
                   ) : (
                     <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 overflow-hidden">
                       {/* Desktop Table View (>= lg) */}
@@ -2469,28 +2473,32 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
                   {/* Sub-view: Attendance Ledger with Date | Checkin time | location | checkout time | location */}
                   {fieldForceSubTab === 'ATTENDANCE_LEDGER' && (
-                    <EmployeeAttendanceLedgerView
-                      attendanceRecords={attendanceRecords}
-                      currentUser={currentUser}
-                      orders={orders}
-                      recoveries={recoveries}
-                      onSaveAttendanceEdit={onSaveAttendanceEdit}
-                      onDeleteAttendance={onDeleteAttendance}
-                    />
+                    <Suspense fallback={<NatureSkeleton variant="table" />}>
+                      <EmployeeAttendanceLedgerView
+                        attendanceRecords={attendanceRecords}
+                        currentUser={currentUser}
+                        orders={orders}
+                        recoveries={recoveries}
+                        onSaveAttendanceEdit={onSaveAttendanceEdit}
+                        onDeleteAttendance={onDeleteAttendance}
+                      />
+                    </Suspense>
                   )}
 
                   {/* Sub-view: Dynamic Activity Dashboard */}
                   {fieldForceSubTab === 'PERFORMANCE_DASHBOARD' && (
-                    <FieldOfficerActivityDashboard
-                      currentUser={currentUser}
-                      customers={customers}
-                      orders={orders}
-                      recoveries={recoveries}
-                      onSelectCustomer={(cId) => {
-                        setSelectedCustomerIdFor360(cId);
-                        setCustomer360SubView('360');
-                      }}
-                    />
+                    <Suspense fallback={<NatureSkeleton variant="full" />}>
+                      <FieldOfficerActivityDashboard
+                        currentUser={currentUser}
+                        customers={customers}
+                        orders={orders}
+                        recoveries={recoveries}
+                        onSelectCustomer={(cId) => {
+                          setSelectedCustomerIdFor360(cId);
+                          setCustomer360SubView('360');
+                        }}
+                      />
+                    </Suspense>
                   )}
                 </div>
               )}
@@ -3038,20 +3046,22 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
-              <EmployeeAttendanceLedgerView
-                attendanceRecords={attendanceRecords.filter(
-                  (r) =>
-                    !currentUser.id ||
-                    r.employeeId === currentUser.id ||
-                    r.userId === currentUser.id
-                )}
-                currentUser={currentUser}
-                orders={orders}
-                recoveries={recoveries}
-                onBack={() => setIsAttendanceModalOpen(false)}
-                onSaveAttendanceEdit={onSaveAttendanceEdit}
-                onDeleteAttendance={onDeleteAttendance}
-              />
+              <Suspense fallback={<NatureSkeleton variant="table" />}>
+                <EmployeeAttendanceLedgerView
+                  attendanceRecords={attendanceRecords.filter(
+                    (r) =>
+                      !currentUser.id ||
+                      r.employeeId === currentUser.id ||
+                      r.userId === currentUser.id
+                  )}
+                  currentUser={currentUser}
+                  orders={orders}
+                  recoveries={recoveries}
+                  onBack={() => setIsAttendanceModalOpen(false)}
+                  onSaveAttendanceEdit={onSaveAttendanceEdit}
+                  onDeleteAttendance={onDeleteAttendance}
+                />
+              </Suspense>
             </div>
           </div>
         </div>

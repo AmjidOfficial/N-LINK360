@@ -165,7 +165,7 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
             onClick={() => startCamera()}
             className="flex-1 min-h-[52px] bg-[#0F172A] dark:bg-[#1E293B] text-white p-3.5 rounded-xl flex items-center justify-center gap-2.5 hover:bg-slate-800 transition-all border border-slate-700 shadow-xs active:scale-98 cursor-pointer"
           >
-            <div className="w-9 h-9 rounded-lg bg-[#3B82F6]/20 text-[#3B82F6] flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-[#16A34A]/20 text-[#4ADE80] flex items-center justify-center shrink-0">
               <Camera className="w-5 h-5" />
             </div>
             <div className="flex flex-col text-left">
@@ -180,7 +180,7 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className="flex-1 min-h-[52px] bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-slate-100 p-3.5 rounded-xl flex items-center justify-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-[#E2E8F0] dark:border-slate-700 shadow-xs active:scale-98 cursor-pointer"
           >
-            <div className="w-9 h-9 rounded-lg bg-white dark:bg-[#1E293B] text-[#3B82F6] border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-white dark:bg-[#1E293B] text-[#16A34A] border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-center shrink-0">
               <Upload className="w-5 h-5" />
             </div>
             <div className="flex flex-col text-left">
@@ -193,7 +193,7 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
 
       {/* Live Camera Viewfinder Modal */}
       {isCameraActive && (
-        <div className="relative bg-black rounded-2xl overflow-hidden border-2 border-[#3B82F6] shadow-lg flex flex-col items-center">
+        <div className="relative bg-black rounded-2xl overflow-hidden border-2 border-[#16A34A] shadow-lg flex flex-col items-center">
           <div className="relative w-full aspect-4/3 max-h-[320px] bg-slate-900 overflow-hidden flex items-center justify-center">
             <video
               ref={videoRef}
@@ -226,9 +226,9 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
               type="button"
               onClick={capturePhoto}
               aria-label="Capture photo"
-              className="w-14 h-14 rounded-full bg-white border-4 border-[#3B82F6] flex items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer"
+              className="w-14 h-14 rounded-full bg-white border-4 border-[#16A34A] flex items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer"
             >
-              <div className="w-10 h-10 rounded-full bg-[#3B82F6]" />
+              <div className="w-10 h-10 rounded-full bg-[#16A34A]" />
             </button>
 
             {/* Flip Camera Button */}
@@ -279,7 +279,7 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
             <button
               type="button"
               onClick={() => setIsPreviewModalOpen(true)}
-              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-[#3B82F6] hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-all cursor-pointer"
+              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-[#16A34A] hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-all cursor-pointer"
               title="View full image"
               aria-label="View full image"
             >
@@ -304,7 +304,7 @@ export const ReceiptCameraCapture: React.FC<ReceiptCameraCaptureProps> = ({
           <div className="relative max-w-2xl w-full bg-white dark:bg-[#1E293B] rounded-2xl overflow-hidden shadow-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col">
             <div className="p-4 bg-[#0F172A] text-white flex items-center justify-between border-b border-slate-800">
               <span className="text-xs sm:text-sm font-bold flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-[#3B82F6]" />
+                <Receipt className="w-4 h-4 text-[#16A34A]" />
                 Receipt / Collection Proof
               </span>
               <button

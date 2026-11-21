@@ -1314,3 +1314,134 @@ export interface PasswordRecoveryRequest {
   resolvedAt?: string;
   notes?: string;
 }
+
+// ==============================================================================
+// 19. Unified Submission Lifecycle, Outbox, Conflict & Notification Types
+// ==============================================================================
+
+export type SubmissionLifecycleState =
+  | 'IDLE'
+  | 'VALIDATING'
+  | 'SUBMITTING'
+  | 'DATABASE_SAVED'
+  | 'SHEET_SYNC_PENDING'
+  | 'SHEET_SYNCING'
+  | 'FULLY_SYNCHRONIZED'
+  | 'SUBMISSION_FAILED'
+  | 'SYNC_FAILED'
+  | 'OFFLINE_QUEUED';
+
+export type SyncDirection = 'OUTBOUND' | 'INBOUND';
+
+export type SyncOutboxStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CONFLICT';
+
+export type GoogleSheetTabName =
+  | 'Users'
+  | 'Team'
+  | 'Dealers'
+  | 'Products'
+  | 'Customers'
+  | 'Sales_Orders'
+  | 'Recoveries'
+  | 'Inventory_Stock'
+  | 'Invoices'
+  | 'Visits'
+  | 'Attendance'
+  | 'Ledger'
+  | 'Dispatch'
+  | 'Returns'
+  | 'Sync_Log';
+
+export interface SyncOutboxItem {
+  id: string;
+  idempotencyKey: string;
+  transactionId: string;
+  direction: SyncDirection;
+  entityType: string;
+  entityId: string;
+  sheetTab: GoogleSheetTabName | string;
+  operation: 'UPSERT' | 'INSERT' | 'UPDATE' | 'DELETE';
+  payload: Record<string, unknown>;
+  status: SyncOutboxStatus;
+  retryCount: number;
+  maxRetries: number;
+  nextRetryAt: string;
+  lastError?: string;
+  externalSheetId?: string;
+  createdByEmail?: string;
+  createdByName?: string;
+  createdAt: string;
+  updatedAt: string;
+  syncedAt?: string;
+}
+
+export type SyncConflictType =
+  | 'UNAUTHORIZED_FINANCIAL_EDIT'
+  | 'VERSION_MISMATCH'
+  | 'DUPLICATE_KEY'
+  | 'VALIDATION_REJECTED'
+  | 'REFERENTIAL_ERROR';
+
+export type SyncConflictStatus =
+  | 'OPEN'
+  | 'RESOLVED_KEEP_DB'
+  | 'RESOLVED_ACCEPT_SHEET'
+  | 'DISMISSED';
+
+export interface SyncConflictRecord {
+  id: string;
+  entityType: string;
+  entityId: string;
+  sheetTab: string;
+  conflictType: SyncConflictType;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  dbSnapshot?: Record<string, unknown> | null;
+  sheetSnapshot: Record<string, unknown>;
+  status: SyncConflictStatus;
+  reason: string;
+  detectedBy: string;
+  detectedAt: string;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  resolutionNotes?: string;
+}
+
+export interface UserNotificationItem {
+  id: string;
+  userId?: string;
+  userEmail: string;
+  dedupeKey?: string;
+  category: 'SYNC' | 'APPROVAL' | 'CONFLICT' | 'OFFLINE' | 'SYSTEM';
+  severity: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
+  title: string;
+  message: string;
+  entityType?: string;
+  entityId?: string;
+  transactionId?: string;
+  syncStatus?: SubmissionLifecycleState | string;
+  isRead: boolean;
+  readAt?: string;
+  createdAt: string;
+}
+
+export interface InboundRejectedRow {
+  tab: string;
+  rowNumber: number;
+  code?: string;
+  reason: string;
+  rawRow?: Record<string, unknown>;
+}
+
+export interface InboundSheetValidationReport {
+  success: boolean;
+  processedCount: number;
+  createdCount: number;
+  updatedCount: number;
+  rejectedCount: number;
+  conflictCount: number;
+  rejectedRows: InboundRejectedRow[];
+  conflicts: SyncConflictRecord[];
+  timestamp: string;
+  summary: string;
+}
+

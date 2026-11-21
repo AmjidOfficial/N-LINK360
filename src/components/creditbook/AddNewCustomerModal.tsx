@@ -117,7 +117,7 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-[#0F172A] text-white shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-[#3B82F6]/20 text-[#3B82F6] font-bold flex items-center justify-center text-sm shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-[#4ADE80] font-bold flex items-center justify-center text-sm shrink-0">
               <Building2 className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -167,7 +167,7 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
           {/* Business Name */}
           <div className="space-y-1">
             <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-[#3B82F6]" />
+              <Building2 className="w-3.5 h-3.5 text-[#16A34A]" />
               Business / Shop Name *
             </label>
             <input
@@ -176,7 +176,7 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
               placeholder="e.g. Iqbal Electric, Khyber Traders"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
-              className="w-full min-h-[44px] p-3 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+              className="w-full min-h-[44px] p-3 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
             />
           </div>
 
@@ -191,7 +191,7 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
                 onClick={() => setChannelType('DEALER')}
                 className={`min-h-[44px] p-2.5 rounded-xl font-bold text-center transition-all cursor-pointer ${
                   channelType === 'DEALER'
-                    ? 'bg-[#3B82F6] text-white shadow-xs'
+                    ? 'bg-[#16A34A] text-white shadow-xs'
                     : 'bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
               >
@@ -202,7 +202,7 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
                 onClick={() => setChannelType('DISTRIBUTOR')}
                 className={`min-h-[44px] p-2.5 rounded-xl font-bold text-center transition-all cursor-pointer ${
                   channelType === 'DISTRIBUTOR'
-                    ? 'bg-[#3B82F6] text-white shadow-xs'
+                    ? 'bg-[#16A34A] text-white shadow-xs'
                     : 'bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
               >
@@ -215,7 +215,7 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <UserIcon className="w-3.5 h-3.5 text-[#3B82F6]" />
+                <UserIcon className="w-3.5 h-3.5 text-[#16A34A]" />
                 Contact Person / Owner
               </label>
               <input
@@ -223,13 +223,13 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
                 placeholder="e.g. Iqbal Ahmad"
                 value={contactPerson}
                 onChange={(e) => setContactPerson(e.target.value)}
-                className="w-full min-h-[44px] p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                className="w-full min-h-[44px] p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
               />
             </div>
 
             <div className="space-y-1">
               <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-[#3B82F6]" />
+                <Phone className="w-3.5 h-3.5 text-[#16A34A]" />
                 Phone / WhatsApp Number
               </label>
               <input
@@ -237,7 +237,7 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
                 placeholder="e.g. 0349-9255567"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full min-h-[44px] p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                className="w-full min-h-[44px] p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
               />
             </div>
           </div>
@@ -245,13 +245,13 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
           {/* Town / City Selection */}
           <div className="space-y-1">
             <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#3B82F6]" />
+              <MapPin className="w-3.5 h-3.5 text-[#16A34A]" />
               Town / City *
             </label>
             <select
               value={town}
               onChange={(e) => setTown(e.target.value)}
-              className="w-full min-h-[44px] p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6] cursor-pointer"
+              className="w-full min-h-[44px] p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A] cursor-pointer"
             >
               {safeTowns
                 .filter((t) => t !== 'All Towns')
@@ -269,7 +269,7 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
                 placeholder="Enter city / town name"
                 value={customTown}
                 onChange={(e) => setCustomTown(e.target.value)}
-                className="w-full min-h-[44px] mt-1.5 p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#3B82F6] rounded-xl font-bold text-[#0F172A] dark:text-white outline-none"
+                className="w-full min-h-[44px] mt-1.5 p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#16A34A] rounded-xl font-bold text-[#0F172A] dark:text-white outline-none"
               />
             )}
           </div>
@@ -284,7 +284,7 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
               placeholder="e.g. Shop #14, Main Bazaar, Mingora"
               value={marketAddress}
               onChange={(e) => setMarketAddress(e.target.value)}
-              className="w-full min-h-[44px] p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+              className="w-full min-h-[44px] p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
             />
           </div>
 
@@ -292,40 +292,40 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <DollarSign className="w-3 h-3 text-[#3B82F6]" />
+                <DollarSign className="w-3 h-3 text-[#16A34A]" />
                 Opening Balance
               </label>
               <input
                 type="number"
                 value={openingBalance}
                 onChange={(e) => setOpeningBalance(e.target.value)}
-                className="w-full min-h-[44px] p-2 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-lg font-mono tabular-nums font-bold text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                className="w-full min-h-[44px] p-2 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-lg font-mono tabular-nums font-bold text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
               />
             </div>
 
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <DollarSign className="w-3 h-3 text-[#3B82F6]" />
+                <DollarSign className="w-3 h-3 text-[#16A34A]" />
                 Credit Limit (PKR)
               </label>
               <input
                 type="number"
                 value={creditLimit}
                 onChange={(e) => setCreditLimit(e.target.value)}
-                className="w-full min-h-[44px] p-2 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-lg font-mono tabular-nums font-bold text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                className="w-full min-h-[44px] p-2 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-lg font-mono tabular-nums font-bold text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
               />
             </div>
 
             <div className="space-y-1">
               <label className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <Clock className="w-3 h-3 text-[#3B82F6]" />
+                <Clock className="w-3 h-3 text-[#16A34A]" />
                 Credit Days
               </label>
               <input
                 type="number"
                 value={creditDays}
                 onChange={(e) => setCreditDays(e.target.value)}
-                className="w-full min-h-[44px] p-2 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-lg font-mono tabular-nums font-bold text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                className="w-full min-h-[44px] p-2 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-lg font-mono tabular-nums font-bold text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
               />
             </div>
           </div>

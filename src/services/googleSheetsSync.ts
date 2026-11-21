@@ -50,11 +50,15 @@ export async function fetchAuthorizedUsersFromGoogleSheet(): Promise<GoogleSheet
       }));
     }
 
-    // Fallback attempt via Webhook endpoint if available
-    if (webhookUrl && webhookUrl.startsWith('https://script.google.com')) {
-      const res = await fetch(`${webhookUrl}?action=getUsers`, {
-        method: 'GET',
-        mode: 'cors',
+    // Authenticated server gateway attempt (injects NLINK_SHEET_TOKEN)
+    if (typeof window !== 'undefined') {
+      const res = await fetch('/api/sync-google-sheets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(webhookUrl ? { 'x-google-sheets-webhook': webhookUrl } : {}),
+        },
+        body: JSON.stringify({ action: 'getUsers', sheetTab: 'Users' }),
       });
       if (res.ok) {
         const data = await parseJsonResponse(res).catch(() => null);
@@ -70,7 +74,7 @@ export async function fetchAuthorizedUsersFromGoogleSheet(): Promise<GoogleSheet
       }
     }
   } catch (err) {
-    console.warn('[GoogleSheetsSync] Failed to fetch live users from webhook, using synchronized roster:', err);
+    console.warn('[GoogleSheetsSync] Failed to fetch live users from authenticated gateway, using stored roster:', err);
   }
 
   // Default fallback to stored roster

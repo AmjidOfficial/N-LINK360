@@ -6,6 +6,8 @@
  */
 
 import { generateIdempotencyUuid, isValidUuid } from '../utils/idGenerator';
+import { idbPut, idbReplaceAll, migrateLegacySyncQueuesToIndexedDb } from '../lib/offlineIndexedDb';
+import { publishUserNotification } from './syncNotificationService';
 
 export type SyncStatus = 'DRAFT' | 'PENDING_SYNC' | 'SYNCED' | 'FAILED';
 
@@ -100,7 +102,7 @@ const OFFLINE_QUEUE_KEY = 'nlink360_offline_sync_queue';
 const SYNC_LOGS_KEY = 'nlink360_sync_attempt_logs';
 
 // ==============================================================================
-// 1. QUEUE PERSISTENCE & RETRIEVAL
+// 1. QUEUE PERSISTENCE & RETRIEVAL (LocalStorage Mirror + Durable IndexedDB)
 // ==============================================================================
 export function getOfflineQueue(): OfflineQueueItem[] {
   try {
@@ -116,6 +118,7 @@ export function getOfflineQueue(): OfflineQueueItem[] {
 export function saveOfflineQueue(queue: OfflineQueueItem[]): void {
   try {
     localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+    void idbReplaceAll('offline_queue', queue as any[]).catch(() => {});
   } catch (err) {
     console.error('Failed to persist offline sync queue:', err);
   }
@@ -193,6 +196,17 @@ export function enqueueOfflineAction(
 
   queue.push(item);
   saveOfflineQueue(queue);
+  void idbPut('offline_queue', item as any).catch(() => {});
+  void publishUserNotification({
+    dedupeKey: `offline:${idempotencyKey}`,
+    category: 'OFFLINE',
+    severity: 'INFO',
+    title: 'Queued Offline',
+    message: `${module} transaction (${idempotencyKey.slice(0, 8)}) saved in offline storage and will sync when connectivity returns.`,
+    entityType: module,
+    transactionId: idempotencyKey,
+    syncStatus: 'OFFLINE_QUEUED',
+  }).catch(() => {});
   return item;
 }
 
@@ -266,6 +280,7 @@ class SyncManager {
 
   constructor() {
     if (typeof window !== 'undefined') {
+      void migrateLegacySyncQueuesToIndexedDb().catch(() => {});
       window.addEventListener('online', () => {
         this.notifyNetworkState(true);
         void this.triggerSync(undefined, 'AUTO_ONLINE');
@@ -273,17 +288,7 @@ class SyncManager {
       window.addEventListener('offline', () => {
         this.notifyNetworkState(false);
       });
-
-      // Background sync runner every 45s if online and items need syncing
-      setInterval(() => {
-        if (this.isOnline() && !this.isSyncing) {
-          const q = getOfflineQueue();
-          const hasPending = q.some((i) => i.status === 'PENDING_SYNC');
-          if (hasPending) {
-            void this.triggerSync(undefined, 'BACKGROUND_INTERVAL');
-          }
-        }
-      }, 45000);
+      // Background periodic scheduling is handled cleanly by universalSubmissionService.startUnifiedBackgroundSync()
     }
   }
 

@@ -79,7 +79,7 @@ export const ThermalOrderSummaryModal: React.FC<ThermalOrderSummaryModalProps> =
         {/* Modal Header Actions (Hidden on print) */}
         <div className="p-3.5 bg-[#0F172A] text-white flex items-center justify-between print:hidden">
           <div className="flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-[#3B82F6]" />
+            <Receipt className="w-4 h-4 text-[#16A34A]" />
             <span className="text-xs font-bold tracking-wide uppercase">Thermal Printer Receipt View</span>
           </div>
           <button

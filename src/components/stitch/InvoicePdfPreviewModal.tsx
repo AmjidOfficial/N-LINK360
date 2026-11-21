@@ -153,7 +153,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
         {/* Modal Top Header Bar */}
         <div className="bg-[#0F172A] px-3.5 py-3 sm:px-5 sm:py-4 flex items-center justify-between gap-3 border-b border-slate-800 shrink-0 text-white">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/20 border border-[#3B82F6]/40 flex items-center justify-center text-[#3B82F6] shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#16A34A]/20 border border-[#16A34A]/40 flex items-center justify-center text-[#4ADE80] shrink-0">
               {isBulk ? <FolderArchive className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
             </div>
             <div className="min-w-0 flex-1">
@@ -202,7 +202,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
 
               <div className="flex items-start justify-between gap-2 pb-3 border-b border-[#E2E8F0]">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-[#3B82F6]">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-[#16A34A]">
                     National Lights (Pvt.) Ltd.
                   </div>
                   <div className="text-base font-bold text-[#0F172A] mt-0.5">{title}</div>
@@ -273,40 +273,42 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                   )}
 
                   {orderItems.length > 0 && (
-                    <table className="w-full border border-[#E2E8F0] rounded-xl overflow-hidden bg-white text-xs">
-                      <thead>
-                        <tr className="bg-[#0F172A] text-white text-left">
-                          <th className="px-3 py-2">SKU / Item</th>
-                          <th className="px-2 py-2 text-center">Qty</th>
-                          <th className="px-2 py-2 text-right">Rate</th>
-                          <th className="px-3 py-2 text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {orderItems.map((it, idx) => (
-                          <tr key={it.id || it.sku || idx} className="border-t border-[#E2E8F0]">
-                            <td className="px-3 py-2">
-                              <div className="font-medium text-[#0F172A]">
-                                {it.skuName || it.productName || it.name || it.sku}
-                              </div>
-                              <div className="font-mono tabular-nums text-[10px] text-slate-500">
-                                {it.skuCode || it.sku || 'NL-SKU'}
-                              </div>
-                            </td>
-                            <td className="px-2 py-2 text-center font-mono text-slate-700 tabular-nums">
-                              {it.cartons ? `${it.cartons}c` : ''}
-                              {it.packs ? ` ${it.packs}p` : !it.cartons ? `${it.orderedQuantity || it.quantity || 0}` : ''}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-slate-700 tabular-nums">
-                              PKR {Number(it.unitPrice || it.rate || 0).toLocaleString()}
-                            </td>
-                            <td className="px-3 py-2 text-right font-mono font-semibold text-[#0F172A] tabular-nums">
-                              PKR {Number(it.lineTotal || it.totalPrice || it.total || 0).toLocaleString()}
-                            </td>
+                    <div className="responsive-table-container rounded-xl border border-[#E2E8F0]">
+                      <table className="w-full overflow-hidden bg-white text-xs">
+                        <thead>
+                          <tr className="bg-[#0F172A] text-white text-left">
+                            <th className="px-3 py-2">SKU / Item</th>
+                            <th className="px-2 py-2 text-center">Qty</th>
+                            <th className="px-2 py-2 text-right">Rate</th>
+                            <th className="px-3 py-2 text-right">Total</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {orderItems.map((it, idx) => (
+                            <tr key={it.id || it.sku || idx} className="border-t border-[#E2E8F0]">
+                              <td className="px-3 py-2">
+                                <div className="font-medium text-[#0F172A]">
+                                  {it.skuName || it.productName || it.name || it.sku}
+                                </div>
+                                <div className="font-mono tabular-nums text-[10px] text-slate-500">
+                                  {it.skuCode || it.sku || 'NL-SKU'}
+                                </div>
+                              </td>
+                              <td className="px-2 py-2 text-center font-mono text-slate-700 tabular-nums">
+                                {it.cartons ? `${it.cartons}c` : ''}
+                                {it.packs ? ` ${it.packs}p` : !it.cartons ? `${it.orderedQuantity || it.quantity || 0}` : ''}
+                              </td>
+                              <td className="px-2 py-2 text-right font-mono text-slate-700 tabular-nums">
+                                PKR {Number(it.unitPrice || it.rate || 0).toLocaleString()}
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono font-semibold text-[#0F172A] tabular-nums">
+                                PKR {Number(it.lineTotal || it.totalPrice || it.total || 0).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
 
                   <div className="flex flex-col items-end gap-1 pt-2 border-t border-[#E2E8F0] text-xs font-mono tabular-nums">
@@ -347,7 +349,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
               />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 text-slate-600 dark:text-slate-300 print:hidden">
-                <div className="w-10 h-10 rounded-full border-3 border-[#3B82F6] border-t-transparent animate-spin" />
+                <div className="w-10 h-10 rounded-full border-3 border-[#16A34A] border-t-transparent animate-spin" />
                 <p className="text-sm font-medium">Rendering vector PDF document...</p>
               </div>
             )
@@ -355,7 +357,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
 
           {/* Toast Notification Banner */}
           {toastMessage && (
-            <div className="absolute top-4 inset-x-4 mx-auto max-w-md bg-[#0F172A] border border-[#3B82F6]/60 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 justify-center z-10 animate-fadeIn">
+            <div className="absolute top-4 inset-x-4 mx-auto max-w-md bg-[#0F172A] border border-[#16A34A]/60 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 justify-center z-10 animate-fadeIn">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>{toastMessage}</span>
             </div>
@@ -428,7 +430,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
             <div className="bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-[#3B82F6]" />
+                  <Mail className="w-4 h-4 text-[#16A34A]" />
                   <h3 className="font-bold text-sm text-[#0F172A] dark:text-white">Send Invoice via Email</h3>
                 </div>
                 <button
@@ -450,7 +452,7 @@ export const InvoicePdfPreviewModal: React.FC<InvoicePdfPreviewModalProps> = ({
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
                   placeholder="customer@example.com"
-                  className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-sm text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
+                  className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-sm text-[#0F172A] dark:text-white focus:outline-none focus:border-[#16A34A]"
                 />
               </div>
 

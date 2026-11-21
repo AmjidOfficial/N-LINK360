@@ -59,9 +59,9 @@ const REGION_COLORS: Record<string, { bg: string; text: string; border: string }
     border: 'border-amber-200 dark:border-amber-800',
   },
   SINDH: {
-    bg: 'bg-blue-50 dark:bg-blue-950/40',
-    text: 'text-blue-700 dark:text-blue-300',
-    border: 'border-blue-200 dark:border-blue-800',
+    bg: 'bg-cyan-50 dark:bg-cyan-950/40',
+    text: 'text-cyan-700 dark:text-cyan-300',
+    border: 'border-cyan-200 dark:border-cyan-800',
   },
   BALOCHISTAN: {
     bg: 'bg-orange-50 dark:bg-orange-950/40',

@@ -240,7 +240,7 @@ async function startServer() {
   const DASHBOARD_CONFIG_STORE_PATH = path.join(process.cwd(), '.nlink-dashboard-config.json');
   const SESSION_SIGNING_SECRET =
     process.env.NLINK_SESSION_SECRET ||
-    crypto.createHash('sha256').update(process.cwd() + ':nlink-360-gateway-key').digest('hex');
+    crypto.randomBytes(32).toString('hex');
 
   function signSessionToken(account: ServerAuthAccount): string {
     const payload = {
@@ -476,6 +476,37 @@ async function startServer() {
     return SERVER_ACCOUNTS.get(clean);
   }
 
+  function authenticateGatewayUser(req: express.Request): ServerAuthAccount | null {
+    const authHeader = String(req.headers.authorization || '');
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    const verified = verifySessionToken(token);
+    if (!verified) return null;
+    const acc = findAccountByEmail(verified.email);
+    if (!acc || !acc.isActive) return null;
+    return acc;
+  }
+
+  function isEmployeeAdminAccount(account: ServerAuthAccount): boolean {
+    const roleUpper = String(account.role || '').toUpperCase();
+    return (
+      roleUpper === 'SUPER_ADMIN' ||
+      roleUpper === 'NSM' ||
+      roleUpper === 'MANAGEMENT' ||
+      hasPermission(account.role as any, 'employees.manage') ||
+      hasPermission(account.role as any, 'users.manage')
+    );
+  }
+
+  function isAuditReaderAccount(account: ServerAuthAccount): boolean {
+    const roleUpper = String(account.role || '').toUpperCase();
+    return (
+      isEmployeeAdminAccount(account) ||
+      roleUpper === 'ACCOUNTS' ||
+      hasPermission(account.role as any, 'reports.view') ||
+      hasPermission(account.role as any, 'audit.view')
+    );
+  }
+
   // Primary Strict Email + Password Authentication
   app.post("/api/auth/login", (req, res) => {
     const { email, identifier, password } = req.body;
@@ -512,21 +543,9 @@ async function startServer() {
       });
     }
 
-    const masterAdminPass = process.env.NLINK_SUPERADMIN_PASS || 'Amjid@1947';
-    const isMasterAdmin = cleanPass === masterAdminPass;
-    const isManagementInitialPass =
-      Boolean(account.mustChangePassword) &&
-      (account.role === 'NSM' || account.role === 'ZSM' || account.role === 'TSM' || account.role === 'SUPER_ADMIN') &&
-      (cleanPass === 'National@link360' || cleanPass === 'N@link360');
-    const isHashValid = verifyPasswordHash(cleanPass, account.passwordHash) || isManagementInitialPass;
+    const isHashValid = verifyPasswordHash(cleanPass, account.passwordHash);
 
-    // If master admin pass is entered, instantly clear any temporary lockout
-    if (isMasterAdmin && account.lockedUntil) {
-      account.lockedUntil = 0;
-      account.failedAttempts = 0;
-    }
-
-    if (!isHashValid && !isMasterAdmin) {
+    if (!isHashValid) {
       account.failedAttempts += 1;
       if (account.failedAttempts >= 5) {
         account.lockedUntil = Date.now() + 15 * 60 * 1000;
@@ -593,43 +612,18 @@ async function startServer() {
     });
   });
 
-  // Change Password (Self-service / Forced first login)
+  // Change Password (Authenticated Self-service / Forced first login)
   app.post("/api/auth/change-password", (req, res) => {
     const { email, currentPassword, newPassword, forced } = req.body;
     const cleanEmail = String(email || '').trim().toLowerCase();
-    const masterAdminPass = process.env.NLINK_SUPERADMIN_PASS || 'Amjid@1947';
 
     if (!cleanEmail || !cleanEmail.includes('@')) {
       return res.status(400).json({ success: false, error: "A valid corporate email address is required." });
     }
 
-    let account = findAccountByEmail(cleanEmail);
-
+    const account = findAccountByEmail(cleanEmail);
     if (!account) {
-      const superAdminEmails = [
-        'nationallights2026@gmail.com',
-        'amjid.bisconni@gmail.com',
-        'amjid@nationallight.pk',
-        'shahzadullah@nationallight.pk',
-      ];
-      const isSuper = superAdminEmails.includes(cleanEmail);
-      account = {
-        id: `USR-${Date.now()}`,
-        employeeCode: `EMP-${cleanEmail.split('@')[0].toUpperCase().slice(0, 6)}`,
-        email: cleanEmail,
-        fullName: cleanEmail.split('@')[0],
-        role: isSuper ? 'SUPER_ADMIN' : 'SALES_RECOVERY',
-        roleTitle: isSuper ? 'Executive Admin' : 'Field Sales Officer',
-        department: isSuper ? 'EXECUTIVE' : 'SALES_FIELD',
-        phone: '+92 300 0000000',
-        canApprove: isSuper,
-        isActive: true,
-        passwordHash: hashPassword(masterAdminPass),
-        mustChangePassword: true,
-        failedAttempts: 0,
-        lockedUntil: 0,
-      };
-      SERVER_ACCOUNTS.set(cleanEmail, account);
+      return res.status(404).json({ success: false, error: "Account not found." });
     }
 
     if (!newPassword || !isStrongPassword(String(newPassword))) {
@@ -639,34 +633,39 @@ async function startServer() {
       });
     }
 
-    const isForcedReset = Boolean(forced || account.mustChangePassword);
+    const sessionActor = authenticateGatewayUser(req);
+    if (sessionActor && sessionActor.email !== cleanEmail && !isEmployeeAdminAccount(sessionActor)) {
+      return res.status(403).json({
+        success: false,
+        error: "Forbidden: You cannot modify another user's password.",
+      });
+    }
+
+    const isForcedReset = Boolean(forced && account.mustChangePassword && sessionActor);
 
     if (!isForcedReset) {
-      if (!currentPassword) {
-        return res.status(400).json({ success: false, error: "Current password is required." });
-      }
-      const isMasterValid = String(currentPassword) === masterAdminPass;
-      const isHashValid = verifyPasswordHash(String(currentPassword), account.passwordHash);
-      if (!isMasterValid && !isHashValid) {
-        return res.status(401).json({ success: false, error: "Current password is incorrect." });
-      }
-    } else {
-      // In forced first-login reset mode, current password is optional.
-      // If user typed something, record audit note if mismatch, but permit first-time credential setup.
-      if (currentPassword) {
-        const isMasterValid = String(currentPassword) === masterAdminPass;
-        const isHashValid = verifyPasswordHash(String(currentPassword), account.passwordHash);
-        if (!isMasterValid && !isHashValid) {
-          recordServerAudit({
-            userId: account.id,
-            userName: account.fullName,
-            userEmail: account.email,
-            action: 'FORCED_PW_INITIAL_MISMATCH_BYPASSED',
-            module: 'AUTH',
-            recordId: account.id,
-            details: `Initial temporary password mismatch during forced reset; password rotation accepted for authenticated user`,
-          });
+      const canAdminOverride = Boolean(sessionActor && isEmployeeAdminAccount(sessionActor) && sessionActor.email !== cleanEmail);
+      if (!canAdminOverride) {
+        if (!currentPassword) {
+          return res.status(400).json({ success: false, error: "Current password is required." });
         }
+        const isHashValid = verifyPasswordHash(String(currentPassword), account.passwordHash);
+        if (!isHashValid) {
+          return res.status(401).json({ success: false, error: "Current password is incorrect." });
+        }
+      }
+    } else if (currentPassword) {
+      const isHashValid = verifyPasswordHash(String(currentPassword), account.passwordHash);
+      if (!isHashValid) {
+        recordServerAudit({
+          userId: account.id,
+          userName: account.fullName,
+          userEmail: account.email,
+          action: 'FORCED_PW_INITIAL_MISMATCH_BYPASSED',
+          module: 'AUTH',
+          recordId: account.id,
+          details: `Initial temporary password mismatch during authenticated forced reset; password rotation accepted for verified user`,
+        });
       }
     }
 
@@ -737,9 +736,17 @@ async function startServer() {
     });
   });
 
-  // Employee Provisioning (Admin creates employee -> unique ID, @nationallight.pk identity, 14-char password returned ONCE)
+  // Employee Provisioning (Authenticated Admin only)
   app.post("/api/employees/provision", (req, res) => {
-    const { fullName, role, roleTitle, department, phone, employeeCode: requestedCode, email: requestedEmail, initialPassword: requestedPassword, createdBy } = req.body;
+    const actor = authenticateGatewayUser(req);
+    if (!actor) {
+      return res.status(401).json({ success: false, error: "Authentication required to provision employees." });
+    }
+    if (!isEmployeeAdminAccount(actor)) {
+      return res.status(403).json({ success: false, error: "Forbidden: Only authorized administrators can provision employees." });
+    }
+
+    const { fullName, role, roleTitle, department, phone, employeeCode: requestedCode, email: requestedEmail, initialPassword: requestedPassword } = req.body;
     const cleanName = String(fullName || '').trim();
     if (!cleanName) {
       return res.status(400).json({ success: false, error: "Employee full name is required." });
@@ -784,7 +791,9 @@ async function startServer() {
     saveAuthStore(SERVER_ACCOUNTS);
 
     recordServerAudit({
-      userName: createdBy || 'Head Office Admin',
+      userId: actor.id,
+      userName: actor.fullName,
+      userEmail: actor.email,
       action: 'EMPLOYEE_CREATED',
       module: 'EMPLOYEES',
       recordId: id,
@@ -807,9 +816,17 @@ async function startServer() {
     });
   });
 
-  // Admin-Assisted Password Reset (generates one-time temp password & forces password change)
+  // Admin-Assisted Password Reset (Authenticated Admin only)
   app.post("/api/employees/admin-reset-password", (req, res) => {
-    const { email, fullName, temporaryPassword: requestedTemp, resetBy } = req.body;
+    const actor = authenticateGatewayUser(req);
+    if (!actor) {
+      return res.status(401).json({ success: false, error: "Authentication required for admin password reset." });
+    }
+    if (!isEmployeeAdminAccount(actor)) {
+      return res.status(403).json({ success: false, error: "Forbidden: Only authorized administrators can reset employee credentials." });
+    }
+
+    const { email, fullName, temporaryPassword: requestedTemp } = req.body;
     const cleanEmail = String(email || '').trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
       return res.status(400).json({ success: false, error: "Target employee corporate email is required." });
@@ -847,12 +864,13 @@ async function startServer() {
     saveAuthStore(SERVER_ACCOUNTS);
 
     recordServerAudit({
-      userName: resetBy || 'Head Office Admin',
+      userId: actor.id,
+      userName: actor.fullName,
       userEmail: cleanEmail,
       action: 'ADMIN_PASSWORD_RESET',
       module: 'AUTH',
       recordId: account.id,
-      details: `Temporary password issued by ${resetBy || 'Admin'}; forced change on next login enforced.`,
+      details: `Temporary password issued by ${actor.fullName} (${actor.email}); forced change on next login enforced.`,
     });
 
     res.json({
@@ -863,8 +881,15 @@ async function startServer() {
     });
   });
 
-  // Central Audit Logs API
+  // Central Audit Logs API (Authenticated Authorized Readers only)
   app.get("/api/audit-logs", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) {
+      return res.status(401).json({ success: false, error: "Authentication required to view audit logs." });
+    }
+    if (!isAuditReaderAccount(actor)) {
+      return res.status(403).json({ success: false, error: "Forbidden: Insufficient permissions to view audit logs." });
+    }
     res.json({ success: true, logs: serverAuditLogs, recoveryRequests: serverRecoveryRequests });
   });
 
@@ -885,16 +910,6 @@ async function startServer() {
     try {
       fs.writeFileSync(DASHBOARD_CONFIG_STORE_PATH, JSON.stringify(overrides, null, 2), 'utf-8');
     } catch {}
-  }
-
-  function authenticateGatewayUser(req: express.Request): ServerAuthAccount | null {
-    const authHeader = String(req.headers.authorization || '');
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-    const verified = verifySessionToken(token);
-    if (!verified) return null;
-    const acc = findAccountByEmail(verified.email);
-    if (!acc || !acc.isActive) return null;
-    return acc;
   }
 
   app.get("/api/dashboard/config", (req, res) => {
@@ -1030,14 +1045,18 @@ async function startServer() {
   });
 
   app.post("/api/audit-logs", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) {
+      return res.status(401).json({ success: false, error: "Authentication required to record audit logs." });
+    }
     const body = req.body || {};
     if (!body.action || !body.module) {
       return res.status(400).json({ success: false, error: "action and module are required" });
     }
     const created = recordServerAudit({
-      userId: body.userId,
-      userName: body.userName,
-      userEmail: body.userEmail,
+      userId: actor.id,
+      userName: actor.fullName,
+      userEmail: actor.email,
       action: String(body.action),
       module: String(body.module),
       recordId: String(body.recordId || 'N/A'),
@@ -1061,13 +1080,28 @@ async function startServer() {
     });
   });
 
-  // AI Payment Slip Scanner
+  // AI Payment Slip Scanner (Authenticated users only)
+  const ALLOWED_IMAGE_MIME_TYPES = new Set([
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+  ]);
   app.post("/api/scan-payment-slip", async (req, res) => {
     try {
+      const actor = authenticateGatewayUser(req);
+      if (!actor) {
+        return res.status(401).json({ success: false, error: "Authentication required for payment slip OCR." });
+      }
       const { imageBase64, mimeType = "image/jpeg" } = req.body;
-      if (!imageBase64) {
+      if (!imageBase64 || typeof imageBase64 !== "string") {
         return res.status(400).json({ error: "No image data provided" });
       }
+      const cleanMimeType = ALLOWED_IMAGE_MIME_TYPES.has(String(mimeType).toLowerCase())
+        ? String(mimeType).toLowerCase()
+        : "image/jpeg";
 
       // Clean base64 prefix if present
       const cleanBase64 = imageBase64.replace(/^data:image\/[a-z0-9+]+;base64,/, "");
@@ -1097,7 +1131,7 @@ async function startServer() {
           parts: [
             {
               inlineData: {
-                mimeType,
+                mimeType: cleanMimeType,
                 data: cleanBase64,
               },
             },
@@ -1173,6 +1207,9 @@ Return valid JSON adhering strictly to the schema.`,
       syncStatus: string;
       receivedAt: string;
     }>;
+    outbox: Array<any>;
+    conflicts: Array<any>;
+    notifications: Array<any>;
   }
 
   function loadSyncStore(): ServerSyncState {
@@ -1185,6 +1222,9 @@ Return valid JSON adhering strictly to the schema.`,
           duplicatesPrevented: Number(parsed?.duplicatesPrevented || 0),
           seenSignatures: parsed?.seenSignatures && typeof parsed.seenSignatures === 'object' ? parsed.seenSignatures : {},
           events: Array.isArray(parsed?.events) ? parsed.events : [],
+          outbox: Array.isArray(parsed?.outbox) ? parsed.outbox : [],
+          conflicts: Array.isArray(parsed?.conflicts) ? parsed.conflicts : [],
+          notifications: Array.isArray(parsed?.notifications) ? parsed.notifications : [],
         };
       }
     } catch {}
@@ -1194,6 +1234,9 @@ Return valid JSON adhering strictly to the schema.`,
       duplicatesPrevented: 0,
       seenSignatures: {},
       events: [],
+      outbox: [],
+      conflicts: [],
+      notifications: [],
     };
   }
 
@@ -1202,6 +1245,9 @@ Return valid JSON adhering strictly to the schema.`,
       const trimmed: ServerSyncState = {
         ...state,
         events: state.events.slice(0, 500),
+        outbox: state.outbox.slice(0, 500),
+        conflicts: state.conflicts.slice(0, 300),
+        notifications: state.notifications.slice(0, 500),
       };
       fs.writeFileSync(SYNC_STORE_PATH, JSON.stringify(trimmed, null, 2), 'utf-8');
     } catch {}
@@ -1245,6 +1291,10 @@ Return valid JSON adhering strictly to the schema.`,
   });
 
   app.post("/api/sync/retry", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) {
+      return res.status(401).json({ success: false, error: "Authentication required to trigger sync retry." });
+    }
     const syncState = loadSyncStore();
     const targetId = String(req.body?.eventId || '').trim();
     const nowIso = new Date().toISOString();
@@ -1260,7 +1310,306 @@ Return valid JSON adhering strictly to the schema.`,
       syncState.lastGoogleSyncedAt = nowIso;
       saveSyncStore(syncState);
     }
+    recordServerAudit({
+      userId: actor.id,
+      userName: actor.fullName,
+      userEmail: actor.email,
+      action: 'SYNC_RETRY_EXECUTED',
+      module: 'SYSTEM',
+      recordId: targetId || 'BATCH_RETRY',
+      details: `Retried ${retried} sync queue record(s)`,
+    });
     res.json({ success: true, retriedCount: retried, lastGoogleSyncedAt: syncState.lastGoogleSyncedAt });
+  });
+
+  // Outbox Queue API
+  app.get("/api/sync/outbox", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) return res.status(401).json({ success: false, error: "Authentication required." });
+    const syncState = loadSyncStore();
+    const isAdmin = isEmployeeAdminAccount(actor) || isAuditReaderAccount(actor);
+    const items = isAdmin
+      ? syncState.outbox
+      : syncState.outbox.filter((o: any) => String(o.createdByEmail || '').toLowerCase() === actor.email.toLowerCase());
+    res.json({ success: true, items, total: items.length });
+  });
+
+  app.post("/api/sync/outbox", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) return res.status(401).json({ success: false, error: "Authentication required." });
+    const body = req.body || {};
+    const nowIso = new Date().toISOString();
+    const syncState = loadSyncStore();
+    const idem = String(body.idempotencyKey || body.transactionId || '').trim();
+    if (!idem || !body.entityType || !body.sheetTab) {
+      return res.status(400).json({ success: false, error: "idempotencyKey, entityType, and sheetTab are required." });
+    }
+    const existing = syncState.outbox.find((o: any) => o.idempotencyKey === idem && o.entityType === body.entityType);
+    if (existing) {
+      return res.json({ success: true, item: existing, deduplicated: true });
+    }
+    const item = {
+      id: body.id || `OBX-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      idempotencyKey: idem,
+      transactionId: String(body.transactionId || idem),
+      direction: body.direction || 'OUTBOUND',
+      entityType: String(body.entityType),
+      entityId: String(body.entityId || idem),
+      sheetTab: String(body.sheetTab),
+      operation: body.operation || 'UPSERT',
+      payload: body.payload || {},
+      status: body.status || 'PENDING',
+      retryCount: Number(body.retryCount || 0),
+      maxRetries: Number(body.maxRetries || 6),
+      nextRetryAt: body.nextRetryAt || nowIso,
+      createdByEmail: actor.email,
+      createdByName: actor.fullName,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    syncState.outbox.unshift(item);
+    saveSyncStore(syncState);
+    res.json({ success: true, item });
+  });
+
+  app.post("/api/sync/outbox/process", async (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) return res.status(401).json({ success: false, error: "Authentication required." });
+    const syncState = loadSyncStore();
+    const webhookUrl = String(
+      process.env.GOOGLE_SHEETS_WEBHOOK_URL ||
+      process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL ||
+      req.headers['x-google-sheets-webhook'] ||
+      ''
+    ).trim();
+    const sheetToken = process.env.NLINK_SHEET_TOKEN || '';
+
+    const now = Date.now();
+    const targetIds: string[] | null = Array.isArray(req.body?.ids) ? req.body.ids : null;
+    const dueItems = syncState.outbox.filter((o: any) => {
+      if (targetIds && !targetIds.includes(o.id)) return false;
+      return o.status === 'PENDING' || (o.status === 'FAILED' && Date.parse(o.nextRetryAt || '1970-01-01') <= now);
+    });
+
+    let completed = 0;
+    let failed = 0;
+    for (const item of dueItems) {
+      if (!webhookUrl) {
+        item.status = 'FAILED';
+        item.retryCount = (item.retryCount || 0) + 1;
+        item.lastError = 'GOOGLE_SHEETS_WEBHOOK_URL is not configured on gateway.';
+        item.nextRetryAt = new Date(now + Math.min(3600_000, Math.pow(2, item.retryCount) * 15_000)).toISOString();
+        item.updatedAt = new Date().toISOString();
+        failed += 1;
+        continue;
+      }
+      try {
+        const gsRes = await fetch(webhookUrl, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8',
+            ...(sheetToken ? { 'X-NLINK-SHEET-TOKEN': sheetToken } : {}),
+          },
+          body: JSON.stringify({
+            action: 'UPSERT',
+            mode: 'UPSERT',
+            sheetTab: item.sheetTab,
+            entityType: item.entityType,
+            entityId: item.entityId,
+            idempotencyKey: item.idempotencyKey,
+            transactionId: item.transactionId,
+            sheetToken: sheetToken || undefined,
+            record: item.payload,
+            timestamp: new Date().toISOString(),
+          }),
+        });
+        const text = await gsRes.text();
+        let parsed: any = {};
+        try { parsed = text ? JSON.parse(text) : {}; } catch {}
+        if (!gsRes.ok || parsed?.status === 'error' || parsed?.success === false) {
+          throw new Error(parsed?.message || parsed?.error || `HTTP ${gsRes.status}`);
+        }
+        const nowIso = new Date().toISOString();
+        item.status = 'COMPLETED';
+        item.lastError = undefined;
+        item.syncedAt = nowIso;
+        item.updatedAt = nowIso;
+        syncState.lastGoogleSyncedAt = nowIso;
+        completed += 1;
+      } catch (err: any) {
+        item.status = 'FAILED';
+        item.retryCount = (item.retryCount || 0) + 1;
+        item.lastError = err?.message || 'Remote Sheet UPSERT failed';
+        item.nextRetryAt = new Date(now + Math.min(3600_000, Math.pow(2, item.retryCount) * 15_000)).toISOString();
+        item.updatedAt = new Date().toISOString();
+        failed += 1;
+      }
+    }
+    saveSyncStore(syncState);
+    res.json({ success: true, processed: dueItems.length, completed, failed, lastGoogleSyncedAt: syncState.lastGoogleSyncedAt });
+  });
+
+  // Sync Conflicts Quarantine & Admin Resolution
+  app.get("/api/sync/conflicts", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) return res.status(401).json({ success: false, error: "Authentication required." });
+    if (!isEmployeeAdminAccount(actor) && !isAuditReaderAccount(actor)) {
+      return res.status(403).json({ success: false, error: "Forbidden: Admin, Management, or Accounts access required." });
+    }
+    const syncState = loadSyncStore();
+    res.json({ success: true, conflicts: syncState.conflicts });
+  });
+
+  app.post("/api/sync/conflicts", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) return res.status(401).json({ success: false, error: "Authentication required." });
+    const body = req.body || {};
+    const syncState = loadSyncStore();
+    const record = {
+      id: body.id || `CONF-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      entityType: String(body.entityType || 'UNKNOWN'),
+      entityId: String(body.entityId || 'UNKNOWN'),
+      sheetTab: String(body.sheetTab || 'Unknown'),
+      conflictType: body.conflictType || 'UNAUTHORIZED_FINANCIAL_EDIT',
+      severity: body.severity || 'HIGH',
+      dbSnapshot: body.dbSnapshot || null,
+      sheetSnapshot: body.sheetSnapshot || {},
+      status: 'OPEN',
+      reason: String(body.reason || 'Quarantined conflict'),
+      detectedBy: actor.email,
+      detectedAt: new Date().toISOString(),
+    };
+    syncState.conflicts.unshift(record);
+    saveSyncStore(syncState);
+    recordServerAudit({
+      userId: actor.id,
+      userName: actor.fullName,
+      userEmail: actor.email,
+      action: 'SYNC_CONFLICT_QUARANTINED',
+      module: 'GOOGLE_SHEETS_SYNC',
+      recordId: record.id,
+      details: record.reason,
+    });
+    res.json({ success: true, conflict: record });
+  });
+
+  app.post("/api/sync/conflicts/:id/resolve", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) return res.status(401).json({ success: false, error: "Authentication required." });
+    if (!isEmployeeAdminAccount(actor) && !isAuditReaderAccount(actor)) {
+      return res.status(403).json({ success: false, error: "Forbidden: Admin, Management, or Accounts access required." });
+    }
+    const resolution = String(req.body?.resolution || 'RESOLVED_KEEP_DB');
+    const notes = String(req.body?.notes || '').trim();
+    const syncState = loadSyncStore();
+    const idx = syncState.conflicts.findIndex((c: any) => c.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ success: false, error: "Conflict record not found." });
+
+    const conflict = syncState.conflicts[idx];
+    const isFinancial = /INVOICE|RECOVER|LEDGER|INVENTORY|CUSTOMER_BALANCE/i.test(String(conflict.entityType || ''));
+    if (resolution === 'RESOLVED_ACCEPT_SHEET' && isFinancial && actor.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ success: false, error: "Only SUPER_ADMIN may override authoritative financial entities." });
+    }
+
+    conflict.status = resolution;
+    conflict.resolvedBy = actor.email;
+    conflict.resolvedAt = new Date().toISOString();
+    conflict.resolutionNotes = notes || undefined;
+    saveSyncStore(syncState);
+
+    recordServerAudit({
+      userId: actor.id,
+      userName: actor.fullName,
+      userEmail: actor.email,
+      action: 'SYNC_CONFLICT_RESOLVED',
+      module: 'GOOGLE_SHEETS_SYNC',
+      recordId: conflict.id,
+      details: `${resolution} on ${conflict.entityType}:${conflict.entityId}${notes ? ` (${notes})` : ''}`,
+    });
+    res.json({ success: true, conflict });
+  });
+
+  // Persistent Per-User Notification Store API
+  app.get("/api/notifications", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) return res.status(401).json({ success: false, error: "Authentication required." });
+    const syncState = loadSyncStore();
+    const emailLower = actor.email.toLowerCase();
+    const items = syncState.notifications.filter(
+      (n: any) => String(n.userEmail || '').toLowerCase() === emailLower || n.userEmail === '*'
+    );
+    res.json({ success: true, notifications: items });
+  });
+
+  app.post("/api/notifications", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) return res.status(401).json({ success: false, error: "Authentication required." });
+    const body = req.body || {};
+    const targetEmail = String(body.userEmail || actor.email).trim().toLowerCase();
+    const syncState = loadSyncStore();
+    if (body.dedupeKey) {
+      const existing = syncState.notifications.find(
+        (n: any) => String(n.userEmail || '').toLowerCase() === targetEmail && n.dedupeKey === body.dedupeKey
+      );
+      if (existing) {
+        existing.title = body.title || existing.title;
+        existing.message = body.message || existing.message;
+        existing.severity = body.severity || existing.severity;
+        existing.syncStatus = body.syncStatus || existing.syncStatus;
+        existing.isRead = false;
+        saveSyncStore(syncState);
+        return res.json({ success: true, notification: existing, updated: true });
+      }
+    }
+    const item = {
+      id: body.id || `NTF-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      userId: body.userId || actor.id,
+      userEmail: targetEmail,
+      dedupeKey: body.dedupeKey || undefined,
+      category: body.category || 'SYNC',
+      severity: body.severity || 'INFO',
+      title: String(body.title || 'Sync Update'),
+      message: String(body.message || ''),
+      entityType: body.entityType,
+      entityId: body.entityId,
+      transactionId: body.transactionId,
+      syncStatus: body.syncStatus,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    };
+    syncState.notifications.unshift(item);
+    saveSyncStore(syncState);
+    res.json({ success: true, notification: item });
+  });
+
+  app.post("/api/notifications/:id/read", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) return res.status(401).json({ success: false, error: "Authentication required." });
+    const syncState = loadSyncStore();
+    const item = syncState.notifications.find((n: any) => n.id === req.params.id);
+    if (item) {
+      item.isRead = true;
+      item.readAt = new Date().toISOString();
+      saveSyncStore(syncState);
+    }
+    res.json({ success: true });
+  });
+
+  app.post("/api/notifications/read-all", (req, res) => {
+    const actor = authenticateGatewayUser(req);
+    if (!actor) return res.status(401).json({ success: false, error: "Authentication required." });
+    const syncState = loadSyncStore();
+    const emailLower = actor.email.toLowerCase();
+    const nowIso = new Date().toISOString();
+    syncState.notifications.forEach((n: any) => {
+      if (String(n.userEmail || '').toLowerCase() === emailLower && !n.isRead) {
+        n.isRead = true;
+        n.readAt = nowIso;
+      }
+    });
+    saveSyncStore(syncState);
+    res.json({ success: true });
   });
 
   app.get("/api/price-list", (_req, res) => {
@@ -1454,15 +1803,19 @@ Return valid JSON adhering strictly to the schema.`,
     res.json(responseBody);
   });
 
-  // Google Sheets Server-Side Sync Proxy
+  // Google Sheets Server-Side Sync Proxy (Authenticated + Strict URL Validation)
   app.post("/api/sync-google-sheets", async (req, res) => {
     try {
+      const actor = authenticateGatewayUser(req);
+      if (!actor) {
+        return res.status(401).json({ success: false, error: "Authentication required for Google Sheets synchronization." });
+      }
       const payload = req.body;
       const clientWebhookUrl = req.headers["x-google-sheets-webhook"] as string;
       const serverWebhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL || process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
       const DEFAULT_WEBHOOK = "https://script.google.com/macros/s/AKfycbyH0eZXxZDJ_Xfvgq2O817NUBJ-AFs7xesSq3kwET6ZpRwXTcSQMv8QLajGN5GQrjO0Aw/exec";
       
-      const webhookUrl = serverWebhookUrl || clientWebhookUrl || DEFAULT_WEBHOOK;
+      const webhookUrl = String(serverWebhookUrl || clientWebhookUrl || DEFAULT_WEBHOOK).trim();
 
       if (!webhookUrl) {
         return res.status(400).json({
@@ -1471,12 +1824,30 @@ Return valid JSON adhering strictly to the schema.`,
         });
       }
 
-      if (!webhookUrl.startsWith("https://script.google.com")) {
+      let isValidWebhookUrl = false;
+      try {
+        const parsedWebhook = new URL(webhookUrl);
+        isValidWebhookUrl =
+          parsedWebhook.protocol === "https:" &&
+          parsedWebhook.hostname === "script.google.com" &&
+          parsedWebhook.pathname.startsWith("/macros/s/");
+      } catch {
+        isValidWebhookUrl = false;
+      }
+
+      if (!isValidWebhookUrl) {
         return res.status(400).json({
           success: false,
           error: "Invalid Google Apps Script Webhook URL. It must start with https://script.google.com/macros/s/.../exec"
         });
       }
+
+      const sheetToken = process.env.NLINK_SHEET_TOKEN || "";
+      const forwardedBody = {
+        ...(payload || {}),
+        ...(sheetToken ? { sheetToken } : {}),
+        spreadsheetId: payload?.spreadsheetId || "1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo",
+      };
 
       console.log(`[Proxy] Syncing to Google Sheets Webhook: ${webhookUrl.slice(0, 45)}...`);
 
@@ -1486,28 +1857,33 @@ Return valid JSON adhering strictly to the schema.`,
         redirect: "follow",
         headers: {
           "Content-Type": "text/plain;charset=utf-8",
+          ...(sheetToken ? { "X-NLINK-SHEET-TOKEN": sheetToken } : {}),
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(forwardedBody),
       });
 
       const responseText = await googleResponse.text();
-      const isHtml = responseText.includes("<!DOCTYPE") || responseText.includes("<html") || responseText.includes("<head>");
-      
       let googleData: any = { status: "success" };
       try {
         if (responseText) {
           googleData = JSON.parse(responseText);
         }
       } catch {
-        // Many Apps Script deployments return standard text output
-        googleData = { status: "success", raw: responseText.slice(0, 100) };
+        googleData = { status: "success", raw: responseText.slice(0, 120) };
       }
 
-      if (!googleResponse.ok && googleResponse.status !== 302) {
-        console.warn(`[Proxy] Google Webhook returned status: ${googleResponse.status}`);
-        return res.status(200).json({
+      const explicitSheetError =
+        String(googleData?.status || "").toLowerCase() === "error" ||
+        googleData?.success === false;
+
+      if ((!googleResponse.ok && googleResponse.status !== 302) || explicitSheetError) {
+        console.warn(`[Proxy] Google Webhook rejected payload: ${googleResponse.status}`);
+        return res.status(502).json({
           success: false,
-          error: `Google Apps Script returned status ${googleResponse.status}. Verify deployment is set to 'Anyone'.`,
+          error:
+            googleData?.message ||
+            googleData?.error ||
+            `Google Apps Script returned status ${googleResponse.status}. Verify deployment and NLINK_SHEET_TOKEN.`,
           statusCode: googleResponse.status,
         });
       }

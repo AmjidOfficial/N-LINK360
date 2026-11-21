@@ -146,7 +146,7 @@ export const PackingLoadingModule: React.FC<PackingLoadingModuleProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search order # or customer..."
-            className="w-full min-h-[44px] pl-10 pr-4 py-2 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#0F172A] text-xs font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+            className="w-full min-h-[44px] pl-10 pr-4 py-2 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#0F172A] text-xs font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
           />
         </div>
       </div>

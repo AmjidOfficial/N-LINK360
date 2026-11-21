@@ -71,7 +71,18 @@ export async function safeApiFetch<T = any>(
 ): Promise<SafeApiResponse<T>> {
   try {
     const resolved = resolveApiUrl(url);
-    const res = await fetch(resolved, init);
+    const headers = new Headers(init?.headers || {});
+    if (url.startsWith('/api/') && !headers.has('Authorization')) {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          const token = localStorage.getItem('nlink_sec_token') || localStorage.getItem('nlink_auth_token') || '';
+          if (token.trim()) {
+            headers.set('Authorization', `Bearer ${token.trim()}`);
+          }
+        }
+      } catch {}
+    }
+    const res = await fetch(resolved, { ...init, headers });
     const contentType = res.headers.get('content-type') || '';
     const text = await res.text();
 

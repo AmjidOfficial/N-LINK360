@@ -177,7 +177,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
                 <h1 className="text-base font-bold text-[#0F172A] dark:text-white leading-tight truncate">
                   {customer.companyName || 'Rasheed Electric'}
                 </h1>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-blue-50 text-[#3B82F6] dark:bg-blue-950/60 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/60 shrink-0">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-emerald-50 text-[#16A34A] dark:bg-emerald-950/60 dark:text-emerald-300 rounded-md border border-emerald-200 dark:border-emerald-800/60 shrink-0">
                   {customer.customerCode || 'NL-PEW-RE01'}
                 </span>
               </div>
@@ -211,7 +211,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search orders by invoice #, date, or SKU name..."
             aria-label="Search customer order history"
-            className="w-full min-h-[44px] pl-10 pr-11 py-2 text-xs bg-[#F8FAFC] dark:bg-[#1E293B] text-[#0F172A] dark:text-white rounded-xl border border-[#E2E8F0] dark:border-slate-700 focus:border-[#3B82F6] transition-all outline-hidden"
+            className="w-full min-h-[44px] pl-10 pr-11 py-2 text-xs bg-[#F8FAFC] dark:bg-[#1E293B] text-[#0F172A] dark:text-white rounded-xl border border-[#E2E8F0] dark:border-slate-700 focus:border-[#16A34A] transition-all outline-hidden"
           />
           {searchQuery && (
             <button
@@ -232,7 +232,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
             onClick={() => setSelectedStatusFilter('ALL')}
             className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
               selectedStatusFilter === 'ALL'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
             }`}
           >
@@ -243,7 +243,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
             onClick={() => setSelectedStatusFilter('INVOICED')}
             className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
               selectedStatusFilter === 'INVOICED'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
             }`}
           >
@@ -286,7 +286,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
             <span className="text-base font-bold font-mono tabular-nums text-[#0F172A] dark:text-white mt-0.5 block">
               {totalOrdersCount}
             </span>
-            <span className="text-[10px] font-mono tabular-nums text-[#3B82F6] dark:text-blue-400 font-semibold mt-auto truncate">
+            <span className="text-[10px] font-mono tabular-nums text-[#EA580C] dark:text-orange-400 font-semibold mt-auto truncate">
               PKR {totalOrdersVolume.toLocaleString()}
             </span>
           </div>
@@ -402,7 +402,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
                       <button
                         type="button"
                         onClick={() => toggleExpand(orderId)}
-                        className="min-h-[44px] flex items-center gap-1.5 text-xs font-semibold text-[#3B82F6] dark:text-blue-400 hover:text-blue-700 cursor-pointer"
+                        className="min-h-[44px] flex items-center gap-1.5 text-xs font-semibold text-[#16A34A] dark:text-emerald-400 hover:text-[#15803D] cursor-pointer"
                       >
                         <Package className="w-4 h-4" />
                         <span>{isExpanded ? 'Hide Items Breakdown' : 'View Items Breakdown'}</span>
@@ -451,7 +451,7 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({
                                 handleDownloadPdf(order);
                               }
                             }}
-                            className="min-h-[44px] px-3 bg-[#3B82F6] hover:bg-[#2563EB] text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors"
+                            className="min-h-[44px] px-3 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors"
                             title="Print Official Tax Invoice"
                           >
                             <Printer className="w-4 h-4" />

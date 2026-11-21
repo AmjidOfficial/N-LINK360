@@ -180,8 +180,8 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
             </span>
           </div>
 
-          <div className="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/70 flex items-center justify-center shrink-0">
-            <Clock className="w-7 h-7 text-[#3B82F6]" />
+          <div className="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/70 flex items-center justify-center shrink-0">
+            <Clock className="w-7 h-7 text-[#16A34A]" />
           </div>
         </div>
 
@@ -216,7 +216,7 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
       <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0] dark:border-slate-700/80">
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#0F172A] dark:text-white">
-            <Navigation className="w-4 h-4 text-[#3B82F6]" />
+            <Navigation className="w-4 h-4 text-[#16A34A]" />
             <span>Device GPS &amp; Territory</span>
           </div>
           <button
@@ -226,7 +226,7 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
               requestDeviceGps();
             }}
             disabled={isDetectingGps}
-            className="min-h-[44px] px-2 -mr-2 text-xs font-semibold text-[#3B82F6] dark:text-blue-400 hover:underline inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="min-h-[44px] px-2 -mr-2 text-xs font-semibold text-[#16A34A] dark:text-emerald-400 hover:underline inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <Radio className={`w-3.5 h-3.5 ${isDetectingGps ? 'animate-spin' : ''}`} />
             <span>{isDetectingGps ? 'Locating...' : 'Refresh GPS'}</span>
@@ -261,7 +261,7 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
         )}
 
         <div className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5 pt-1">
-          <MapPin className="w-3.5 h-3.5 text-[#3B82F6] shrink-0" />
+          <MapPin className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
           <span className="truncate font-medium">
             <strong>{selectedTown}</strong> &middot; {selectedRoute || 'Commercial Route Beat'}
           </span>
@@ -271,7 +271,7 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
           <select
             value={selectedTown}
             onChange={(e) => onSelectTown(e.target.value)}
-            className="flex-1 min-h-[44px] px-3 py-2 rounded-lg text-xs font-semibold bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6] cursor-pointer"
+            className="flex-1 min-h-[44px] px-3 py-2 rounded-lg text-xs font-semibold bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A] cursor-pointer"
           >
             {availableTowns.map((t) => (
               <option key={t} value={t}>

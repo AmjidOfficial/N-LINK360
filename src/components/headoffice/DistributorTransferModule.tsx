@@ -321,7 +321,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
       {/* 1. Header Banner & Action Control Bar */}
       <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5 min-w-0">
-          <div className="w-12 h-12 rounded-xl bg-[#0F172A] border border-slate-700 text-[#3B82F6] flex items-center justify-center shadow-xs shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[#0F172A] border border-slate-700 text-[#4ADE80] flex items-center justify-center shadow-xs shrink-0">
             <ArrowRightLeft className="w-6 h-6 stroke-[2.25]" />
           </div>
           <div className="min-w-0">
@@ -329,7 +329,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
               <h2 className="text-base font-bold text-[#0F172A] dark:text-white tracking-tight">
                 Distributor Replacement &amp; Market Handover Engine
               </h2>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-blue-50 dark:bg-blue-950/60 text-[#3B82F6] dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-950/60 text-[#15803D] dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                 Enterprise Module
               </span>
             </div>
@@ -363,7 +363,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                 onClick={() => setStatusFilter(tab)}
                 className={`min-h-[38px] flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer text-xs whitespace-nowrap ${
                   statusFilter === tab
-                    ? 'bg-[#3B82F6] text-white shadow-xs'
+                    ? 'bg-[#16A34A] text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white'
                 }`}
               >
@@ -385,7 +385,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search transfer #, distributor, town..."
-              className="w-full min-h-[44px] pl-9 pr-10 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+              className="w-full min-h-[44px] pl-9 pr-10 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
             />
             {searchQuery && (
               <button
@@ -413,7 +413,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
           filteredTransfers.map((req) => (
             <div
               key={req.id}
-              className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs hover:border-[#3B82F6] transition-all space-y-4"
+              className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs hover:border-[#16A34A] transition-all space-y-4"
             >
               {/* Card Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#E2E8F0] dark:border-slate-700/80">
@@ -421,7 +421,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                   <span className="px-2.5 py-1 rounded-lg text-xs font-bold font-mono tabular-nums bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-[#0F172A] dark:text-slate-200">
                     {req.transferNumber}
                   </span>
-                  <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 text-[#3B82F6] dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-[#15803D] dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                     {req.transferType.replace('_', ' ')}
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums font-medium">
@@ -470,7 +470,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
                     Target Distributor (Receiving)
                   </span>
-                  <span className="text-xs font-bold text-[#3B82F6] dark:text-blue-400 block mt-0.5">
+                  <span className="text-xs font-bold text-[#16A34A] dark:text-emerald-400 block mt-0.5">
                     {req.targetDistributorName}
                   </span>
                 </div>
@@ -486,7 +486,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                 </div>
                 <div className="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80">
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Receivables Transferred</span>
-                  <span className="text-sm font-bold font-mono tabular-nums text-[#3B82F6] dark:text-blue-400">
+                  <span className="text-sm font-bold font-mono tabular-nums text-[#EA580C] dark:text-orange-400">
                     PKR {req.totalTransferredReceivables.toLocaleString()}
                   </span>
                 </div>
@@ -501,7 +501,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
               {/* Reason & Sign-off footer */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400 pt-1">
                 <span>Reason: {req.reason}</span>
-                <span className="font-semibold text-[#3B82F6] dark:text-blue-400">
+                <span className="font-semibold text-[#16A34A] dark:text-emerald-400">
                   Executive Approver: {req.executiveApprovedBy || 'Awaiting Shahzad Ullah'}
                 </span>
               </div>
@@ -561,7 +561,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                   <select
                     value={transferType}
                     onChange={(e) => setTransferType(e.target.value as any)}
-                    className="w-full min-h-[44px] p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-semibold text-xs text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
+                    className="w-full min-h-[44px] p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-semibold text-xs text-[#0F172A] dark:text-white focus:outline-none focus:border-[#16A34A]"
                   >
                     <option value="TERRITORY_SPLIT">Territory Split (e.g. 60/40 Market Split)</option>
                     <option value="COMPLETE_REPLACEMENT">Complete Distributor Replacement</option>
@@ -580,7 +580,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                       type="text"
                       value={sourceDistributorName}
                       onChange={(e) => setSourceDistributorName(e.target.value)}
-                      className="w-full min-h-[44px] p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-semibold text-xs text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-semibold text-xs text-[#0F172A] dark:text-white focus:outline-none focus:border-[#16A34A]"
                     />
                   </div>
 
@@ -593,7 +593,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                       value={targetDistributorName}
                       onChange={(e) => setTargetDistributorName(e.target.value)}
                       placeholder="e.g. Nowshera Prime Traders"
-                      className="w-full min-h-[44px] p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-semibold text-xs text-[#3B82F6] dark:text-blue-400 focus:outline-none focus:border-[#3B82F6]"
+                      className="w-full min-h-[44px] p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 font-semibold text-xs text-[#16A34A] dark:text-emerald-400 focus:outline-none focus:border-[#16A34A]"
                     />
                   </div>
                 </div>
@@ -606,7 +606,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                     value={reasonNotes}
                     onChange={(e) => setReasonNotes(e.target.value)}
                     placeholder="Enter reason for market handover or territory realignment..."
-                    className="w-full p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 text-xs font-medium text-[#0F172A] dark:text-white h-20 focus:outline-none focus:border-[#3B82F6]"
+                    className="w-full p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 text-xs font-medium text-[#0F172A] dark:text-white h-20 focus:outline-none focus:border-[#16A34A]"
                   />
                 </div>
               </div>
@@ -619,7 +619,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                   <span className="font-bold text-[#0F172A] dark:text-white">
                     Select Shops to Reassign ({selectedDealerIds.length} Selected)
                   </span>
-                  <span className="text-[11px] text-[#3B82F6] dark:text-blue-400 font-semibold">
+                  <span className="text-[11px] text-[#16A34A] dark:text-emerald-400 font-semibold">
                     Checkboxes preserve historical ledger invoices
                   </span>
                 </div>
@@ -633,7 +633,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                         onClick={() => toggleDealerSelection(c.id)}
                         className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
-                            ? 'bg-blue-50 dark:bg-blue-950/40 border-[#3B82F6] text-[#0F172A] dark:text-white'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-[#16A34A] text-[#0F172A] dark:text-white'
                             : 'bg-white dark:bg-[#1E293B] border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300'
                         }`}
                       >
@@ -642,7 +642,7 @@ export const DistributorTransferModule: React.FC<DistributorTransferModuleProps>
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => {}}
-                            className="rounded accent-[#3B82F6]"
+                            className="rounded accent-[#16A34A]"
                           />
                           <div className="min-w-0">
                             <span className="font-bold block truncate">{c.companyName}</span>

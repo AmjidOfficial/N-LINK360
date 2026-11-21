@@ -255,7 +255,7 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
       <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#3B82F6] flex items-center gap-1.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#16A34A] dark:text-emerald-400 flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 shrink-0" />
               <span>System Sync · Management &amp; Super Admin Control Center</span>
             </p>
@@ -319,7 +319,7 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
             </div>
             <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#3B82F6] transition-all duration-200"
+                className="h-full bg-[#16A34A] transition-all duration-200"
                 style={{ width: `${serviceSnapshot.progress.progressPercent}%` }}
               />
             </div>
@@ -351,7 +351,7 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
         <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col h-full">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wide">
             <span>Last DB Save (PKT)</span>
-            <Database className="w-4 h-4 text-[#3B82F6]" />
+            <Database className="w-4 h-4 text-[#16A34A]" />
           </div>
           <div className="mt-2 font-mono tabular-nums font-bold text-[#0F172A] dark:text-white text-xs">
             {effectiveLastDb ? formatKarachiDateTime(effectiveLastDb) : 'Awaiting New Write'}
@@ -410,9 +410,9 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
         <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col h-full">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wide">
             <span>Reconciliation Alerts</span>
-            <Sparkles className="w-4 h-4 text-[#3B82F6]" />
+            <Sparkles className="w-4 h-4 text-[#EA580C]" />
           </div>
-          <div className="mt-2 font-mono tabular-nums font-black text-2xl text-[#3B82F6]">
+          <div className="mt-2 font-mono tabular-nums font-black text-2xl text-[#EA580C]">
             {totalDiscrepancyCount}
           </div>
           <div className="text-[10px] text-slate-400 font-mono tabular-nums mt-auto pt-1">
@@ -428,7 +428,7 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
           onClick={() => setActiveView('EVENTS')}
           className={`min-h-[44px] px-4 py-2 rounded-lg font-bold cursor-pointer whitespace-nowrap transition-colors ${
             activeView === 'EVENTS'
-              ? 'bg-[#3B82F6] text-white shadow-xs'
+              ? 'bg-[#16A34A] text-white shadow-xs'
               : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
         >
@@ -439,7 +439,7 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
           onClick={() => setActiveView('RECONCILIATION')}
           className={`min-h-[44px] px-4 py-2 rounded-lg font-bold cursor-pointer whitespace-nowrap transition-colors ${
             activeView === 'RECONCILIATION'
-              ? 'bg-[#3B82F6] text-white shadow-xs'
+              ? 'bg-[#16A34A] text-white shadow-xs'
               : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
         >
@@ -450,7 +450,7 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
           onClick={() => setActiveView('GHAFFAR_AUDIT')}
           className={`min-h-[44px] px-4 py-2 rounded-lg font-bold cursor-pointer whitespace-nowrap transition-colors ${
             activeView === 'GHAFFAR_AUDIT'
-              ? 'bg-[#3B82F6] text-white shadow-xs'
+              ? 'bg-[#16A34A] text-white shadow-xs'
               : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
         >
@@ -473,7 +473,7 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
                   onClick={() => setStatusFilter(st)}
                   className={`min-h-[36px] px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer whitespace-nowrap transition-colors ${
                     statusFilter === st
-                      ? 'bg-[#0F172A] dark:bg-[#3B82F6] text-white'
+                      ? 'bg-[#0F172A] dark:bg-[#16A34A] text-white'
                       : 'bg-[#F8FAFC] dark:bg-[#0F172A] text-slate-600 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                   }`}
                 >
@@ -551,7 +551,7 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
                               type="button"
                               onClick={() => void handleRetrySingleOperation(op)}
                               disabled={isRetryBusy}
-                              className="min-h-[36px] px-3 py-1 rounded-md bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-[11px] cursor-pointer disabled:opacity-60"
+                              className="min-h-[36px] px-3 py-1 rounded-md bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-[11px] cursor-pointer disabled:opacity-60"
                             >
                               Retry
                             </button>
@@ -607,7 +607,7 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
                         type="button"
                         onClick={() => void handleRetrySingleOperation(op)}
                         disabled={isRetryBusy}
-                        className="min-h-[44px] px-3.5 py-2 rounded-lg bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-xs cursor-pointer"
+                        className="min-h-[44px] px-3.5 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs cursor-pointer"
                       >
                         Retry Sync
                       </button>
