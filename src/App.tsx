@@ -2914,7 +2914,7 @@ export default function App() {
       {/* Live Toast Message */}
       {ledgerToastMessage && (
         <div
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#0F172A] dark:bg-[#1E293B] text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs sm:text-sm font-semibold animate-in fade-in duration-200 border border-[#3B82F6]/60 max-w-lg w-[calc(100%-2rem)] mx-auto"
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#0F172A] dark:bg-[#1E293B] text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs sm:text-sm font-semibold animate-in fade-in duration-200 border border-[#16A34A]/60 max-w-lg w-[calc(100%-2rem)] mx-auto"
         >
           <span className="flex-1">{ledgerToastMessage}</span>
           <button

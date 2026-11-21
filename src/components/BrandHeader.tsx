@@ -51,7 +51,7 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
 
         {currentUser && (
           <div className="hidden md:flex items-center gap-2.5 bg-slate-50 dark:bg-[#1E293B] px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80">
-            <div className="w-8 h-8 rounded-lg bg-[#0F172A] dark:bg-[#3B82F6] text-white font-bold text-xs flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#16A34A] text-white font-bold text-xs flex items-center justify-center shrink-0">
               {currentUser.avatarInitials ||
                 (currentUser.fullName || 'NL')
                   .split(' ')

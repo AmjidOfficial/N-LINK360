@@ -10,4 +10,6 @@ coverage/
 .aistudio/artifacts/
 .nlink-auth-store.json
 .nlink-dashboard-config.json
+.nlink-*-store.json
+test-results/
 .netlify/

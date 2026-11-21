@@ -1,16 +1,16 @@
 <!doctype html>
-<html lang="en" data-theme="dark" class="dark">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0B1120" />
+    <meta name="theme-color" content="#16A34A" />
     <script>
       (function () {
         try {
           var mode = localStorage.getItem('nlink_theme_mode');
-          var isLight = mode === 'light';
-          document.documentElement.classList.toggle('dark', !isLight);
-          document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
+          var isDark = mode === 'dark';
+          document.documentElement.classList.toggle('dark', isDark);
+          document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
         } catch (e) {}
       })();
     </script>

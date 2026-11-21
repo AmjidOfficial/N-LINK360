@@ -180,7 +180,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-3 bg-white dark:bg-[#0F172A] shrink-0">
           <div className="min-w-0">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#3B82F6] dark:text-blue-400">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#16A34A] dark:text-emerald-400">
               Record Customer Payment / Wasooli
             </span>
             <h2 className="text-base sm:text-lg font-bold text-[#0F172A] dark:text-white truncate">
@@ -295,7 +295,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
               {/* Payment Amount Input */}
               <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 space-y-2.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-slate-200 flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+                  <Wallet className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
                   Enter Received Amount (PKR)
                 </label>
 
@@ -309,7 +309,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                     placeholder="0"
                     value={amountStr}
                     onChange={(e) => setAmountStr(e.target.value)}
-                    className="w-full min-h-[48px] pl-14 pr-4 py-3 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-lg font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full min-h-[48px] pl-14 pr-4 py-3 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-lg font-mono tabular-nums font-bold text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20"
                   />
                 </div>
 
@@ -321,7 +321,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                       triggerHaptic('light');
                       setAmountStr(previousBalance.toString());
                     }}
-                    className="min-h-[44px] px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#1D4ED8] dark:text-blue-300 font-semibold text-xs cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/60 active:scale-95 transition-all border border-blue-200 dark:border-blue-800/70 tabular-nums"
+                    className="min-h-[44px] px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#15803D] dark:text-emerald-300 font-semibold text-xs cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/60 active:scale-95 transition-all border border-emerald-200 dark:border-emerald-800/70 tabular-nums"
                   >
                     Full Balance (PKR {previousBalance.toLocaleString()})
                   </button>
@@ -358,7 +358,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                       }}
                       className={`min-h-[44px] p-2.5 rounded-xl font-semibold text-xs border text-center transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
                         paymentMode === mode
-                          ? 'bg-[#3B82F6] text-white border-[#3B82F6] shadow-xs font-bold'
+                          ? 'bg-[#16A34A] text-white border-[#16A34A] shadow-xs font-bold'
                           : 'bg-white dark:bg-[#0F172A] border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                     >
@@ -380,7 +380,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                       placeholder="e.g. Meezan Bank, HBL"
                       value={bankName}
                       onChange={(e) => setBankName(e.target.value)}
-                      className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                      className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                     />
                   </div>
 
@@ -393,7 +393,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                       placeholder="e.g. CHQ-981240"
                       value={instrumentNumber}
                       onChange={(e) => setInstrumentNumber(e.target.value)}
-                      className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                      className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                     />
                   </div>
                 </div>
@@ -443,7 +443,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                   placeholder="e.g. Deposited by dealer at shop"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+                  className="w-full min-h-[44px] px-3 py-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
                 />
               </div>
 

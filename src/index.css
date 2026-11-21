@@ -3,27 +3,31 @@
 @import "leaflet/dist/leaflet.css";
 
 :root {
-  /* N-LINK 360 Enterprise Design System — Clean Daylight Light Tokens */
+  /* N-LINK 360 Enterprise Design System — National Light Logo Brand Tokens */
   --deep-navy: #0F172A;
   --deep-obsidian: #0B1120;
-  --slate-teal: #3B82F6;
-  --action-orange: #F97316;
-  --action-orange-hover: #EA580C;
-  --action-teal: #F97316;
-  --action-teal-hover: #EA580C;
-  --accent-blue: #3B82F6;
-  --accent-blue-hover: #2563EB;
-  --accent-mint: #DBEAFE;
+  --brand-green: #16A34A;
+  --brand-green-hover: #15803D;
+  --brand-green-soft: #DCFCE7;
+  --slate-teal: #16A34A;
+  --action-orange: #EA580C;
+  --action-orange-bright: #F97316;
+  --action-orange-hover: #C2410C;
+  --action-teal: #EA580C;
+  --action-teal-hover: #C2410C;
+  --accent-blue: #16A34A;
+  --accent-blue-hover: #15803D;
+  --accent-mint: #DCFCE7;
   --illumination-amber: #F59E0B;
   --info-sky: #0EA5E9;
 
-  /* Legacy Variable Aliases (mapped cleanly without Nature Green drift) */
-  --primary-blue: var(--accent-blue);
-  --primary-blue-hover: var(--accent-blue-hover);
+  /* Brand Aliases */
+  --primary-blue: var(--brand-green);
+  --primary-blue-hover: var(--brand-green-hover);
   --accent-cyan: var(--info-sky);
-  --luminous-orange: var(--action-orange);
+  --luminous-orange: var(--action-orange-bright);
 
-  /* Crisp Daylight Light Mode Surfaces */
+  /* Crisp Daylight Light Mode Surfaces (Default) */
   --bg-canvas: #F8FAFC;
   --bg-surface: #FFFFFF;
   --bg-elevated: #F1F5F9;
@@ -34,7 +38,7 @@
   --border-hairline: #E2E8F0;
 
   /* Semantic Ledger & KPI Colors */
-  --status-credit: #10B981;
+  --status-credit: #16A34A;
   --status-debit: #DC2626;
   --status-warning: #F97316;
 
@@ -437,7 +441,7 @@ button {
   border: 1px solid var(--border-hairline);
 }
 .btn-outline:hover:not(:disabled) {
-  border-color: #3B82F6;
+  border-color: #16A34A;
   background-color: var(--bg-elevated);
 }
 

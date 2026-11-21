@@ -306,7 +306,7 @@ export const MobileAttendanceGpsScreen: React.FC<MobileAttendanceGpsScreenProps>
       <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0] dark:border-slate-700/80">
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#0F172A] dark:text-white">
-            <History className="w-4 h-4 text-[#3B82F6]" />
+            <History className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
             <span>Recent Attendance History</span>
           </div>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums font-semibold">

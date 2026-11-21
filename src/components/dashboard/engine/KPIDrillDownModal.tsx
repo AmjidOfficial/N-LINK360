@@ -35,13 +35,13 @@ export const KPIDrillDownModal: React.FC<KPIDrillDownModalProps> = ({
 
         <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-800">
           <div className="min-w-0">
-            <div className="text-[11px] font-mono uppercase tracking-wider text-[#3B82F6] dark:text-blue-400">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-[#16A34A] dark:text-emerald-400">
               KPI Drill-Down · {metric.sourceNote}
             </div>
             <h2 id="kpi-drilldown-title" className="mt-0.5 text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC] truncate">
               {metric.label}
             </h2>
-            <div className="mt-1 font-mono tabular-nums text-base font-bold text-[#3B82F6] dark:text-blue-400">
+            <div className="mt-1 font-mono tabular-nums text-base font-bold text-[#16A34A] dark:text-emerald-400">
               {metric.formattedValue}
             </div>
           </div>
@@ -91,7 +91,7 @@ export const KPIDrillDownModal: React.FC<KPIDrillDownModalProps> = ({
                       onClick={() => onSelectCustomer(rec.customerId!)}
                       title="Open party ledger"
                       aria-label={`Open party ledger for ${rec.title}`}
-                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg border border-[#E2E8F0] dark:border-slate-700 text-[#3B82F6] dark:text-blue-400 hover:border-[#3B82F6] cursor-pointer"
+                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg border border-[#E2E8F0] dark:border-slate-700 text-[#16A34A] dark:text-emerald-400 hover:border-[#16A34A] cursor-pointer"
                     >
                       <ArrowRight className="w-4 h-4" />
                     </button>

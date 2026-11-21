@@ -23,7 +23,7 @@ export const ExecutiveStockExpensePanel: React.FC<ExecutiveStockExpensePanelProp
         <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-700/70">
           <div>
             <h3 className="text-sm sm:text-base font-bold text-[#0F172A] dark:text-[#F8FAFC] flex items-center gap-2">
-              <Boxes className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+              <Boxes className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
               <span>Stock Overview</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -34,7 +34,7 @@ export const ExecutiveStockExpensePanel: React.FC<ExecutiveStockExpensePanelProp
             <button
               type="button"
               onClick={onOpenInventory}
-              className="btn-outline min-h-[44px] sm:min-h-[38px] text-[#3B82F6] dark:text-blue-400"
+              className="btn-outline min-h-[44px] sm:min-h-[38px] text-[#16A34A] dark:text-emerald-400"
             >
               <span>Warehouse</span>
               <ArrowUpRight className="w-3.5 h-3.5" />

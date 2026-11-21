@@ -37,7 +37,7 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ alerts, onInsp
                 ? 'text-rose-600 dark:text-rose-400'
                 : alert.severity === 'warning'
                 ? 'text-[#F97316] dark:text-orange-400'
-                : 'text-[#3B82F6] dark:text-blue-400';
+                : 'text-[#16A34A] dark:text-emerald-400';
 
             return (
               <div
@@ -60,7 +60,7 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ alerts, onInsp
                   <button
                     type="button"
                     onClick={() => onInspectRecord(alert.recordId!, alert)}
-                    className="btn-outline min-h-[44px] sm:min-h-[36px] text-[#3B82F6] dark:text-blue-400"
+                    className="btn-outline min-h-[44px] sm:min-h-[36px] text-[#16A34A] dark:text-emerald-400"
                   >
                     Inspect
                   </button>

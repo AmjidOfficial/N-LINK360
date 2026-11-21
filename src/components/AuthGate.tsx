@@ -60,9 +60,9 @@ export const AuthGate: React.FC<AuthGateProps> = ({
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     if (typeof localStorage !== 'undefined') {
       const stored = localStorage.getItem('nlink_theme_mode') || localStorage.getItem('nlink_auth_theme');
-      return stored === 'light' ? 'light' : 'dark';
+      return stored === 'dark' ? 'dark' : 'light';
     }
-    return 'dark';
+    return 'light';
   });
 
   useEffect(() => {
@@ -193,11 +193,11 @@ export const AuthGate: React.FC<AuthGateProps> = ({
             </div>
 
             <div>
-              <p className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+              <p className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-emerald-400' : 'text-[#16A34A]'}`}>
                 Head Office &amp; Field Portal &middot; Peshawar
               </p>
               <h1 id="nlink-login-title" className={`text-2xl font-black tracking-tight mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                NATIONAL LIGHT <span className="text-[#F97316]">360</span>
+                NATIONAL LIGHT <span className="text-[#EA580C] dark:text-[#F97316]">360</span>
               </h1>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'} font-medium mt-0.5`}>
                 Enterprise Resource Planning &amp; Financial Accounting
@@ -212,9 +212,9 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="p-3 rounded-xl text-xs font-semibold text-blue-300 bg-blue-950/50 border border-blue-800 flex items-start gap-2"
+                className={`p-3 rounded-xl text-xs font-semibold border flex items-start gap-2 ${isDark ? 'text-emerald-300 bg-emerald-950/50 border-emerald-800' : 'text-emerald-800 bg-emerald-50 border-emerald-200'}`}
               >
-                <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <Info className="w-4 h-4 text-[#16A34A] dark:text-emerald-400 shrink-0 mt-0.5" />
                 <span>{midnightCutoffNotice}</span>
               </motion.div>
             )}
@@ -273,7 +273,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                       isDark
                         ? 'border-slate-700 bg-[#1E293B] text-white placeholder:text-slate-500'
                         : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400'
-                    } text-xs font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
+                    } text-xs font-semibold outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/20 transition-all`}
                   />
                 </div>
               </div>
@@ -294,7 +294,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                       setError('');
                       setNotice('');
                     }}
-                    className="text-[11px] font-semibold text-blue-500 hover:text-blue-400 transition-colors cursor-pointer"
+                    className="text-[11px] font-semibold text-[#16A34A] hover:text-[#15803D] transition-colors cursor-pointer"
                   >
                     Forgot Password?
                   </button>
@@ -313,7 +313,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                       isDark
                         ? 'border-slate-700 bg-[#1E293B] text-white placeholder:text-slate-500'
                         : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400'
-                    } text-xs font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
+                    } text-xs font-semibold outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/20 transition-all`}
                   />
                   <button
                     type="button"
@@ -364,7 +364,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                       setError('');
                       setNotice('');
                     }}
-                    className="text-[11px] font-semibold text-blue-500 hover:text-blue-400 transition-colors cursor-pointer"
+                    className="text-[11px] font-semibold text-[#16A34A] hover:text-[#15803D] transition-colors cursor-pointer"
                   >
                     Back to Login
                   </button>
@@ -382,11 +382,11 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                       isDark
                         ? 'border-slate-700 bg-[#1E293B] text-white placeholder:text-slate-500'
                         : 'border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400'
-                    } text-xs font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all`}
+                    } text-xs font-semibold outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/20 transition-all`}
                   />
                 </div>
                 <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'} pt-1`}>
-                  A verifiable password recovery request will be logged and sent to Head Office administration (<span className="font-mono text-blue-400">nationallights2026@gmail.com</span>). Verified employees receive a one-time temporary credential requiring immediate update.
+                  A verifiable password recovery request will be logged and sent to Head Office administration (<span className="font-mono text-[#16A34A] dark:text-emerald-400">nationallights2026@gmail.com</span>). Verified employees receive a one-time temporary credential requiring immediate update.
                 </p>
               </div>
 
@@ -413,14 +413,14 @@ export const AuthGate: React.FC<AuthGateProps> = ({
           {/* Corporate Office Footer */}
           <div className={`pt-4 border-t ${isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-600'} text-center space-y-1 text-[10px]`}>
             <p className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-800'} flex items-center justify-center gap-1`}>
-              <Building2 className="w-3 h-3 text-blue-500" />
+              <Building2 className="w-3 h-3 text-[#16A34A]" />
               Office No GF 71, Sheikh Yaseen Tower, Peshawar
             </p>
             <p className="font-mono tabular-nums text-slate-500 dark:text-slate-400">
               Ph: 091-2212700 &middot; Cell: 0303-5262872 / 0312-7876620
             </p>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
-              Central Admin: <span className="font-mono text-blue-500">nationallights2026@gmail.com</span>
+              Central Admin: <span className="font-mono text-[#16A34A] dark:text-emerald-400">nationallights2026@gmail.com</span>
             </p>
           </div>
         </motion.div>

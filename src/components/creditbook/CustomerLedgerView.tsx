@@ -444,7 +444,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
               className="btn-outline min-h-[44px] sm:min-h-[38px] px-3 py-1.5 text-xs"
               title="Export to Excel Spreadsheet"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400" />
               <span>Excel</span>
             </button>
 
@@ -474,7 +474,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
         {/* Title */}
         <div>
           <h1 className="text-xl font-bold text-[#0F172A] dark:text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#3B82F6] dark:text-blue-400" />
+            <FileText className="w-5 h-5 text-[#16A34A] dark:text-emerald-400" />
             Customer Ledger &amp; Khata Statement
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
@@ -493,7 +493,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search transactions by reference, description, amount..."
                 aria-label="Search ledger transactions"
-                className="w-full min-h-[44px] pl-10 pr-11 py-2 text-xs bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-white rounded-xl border border-[#E2E8F0] dark:border-slate-700 focus:border-[#3B82F6] outline-hidden"
+                className="w-full min-h-[44px] pl-10 pr-11 py-2 text-xs bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-white rounded-xl border border-[#E2E8F0] dark:border-slate-700 focus:border-[#16A34A] outline-hidden"
               />
               {searchQuery && (
                 <button
@@ -514,7 +514,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                 onClick={() => setDirectionFilter('ALL')}
                 className={`min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   directionFilter === 'ALL'
-                    ? 'bg-[#3B82F6] text-white shadow-2xs'
+                    ? 'bg-[#16A34A] text-white shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
                 }`}
               >
@@ -525,7 +525,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                 onClick={() => setDirectionFilter('DEBIT_ONLY')}
                 className={`min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   directionFilter === 'DEBIT_ONLY'
-                    ? 'bg-[#3B82F6] text-white shadow-2xs'
+                    ? 'bg-[#EA580C] text-white shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
                 }`}
               >
@@ -536,7 +536,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                 onClick={() => setDirectionFilter('CREDIT_ONLY')}
                 className={`min-h-[36px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   directionFilter === 'CREDIT_ONLY'
-                    ? 'bg-[#3B82F6] text-white shadow-2xs'
+                    ? 'bg-[#16A34A] text-white shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
                 }`}
               >
@@ -551,7 +551,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
               className="min-h-[44px] px-3 py-1.5 text-xs font-semibold rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer shrink-0 flex items-center gap-1.5 border border-[#E2E8F0] dark:border-slate-700"
               title="Toggle Oldest First vs Newest First"
             >
-              <ArrowUpDown className="w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400" />
+              <ArrowUpDown className="w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400" />
               <span>{sortOrder === 'OLDEST_FIRST' ? 'Oldest First' : 'Newest First'}</span>
             </button>
           </div>
@@ -566,7 +566,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-full min-h-[44px] px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-mono tabular-nums text-[#0F172A] dark:text-white outline-hidden focus:border-[#3B82F6]"
+                className="w-full min-h-[44px] px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-mono tabular-nums text-[#0F172A] dark:text-white outline-hidden focus:border-[#16A34A]"
               />
             </div>
             <div>
@@ -577,7 +577,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="w-full min-h-[44px] px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-mono tabular-nums text-[#0F172A] dark:text-white outline-hidden focus:border-[#3B82F6]"
+                className="w-full min-h-[44px] px-3 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs font-mono tabular-nums text-[#0F172A] dark:text-white outline-hidden focus:border-[#16A34A]"
               />
             </div>
           </div>
@@ -592,11 +592,11 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
             </span>
           </div>
 
-          <div className="h-full flex flex-col justify-between bg-blue-50/70 dark:bg-blue-950/30 p-3 rounded-xl border border-blue-200 dark:border-blue-800/60 min-w-0">
-            <span className="text-[10px] font-bold uppercase text-blue-700 dark:text-blue-300 block">
+          <div className="h-full flex flex-col justify-between bg-orange-50/70 dark:bg-orange-950/30 p-3 rounded-xl border border-orange-200 dark:border-orange-800/60 min-w-0">
+            <span className="text-[10px] font-bold uppercase text-orange-700 dark:text-orange-300 block">
               Invoices ({invoiceCount} Posted)
             </span>
-            <span className="text-sm font-bold font-mono tabular-nums text-blue-900 dark:text-blue-200 mt-1 block truncate">
+            <span className="text-sm font-bold font-mono tabular-nums text-orange-900 dark:text-orange-200 mt-1 block truncate">
               PKR {postedInvoicesTotal.toLocaleString()}
             </span>
           </div>
@@ -611,12 +611,145 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
           </div>
 
           <div className="h-full flex flex-col justify-between bg-[#0F172A] dark:bg-[#0B1120] p-3 rounded-xl border border-slate-700/80 text-white shadow-xs min-w-0">
-            <span className="text-[10px] font-bold uppercase text-blue-400 block">Closing Balance</span>
+            <span className="text-[10px] font-bold uppercase text-emerald-400 block">Closing Balance</span>
             <span className="text-sm font-bold font-mono tabular-nums text-white mt-1 block truncate">
               PKR {closingBalance.toLocaleString()}
             </span>
           </div>
         </div>
+
+        {/* Dealer Ledger & Recovery Analytics Visual Strip */}
+        {(() => {
+          const creditLimit = customer.creditLimit ?? 250000;
+          const utilPct = creditLimit > 0 ? Math.min(100, Math.round((Math.max(0, closingBalance) / creditLimit) * 100)) : 0;
+          const availableHeadroom = Math.max(0, creditLimit - closingBalance);
+          const totalGrossExposure = Math.max(0, openingBalance) + postedInvoicesTotal;
+          const realizationPct = totalGrossExposure > 0
+            ? Math.min(100, Math.round((confirmedRecoveriesTotal / totalGrossExposure) * 100))
+            : confirmedRecoveriesTotal > 0
+            ? 100
+            : 0;
+
+          const cashTotal = confirmedRecoveries
+            .filter((r) => !r.paymentMode || r.paymentMode === 'CASH')
+            .reduce((s, r) => s + (r.amount || 0), 0);
+          const onlineTotal = confirmedRecoveries
+            .filter((r) => r.paymentMode === 'ONLINE_TRANSFER')
+            .reduce((s, r) => s + (r.amount || 0), 0);
+          const chequeTotal = confirmedRecoveries
+            .filter((r) => r.paymentMode === 'CHEQUE')
+            .reduce((s, r) => s + (r.amount || 0), 0);
+          const otherTotal = Math.max(0, confirmedRecoveriesTotal - cashTotal - onlineTotal - chequeTotal);
+          const channelDenom = Math.max(1, confirmedRecoveriesTotal);
+
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1 items-stretch">
+              {/* 1. Credit Limit Utilization Meter */}
+              <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between space-y-2">
+                <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <span>Credit Utilization</span>
+                  <span className={`font-mono tabular-nums ${
+                    utilPct >= 90
+                      ? 'text-rose-600 dark:text-rose-400'
+                      : utilPct >= 70
+                      ? 'text-[#EA580C] dark:text-orange-400'
+                      : 'text-[#16A34A] dark:text-emerald-400'
+                  }`}>
+                    {utilPct}% Used
+                  </span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.max(utilPct > 0 ? 4 : 0, utilPct)}%`,
+                      backgroundColor: utilPct >= 90 ? '#DC2626' : utilPct >= 70 ? '#F97316' : '#16A34A',
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2 text-[10px] font-mono tabular-nums text-slate-600 dark:text-slate-400">
+                  <span>Limit: {creditLimit.toLocaleString()}</span>
+                  <span className="text-[#16A34A] dark:text-emerald-400 font-semibold">
+                    Free: {availableHeadroom.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. Cashflow Realization Progress */}
+              <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between space-y-2">
+                <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <span>Recovery Realization</span>
+                  <span className="font-mono tabular-nums text-[#16A34A] dark:text-emerald-400">
+                    {realizationPct}% Settled
+                  </span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-orange-200/80 dark:bg-orange-950/60 overflow-hidden flex">
+                  <div
+                    className="h-full bg-[#16A34A] transition-all duration-300"
+                    style={{ width: `${realizationPct}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2 text-[10px] font-mono tabular-nums text-slate-600 dark:text-slate-400">
+                  <span>Billed: {totalGrossExposure.toLocaleString()}</span>
+                  <span className="text-[#16A34A] dark:text-emerald-400 font-semibold">
+                    Rec: {confirmedRecoveriesTotal.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* 3. Recovery Channel Mix */}
+              <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between space-y-2">
+                <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <span>Payment Channel Mix</span>
+                  <span className="font-mono tabular-nums text-[#0F172A] dark:text-slate-200">
+                    {confirmedRecoveries.length} Slips
+                  </span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex">
+                  {confirmedRecoveriesTotal > 0 ? (
+                    <>
+                      {cashTotal > 0 && (
+                        <div
+                          className="h-full bg-[#16A34A]"
+                          style={{ width: `${Math.round((cashTotal / channelDenom) * 100)}%` }}
+                          title={`Cash: PKR ${cashTotal.toLocaleString()}`}
+                        />
+                      )}
+                      {onlineTotal > 0 && (
+                        <div
+                          className="h-full bg-[#F97316]"
+                          style={{ width: `${Math.round((onlineTotal / channelDenom) * 100)}%` }}
+                          title={`Online Transfer: PKR ${onlineTotal.toLocaleString()}`}
+                        />
+                      )}
+                      {chequeTotal > 0 && (
+                        <div
+                          className="h-full bg-amber-500"
+                          style={{ width: `${Math.round((chequeTotal / channelDenom) * 100)}%` }}
+                          title={`Cheque: PKR ${chequeTotal.toLocaleString()}`}
+                        />
+                      )}
+                      {otherTotal > 0 && (
+                        <div
+                          className="h-full bg-slate-500"
+                          style={{ width: `${Math.round((otherTotal / channelDenom) * 100)}%` }}
+                          title={`Other: PKR ${otherTotal.toLocaleString()}`}
+                        />
+                      )}
+                    </>
+                  ) : null}
+                </div>
+                <div className="flex items-center justify-between gap-1 text-[10px] font-mono tabular-nums text-slate-600 dark:text-slate-400 truncate">
+                  <span className="truncate">
+                    Cash {confirmedRecoveriesTotal > 0 ? Math.round((cashTotal / channelDenom) * 100) : 0}%
+                    {' · '}Bank {confirmedRecoveriesTotal > 0 ? Math.round((onlineTotal / channelDenom) * 100) : 0}%
+                    {chequeTotal > 0 ? ` · Chq ${Math.round((chequeTotal / channelDenom) * 100)}%` : ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Operational Credit & Health Matrix */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1 items-stretch">
@@ -647,12 +780,12 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
         </div>
 
         {/* Authoritative Financial Rule Verification Banner */}
-        <div className="px-3.5 py-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/35 border border-blue-200 dark:border-blue-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono tabular-nums">
-          <span className="text-[#0F172A] dark:text-blue-200 font-semibold flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <div className="px-3.5 py-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono tabular-nums">
+          <span className="text-[#0F172A] dark:text-emerald-200 font-semibold flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400 shrink-0" />
             Opening ({openingBalance.toLocaleString()}) + Invoices ({postedInvoicesTotal.toLocaleString()}) - Recovery ({confirmedRecoveriesTotal.toLocaleString()}) = Closing ({closingBalance.toLocaleString()}) PKR
           </span>
-          <span className="text-[#3B82F6] dark:text-blue-400 font-bold uppercase text-[10px]">
+          <span className="text-[#16A34A] dark:text-emerald-400 font-bold uppercase text-[10px]">
             Audited Khata Rule
           </span>
         </div>
@@ -676,7 +809,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
 
         {filteredTimelineEntries.length === 0 ? (
           <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-xs">
-            <FileText className="w-10 h-10 mx-auto mb-2 opacity-40 text-[#3B82F6]" />
+            <FileText className="w-10 h-10 mx-auto mb-2 opacity-40 text-[#16A34A]" />
             <p className="font-bold text-sm text-[#0F172A] dark:text-slate-200">No Ledger Entries</p>
             <p className="mt-1 tabular-nums">Only the opening balance of PKR {openingBalance.toLocaleString()} is currently on file.</p>
           </div>
@@ -720,7 +853,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                         <td className="py-3.5 px-2 text-center">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${
                             isDebit 
-                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/60' 
+                              ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-800/60' 
                               : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/60'
                           }`}>
                             {isDebit ? 'Invoice' : 'Recovery'}
@@ -729,7 +862,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                         <td className="py-3.5 px-2 text-slate-600 dark:text-slate-300 max-w-[200px] truncate" title={item.description}>
                           {item.description}
                         </td>
-                        <td className="py-3.5 px-2 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-blue-300 whitespace-nowrap">
+                        <td className="py-3.5 px-2 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-orange-300 whitespace-nowrap">
                           {isDebit ? `PKR ${item.debit.toLocaleString()}` : '—'}
                         </td>
                         <td className="py-3.5 px-2 text-right font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
@@ -777,7 +910,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                     <td className="py-3.5 px-2 text-slate-500 dark:text-slate-400" colSpan={3}>
                       Filtered Statement Totals
                     </td>
-                    <td className="py-3.5 px-2 text-right font-mono tabular-nums text-[#0F172A] dark:text-blue-300 whitespace-nowrap">
+                    <td className="py-3.5 px-2 text-right font-mono tabular-nums text-[#0F172A] dark:text-orange-300 whitespace-nowrap">
                       PKR {filteredDebitTotal.toLocaleString()}
                     </td>
                     <td className="py-3.5 px-2 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
@@ -807,7 +940,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                           </span>
                           <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${
                             isDebit 
-                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/60' 
+                              ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-800/60' 
                               : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/60'
                           }`}>
                             {isDebit ? 'Invoiced' : 'Recovered'}
@@ -818,7 +951,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className={`text-xs font-bold font-mono tabular-nums ${isDebit ? 'text-[#0F172A] dark:text-blue-300' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                        <div className={`text-xs font-bold font-mono tabular-nums ${isDebit ? 'text-[#0F172A] dark:text-orange-300' : 'text-emerald-700 dark:text-emerald-400'}`}>
                           {isDebit ? `+PKR ${item.debit.toLocaleString()}` : `-PKR ${item.credit.toLocaleString()} CR`}
                         </div>
                         <div className="text-[11px] font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
@@ -930,7 +1063,7 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
           <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xl w-full max-w-md space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0] dark:border-slate-700/80">
               <div className="flex items-center gap-2">
-                <Info className="w-5 h-5 text-[#3B82F6] dark:text-blue-400" />
+                <Info className="w-5 h-5 text-[#16A34A] dark:text-emerald-400" />
                 <h3 className="text-base font-bold text-[#0F172A] dark:text-white">Transaction Details</h3>
               </div>
               <button
@@ -954,11 +1087,13 @@ export const CustomerLedgerView: React.FC<CustomerLedgerViewProps> = ({
               </div>
               <div className="flex justify-between py-1.5 border-b border-[#E2E8F0] dark:border-slate-800">
                 <span className="text-slate-500 dark:text-slate-400">Type</span>
-                <span className="font-bold text-[#3B82F6] dark:text-blue-400">{selectedDetailEntry.type}</span>
+                <span className={`font-bold ${selectedDetailEntry.type === 'INVOICE' ? 'text-[#EA580C] dark:text-orange-400' : 'text-[#16A34A] dark:text-emerald-400'}`}>
+                  {selectedDetailEntry.type}
+                </span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-[#E2E8F0] dark:border-slate-800">
                 <span className="text-slate-500 dark:text-slate-400">Debit (+)</span>
-                <span className="font-bold text-[#0F172A] dark:text-blue-300">PKR {selectedDetailEntry.debit?.toLocaleString()}</span>
+                <span className="font-bold text-[#0F172A] dark:text-orange-300">PKR {selectedDetailEntry.debit?.toLocaleString()}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-[#E2E8F0] dark:border-slate-800">
                 <span className="text-slate-500 dark:text-slate-400">Credit (-)</span>

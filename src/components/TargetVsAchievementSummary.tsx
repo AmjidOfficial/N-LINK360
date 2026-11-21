@@ -134,7 +134,7 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
       if (diff >= 5) {
         return {
           label: 'Ahead of Pace',
-          bg: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+          bg: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300 border-orange-200 dark:border-orange-800',
         };
       }
       if (diff >= -10) {
@@ -173,7 +173,7 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
       {/* Header with Title, Month, and Officer Badge */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 mb-4 border-b border-[#E2E8F0] dark:border-slate-700/80 gap-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#3B82F6] flex items-center justify-center border border-blue-200/70 dark:border-blue-800/50 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-[#16A34A] dark:text-emerald-400 flex items-center justify-center border border-emerald-200/70 dark:border-emerald-800/50 shrink-0">
             <Target className="w-5 h-5" />
           </div>
           <div>
@@ -202,7 +202,7 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
             <button
               type="button"
               onClick={onViewDetails}
-              className="text-[11px] font-bold text-[#3B82F6] hover:underline inline-flex items-center gap-0.5 min-h-[36px] px-1.5 cursor-pointer"
+              className="text-[11px] font-bold text-[#16A34A] dark:text-emerald-400 hover:underline inline-flex items-center gap-0.5 min-h-[36px] px-1.5 cursor-pointer"
             >
               <span>View Report</span>
               <ArrowUpRight className="w-3 h-3" />
@@ -218,7 +218,7 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
           {/* Top Row: Metric Title & Pace Status */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-[#3B82F6]" />
+              <TrendingUp className="w-4 h-4 text-[#EA580C] dark:text-orange-400" />
               <span className="text-xs font-black uppercase tracking-wider text-[#0F172A] dark:text-slate-200">
                 FMCG Sales Booking
               </span>
@@ -241,7 +241,7 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-black text-[#3B82F6] font-mono tabular-nums leading-none">
+              <div className="text-2xl font-black text-[#EA580C] dark:text-orange-400 font-mono tabular-nums leading-none">
                 {salesPercent}%
               </div>
               <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5">
@@ -254,7 +254,7 @@ export const TargetVsAchievementSummary: React.FC<TargetVsAchievementSummaryProp
           <div className="space-y-1">
             <div className="relative w-full h-2.5 bg-slate-200/80 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
               <div
-                className="h-full bg-gradient-to-r from-[#3B82F6] to-sky-400 rounded-full transition-all duration-700 relative"
+                className="h-full bg-gradient-to-r from-[#EA580C] to-[#F97316] rounded-full transition-all duration-700 relative"
                 style={{ width: `${Math.min(100, Math.max(2, salesPercent))}%` }}
               />
             </div>

@@ -67,7 +67,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     <header className="rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 bg-white dark:bg-[#0F172A] px-4 py-4 sm:px-6 sm:py-5">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-[#3B82F6] dark:text-blue-400">
+          <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-[#16A34A] dark:text-emerald-400">
             {config.roleKey.replace(/_/g, ' ')} · {formatScopeBreadCrumb(scope)} · PKT (Asia/Karachi)
           </div>
           <h1 className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] truncate">
@@ -120,7 +120,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             className="btn-outline min-h-[44px] min-w-[44px] px-0!"
           >
-            {isDarkMode ? <Sun className="w-4 h-4 text-[#F97316]" /> : <Moon className="w-4 h-4 text-[#3B82F6]" />}
+            {isDarkMode ? <Sun className="w-4 h-4 text-[#F97316]" /> : <Moon className="w-4 h-4 text-[#16A34A]" />}
           </button>
         </div>
       </div>

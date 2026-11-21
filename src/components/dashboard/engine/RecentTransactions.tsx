@@ -45,8 +45,8 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                       isRecovery
-                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-blue-50 dark:bg-slate-800 text-[#3B82F6] dark:text-blue-400'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-[#16A34A] dark:text-emerald-400'
+                        : 'bg-orange-50 dark:bg-orange-950/50 text-[#EA580C] dark:text-orange-400'
                     }`}
                   >
                     {isRecovery ? <Receipt className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
@@ -76,7 +76,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
                       type="button"
                       onClick={() => onSelectCustomer(tx.customerId!)}
                       aria-label={`Inspect ${tx.partyName}`}
-                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#3B82F6] dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-[#16A34A] dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
                       <ArrowRight className="w-4 h-4" />
                     </button>

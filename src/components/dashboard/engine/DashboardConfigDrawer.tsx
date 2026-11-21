@@ -67,7 +67,7 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
       >
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
-            <div className="text-[11px] font-mono uppercase tracking-wider text-[#3B82F6] dark:text-blue-400">
+            <div className="text-[11px] font-mono uppercase tracking-wider text-[#16A34A] dark:text-emerald-400">
               Admin Dashboard Governance
             </div>
             <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
@@ -96,7 +96,7 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
                 setHiddenKpis([]);
                 setHiddenCharts([]);
               }}
-              className="w-full min-h-[44px] rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-slate-50 dark:bg-[#1E293B] px-3 text-sm font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#3B82F6]"
+              className="w-full min-h-[44px] rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-slate-50 dark:bg-[#1E293B] px-3 text-sm font-medium text-[#0F172A] dark:text-white outline-none focus:border-[#16A34A]"
             >
               {(Object.keys(DEFAULT_ROLE_DASHBOARD_CONFIGS) as DashboardRoleKey[]).map((key) => (
                 <option key={key} value={key}>
@@ -126,7 +126,7 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
                       type="checkbox"
                       checked={visible}
                       onChange={() => toggleKpi(kpiId)}
-                      className="w-4 h-4 accent-[#3B82F6]"
+                      className="w-4 h-4 accent-[#16A34A]"
                     />
                   </label>
                 );
@@ -152,7 +152,7 @@ export const DashboardConfigDrawer: React.FC<DashboardConfigDrawerProps> = ({
                         type="checkbox"
                         checked={visible}
                         onChange={() => toggleChart(chartId)}
-                        className="w-4 h-4 accent-[#3B82F6]"
+                        className="w-4 h-4 accent-[#16A34A]"
                       />
                     </label>
                   );

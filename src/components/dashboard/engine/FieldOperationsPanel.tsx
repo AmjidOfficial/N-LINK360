@@ -92,7 +92,7 @@ export const FieldOperationsPanel: React.FC<FieldOperationsPanelProps> = ({
         <div className="lg:col-span-5 h-full rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 p-4 sm:p-5 flex flex-col justify-between gap-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#3B82F6] dark:text-blue-400">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#16A34A] dark:text-emerald-400">
                 Daily Field Attendance
               </div>
               <h3 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC] mt-0.5 truncate">
@@ -160,7 +160,7 @@ export const FieldOperationsPanel: React.FC<FieldOperationsPanelProps> = ({
               onClick={() => onQuickAction?.('VIEW_ATTENDANCE')}
               className="btn-outline min-h-[44px]"
             >
-              <CalendarCheck className="w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400" />
+              <CalendarCheck className="w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400" />
               <span>Attendance Log</span>
             </button>
           </div>
@@ -170,14 +170,14 @@ export const FieldOperationsPanel: React.FC<FieldOperationsPanelProps> = ({
         <div className="lg:col-span-7 h-full rounded-2xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 p-4 sm:p-5 flex flex-col justify-between gap-4">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#3B82F6] dark:text-blue-400">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[#16A34A] dark:text-emerald-400">
                 Quota &amp; Visit Productivity
               </div>
               <h3 className="text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC] mt-0.5">
                 Monthly Target Attainment ({dateRangeLabel})
               </h3>
             </div>
-            <Target className="w-4 h-4 text-[#3B82F6] dark:text-blue-400 shrink-0" />
+            <Target className="w-4 h-4 text-[#16A34A] dark:text-emerald-400 shrink-0" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -187,13 +187,13 @@ export const FieldOperationsPanel: React.FC<FieldOperationsPanelProps> = ({
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                   MTD Posted Sales
                 </span>
-                <span className="text-xs font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
+                <span className="text-xs font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400">
                   {salesPct !== null ? `${salesPct.toFixed(1)}%` : 'No Target'}
                 </span>
               </div>
               <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
                 <div
-                  className="h-full bg-[#3B82F6] transition-all"
+                  className="h-full bg-[#16A34A] transition-all"
                   style={{ width: `${salesPct ?? 0}%` }}
                 />
               </div>
@@ -209,13 +209,13 @@ export const FieldOperationsPanel: React.FC<FieldOperationsPanelProps> = ({
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                   MTD Confirmed Recovery
                 </span>
-                <span className="text-xs font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="text-xs font-mono tabular-nums font-bold text-[#EA580C] dark:text-orange-400">
                   {recPct !== null ? `${recPct.toFixed(1)}%` : 'No Target'}
                 </span>
               </div>
               <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
                 <div
-                  className="h-full bg-emerald-500 transition-all"
+                  className="h-full bg-[#EA580C] transition-all"
                   style={{ width: `${recPct ?? 0}%` }}
                 />
               </div>
@@ -296,7 +296,7 @@ export const FieldOperationsPanel: React.FC<FieldOperationsPanelProps> = ({
                   key={item.customerId}
                   type="button"
                   onClick={() => onSelectCustomer?.(item.customerId)}
-                  className="w-full min-h-[48px] text-left rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#0F172A] hover:border-[#3B82F6] p-3 flex items-center justify-between gap-3 transition-colors cursor-pointer"
+                  className="w-full min-h-[48px] text-left rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#0F172A] hover:border-[#16A34A] p-3 flex items-center justify-between gap-3 transition-colors cursor-pointer"
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -373,7 +373,7 @@ export const FieldOperationsPanel: React.FC<FieldOperationsPanelProps> = ({
                     <div className="grid grid-cols-3 gap-2 text-[11px] font-mono tabular-nums">
                       <div>
                         <span className="block text-[10px] text-slate-400 font-sans">Sales</span>
-                        <span className="font-semibold text-[#3B82F6] dark:text-blue-400">
+                        <span className="font-semibold text-[#16A34A] dark:text-emerald-400">
                           {formatCurrencyPKR(town.postedSales)}
                         </span>
                       </div>
@@ -418,7 +418,7 @@ export const FieldOperationsPanel: React.FC<FieldOperationsPanelProps> = ({
                         <td className="py-2.5 px-2 text-right font-mono tabular-nums text-slate-600 dark:text-slate-300">
                           {town.activeDealers}
                         </td>
-                        <td className="py-2.5 px-2 text-right font-mono tabular-nums font-semibold text-[#3B82F6] dark:text-blue-400">
+                        <td className="py-2.5 px-2 text-right font-mono tabular-nums font-semibold text-[#16A34A] dark:text-emerald-400">
                           {formatCurrencyPKR(town.postedSales)}
                         </td>
                         <td className="py-2.5 px-2 text-right font-mono tabular-nums text-emerald-600 dark:text-emerald-400">

@@ -79,7 +79,7 @@ export const ExecutiveDashboardView: React.FC<ExecutiveDashboardViewProps> = ({
   creditNotes,
   stockReturns,
   targets,
-  isDarkMode = true,
+  isDarkMode = false,
   onToggleTheme = () => {},
   onOpenApprovals,
   onOpenNewOrder,

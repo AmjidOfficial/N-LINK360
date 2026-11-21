@@ -19,7 +19,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
   return (
     <section
-      className={`w-full space-y-5 text-slate-900 dark:text-emerald-50 transition-colors ${className}`}
+      className={`w-full space-y-5 text-slate-900 dark:text-slate-100 transition-colors ${className}`}
       data-testid="role-dashboard-layout"
     >
       {header && <div className="w-full">{header}</div>}

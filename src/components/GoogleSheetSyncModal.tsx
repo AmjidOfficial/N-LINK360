@@ -344,7 +344,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
         {/* Header */}
         <div className="bg-[#0F172A] p-4 sm:p-5 text-white flex items-center justify-between shrink-0 border-b border-slate-800">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/20 flex items-center justify-center text-[#3B82F6] border border-[#3B82F6]/40 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#16A34A]/20 flex items-center justify-center text-[#16A34A] border border-[#16A34A]/40 shrink-0">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -371,7 +371,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
             onClick={() => { setActiveMode('FULL_SYNC'); setOpStatus({ type: 'idle' }); }}
             className={`min-h-[40px] py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
               activeMode === 'FULL_SYNC'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700'
             }`}
           >
@@ -383,7 +383,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
             onClick={() => { setActiveMode('IMPORT'); setOpStatus({ type: 'idle' }); }}
             className={`min-h-[40px] py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
               activeMode === 'IMPORT'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700'
             }`}
           >
@@ -395,7 +395,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
             onClick={() => { setActiveMode('EXPORT'); setOpStatus({ type: 'idle' }); }}
             className={`min-h-[40px] py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
               activeMode === 'EXPORT'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700'
             }`}
           >
@@ -407,7 +407,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
             onClick={() => { setActiveMode('OFFLINE_QUEUE'); setOpStatus({ type: 'idle' }); }}
             className={`min-h-[40px] py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer relative ${
               activeMode === 'OFFLINE_QUEUE'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700'
             }`}
           >
@@ -424,7 +424,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
             onClick={() => { setActiveMode('WEBHOOK'); setOpStatus({ type: 'idle' }); }}
             className={`min-h-[40px] py-1.5 px-2 rounded-lg text-[10px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer col-span-2 sm:col-span-1 ${
               activeMode === 'WEBHOOK'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700'
             }`}
           >
@@ -445,7 +445,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                 href={sheetUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs font-bold text-[#3B82F6] hover:underline flex items-center gap-1"
+                className="text-xs font-bold text-[#16A34A] dark:text-emerald-400 hover:underline flex items-center gap-1"
               >
                 <span>Open in Sheets</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -459,7 +459,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                 setActiveSpreadsheetId(e.target.value);
               }}
               placeholder="Google Spreadsheet ID"
-              className="w-full min-h-[44px] text-xs font-mono tabular-nums font-bold bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-xl px-3 py-2 text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
+              className="w-full min-h-[44px] text-xs font-mono tabular-nums font-bold bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 rounded-xl px-3 py-2 text-[#0F172A] dark:text-white focus:outline-none focus:border-[#16A34A]"
             />
             {metadata && (
               <div className="pt-1 flex items-center gap-2 flex-wrap text-xs">
@@ -505,7 +505,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
 
             {user ? (
               <div className="flex items-center gap-2.5 bg-white dark:bg-[#1E293B] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700">
-                <div className="w-7 h-7 rounded-lg bg-[#3B82F6] text-white font-bold flex items-center justify-center text-xs shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-[#16A34A] text-white font-bold flex items-center justify-center text-xs shrink-0">
                   {user.email ? user.email.charAt(0).toUpperCase() : 'G'}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -543,7 +543,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
               <div className="p-4 rounded-xl bg-[#0F172A] text-white border border-slate-700/80 shadow-sm space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-lg bg-[#3B82F6]/20 border border-[#3B82F6]/40 flex items-center justify-center text-[#3B82F6] shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-[#16A34A]/20 border border-[#16A34A]/40 flex items-center justify-center text-[#16A34A] shrink-0">
                       <Clock className="w-5 h-5" />
                     </div>
                     <div>
@@ -580,7 +580,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-800 text-xs">
                   <div className="bg-[#1E293B] rounded-lg p-2.5 border border-slate-700/80">
                     <span className="text-[10px] text-slate-400 block font-medium">Next Cycle In</span>
-                    <span className="text-sm font-mono tabular-nums font-bold text-[#60A5FA]">
+                    <span className="text-sm font-mono tabular-nums font-bold text-emerald-400">
                       {Math.floor(autoSyncStatus.secondsRemaining / 60)}m{' '}
                       {autoSyncStatus.secondsRemaining % 60 < 10 ? '0' : ''}
                       {autoSyncStatus.secondsRemaining % 60}s
@@ -613,7 +613,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
               {/* Action Box */}
               <div className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#3B82F6] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <div className="w-10 h-10 rounded-lg bg-[#16A34A] text-white flex items-center justify-center shrink-0 shadow-xs">
                     <UploadCloud className="w-5 h-5" />
                   </div>
                   <div>
@@ -654,7 +654,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
               <div className="border border-[#E2E8F0] dark:border-slate-700/80 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-[#3B82F6]" />
+                    <History className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
                     <span className="text-xs font-bold text-[#0F172A] dark:text-white uppercase tracking-wider">
                       Individual Transactions Queue ({pendingItems.length})
                     </span>
@@ -734,7 +734,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                                 className={`min-w-[36px] min-h-[36px] inline-flex items-center justify-center rounded-lg border transition-all cursor-pointer ${
                                   retryLoading
                                     ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
-                                    : 'bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-[#3B82F6] border-blue-200 dark:border-blue-800 shadow-2xs'
+                                    : 'bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-[#16A34A] dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 shadow-2xs'
                                 }`}
                                 title="Retry specific sync item"
                                 aria-label="Retry specific sync item"
@@ -808,7 +808,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
               <div className="p-4 rounded-2xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 space-y-3">
                 <div className="flex items-center justify-between border-b border-[#E2E8F0] dark:border-slate-700/80 pb-2 gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-[#3B82F6]" />
+                    <History className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
                     <span className="text-xs font-black text-[#0F172A] dark:text-white">Latest Import Status</span>
                   </div>
                   <span className="text-[10px] font-medium font-mono tabular-nums text-slate-500 dark:text-slate-400">
@@ -822,19 +822,19 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
                   <div className="p-2 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xs">
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold">Users</span>
-                    <span className="font-mono tabular-nums font-black text-[#3B82F6] text-sm">
+                    <span className="font-mono tabular-nums font-black text-[#16A34A] dark:text-emerald-400 text-sm">
                       {importSummary?.usersCount ?? 0}
                     </span>
                   </div>
                   <div className="p-2 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xs">
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold">Distributors</span>
-                    <span className="font-mono tabular-nums font-black text-[#3B82F6] text-sm">
+                    <span className="font-mono tabular-nums font-black text-[#EA580C] dark:text-orange-400 text-sm">
                       {importSummary?.distributorsCount ?? 0}
                     </span>
                   </div>
                   <div className="p-2 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 shadow-2xs">
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold">Dealers</span>
-                    <span className="font-mono tabular-nums font-black text-indigo-600 dark:text-indigo-400 text-sm">
+                    <span className="font-mono tabular-nums font-black text-slate-700 dark:text-slate-200 text-sm">
                       {importSummary?.dealersCount ?? 0}
                     </span>
                   </div>
@@ -844,9 +844,9 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                       {importSummary?.createdCount ?? 0}
                     </span>
                   </div>
-                  <div className="p-2 rounded-xl bg-white dark:bg-[#1E293B] border border-blue-200 dark:border-blue-800/80 shadow-2xs">
-                    <span className="text-[10px] text-[#3B82F6] block font-bold">Updated</span>
-                    <span className="font-mono tabular-nums font-black text-blue-700 dark:text-blue-300 text-sm">
+                  <div className="p-2 rounded-xl bg-white dark:bg-[#1E293B] border border-orange-200 dark:border-orange-800/80 shadow-2xs">
+                    <span className="text-[10px] text-[#EA580C] dark:text-orange-400 block font-bold">Updated</span>
+                    <span className="font-mono tabular-nums font-black text-orange-700 dark:text-orange-300 text-sm">
                       {importSummary?.updatedCount ?? 0}
                     </span>
                   </div>
@@ -927,9 +927,9 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                     else setPendingImportScope('USERS');
                   }}
                   disabled={isOperating}
-                  className="p-3.5 min-h-[44px] rounded-2xl bg-white dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#3B82F6] hover:shadow-md transition-all text-left group cursor-pointer disabled:opacity-50"
+                  className="p-3.5 min-h-[44px] rounded-2xl bg-white dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#16A34A] hover:shadow-md transition-all text-left group cursor-pointer disabled:opacity-50"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#3B82F6] flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-[#16A34A] dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
                     <Users className="w-4 h-4" />
                   </div>
                   <div className="text-xs font-black text-[#0F172A] dark:text-white">Sync Users</div>
@@ -943,9 +943,9 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                     else setPendingImportScope('CUSTOMERS');
                   }}
                   disabled={isOperating}
-                  className="p-3.5 min-h-[44px] rounded-2xl bg-white dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#3B82F6] hover:shadow-md transition-all text-left group cursor-pointer disabled:opacity-50"
+                  className="p-3.5 min-h-[44px] rounded-2xl bg-white dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#16A34A] hover:shadow-md transition-all text-left group cursor-pointer disabled:opacity-50"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#3B82F6] flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-[#16A34A] dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
                     <Store className="w-4 h-4" />
                   </div>
                   <div className="text-xs font-black text-[#0F172A] dark:text-white">Sync Customers</div>
@@ -980,7 +980,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                 <div className="p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
                   <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                    <Store className="w-3 h-3 text-[#3B82F6]" />
+                    <Store className="w-3 h-3 text-[#16A34A] dark:text-emerald-400" />
                     <span>Customers</span>
                   </div>
                   <div className="text-sm font-black font-mono tabular-nums text-[#0F172A] dark:text-white mt-1">
@@ -989,7 +989,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                 </div>
                 <div className="p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
                   <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                    <ShoppingBag className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    <ShoppingBag className="w-3 h-3 text-[#EA580C] dark:text-orange-400" />
                     <span>Orders</span>
                   </div>
                   <div className="text-sm font-black font-mono tabular-nums text-[#0F172A] dark:text-white mt-1">
@@ -998,7 +998,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                 </div>
                 <div className="p-2.5 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
                   <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                    <DollarSign className="w-3 h-3 text-[#3B82F6]" />
+                    <DollarSign className="w-3 h-3 text-[#16A34A] dark:text-emerald-400" />
                     <span>Recovery</span>
                   </div>
                   <div className="text-sm font-black font-mono tabular-nums text-[#0F172A] dark:text-white mt-1">
@@ -1202,7 +1202,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                                 className={`px-3 min-h-[44px] rounded-xl border text-[11px] font-black inline-flex items-center gap-1.5 transition-all cursor-pointer ${
                                   retryLoading
                                     ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
-                                    : 'bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-[#3B82F6] border-blue-200 dark:border-blue-800/80 active:scale-95'
+                                    : 'bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-[#16A34A] dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/80 active:scale-95'
                                 }`}
                                 title="Retry syncing this record"
                               >
@@ -1273,7 +1273,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
               <div className="p-4 bg-[#0F172A] text-white border border-slate-700/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Link2 className="w-5 h-5 text-[#3B82F6]" />
+                    <Link2 className="w-5 h-5 text-[#16A34A]" />
                     <h3 className="text-sm font-black text-white uppercase tracking-wider">
                       Permanent Webhook Mirror Channel
                     </h3>
@@ -1312,7 +1312,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                       placeholder="https://script.google.com/macros/s/.../exec"
                       value={customWebhookUrl}
                       onChange={(e) => setCustomWebhookUrl(e.target.value)}
-                      className="w-full min-h-[44px] text-xs font-mono p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#1E293B] text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
+                      className="w-full min-h-[44px] text-xs font-mono p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#1E293B] text-[#0F172A] dark:text-white focus:outline-none focus:border-[#16A34A]"
                     />
                   </div>
 
@@ -1369,7 +1369,7 @@ export const GoogleSheetSyncModal: React.FC<GoogleSheetSyncModalProps> = ({
                       setCopiedScript(true);
                       setTimeout(() => setCopiedScript(false), 2000);
                     }}
-                    className="text-[11px] font-black text-[#3B82F6] hover:underline inline-flex items-center gap-1 min-h-[36px] px-2 cursor-pointer"
+                    className="text-[11px] font-black text-[#16A34A] dark:text-emerald-400 hover:underline inline-flex items-center gap-1 min-h-[36px] px-2 cursor-pointer"
                   >
                     <Copy className="w-3.5 h-3.5" />
                     <span>{copiedScript ? 'Copied!' : 'Copy Code'}</span>

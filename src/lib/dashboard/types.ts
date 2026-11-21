@@ -424,6 +424,45 @@ export interface FieldOperationsSummary {
   assignedTownsSummary: HierarchyPerformanceRow[];
 }
 
+export interface BrandSkuMixItem {
+  name: string;
+  amount: number;
+  units: number;
+  sharePct: number;
+  color: string;
+}
+
+export interface PaymentModeMixItem {
+  mode: string;
+  label: string;
+  amount: number;
+  count: number;
+  sharePct: number;
+  color: string;
+}
+
+export interface DashboardGaugeMetrics {
+  salesAchievementPct: number;
+  recoveryEfficiencyPct: number;
+  creditUtilizationPct: number;
+  billedOutletReachPct: number;
+  salesPosted: number;
+  salesTarget: number;
+  recoveryCollected: number;
+  recoveryTarget: number;
+  totalReceivables: number;
+  totalCreditLimit: number;
+  billedDealersCount: number;
+  activeDealersCount: number;
+}
+
+export interface DashboardBiSummary {
+  brandSkuMix: BrandSkuMixItem[];
+  paymentModeMix: PaymentModeMixItem[];
+  topTowns: HierarchyPerformanceRow[];
+  gauges: DashboardGaugeMetrics;
+}
+
 export interface DashboardComputationResult {
   dateRange: KarachiDateRange;
   scope: UserDataScope;
@@ -439,6 +478,7 @@ export interface DashboardComputationResult {
   stockOverview: StockOverviewSummary;
   expenseSummary: ExpenseSummaryBreakdown;
   fieldSummary?: FieldOperationsSummary;
+  biSummary?: DashboardBiSummary;
   recentTransactions: RecentTransactionRow[];
   filterOptions: {
     regions: string[];

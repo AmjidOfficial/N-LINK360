@@ -23,7 +23,7 @@ export const KPICard: React.FC<KPICardProps> = ({ metric, onSelect, compact = fa
     <button
       type="button"
       onClick={() => onSelect?.(metric)}
-      className={`group h-full w-full flex flex-col justify-between text-left rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 bg-white dark:bg-[#1E293B] hover:border-[#3B82F6]/80 dark:hover:border-[#3B82F6]/70 transition-colors cursor-pointer min-h-[44px] ${
+      className={`group h-full w-full flex flex-col justify-between text-left rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 bg-white dark:bg-[#1E293B] hover:border-[#16A34A]/80 dark:hover:border-emerald-500/70 transition-colors cursor-pointer min-h-[44px] ${
         compact ? 'p-3.5' : 'p-4 sm:p-5'
       }`}
     >
@@ -32,7 +32,7 @@ export const KPICard: React.FC<KPICardProps> = ({ metric, onSelect, compact = fa
           <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
             {compact ? metric.shortLabel : metric.label}
           </span>
-          <ArrowUpRight className="w-4 h-4 shrink-0 text-slate-400 dark:text-slate-500 group-hover:text-[#3B82F6] dark:group-hover:text-blue-400 transition-colors" />
+          <ArrowUpRight className="w-4 h-4 shrink-0 text-slate-400 dark:text-slate-500 group-hover:text-[#16A34A] dark:group-hover:text-emerald-400 transition-colors" />
         </div>
 
         <div

@@ -1599,6 +1599,124 @@ export function computeDashboardMetrics(params: {
     .map((c) => ({ id: c.id, name: c.companyName }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // BI Executive Graphics Summary (Gauges, Brand/SKU Mix, Payment Mode Mix, Top Towns)
+  const BI_PALETTE = ['#16A34A', '#EA580C', '#F59E0B', '#0EA5E9', '#15803D', '#64748B'];
+  const skuCatLookup = new Map<string, string>();
+  for (const s of dataset.skus || []) {
+    const label = (s.categoryName || s.category || '').trim();
+    if (label) {
+      if (s.id) skuCatLookup.set(s.id.toLowerCase(), label);
+      if (s.skuCode) skuCatLookup.set(s.skuCode.toLowerCase(), label);
+    }
+  }
+
+  const classifyProductFamily = (skuId?: string, skuCode?: string, skuName?: string): string => {
+    const direct =
+      (skuId && skuCatLookup.get(skuId.toLowerCase())) ||
+      (skuCode && skuCatLookup.get(skuCode.toLowerCase()));
+    if (direct) return direct;
+    const raw = (skuName || skuCode || '').toLowerCase();
+    if (raw.includes('high watt') || raw.includes('50w') || raw.includes('40w') || raw.includes('30w')) return 'High Wattage LED';
+    if (raw.includes('panel') || raw.includes('downlight') || raw.includes('slim') || raw.includes('cob')) return 'Panels & Downlights';
+    if (raw.includes('tube') || raw.includes('batten') || raw.includes('t8')) return 'LED Tubes & Battens';
+    if (raw.includes('flood') || raw.includes('street') || raw.includes('stadium')) return 'Outdoor & Flood Lights';
+    if (raw.includes('bulb') || raw.includes('e27') || raw.includes('b22') || raw.includes('led')) return 'LED Bulbs & Domestic';
+    return 'Commercial & Accessories';
+  };
+
+  const brandMixMap = new Map<string, { amount: number; units: number }>();
+  const periodDocIds = new Set((periodSalesCalc?.docs || []).map((d) => d.id));
+  const periodPostedOrders = allOrders.filter(
+    (o) => isPostedOrder(o) && (periodDocIds.has(o.id) || isDateInKarachiRange(getOrderDate(o), dateRange.start, dateRange.end))
+  );
+
+  for (const ord of periodPostedOrders) {
+    const items = Array.isArray(ord.items) ? ord.items : [];
+    if (items.length === 0) {
+      const cat = 'Commercial Lighting';
+      const entry = brandMixMap.get(cat) || { amount: 0, units: 0 };
+      entry.amount = roundTo2(entry.amount + (Number(ord.totalAmount ?? ord.netAmount) || 0));
+      entry.units += 1;
+      brandMixMap.set(cat, entry);
+      continue;
+    }
+    for (const item of items) {
+      const cat = classifyProductFamily(item.skuId, item.skuCode, item.skuName);
+      const qty = Number(item.approvedQuantity ?? item.orderedQuantity ?? item.quantity) || 0;
+      const lineAmt = Number(item.lineTotal ?? item.totalAmount) || roundTo2((Number(item.unitPrice) || 0) * qty);
+      const entry = brandMixMap.get(cat) || { amount: 0, units: 0 };
+      entry.amount = roundTo2(entry.amount + lineAmt);
+      entry.units += qty;
+      brandMixMap.set(cat, entry);
+    }
+  }
+
+  const totalBrandAmt = Array.from(brandMixMap.values()).reduce((s, v) => s + v.amount, 0);
+  const brandSkuMix = Array.from(brandMixMap.entries())
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .slice(0, 6)
+    .map(([name, val], idx) => ({
+      name,
+      amount: val.amount,
+      units: val.units,
+      sharePct: totalBrandAmt > 0 ? roundTo2((val.amount / totalBrandAmt) * 100) : 0,
+      color: BI_PALETTE[idx % BI_PALETTE.length],
+    }));
+
+  // Payment Mode Mix from period confirmed recoveries
+  const paymentModeLabels: Record<string, { label: string; color: string }> = {
+    CASH: { label: 'Cash Collection', color: '#16A34A' },
+    ONLINE_TRANSFER: { label: 'Bank / Online', color: '#EA580C' },
+    BANK_TRANSFER: { label: 'Bank / Online', color: '#EA580C' },
+    CHEQUE: { label: 'Cheque / Instrument', color: '#F59E0B' },
+    EASYPAISA: { label: 'Mobile Wallet', color: '#0EA5E9' },
+    JAZZCASH: { label: 'Mobile Wallet', color: '#0EA5E9' },
+  };
+  const payMap = new Map<string, { mode: string; label: string; amount: number; count: number; color: string }>();
+  for (const r of periodRecoveryCalc?.rows || []) {
+    const rawMode = String(r.paymentMode || 'CASH').toUpperCase();
+    const meta = paymentModeLabels[rawMode] || { label: rawMode.replace(/_/g, ' '), color: '#64748B' };
+    const existing = payMap.get(meta.label) || { mode: rawMode, label: meta.label, amount: 0, count: 0, color: meta.color };
+    existing.amount = roundTo2(existing.amount + (Number(r.amount) || 0));
+    existing.count += 1;
+    payMap.set(meta.label, existing);
+  }
+  const totalPayAmt = Array.from(payMap.values()).reduce((s, v) => s + v.amount, 0);
+  const paymentModeMix = Array.from(payMap.values())
+    .sort((a, b) => b.amount - a.amount)
+    .map((p) => ({
+      ...p,
+      sharePct: totalPayAmt > 0 ? roundTo2((p.amount / totalPayAmt) * 100) : 0,
+    }));
+
+  const periodSalesAmt = periodSalesCalc?.netAmount ?? 0;
+  const periodRecoveryAmt = periodRecoveryCalc?.amount ?? 0;
+  const totalCreditLimit = roundTo2(customerList.reduce((s, c) => s + (Number(c.creditLimit) || 0), 0));
+  const totalReceivables = Math.max(0, totalOutstandingVal ?? 0);
+  const billedDealerSet = new Set((periodSalesCalc?.docs || []).map((d) => d.customerId));
+  const effectiveSalesTarget = salesTargetVal && salesTargetVal > 0 ? salesTargetVal : Math.max(500000, totalCreditLimit * 0.25);
+  const effectiveRecoveryTarget = recoveryTargetVal && recoveryTargetVal > 0 ? recoveryTargetVal : Math.max(periodSalesAmt, effectiveSalesTarget * 0.85);
+
+  const biSummary = {
+    brandSkuMix,
+    paymentModeMix,
+    topTowns: byTown.slice(0, 10),
+    gauges: {
+      salesAchievementPct: effectiveSalesTarget > 0 ? roundTo2((periodSalesAmt / effectiveSalesTarget) * 100) : 0,
+      recoveryEfficiencyPct: effectiveRecoveryTarget > 0 ? roundTo2((periodRecoveryAmt / effectiveRecoveryTarget) * 100) : 0,
+      creditUtilizationPct: totalCreditLimit > 0 ? roundTo2((totalReceivables / totalCreditLimit) * 100) : 0,
+      billedOutletReachPct: activeDealers.length > 0 ? roundTo2((billedDealerSet.size / activeDealers.length) * 100) : 0,
+      salesPosted: periodSalesAmt,
+      salesTarget: roundTo2(effectiveSalesTarget),
+      recoveryCollected: periodRecoveryAmt,
+      recoveryTarget: roundTo2(effectiveRecoveryTarget),
+      totalReceivables: roundTo2(totalReceivables),
+      totalCreditLimit,
+      billedDealersCount: billedDealerSet.size,
+      activeDealersCount: activeDealers.length,
+    },
+  };
+
   return {
     dateRange,
     scope,
@@ -1614,6 +1732,7 @@ export function computeDashboardMetrics(params: {
     stockOverview,
     expenseSummary,
     fieldSummary,
+    biSummary,
     recentTransactions,
     filterOptions: { regions, zones, territories, towns, dealers },
     computedAt: new Date().toISOString(),

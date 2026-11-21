@@ -64,7 +64,7 @@ export const KPIGrid: React.FC<KPIGridProps> = ({
           <button
             type="button"
             onClick={() => setShowAllMobile((v) => !v)}
-            className="btn-outline w-full min-h-[44px] text-[#3B82F6] dark:text-blue-400"
+            className="btn-outline w-full min-h-[44px] text-[#16A34A] dark:text-emerald-400"
           >
             {showAllMobile ? (
               <>

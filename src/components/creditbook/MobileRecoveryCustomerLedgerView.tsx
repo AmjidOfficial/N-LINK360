@@ -87,6 +87,14 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
     .reduce((sum, r) => sum + (r.amount || 0), 0);
 
   const closingBalance = customer.currentBalance ?? Math.max(0, openingBalance + totalInvoices - verifiedRecoveries);
+  const creditLimit = customer.creditLimit ?? 250000;
+  const creditUtilizationPct = creditLimit > 0 ? Math.min(100, Math.round((Math.max(0, closingBalance) / creditLimit) * 100)) : 0;
+  const totalGrossExposure = Math.max(0, openingBalance) + totalInvoices;
+  const recoveryRealizationPct = totalGrossExposure > 0
+    ? Math.min(100, Math.round((verifiedRecoveries / totalGrossExposure) * 100))
+    : verifiedRecoveries > 0
+    ? 100
+    : 0;
 
   const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -154,7 +162,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
         <button
           type="button"
           onClick={onBack}
-          className="btn-outline self-start min-h-[44px] px-3 text-xs text-[#3B82F6] dark:text-blue-400"
+          className="btn-outline self-start min-h-[44px] px-3 text-xs text-[#16A34A] dark:text-emerald-400"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Customers</span>
@@ -164,7 +172,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
       {/* Top National Light Logo Header */}
       <div className="flex items-center justify-between bg-white dark:bg-[#1E293B] p-3.5 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs">
         <NationalLightHeaderBrand size="sm" />
-        <span className="text-[10px] font-mono font-bold text-[#3B82F6] dark:text-blue-300 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/60">
+        <span className="text-[10px] font-mono font-bold text-[#16A34A] dark:text-emerald-300 px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60">
           LEDGER &amp; WASOOLI
         </span>
       </div>
@@ -173,7 +181,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/70 text-[#3B82F6] dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center justify-center font-bold text-base shadow-xs shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-[#16A34A] dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center font-bold text-base shadow-xs shrink-0">
               {customer.companyName?.slice(0, 2).toUpperCase() || 'AN'}
             </div>
             <div className="min-w-0">
@@ -181,9 +189,11 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
                 <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Customer Ledger
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/70 text-[#DC2626] dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                  Overdue
-                </span>
+                {closingBalance > creditLimit && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/70 text-[#DC2626] dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                    Over Limit
+                  </span>
+                )}
               </div>
               <h1 className="text-base font-bold text-[#0F172A] dark:text-white flex items-center gap-1 truncate">
                 <span className="truncate">{customer.companyName}</span>
@@ -194,7 +204,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
 
           <div className="text-right shrink-0">
             <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block">Outstanding</span>
-            <span className="text-base font-bold font-mono tabular-nums text-[#DC2626] dark:text-rose-400">
+            <span className={`text-base font-bold font-mono tabular-nums ${closingBalance > creditLimit ? 'text-[#DC2626] dark:text-rose-400' : 'text-[#0F172A] dark:text-white'}`}>
               PKR {closingBalance.toLocaleString()}
             </span>
           </div>
@@ -205,9 +215,9 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
           <button
             type="button"
             onClick={() => setActiveFilterTab('SUMMARY')}
-            className={`min-h-[40px] px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`min-h-[44px] px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
               activeFilterTab === 'SUMMARY'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
             }`}
           >
@@ -216,9 +226,9 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
           <button
             type="button"
             onClick={() => setActiveFilterTab('INVOICES')}
-            className={`min-h-[40px] px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`min-h-[44px] px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
               activeFilterTab === 'INVOICES'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#EA580C] text-white shadow-xs'
                 : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
             }`}
           >
@@ -227,35 +237,36 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
           <button
             type="button"
             onClick={() => setActiveFilterTab('RECOVERIES')}
-            className={`min-h-[40px] px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`min-h-[44px] px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
               activeFilterTab === 'RECOVERIES'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
             }`}
           >
-            Recovery Logs
+            Recovery Logs ({customerRecoveries.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveFilterTab('CREDIT_NOTES')}
-            className={`min-h-[40px] px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`min-h-[44px] px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
               activeFilterTab === 'CREDIT_NOTES'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300'
             }`}
           >
-            Credit Notes
+            Analytics &amp; Notes
           </button>
         </div>
       </div>
 
       {/* 2. Financial Summary Card with Centered Watermark Overlay */}
+      {(activeFilterTab === 'SUMMARY' || activeFilterTab === 'CREDIT_NOTES') && (
       <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs relative overflow-hidden">
         <DocumentCenterWatermark title="CUSTOMER LEDGER" />
         <div className="relative z-10">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/70 flex items-center justify-center text-[#3B82F6] dark:text-blue-400">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 flex items-center justify-center text-[#16A34A] dark:text-emerald-400">
               <Wallet className="w-4 h-4" />
             </div>
             <span className="text-sm font-bold text-[#0F172A] dark:text-white">Financial Breakdown</span>
@@ -273,30 +284,72 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
 
           <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
             <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block mb-0.5">Total Invoices</span>
-            <span className="font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400 text-xs">
+            <span className="font-mono tabular-nums font-bold text-[#EA580C] dark:text-orange-400 text-xs">
               +PKR {totalInvoices.toLocaleString()}
             </span>
           </div>
 
           <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block mb-0.5">Debit Notes</span>
-            <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white text-xs">
-              +PKR {debitNotes.toLocaleString()}
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block mb-0.5">Pending Claims</span>
+            <span className="font-mono tabular-nums font-bold text-amber-600 dark:text-amber-400 text-xs">
+              PKR {pendingRecoveriesAmount.toLocaleString()}
             </span>
           </div>
 
           <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80">
             <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-semibold block mb-0.5">Verified Recoveries</span>
-            <span className="font-mono tabular-nums font-bold text-emerald-600 dark:text-emerald-400 text-xs">
+            <span className="font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400 text-xs">
               -PKR {verifiedRecoveries.toLocaleString()} CR
             </span>
+          </div>
+        </div>
+
+        {/* Compact Credit Utilization & Recovery Realization Analytics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3 text-[11px]">
+          <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 space-y-1.5">
+            <div className="flex items-center justify-between font-mono tabular-nums">
+              <span className="font-semibold text-slate-600 dark:text-slate-400 uppercase text-[10px]">Credit Limit Used</span>
+              <span className={`font-bold ${creditUtilizationPct >= 90 ? 'text-rose-600 dark:text-rose-400' : creditUtilizationPct >= 70 ? 'text-[#EA580C] dark:text-orange-400' : 'text-[#16A34A] dark:text-emerald-400'}`}>
+                {creditUtilizationPct}%
+              </span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${Math.max(creditUtilizationPct > 0 ? 4 : 0, creditUtilizationPct)}%`,
+                  backgroundColor: creditUtilizationPct >= 90 ? '#DC2626' : creditUtilizationPct >= 70 ? '#F97316' : '#16A34A',
+                }}
+              />
+            </div>
+            <div className="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400">
+              Limit: PKR {creditLimit.toLocaleString()}
+            </div>
+          </div>
+
+          <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 space-y-1.5">
+            <div className="flex items-center justify-between font-mono tabular-nums">
+              <span className="font-semibold text-slate-600 dark:text-slate-400 uppercase text-[10px]">Recovery Realization</span>
+              <span className="font-bold text-[#16A34A] dark:text-emerald-400">
+                {recoveryRealizationPct}%
+              </span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-orange-200/80 dark:bg-orange-950/60 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[#16A34A] transition-all duration-300"
+                style={{ width: `${recoveryRealizationPct}%` }}
+              />
+            </div>
+            <div className="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400">
+              Collected: PKR {verifiedRecoveries.toLocaleString()}
+            </div>
           </div>
         </div>
 
         <div className="pt-3 -mx-4 -mb-4 p-4 bg-[#F8FAFC] dark:bg-[#0F172A] border-t border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-2">
           <div>
             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block">Calculated Closing Balance</span>
-            <span className="text-[10px] text-slate-400">Opening + Invs + DN - Rec - CN</span>
+            <span className="text-[10px] text-slate-400">Opening + Invs + DN ({debitNotes}) - Rec</span>
           </div>
           <span className="text-base font-bold font-mono tabular-nums text-[#0F172A] dark:text-white">
             PKR {closingBalance.toLocaleString()}
@@ -304,11 +357,13 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
         </div>
         </div>
       </div>
+      )}
 
       {/* 3. Recovery Collection Form Section */}
+      {activeFilterTab === 'SUMMARY' && (
       <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs">
         <div className="flex items-center gap-2.5 mb-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/70 flex items-center justify-center text-[#3B82F6] dark:text-blue-400">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 flex items-center justify-center text-[#16A34A] dark:text-emerald-400">
             <Receipt className="w-4 h-4" />
           </div>
           <div>
@@ -332,7 +387,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
                 value={amountInput}
                 onChange={(e) => setAmountInput(e.target.value)}
                 placeholder="0.00"
-                className="w-full min-h-[46px] bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-white font-mono tabular-nums font-bold text-sm pl-14 pr-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 focus:outline-none focus:border-[#3B82F6] focus:ring-2 focus:ring-blue-500/20"
+                className="w-full min-h-[46px] bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-white font-mono tabular-nums font-bold text-sm pl-14 pr-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-700 focus:outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
           </div>
@@ -348,7 +403,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
                 onClick={() => setPayMethod('CASH')}
                 className={`min-h-[48px] flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all cursor-pointer ${
                   payMethod === 'CASH'
-                    ? 'bg-[#3B82F6] text-white border-[#3B82F6] shadow-xs'
+                    ? 'bg-[#16A34A] text-white border-[#16A34A] shadow-xs'
                     : 'bg-[#F8FAFC] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
               >
@@ -361,7 +416,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
                 onClick={() => setPayMethod('CHEQUE')}
                 className={`min-h-[48px] flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all cursor-pointer ${
                   payMethod === 'CHEQUE'
-                    ? 'bg-[#3B82F6] text-white border-[#3B82F6] shadow-xs'
+                    ? 'bg-[#16A34A] text-white border-[#16A34A] shadow-xs'
                     : 'bg-[#F8FAFC] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
               >
@@ -374,7 +429,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
                 onClick={() => setPayMethod('BANK_TRANSFER')}
                 className={`min-h-[48px] flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all cursor-pointer ${
                   payMethod === 'BANK_TRANSFER'
-                    ? 'bg-[#3B82F6] text-white border-[#3B82F6] shadow-xs'
+                    ? 'bg-[#16A34A] text-white border-[#16A34A] shadow-xs'
                     : 'bg-[#F8FAFC] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
               >
@@ -394,7 +449,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
               value={referenceNumber}
               onChange={(e) => setReferenceNumber(e.target.value)}
               placeholder="e.g. CHQ-998231 or TRX-448102"
-              className="w-full min-h-[44px] bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-white text-xs px-3 py-2 rounded-xl border border-[#E2E8F0] dark:border-slate-700 focus:outline-none focus:border-[#3B82F6]"
+              className="w-full min-h-[44px] bg-[#F8FAFC] dark:bg-[#0F172A] text-[#0F172A] dark:text-white text-xs px-3 py-2 rounded-xl border border-[#E2E8F0] dark:border-slate-700 focus:outline-none focus:border-[#16A34A]"
             />
           </div>
 
@@ -444,17 +499,29 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
           </button>
         </form>
       </div>
+      )}
 
-      {/* 4. Recent Invoices & Ledger Table */}
+      {/* 4. Recent Invoices & Status */}
+      {(activeFilterTab === 'SUMMARY' || activeFilterTab === 'INVOICES') && (
       <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/70 flex items-center justify-center text-[#3B82F6] dark:text-blue-400">
+            <div className="w-7 h-7 rounded-lg bg-orange-50 dark:bg-orange-950/70 flex items-center justify-center text-[#EA580C] dark:text-orange-400">
               <Receipt className="w-4 h-4" />
             </div>
-            <h2 className="text-sm font-bold text-[#0F172A] dark:text-white">Recent Invoices &amp; Status</h2>
+            <h2 className="text-sm font-bold text-[#0F172A] dark:text-white">
+              {activeFilterTab === 'INVOICES' ? `All Active Invoices (${customerOrders.length})` : 'Recent Invoices & Status'}
+            </h2>
           </div>
-          <span className="text-[11px] font-semibold text-[#3B82F6] dark:text-blue-400">View All &rarr;</span>
+          {activeFilterTab === 'SUMMARY' && customerOrders.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setActiveFilterTab('INVOICES')}
+              className="text-[11px] font-semibold text-[#16A34A] dark:text-emerald-400 hover:underline cursor-pointer"
+            >
+              View All &rarr;
+            </button>
+          )}
         </div>
 
         <div className="space-y-2 text-xs">
@@ -463,7 +530,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
               No orders or invoices on record for this customer.
             </div>
           ) : (
-            customerOrders.slice(0, 5).map((ord) => {
+            (activeFilterTab === 'INVOICES' ? customerOrders : customerOrders.slice(0, 5)).map((ord) => {
               const isApproved = ord.status === 'APPROVED' || ord.shahzadApproval === 'APPROVED';
               const isPending = !isApproved && ord.status !== 'REJECTED';
               const invNum = ord.orderNumber || ord.id;
@@ -473,7 +540,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
                 <div
                   key={ord.id}
                   onClick={() => onPreviewInvoicePdf && onPreviewInvoicePdf(ord, customer)}
-                  className="bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-2 cursor-pointer hover:border-[#3B82F6] transition-colors"
+                  className="bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-2 cursor-pointer hover:border-[#16A34A] transition-colors"
                 >
                   <div className="flex flex-col gap-0.5 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -498,7 +565,7 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
                     <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white block">
                       PKR {ord.totalAmount?.toLocaleString()}
                     </span>
-                    <span className={`text-[10px] font-bold ${isApproved ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                    <span className={`text-[10px] font-bold ${isApproved ? 'text-[#16A34A] dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                       {isApproved ? 'In Ledger' : 'Awaiting Approval'}
                     </span>
                   </div>
@@ -508,6 +575,71 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
           )}
         </div>
       </div>
+      )}
+
+      {/* 4B. Recovery Logs Section (Active when RECOVERIES tab selected) */}
+      {activeFilterTab === 'RECOVERIES' && (
+      <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 flex items-center justify-center text-[#16A34A] dark:text-emerald-400">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <h2 className="text-sm font-bold text-[#0F172A] dark:text-white">
+              Recovery Logs ({customerRecoveries.length})
+            </h2>
+          </div>
+          <span className="text-[11px] font-mono tabular-nums font-semibold text-[#16A34A] dark:text-emerald-400">
+            Total Verified: PKR {verifiedRecoveries.toLocaleString()}
+          </span>
+        </div>
+
+        <div className="space-y-2 text-xs">
+          {customerRecoveries.length === 0 ? (
+            <div className="p-4 text-center text-slate-500 dark:text-slate-400 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-xl">
+              No recovery collections recorded for this customer yet.
+            </div>
+          ) : (
+            customerRecoveries.map((rec) => {
+              const isConfirmed = rec.status === 'VERIFIED' || rec.status === 'APPROVED' || rec.shahzadApproval === 'APPROVED';
+              const dateStr = rec.collectionDate || rec.createdAt ? new Date(rec.collectionDate || rec.createdAt!).toLocaleDateString('en-GB') : 'Recent';
+              return (
+                <div
+                  key={rec.id}
+                  className="bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-2"
+                >
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
+                        #{rec.recoveryNumber || rec.id}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                        isConfirmed
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                          : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+                      }`}>
+                        {isConfirmed ? 'Verified CR' : 'Pending Approval'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {dateStr} &bull; {rec.paymentMode || 'CASH'}{rec.instrumentNumber ? ` (${rec.instrumentNumber})` : ''}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400 block">
+                      -PKR {(rec.amount || 0).toLocaleString()} CR
+                    </span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      {rec.salesUserName || 'Field Officer'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+      )}
 
       {/* 5. Secondary Actions */}
       <div className="grid grid-cols-2 gap-3">
@@ -528,20 +660,17 @@ export const MobileRecoveryCustomerLedgerView: React.FC<MobileRecoveryCustomerLe
           }}
           className="btn-outline min-h-[44px] px-3 text-xs"
         >
-          <Download className="w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400" />
+          <Download className="w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400" />
           <span>Download PDF</span>
         </button>
 
         <button
           type="button"
-          onClick={() => {
-            setToastMessage('Displaying ledger audit history...');
-            setTimeout(() => setToastMessage(null), 5000);
-          }}
+          onClick={() => setActiveFilterTab(activeFilterTab === 'RECOVERIES' ? 'SUMMARY' : 'RECOVERIES')}
           className="btn-outline min-h-[44px] px-3 text-xs"
         >
-          <History className="w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400" />
-          <span>Audit History</span>
+          <History className="w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400" />
+          <span>{activeFilterTab === 'RECOVERIES' ? 'Back to Summary' : 'Recovery Logs'}</span>
         </button>
       </div>
 

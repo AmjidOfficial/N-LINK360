@@ -309,16 +309,16 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   const [customerFilterQuery, setCustomerFilterQuery] = useState('');
   const [townFilter, setTownFilter] = useState('ALL');
 
-  // Persistent Theme (Industrial Dark & Emerald default + Light mode toggle)
+  // Persistent Theme (Crisp Light default + Dark mode toggle)
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
       if (typeof localStorage !== 'undefined') {
         const stored = localStorage.getItem('nlink_theme_mode');
-        if (stored === 'light') return false;
         if (stored === 'dark') return true;
+        if (stored === 'light') return false;
       }
     } catch {}
-    return true;
+    return false;
   });
 
   useEffect(() => {
@@ -709,7 +709,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-3'
                       } py-2 rounded-xl text-xs font-semibold flex items-center transition-colors cursor-pointer ${
                         active
-                          ? 'bg-[#3B82F6] text-white shadow-xs'
+                          ? 'bg-[#16A34A] text-white shadow-xs'
                           : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
@@ -718,7 +718,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                       </div>
                       {!isSidebarCollapsed && 'badge' in item && item.badge !== undefined && (
-                        <span className={`text-[11px] font-mono tabular-nums ${active ? 'text-blue-100' : 'text-slate-400'}`}>{item.badge}</span>
+                        <span className={`text-[11px] font-mono tabular-nums ${active ? 'text-emerald-100' : 'text-slate-400'}`}>{item.badge}</span>
                       )}
                       {!isSidebarCollapsed && 'alertBadge' in item && item.alertBadge !== undefined && item.alertBadge > 0 && (
                         <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono tabular-nums font-bold bg-[#F97316] text-white">
@@ -737,7 +737,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
         <div className="p-2.5 border-t border-[#E2E8F0] dark:border-slate-800 space-y-2 shrink-0">
           {!isSidebarCollapsed && (
             <div className="px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#3B82F6] text-white font-bold text-xs flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-[#16A34A] text-white font-bold text-xs flex items-center justify-center shrink-0">
                 {currentUser.avatarInitials || 'NL'}
               </div>
               <div className="min-w-0 flex-1">
@@ -771,7 +771,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 type="button"
                 onClick={onOpenChangePassword}
                 title="Change Password"
-                className="min-h-[44px] py-2 px-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:text-[#3B82F6] hover:bg-blue-50 dark:hover:bg-blue-950/40 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="min-h-[44px] py-2 px-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:text-[#16A34A] hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <KeyRound className="w-3.5 h-3.5" />
                 {!isSidebarCollapsed && <span>Change Password</span>}
@@ -844,7 +844,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 className="btn-outline min-h-[44px]"
                 title="Sync Google Sheets"
               >
-                <RefreshCw className={`w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400 ${isSyncingSheet ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400 ${isSyncingSheet ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">{isSyncingSheet ? 'Syncing...' : 'Sync'}</span>
               </button>
             )}
@@ -1053,7 +1053,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                        <CheckSquare className="w-5 h-5 text-[#3B82F6]" />
+                        <CheckSquare className="w-5 h-5 text-[#16A34A]" />
                         Executive Approval Center
                       </h2>
                       <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
@@ -1067,7 +1067,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         onClick={() => setApprovalsSubTab('ORDERS')}
                         className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer tabular-nums ${
                           approvalsSubTab === 'ORDERS'
-                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            ? 'bg-[#16A34A] text-white shadow-xs'
                             : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
@@ -1079,7 +1079,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         onClick={() => setApprovalsSubTab('RECOVERIES')}
                         className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer tabular-nums ${
                           approvalsSubTab === 'RECOVERIES'
-                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            ? 'bg-[#16A34A] text-white shadow-xs'
                             : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
@@ -1091,7 +1091,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         onClick={() => setApprovalsSubTab('CUSTOMERS')}
                         className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer tabular-nums ${
                           approvalsSubTab === 'CUSTOMERS'
-                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            ? 'bg-[#16A34A] text-white shadow-xs'
                             : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
@@ -1103,7 +1103,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         onClick={() => setApprovalsSubTab('PROFILE_EDITS')}
                         className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer tabular-nums ${
                           approvalsSubTab === 'PROFILE_EDITS'
-                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            ? 'bg-[#16A34A] text-white shadow-xs'
                             : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
@@ -1167,8 +1167,8 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                     PKR {oldBalance.toLocaleString()}
                                   </span>
                                 </div>
-                                <div className="bg-blue-50/70 dark:bg-blue-950/30 p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60">
-                                  <span className="text-[10px] text-[#3B82F6] dark:text-blue-400 block font-medium">Order Amount</span>
+                                <div className="bg-emerald-50/70 dark:bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60">
+                                  <span className="text-[10px] text-[#16A34A] dark:text-emerald-400 block font-medium">Order Amount</span>
                                   <span className="font-mono tabular-nums font-bold text-slate-900 dark:text-white">
                                     PKR {ordAmount.toLocaleString()}
                                   </span>
@@ -1221,7 +1221,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                           st.done
                                             ? 'bg-emerald-500 text-white'
                                             : idx === 1
-                                            ? 'bg-[#3B82F6] text-white'
+                                            ? 'bg-[#16A34A] text-white'
                                             : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                                         }`}>
                                           {st.step}
@@ -1230,7 +1230,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                           st.done
                                             ? 'text-emerald-600 dark:text-emerald-400'
                                             : idx === 1
-                                            ? 'text-[#3B82F6] dark:text-blue-400'
+                                            ? 'text-[#16A34A] dark:text-emerald-400'
                                             : 'text-slate-500 dark:text-slate-400'
                                         }`}>
                                           {st.label}
@@ -1265,7 +1265,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                     className="btn-outline min-h-[44px] px-3.5 text-xs"
                                     title="Run 5-Step Operational Flow: Sales Entry -> Dispatch Note -> Stock Availability Check -> Invoice (-15%) -> Ledger"
                                   >
-                                    <Truck className="w-4 h-4 text-[#3B82F6] shrink-0" />
+                                    <Truck className="w-4 h-4 text-[#16A34A] shrink-0" />
                                     <span>5-Step Dispatch &amp; Invoice</span>
                                   </button>
 
@@ -1402,7 +1402,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   <span className="font-mono tabular-nums font-black text-sm text-slate-900 dark:text-white">
                                     {cust.customerCode || cust.id}
                                   </span>
-                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-blue-500/10 text-[#3B82F6] dark:text-blue-400 border border-blue-500/20">
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-emerald-500/10 text-[#16A34A] dark:text-emerald-400 border border-emerald-500/20">
                                     {cust.type || cust.customerType || 'DEALER'}
                                   </span>
                                   <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border border-orange-500/20">
@@ -1419,7 +1419,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
                               <div className="text-right">
                                 <span className="text-xs text-slate-400 block font-bold">Requested Credit Limit</span>
-                                <span className="text-base font-black font-mono tabular-nums text-[#3B82F6] dark:text-blue-400">
+                                <span className="text-base font-black font-mono tabular-nums text-[#16A34A] dark:text-emerald-400">
                                   PKR {(cust.creditLimit || 500000).toLocaleString()}
                                 </span>
                                 <span className="text-[10px] text-slate-400 block font-bold tabular-nums">
@@ -1530,7 +1530,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                               </div>
 
                               <div className="space-y-1 sm:border-l sm:border-slate-200 dark:sm:border-slate-700 sm:pl-3">
-                                <span className="text-[10px] font-extrabold uppercase text-[#3B82F6] dark:text-blue-400 block">Requested Updates</span>
+                                <span className="text-[10px] font-extrabold uppercase text-[#16A34A] dark:text-emerald-400 block">Requested Updates</span>
                                 <p className="font-bold text-emerald-600 dark:text-emerald-400">
                                   Name: {req.requestedChanges.fullName || req.currentInfo.fullName}
                                 </p>
@@ -1594,7 +1594,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       <div>
                         <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
                           <span>Dealer Accounts &amp; Customer Khata</span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-blue-500/10 text-[#3B82F6] dark:text-blue-400 border border-blue-500/20 font-bold">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-[#16A34A] dark:text-emerald-400 border border-emerald-500/20 font-bold">
                             Live Ledger
                           </span>
                         </h2>
@@ -1608,7 +1608,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         <select
                           value={townFilter}
                           onChange={(e) => setTownFilter(e.target.value)}
-                          className="min-h-[44px] px-3 py-2 bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-[#3B82F6] cursor-pointer"
+                          className="min-h-[44px] px-3 py-2 bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-[#16A34A] cursor-pointer"
                         >
                           <option value="ALL">All Towns ({customers.length})</option>
                           {Array.from(new Set(customers.map((c) => c.town || c.city).filter(Boolean))).map((t) => (
@@ -1623,7 +1623,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             onClick={() => setDealersViewMode('CARDS')}
                             className={`min-h-[36px] px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                               dealersViewMode === 'CARDS'
-                                ? 'bg-[#3B82F6] text-white shadow-xs'
+                                ? 'bg-[#16A34A] text-white shadow-xs'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                             }`}
                           >
@@ -1635,7 +1635,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             onClick={() => setDealersViewMode('TABLE')}
                             className={`min-h-[36px] px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                               dealersViewMode === 'TABLE'
-                                ? 'bg-[#3B82F6] text-white shadow-xs'
+                                ? 'bg-[#16A34A] text-white shadow-xs'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                             }`}
                           >
@@ -1647,7 +1647,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             onClick={() => setDealersViewMode('MAP')}
                             className={`min-h-[36px] px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                               dealersViewMode === 'MAP'
-                                ? 'bg-[#3B82F6] text-white shadow-xs'
+                                ? 'bg-[#16A34A] text-white shadow-xs'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                             }`}
                           >
@@ -1664,7 +1664,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             placeholder="Search dealer, shop, code..."
                             value={customerFilterQuery}
                             onChange={(e) => setCustomerFilterQuery(e.target.value)}
-                            className="w-full min-h-[44px] pl-9 pr-10 py-2 bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-[#3B82F6]"
+                            className="w-full min-h-[44px] pl-9 pr-10 py-2 bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-[#16A34A]"
                           />
                           {customerFilterQuery && (
                             <button
@@ -1724,19 +1724,19 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                           return (
                             <div
                               key={c.id}
-                              className="h-full bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs hover:border-[#3B82F6]/60 transition-all space-y-3.5 flex flex-col justify-between"
+                              className="h-full bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs hover:border-[#16A34A]/60 transition-all space-y-3.5 flex flex-col justify-between"
                             >
                               <div>
                                 {/* Card Header */}
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex items-start gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-[#3B82F6] dark:text-blue-400 font-black text-xs flex items-center justify-center shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-[#16A34A] dark:text-emerald-400 font-black text-xs flex items-center justify-center shrink-0">
                                       {c.companyName.slice(0, 2).toUpperCase()}
                                     </div>
                                     <div className="min-w-0">
                                       <h3
                                         onClick={() => handleOpen360ForCustomer(c)}
-                                        className="font-black text-sm text-slate-900 dark:text-white truncate cursor-pointer hover:text-[#3B82F6] transition-colors"
+                                        className="font-black text-sm text-slate-900 dark:text-white truncate cursor-pointer hover:text-[#16A34A] transition-colors"
                                       >
                                         {c.companyName}
                                       </h3>
@@ -1755,7 +1755,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                     <a
                                       href={`tel:${c.phone}`}
                                       aria-label={`Call ${c.companyName}`}
-                                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-blue-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-[#3B82F6] flex items-center justify-center border border-[#E2E8F0] dark:border-slate-700 shrink-0"
+                                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-slate-100 dark:bg-[#0F172A] hover:bg-emerald-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-[#16A34A] flex items-center justify-center border border-[#E2E8F0] dark:border-slate-700 shrink-0"
                                       title="Call Dealer"
                                     >
                                       <Phone className="w-4 h-4" />
@@ -1828,7 +1828,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   className="btn-outline min-h-[44px] px-2.5 text-xs"
                                   title="View bills and invoices"
                                 >
-                                  <Receipt className="w-3.5 h-3.5 text-[#3B82F6]" />
+                                  <Receipt className="w-3.5 h-3.5 text-[#16A34A]" />
                                   <span>Invoices</span>
                                 </button>
 
@@ -1839,7 +1839,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   className="btn-outline min-h-[44px] px-2.5 text-xs"
                                   title="View Khata ledger statement"
                                 >
-                                  <BookOpen className="w-3.5 h-3.5 text-[#3B82F6]" />
+                                  <BookOpen className="w-3.5 h-3.5 text-[#16A34A]" />
                                   <span>Khata Ledger</span>
                                 </button>
 
@@ -1893,13 +1893,13 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
                                 return (
                                   <tr key={c.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
-                                    <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-2.5 px-3 font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
+                                    <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-2.5 px-3 font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400">
                                       {c.customerCode}
                                     </td>
                                     <td className="py-2.5 px-3">
                                       <span
                                         onClick={() => handleOpen360ForCustomer(c)}
-                                        className="font-bold text-slate-900 dark:text-white cursor-pointer hover:text-[#3B82F6] block"
+                                        className="font-bold text-slate-900 dark:text-white cursor-pointer hover:text-[#16A34A] block"
                                       >
                                         {c.companyName}
                                       </span>
@@ -1943,7 +1943,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                             },
                                             {
                                               label: 'View Invoices',
-                                              icon: <Receipt className="w-3.5 h-3.5 text-[#3B82F6]" />,
+                                              icon: <Receipt className="w-3.5 h-3.5 text-[#16A34A]" />,
                                               onClick: () => {
                                                 setSelectedCustomerIdFor360(c.id);
                                                 setCustomer360SubView('INVOICES');
@@ -1989,7 +1989,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         onClick={() => setSalesOrderView('ORDER_FORM')}
                         className={`min-h-[40px] px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                           salesOrderView === 'ORDER_FORM'
-                            ? 'bg-[#3B82F6] text-white'
+                            ? 'bg-[#16A34A] text-white'
                             : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
@@ -2000,7 +2000,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         onClick={() => setSalesOrderView('ORDER_LIST')}
                         className={`min-h-[40px] px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer tabular-nums ${
                           salesOrderView === 'ORDER_LIST'
-                            ? 'bg-[#3B82F6] text-white'
+                            ? 'bg-[#16A34A] text-white'
                             : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
@@ -2013,7 +2013,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       onClick={onOpenRateCard}
                       className="btn-outline min-h-[40px] text-xs w-fit"
                     >
-                      <Receipt className="w-3.5 h-3.5 text-[#3B82F6]" />
+                      <Receipt className="w-3.5 h-3.5 text-[#16A34A]" />
                       <span>Rate List</span>
                     </button>
                   </div>
@@ -2055,7 +2055,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                               const c = customers.find((cust) => cust.id === o.customerId || cust.companyName === o.customerName);
                               return (
                                 <tr key={o.id || o.orderNumber} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
-                                  <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-3 px-4 font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
+                                  <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-3 px-4 font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400">
                                     #{o.orderNumber || o.id?.slice(-6)}
                                   </td>
                                   <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
@@ -2113,7 +2113,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                           }}
                                           className="btn-outline min-h-[36px] px-2.5 py-1.5 text-[11px] whitespace-nowrap"
                                         >
-                                          <Download className="w-3.5 h-3.5 text-[#3B82F6]" />
+                                          <Download className="w-3.5 h-3.5 text-[#16A34A]" />
                                           <span>PDF</span>
                                         </button>
                                       )}
@@ -2122,7 +2122,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                         items={[
                                           {
                                             label: 'Download Invoice PDF',
-                                            icon: <Download className="w-3.5 h-3.5 text-[#3B82F6]" />,
+                                            icon: <Download className="w-3.5 h-3.5 text-[#16A34A]" />,
                                             disabled: !c,
                                             onClick: () => {
                                               if (c) {
@@ -2167,7 +2167,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             <div key={o.id || o.orderNumber} className="p-4 space-y-3">
                               <div className="flex justify-between items-start gap-2">
                                 <div className="space-y-0.5 min-w-0">
-                                  <div className="font-mono tabular-nums font-bold text-xs text-[#3B82F6] dark:text-blue-400">#{o.orderNumber || o.id?.slice(-6)}</div>
+                                  <div className="font-mono tabular-nums font-bold text-xs text-[#16A34A] dark:text-emerald-400">#{o.orderNumber || o.id?.slice(-6)}</div>
                                   <div className="font-bold text-slate-900 dark:text-white text-[13px] truncate">{o.customerName}</div>
                                   <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">By {o.salesUserName} &bull; {o.orderDate || o.createdAt?.slice(0, 10)}</div>
                                 </div>
@@ -2216,7 +2216,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                     }}
                                     className="flex-1 btn-outline min-h-[44px] text-xs"
                                   >
-                                    <Download className="w-3.5 h-3.5 text-[#3B82F6]" />
+                                    <Download className="w-3.5 h-3.5 text-[#16A34A]" />
                                     <span>Download PDF</span>
                                   </button>
                                 )}
@@ -2281,7 +2281,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
                           {recoveries.map((r) => (
                             <tr key={r.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
-                              <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-3 px-4 font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
+                              <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-3 px-4 font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400">
                                 #{r.id}
                               </td>
                               <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
@@ -2339,7 +2339,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                           <div key={r.id} className="p-4 space-y-3">
                             <div className="flex justify-between items-start gap-2">
                               <div className="space-y-0.5 min-w-0">
-                                <div className="font-mono tabular-nums font-bold text-xs text-[#3B82F6] dark:text-blue-400">#{r.id}</div>
+                                <div className="font-mono tabular-nums font-bold text-xs text-[#16A34A] dark:text-emerald-400">#{r.id}</div>
                                 <div className="font-bold text-slate-900 dark:text-white text-[13px] truncate">{r.customerName}</div>
                                 <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{r.salesUserName} &bull; {r.recordedAt?.slice(0, 10)}</div>
                               </div>
@@ -2409,7 +2409,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         onClick={() => setFieldForceSubTab('ROSTER')}
                         className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                           fieldForceSubTab === 'ROSTER'
-                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            ? 'bg-[#16A34A] text-white shadow-xs'
                             : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
@@ -2421,7 +2421,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         onClick={() => setFieldForceSubTab('ATTENDANCE_LEDGER')}
                         className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer tabular-nums ${
                           fieldForceSubTab === 'ATTENDANCE_LEDGER'
-                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            ? 'bg-[#16A34A] text-white shadow-xs'
                             : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
@@ -2433,7 +2433,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         onClick={() => setFieldForceSubTab('PERFORMANCE_DASHBOARD')}
                         className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                           fieldForceSubTab === 'PERFORMANCE_DASHBOARD'
-                            ? 'bg-[#3B82F6] text-white shadow-xs'
+                            ? 'bg-[#16A34A] text-white shadow-xs'
                             : 'bg-slate-100 dark:bg-[#0F172A] text-slate-700 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
                         }`}
                       >
@@ -2448,7 +2448,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       {NLINK_TEAM_ROSTER.map((u) => (
                         <div key={u.id} className="p-4 flex items-center justify-between gap-2 text-xs">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-xl bg-[#3B82F6] text-white font-black flex items-center justify-center text-xs shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-[#16A34A] text-white font-black flex items-center justify-center text-xs shrink-0">
                               {u.avatarInitials}
                             </div>
                             <div className="min-w-0">
@@ -2539,7 +2539,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                         onClick={() => setActiveTab('MANAGE_TOWNS')}
                         className="btn-outline min-h-[44px] px-4 text-xs shrink-0"
                       >
-                        <MapPin className="w-3.5 h-3.5 text-[#3B82F6]" />
+                        <MapPin className="w-3.5 h-3.5 text-[#16A34A]" />
                         <span>Manage Towns ({effectiveTownNodes.filter(t => t.isActive).length} Active)</span>
                       </button>
                     </div>
@@ -2556,7 +2556,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             onClick={() => setActiveTab('SYNC_MONITORING')}
                             className="btn-outline min-h-[40px] px-3 text-xs"
                           >
-                            <Activity className="w-3.5 h-3.5 text-[#3B82F6]" />
+                            <Activity className="w-3.5 h-3.5 text-[#16A34A]" />
                             <span>System Sync</span>
                           </button>
                         )}
@@ -2565,7 +2565,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                           onClick={() => setActiveTab('PRICE_LIST')}
                           className="btn-outline min-h-[40px] px-3 text-xs"
                         >
-                          <Tag className="w-3.5 h-3.5 text-[#3B82F6]" />
+                          <Tag className="w-3.5 h-3.5 text-[#16A34A]" />
                           <span>Price List ({skus?.length || 30} SKUs)</span>
                         </button>
                         {onSyncGoogleSheet && (
@@ -2752,7 +2752,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 setRejectionReasonInput(e.target.value);
                 if (rejectionError) setRejectionError(null);
               }}
-              className="w-full p-2.5 bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-[#3B82F6]"
+              className="w-full p-2.5 bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-[#16A34A]"
             />
 
             {rejectionError && (
@@ -2856,7 +2856,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
             </div>
 
             {/* Financial Ledger Snapshot */}
-            <div className="p-4 bg-blue-50/50 dark:bg-[#0B1120] border-b border-blue-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="p-4 bg-emerald-50/50 dark:bg-[#0B1120] border-b border-emerald-100 dark:border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
                   Net Ledger Balance
@@ -2937,7 +2937,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 className="w-full min-h-[48px] p-3 rounded-2xl bg-slate-50 dark:bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 flex items-center justify-between text-slate-900 dark:text-white transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#3B82F6] text-white flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#16A34A] text-white flex items-center justify-center shrink-0">
                     <Navigation className="w-4 h-4" />
                   </div>
                   <div className="text-left">

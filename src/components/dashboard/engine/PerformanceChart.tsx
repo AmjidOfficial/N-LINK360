@@ -43,7 +43,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div>
           <h3 className="text-sm sm:text-base font-bold text-[#0F172A] dark:text-[#F8FAFC] flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+            <BarChart3 className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
             <span>{title}</span>
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
@@ -51,11 +51,11 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
 
         <div className="flex items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300 shrink-0">
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#3B82F6] inline-block" />
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#16A34A] inline-block" />
             Posted Sales
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block" />
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#EA580C] inline-block" />
             Confirmed Recovery
           </span>
         </div>
@@ -88,7 +88,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
                 tickFormatter={(val) => (val >= 1000 ? `${Math.round(val / 1000)}k` : String(val))}
               />
               <Tooltip
-                cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
+                cursor={{ fill: 'rgba(22, 163, 74, 0.08)' }}
                 contentStyle={{
                   backgroundColor: '#0F172A',
                   borderColor: '#334155',
@@ -101,8 +101,8 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = ({
                   name === 'sales' ? 'Posted Sales' : 'Confirmed Recovery',
                 ]}
               />
-              <Bar dataKey="sales" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={28} />
-              <Bar dataKey="recovery" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={28} />
+              <Bar dataKey="sales" fill="#16A34A" radius={[4, 4, 0, 0]} maxBarSize={28} />
+              <Bar dataKey="recovery" fill="#EA580C" radius={[4, 4, 0, 0]} maxBarSize={28} />
             </BarChart>
           </ResponsiveContainer>
         </div>

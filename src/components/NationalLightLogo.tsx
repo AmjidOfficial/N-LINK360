@@ -143,7 +143,7 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
       id="national-light-logo-container"
     >
       <div
-        className={`w-full h-full rounded-full overflow-hidden p-[1.5px] bg-gradient-to-tr from-emerald-600 via-green-500 to-teal-500 ${glowEffect} ring-1 ring-emerald-500/30 flex items-center justify-center`}
+        className={`w-full h-full rounded-full overflow-hidden p-[1.5px] bg-gradient-to-tr from-[#16A34A] via-[#22C55E] to-[#F97316] ${glowEffect} ring-1 ring-[#16A34A]/40 flex items-center justify-center`}
       >
         <div className="w-full h-full rounded-full overflow-hidden bg-white flex items-center justify-center">
           {variant === 'image' && !imageError ? (
@@ -176,7 +176,7 @@ export const NationalLightHeaderBrand: React.FC<{ size?: 'sm' | 'md' | 'lg'; cla
       <span className="font-extrabold tracking-tight uppercase text-[#0F172A] dark:text-white text-sm sm:text-base font-sans truncate">
         NATIONAL LIGHT
       </span>
-      <span className="font-mono font-bold tracking-widest text-[9px] sm:text-[10px] text-slate-500 dark:text-[#3B82F6] uppercase truncate mt-0.5">
+      <span className="font-mono font-bold tracking-widest text-[9px] sm:text-[10px] text-[#16A34A] dark:text-[#22C55E] uppercase truncate mt-0.5">
         N-LINK 360 ENTERPRISE
       </span>
     </div>

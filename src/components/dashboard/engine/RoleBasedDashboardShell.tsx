@@ -34,6 +34,7 @@ import { DashboardConfigDrawer } from './DashboardConfigDrawer';
 import { HierarchyBreakdownPanel } from './HierarchyBreakdownPanel';
 import { ExecutiveStockExpensePanel } from './ExecutiveStockExpensePanel';
 import { FieldOperationsPanel, type FieldLiveContext } from './FieldOperationsPanel';
+import { ExecutiveBiGraphicsPanel } from './ExecutiveBiGraphicsPanel';
 
 export interface RoleBasedDashboardShellProps {
   currentUser: NLinkUser;
@@ -224,6 +225,15 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
             config={summary.config}
             kpis={summary.kpis}
             onSelectKpi={(m) => setSelectedKpi(m)}
+          />
+        )}
+
+        {summary.config.layoutSections.includes('CHARTS') && summary.biSummary && (
+          <ExecutiveBiGraphicsPanel
+            biSummary={summary.biSummary}
+            teamBreakdown={summary.hierarchyBreakdowns?.byTeam || []}
+            dateRangeLabel={summary.dateRange.label}
+            onSelectCustomer={onSelectCustomer}
           />
         )}
 

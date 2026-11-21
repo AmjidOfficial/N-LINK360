@@ -321,7 +321,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="space-y-2 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-[#3B82F6] dark:text-blue-400 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-[#16A34A] dark:text-emerald-400 uppercase tracking-wider">
                 Dealer Accounts &bull; 360 Credit Health Profile
               </span>
             </div>
@@ -332,7 +332,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             {/* Metadata Tags with Consistent Spacing */}
             <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs text-slate-500 dark:text-slate-400 font-medium">
               <span className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200">
-                <Building2 className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+                <Building2 className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
                 {customer.contactPerson || 'Proprietor'}
               </span>
               <span className="hidden sm:inline text-slate-300 dark:text-slate-700">|</span>
@@ -356,9 +356,9 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setProfileViewMode('MAP')}
-                className="inline-flex items-center gap-2 min-h-[44px] sm:min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#F8FAFC] hover:bg-slate-100 dark:bg-[#0F172A] dark:hover:bg-slate-800 text-[#3B82F6] dark:text-blue-300 border border-[#E2E8F0] dark:border-slate-700 transition-all cursor-pointer group"
+                className="inline-flex items-center gap-2 min-h-[44px] sm:min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#F8FAFC] hover:bg-slate-100 dark:bg-[#0F172A] dark:hover:bg-slate-800 text-[#16A34A] dark:text-emerald-300 border border-[#E2E8F0] dark:border-slate-700 transition-all cursor-pointer group"
               >
-                <Navigation className="w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                <Navigation className="w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400 group-hover:scale-110 transition-transform" />
                 <span>{quickRoute.formattedDistance} from current point</span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums font-bold">
                   ({quickRoute.formattedEta} ETA)
@@ -376,7 +376,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                 className="btn-outline min-h-[44px] px-4 text-xs"
                 title="Call Dealer"
               >
-                <Phone className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+                <Phone className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
                 <span>Call Dealer</span>
               </a>
             )}
@@ -401,7 +401,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
               triggerHaptic('medium');
               triggerRecovery();
             }}
-            className="min-h-[44px] px-3 py-2.5 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer touch-manipulation whitespace-nowrap"
+            className="min-h-[44px] px-3 py-2.5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer touch-manipulation whitespace-nowrap"
             title="Record cash or cheque recovery"
           >
             <Wallet className="w-4 h-4 shrink-0" />
@@ -432,7 +432,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             className="btn-outline min-h-[44px] px-3 py-2.5 text-xs whitespace-nowrap"
             title="View past sales orders history"
           >
-            <Clock className="w-4 h-4 shrink-0 text-[#3B82F6] dark:text-blue-400" />
+            <Clock className="w-4 h-4 shrink-0 text-[#EA580C] dark:text-orange-400" />
             <span>Order History</span>
           </button>
 
@@ -446,7 +446,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             className="btn-outline min-h-[44px] px-3 py-2.5 text-xs whitespace-nowrap"
             title="View bills and commercial invoices"
           >
-            <Receipt className="w-4 h-4 shrink-0 text-[#3B82F6] dark:text-blue-400" />
+            <Receipt className="w-4 h-4 shrink-0 text-[#EA580C] dark:text-orange-400" />
             <span>Invoices</span>
           </button>
 
@@ -460,7 +460,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             className="btn-outline min-h-[44px] px-3 py-2.5 text-xs whitespace-nowrap col-span-2 sm:col-span-1"
             title="View running balance Khata ledger"
           >
-            <BookOpen className="w-4 h-4 shrink-0 text-[#3B82F6] dark:text-blue-400" />
+            <BookOpen className="w-4 h-4 shrink-0 text-[#16A34A] dark:text-emerald-400" />
             <span>Khata</span>
           </button>
         </div>
@@ -472,7 +472,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             onClick={() => setProfileViewMode('FINANCIAL')}
             className={`min-h-[42px] py-2 px-2 rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               profileViewMode === 'FINANCIAL'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white'
             }`}
           >
@@ -485,7 +485,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             onClick={() => setProfileViewMode('LEDGER')}
             className={`min-h-[42px] py-2 px-2 rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               profileViewMode === 'LEDGER'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white'
             }`}
           >
@@ -498,7 +498,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             onClick={() => setProfileViewMode('MAP')}
             className={`min-h-[42px] py-2 px-2 rounded-lg font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               profileViewMode === 'MAP'
-                ? 'bg-[#3B82F6] text-white shadow-xs'
+                ? 'bg-[#16A34A] text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white'
             }`}
           >
@@ -534,7 +534,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
         <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 sm:p-6 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-5 animate-in fade-in duration-150">
           <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0] dark:border-slate-700/80">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+              <FileText className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
               Chronological Ledger Statement Details
             </span>
             <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 font-mono tabular-nums bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 px-2.5 py-1 rounded-md">
@@ -563,7 +563,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                           isOpening 
                             ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
                             : isDebit
-                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                              ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800'
                               : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
                         }`}>
                           {item.type}
@@ -575,7 +575,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                           {item.debit > 0 && (
                             <div>
                               <div className="text-[9px] uppercase font-bold text-slate-500 dark:text-slate-400">Debit</div>
-                              <div className="text-xs font-mono tabular-nums font-bold text-[#0F172A] dark:text-blue-300">PKR {item.debit.toLocaleString()}</div>
+                              <div className="text-xs font-mono tabular-nums font-bold text-[#0F172A] dark:text-orange-300">PKR {item.debit.toLocaleString()}</div>
                             </div>
                           )}
                           {item.credit > 0 && (
@@ -619,12 +619,12 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                         <td className="py-3 pl-3 pr-2 frozen-first-col font-mono tabular-nums text-[11px] font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">{item.date}</td>
                         <td className="py-3 px-2 text-center">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${
-                            isOpening ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' : isDebit ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800' : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                            isOpening ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' : isDebit ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-800' : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
                           }`}>{item.type}</span>
                         </td>
                         <td className="py-3 px-2 font-mono tabular-nums text-[11px] font-bold text-[#0F172A] dark:text-white whitespace-nowrap">{item.ref}</td>
                         <td className="py-3 px-2 max-w-[220px] truncate text-slate-600 dark:text-slate-300" title={item.description}>{item.description}</td>
-                        <td className="py-3 px-2 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-blue-300 whitespace-nowrap">{item.debit > 0 ? `PKR ${item.debit.toLocaleString()}` : '—'}</td>
+                        <td className="py-3 px-2 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-orange-300 whitespace-nowrap">{item.debit > 0 ? `PKR ${item.debit.toLocaleString()}` : '—'}</td>
                         <td className="py-3 px-2 text-right font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">{item.credit > 0 ? `-PKR ${item.credit.toLocaleString()} CR` : '—'}</td>
                         <td className="py-3 px-2 text-right font-mono tabular-nums font-bold text-[#0F172A] dark:text-white pr-3 whitespace-nowrap">PKR {item.runningBalance.toLocaleString()}</td>
                       </tr>
@@ -639,7 +639,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                     <td className="py-3 px-2 text-slate-500 dark:text-slate-400" colSpan={3}>
                       Reconciled Closing Position
                     </td>
-                    <td className="py-3 px-2 text-right font-mono tabular-nums text-[#0F172A] dark:text-blue-300 whitespace-nowrap">
+                    <td className="py-3 px-2 text-right font-mono tabular-nums text-[#0F172A] dark:text-orange-300 whitespace-nowrap">
                       PKR {derivedTotalDebit.toLocaleString()}
                     </td>
                     <td className="py-3 px-2 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
@@ -666,7 +666,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             
             <div className="flex items-center justify-between pb-4 border-b border-[#E2E8F0] dark:border-slate-700/80">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+                <TrendingUp className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
                 Ledger Account Overview
               </span>
               <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1 font-mono tabular-nums">
@@ -679,7 +679,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             <div className="bg-[#0F172A] dark:bg-[#0B1120] rounded-2xl p-5 sm:p-6 text-white border border-slate-700/80 shadow-xs relative overflow-hidden space-y-4">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
                 <div className="space-y-2 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-blue-400">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
                     AUTHORITATIVE NET OUTSTANDING BALANCE
                   </span>
                   <div className="text-2xl sm:text-4xl font-bold font-mono tabular-nums tracking-tight flex items-baseline gap-2">
@@ -691,7 +691,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                 </div>
 
                 <div className="lg:text-right border-t lg:border-t-0 lg:border-l border-slate-700/80 pt-4 lg:pt-0 lg:pl-6 shrink-0 space-y-1">
-                  <span className="text-[10px] font-bold text-blue-400 block uppercase tracking-wider">Available Credit Line</span>
+                  <span className="text-[10px] font-bold text-emerald-400 block uppercase tracking-wider">Available Credit Line</span>
                   <span className="text-lg font-bold font-mono tabular-nums text-emerald-400">
                     PKR {Math.max(0, creditLimit - netBalance).toLocaleString()}
                   </span>
@@ -744,10 +744,10 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                 </div>
 
                 <div className="h-full flex flex-col justify-between bg-[#F8FAFC] dark:bg-[#0F172A] p-4 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#3B82F6] dark:text-blue-400 block">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#EA580C] dark:text-orange-400 block">
                     Posted Invoices
                   </span>
-                  <span className="text-base font-bold font-mono tabular-nums text-[#0F172A] dark:text-blue-300 mt-1 block truncate">
+                  <span className="text-base font-bold font-mono tabular-nums text-[#0F172A] dark:text-orange-300 mt-1 block truncate">
                     PKR {totalInvoiced.toLocaleString()}
                   </span>
                 </div>
@@ -762,7 +762,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                 </div>
 
                 <div className="h-full flex flex-col justify-between bg-[#0F172A] dark:bg-[#0B1120] border border-slate-700/80 p-4 rounded-xl text-white min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 block">Closing Balance</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">Closing Balance</span>
                   <span className="text-base font-bold font-mono tabular-nums text-white mt-1 block truncate">
                     PKR {netBalance.toLocaleString()}
                   </span>
@@ -808,7 +808,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
           <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 sm:p-6 border border-[#E2E8F0] dark:border-slate-700/80 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0] dark:border-slate-700/80">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+                <ShieldCheck className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-slate-200">
                   Dealer Credit Health Assessment &bull; D3 Pin Intelligence
                 </h3>
@@ -827,7 +827,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             />
           </div>
 
-          {/* B. Large Prominent Core Touch Targets (Book Order Orange CTA & Log Recovery Blue) */}
+          {/* B. Large Prominent Core Touch Targets (Book Order Orange CTA & Log Recovery Emerald) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               type="button"
@@ -855,7 +855,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                 triggerHaptic('medium');
                 triggerRecovery();
               }}
-              className="min-h-[72px] p-5 rounded-2xl bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold text-sm flex items-center justify-between shadow-xs transition-all active:scale-[0.98] cursor-pointer group"
+              className="min-h-[72px] p-5 rounded-2xl bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-sm flex items-center justify-between shadow-xs transition-all active:scale-[0.98] cursor-pointer group"
             >
               <div className="flex items-center gap-4">
                 <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center text-white shrink-0">
@@ -863,7 +863,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                 </div>
                 <div className="text-left">
                   <span className="block text-sm font-bold uppercase tracking-wide">Record Payment Recovery</span>
-                  <span className="block text-[11px] font-medium text-blue-100">Collect cash, cheque, or bank slips</span>
+                  <span className="block text-[11px] font-medium text-emerald-100">Collect cash, cheque, or bank slips</span>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-white/80 group-hover:translate-x-1 transition-transform shrink-0" />
@@ -875,10 +875,10 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             <button
               type="button"
               onClick={triggerInvoices}
-              className="h-full p-4 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#3B82F6] dark:hover:border-blue-500/70 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-xs group"
+              className="h-full p-4 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#16A34A] dark:hover:border-emerald-500/70 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-xs group"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] text-[#3B82F6] dark:text-blue-400 flex items-center justify-center border border-[#E2E8F0] dark:border-slate-700 shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] text-[#EA580C] dark:text-orange-400 flex items-center justify-center border border-[#E2E8F0] dark:border-slate-700 shrink-0">
                   <Receipt className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -899,10 +899,10 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                 setProfileViewMode('LEDGER');
                 triggerLedger();
               }}
-              className="h-full p-4 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#3B82F6] dark:hover:border-blue-500/70 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-xs group"
+              className="h-full p-4 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#16A34A] dark:hover:border-emerald-500/70 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-xs group"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] text-[#3B82F6] dark:text-blue-400 flex items-center justify-center border border-[#E2E8F0] dark:border-slate-700 shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] text-[#16A34A] dark:text-emerald-400 flex items-center justify-center border border-[#E2E8F0] dark:border-slate-700 shrink-0">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -920,10 +920,10 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             <button
               type="button"
               onClick={() => setProfileViewMode('MAP')}
-              className="h-full p-4 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#3B82F6] dark:hover:border-blue-500/70 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-xs group"
+              className="h-full p-4 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 hover:border-[#16A34A] dark:hover:border-emerald-500/70 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-xs group"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] text-[#3B82F6] dark:text-blue-400 flex items-center justify-center border border-[#E2E8F0] dark:border-slate-700 shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] text-[#16A34A] dark:text-emerald-400 flex items-center justify-center border border-[#E2E8F0] dark:border-slate-700 shrink-0">
                   <Navigation className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
@@ -944,7 +944,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
             
             <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0] dark:border-slate-700/80">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+                <Clock className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
                 Recent Transaction Feed
               </span>
               <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
@@ -976,7 +976,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                         <div
                           className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
                             isOrder
-                              ? 'bg-blue-50 dark:bg-blue-950/50 text-[#3B82F6] dark:text-blue-400 border-blue-200 dark:border-blue-800/60'
+                              ? 'bg-orange-50 dark:bg-orange-950/50 text-[#EA580C] dark:text-orange-400 border-orange-200 dark:border-orange-800/60'
                               : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60'
                           }`}
                         >
@@ -1013,7 +1013,7 @@ export const Customer360Screen: React.FC<Customer360ScreenProps> = ({
                       <div className="text-right shrink-0">
                         <span
                           className={`text-xs font-bold font-mono tabular-nums block ${
-                            isOrder ? 'text-[#0F172A] dark:text-blue-300' : 'text-emerald-700 dark:text-emerald-400'
+                            isOrder ? 'text-[#0F172A] dark:text-orange-300' : 'text-emerald-700 dark:text-emerald-400'
                           }`}
                         >
                           {isOrder ? '+' : '-'}PKR {Number(act.amount || 0).toLocaleString()}{!isOrder ? ' CR' : ''}

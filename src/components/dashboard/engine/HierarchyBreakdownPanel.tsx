@@ -121,7 +121,7 @@ export const HierarchyBreakdownPanel: React.FC<HierarchyBreakdownPanelProps> = (
       <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700/70 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
           <h3 className="text-sm sm:text-base font-bold text-[#0F172A] dark:text-[#F8FAFC] flex items-center gap-2">
-            <Globe2 className="w-4 h-4 text-[#3B82F6] dark:text-blue-400" />
+            <Globe2 className="w-4 h-4 text-[#16A34A] dark:text-emerald-400" />
             <span>{sectionTitle}</span>
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -137,7 +137,7 @@ export const HierarchyBreakdownPanel: React.FC<HierarchyBreakdownPanelProps> = (
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Filter zone, town or officer..."
             aria-label="Filter hierarchy rows"
-            className="w-full min-h-[44px] sm:min-h-[40px] pl-9 pr-10 py-1.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs text-[#0F172A] dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-[#3B82F6]"
+            className="w-full min-h-[44px] sm:min-h-[40px] pl-9 pr-10 py-1.5 rounded-xl bg-slate-50 dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs text-[#0F172A] dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-[#16A34A]"
           />
           {searchQuery && (
             <button
@@ -167,7 +167,7 @@ export const HierarchyBreakdownPanel: React.FC<HierarchyBreakdownPanelProps> = (
             <div className="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {stripPrefix} Posted Sales
             </div>
-            <div className="text-sm font-bold font-mono tabular-nums text-[#3B82F6] dark:text-blue-400 mt-0.5">
+            <div className="text-sm font-bold font-mono tabular-nums text-[#16A34A] dark:text-emerald-400 mt-0.5">
               {formatCurrencyPKR(nationalSummary.postedSales)}
             </div>
           </div>
@@ -215,7 +215,7 @@ export const HierarchyBreakdownPanel: React.FC<HierarchyBreakdownPanelProps> = (
               onClick={() => setLens(tab.id)}
               className={`inline-flex items-center gap-1.5 min-h-[40px] sm:min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                 isActive
-                  ? 'bg-[#3B82F6] text-white shadow-xs'
+                  ? 'bg-[#16A34A] text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-[#0F172A] text-slate-600 dark:text-slate-300 hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
@@ -365,7 +365,7 @@ export const HierarchyBreakdownPanel: React.FC<HierarchyBreakdownPanelProps> = (
                         <span className="text-[11px] font-mono tabular-nums text-slate-400 dark:text-slate-500 w-5">
                           {String(idx + 1).padStart(2, '0')}
                         </span>
-                        <MapPin className="w-3.5 h-3.5 text-[#3B82F6] dark:text-blue-400 shrink-0" />
+                        <MapPin className="w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400 shrink-0" />
                         <span>{row.name}</span>
                       </div>
                     </td>
@@ -389,7 +389,7 @@ export const HierarchyBreakdownPanel: React.FC<HierarchyBreakdownPanelProps> = (
                         <button
                           type="button"
                           onClick={() => onSelectCustomer(row.leadCustomerId!)}
-                          className="text-xs font-semibold text-[#3B82F6] dark:text-blue-400 hover:underline cursor-pointer"
+                          className="text-xs font-semibold text-[#16A34A] dark:text-emerald-400 hover:underline cursor-pointer"
                         >
                           Inspect Ledger &rarr;
                         </button>
@@ -452,7 +452,7 @@ export const HierarchyBreakdownPanel: React.FC<HierarchyBreakdownPanelProps> = (
                   <button
                     type="button"
                     onClick={() => onSelectCustomer(row.leadCustomerId!)}
-                    className="btn-outline w-full min-h-[44px] text-[#3B82F6] dark:text-blue-400"
+                    className="btn-outline w-full min-h-[44px] text-[#16A34A] dark:text-emerald-400"
                   >
                     Inspect Party Ledger
                   </button>

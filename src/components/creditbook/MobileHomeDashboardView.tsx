@@ -167,9 +167,9 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
 
   const maxSkuVal = Math.max(...dailySkuBars.map((b) => b.avgSku), 8);
 
-  // Sales Trend (Value) over last 7 days
+  // Sales & Recovery Trend (Value) over last 7 days
   const salesTrendPoints = useMemo(() => {
-    const pts: { label: string; value: number }[] = [];
+    const pts: { label: string; value: number; recovery: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -177,12 +177,19 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
       const val = orders
         .filter((o) => (o.orderDate || o.createdAt || '').slice(0, 10) === iso && o.status !== 'REJECTED')
         .reduce((s, o) => s + (o.totalAmount || 0), 0);
-      pts.push({ label: i === 0 ? 'Today' : d.getDate().toString(), value: val });
+      const rec = recoveries
+        .filter(
+          (r) =>
+            (r.collectionDate || (r as any).paymentDate || r.recordedAt || r.createdAt || '').slice(0, 10) === iso &&
+            r.status !== 'REJECTED'
+        )
+        .reduce((s, r) => s + (r.amount || 0), 0);
+      pts.push({ label: i === 0 ? 'Today' : d.getDate().toString(), value: val, recovery: rec });
     }
     return pts;
-  }, [orders]);
+  }, [orders, recoveries]);
 
-  const maxTrendVal = Math.max(...salesTrendPoints.map((p) => p.value), 1);
+  const maxTrendVal = Math.max(...salesTrendPoints.map((p) => Math.max(p.value, p.recovery)), 1);
 
   // Visit productivity ring
   const visitTotal = customers.length;
@@ -204,12 +211,12 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
   );
 
   const kpiIconMap: Record<string, { icon: React.ElementType; color: string }> = {
-    outletProductivity: { icon: Store, color: 'bg-[#3B82F6]' },
-    callProductivity: { icon: PhoneCall, color: 'bg-[#F97316]' },
-    billProductivity: { icon: FileText, color: 'bg-[#10B981]' },
-    skuPerBill: { icon: Package, color: 'bg-[#0284C7]' },
-    strikeRate: { icon: Zap, color: 'bg-[#1E293B]' },
-    visitCompliance: { icon: CheckCircle2, color: 'bg-[#059669]' },
+    outletProductivity: { icon: Store, color: 'bg-[#16A34A]' },
+    callProductivity: { icon: PhoneCall, color: 'bg-[#EA580C]' },
+    billProductivity: { icon: FileText, color: 'bg-[#15803D]' },
+    skuPerBill: { icon: Package, color: 'bg-[#F97316]' },
+    strikeRate: { icon: Zap, color: 'bg-[#0F172A]' },
+    visitCompliance: { icon: CheckCircle2, color: 'bg-[#16A34A]' },
   };
 
   const filteredDealers = useMemo(() => {
@@ -249,7 +256,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
               <div className="flex-1 max-w-[180px] h-2 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    achievementPct >= 75 ? 'bg-[#10B981]' : achievementPct >= 40 ? 'bg-[#3B82F6]' : 'bg-[#F97316]'
+                    achievementPct >= 75 ? 'bg-[#16A34A]' : achievementPct >= 40 ? 'bg-[#22C55E]' : 'bg-[#EA580C]'
                   }`}
                   style={{ width: `${achievementPct}%` }}
                 />
@@ -271,7 +278,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
             }}
             className="btn-outline min-h-[44px]"
           >
-            <Clock className={`w-4 h-4 ${isCheckedIn ? 'text-[#10B981]' : 'text-[#3B82F6]'}`} />
+            <Clock className={`w-4 h-4 ${isCheckedIn ? 'text-[#16A34A]' : 'text-[#EA580C]'}`} />
             <span>{isCheckedIn ? `In · ${checkedInTime || 'Active'}` : 'Check In'}</span>
           </button>
           <button
@@ -297,7 +304,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Today&apos;s Sales
               </span>
-              <span className="text-[11px] font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
+              <span className="text-[11px] font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400">
                 {todaySalesPct}%
               </span>
             </div>
@@ -306,7 +313,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
             </div>
             <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
               <div
-                className="h-full rounded-full bg-[#3B82F6] transition-all duration-500"
+                className="h-full rounded-full bg-[#16A34A] transition-all duration-500"
                 style={{ width: `${todaySalesPct}%` }}
               />
             </div>
@@ -324,16 +331,16 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Today&apos;s Recovery
               </span>
-              <span className="text-[11px] font-mono tabular-nums font-bold text-[#10B981]">
+              <span className="text-[11px] font-mono tabular-nums font-bold text-[#EA580C] dark:text-orange-400">
                 {todayRecoveryPct}%
               </span>
             </div>
-            <div className="text-lg font-bold font-mono tabular-nums text-[#10B981] truncate">
+            <div className="text-lg font-bold font-mono tabular-nums text-[#EA580C] dark:text-orange-400 truncate">
               PKR {todayRecoveryValue.toLocaleString()}
             </div>
             <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
               <div
-                className="h-full rounded-full bg-[#10B981] transition-all duration-500"
+                className="h-full rounded-full bg-[#EA580C] transition-all duration-500"
                 style={{ width: `${todayRecoveryPct}%` }}
               />
             </div>
@@ -351,7 +358,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 MTD Sales
               </span>
-              <span className="text-[11px] font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
+              <span className="text-[11px] font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400">
                 {achievementPct}%
               </span>
             </div>
@@ -360,7 +367,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
             </div>
             <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
               <div
-                className="h-full rounded-full bg-[#3B82F6] transition-all duration-500"
+                className="h-full rounded-full bg-[#16A34A] transition-all duration-500"
                 style={{ width: `${achievementPct}%` }}
               />
             </div>
@@ -378,16 +385,16 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 MTD Recovery
               </span>
-              <span className="text-[11px] font-mono tabular-nums font-bold text-[#10B981]">
+              <span className="text-[11px] font-mono tabular-nums font-bold text-[#EA580C] dark:text-orange-400">
                 {mtdRecoveryPct}%
               </span>
             </div>
-            <div className="text-lg font-bold font-mono tabular-nums text-[#10B981] truncate">
+            <div className="text-lg font-bold font-mono tabular-nums text-[#EA580C] dark:text-orange-400 truncate">
               PKR {monthlyRecoveryValue.toLocaleString()}
             </div>
             <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
               <div
-                className="h-full rounded-full bg-[#10B981] transition-all duration-500"
+                className="h-full rounded-full bg-[#EA580C] transition-all duration-500"
                 style={{ width: `${mtdRecoveryPct}%` }}
               />
             </div>
@@ -399,7 +406,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
         </div>
       </div>
 
-      {/* 2. 4-Icon Sub-Tab Strip (Electric Blue active tab) */}
+      {/* 2. 4-Icon Sub-Tab Strip (National Light Emerald active tab) */}
       <div className="bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 p-1 grid grid-cols-4 gap-1">
         {(
           [
@@ -421,7 +428,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
               }}
               className={`min-h-[44px] rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                 active
-                  ? 'bg-[#3B82F6] text-white shadow-xs'
+                  ? 'bg-[#16A34A] text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#0F172A] dark:hover:text-white'
               }`}
             >
@@ -432,8 +439,86 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
         })}
       </div>
 
-      {/* 3A. ANALYTICS SUB-TAB (Average SKU/Bill + Visit Productivity + Sales Trend) */}
+      {/* 3A. ANALYTICS SUB-TAB (Speedometer Gauge + SKU/Bill + Visit Ring + Dual Sales/Recovery Trend) */}
       {subTab === 'ANALYTICS' && (
+        <div className="space-y-4">
+          {/* Top Visual Gauge Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
+            {/* Target Attainment Speedometer Gauge */}
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-4">
+              <div className="min-w-0 space-y-1">
+                <div className="text-[11px] font-mono uppercase tracking-wider text-[#16A34A] dark:text-emerald-400 font-semibold">
+                  Quota Speedometer
+                </div>
+                <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                  Monthly Sales Goal
+                </h2>
+                <p className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400">
+                  PKR {monthlySalesValue.toLocaleString()} / {Math.round(monthlyTarget).toLocaleString()}
+                </p>
+              </div>
+              <svg viewBox="0 0 120 72" className="w-28 h-20 shrink-0 overflow-visible" aria-label={`Monthly Sales Attainment ${achievementPct}%`}>
+                <path
+                  d="M 14 60 A 46 46 0 0 1 106 60"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  className="text-slate-100 dark:text-slate-800"
+                />
+                <path
+                  d="M 14 60 A 46 46 0 0 1 106 60"
+                  fill="none"
+                  stroke={achievementPct >= 75 ? '#16A34A' : achievementPct >= 40 ? '#F59E0B' : '#EA580C'}
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  strokeDasharray={Math.PI * 46}
+                  strokeDashoffset={Math.PI * 46 * (1 - achievementPct / 100)}
+                />
+                <text x="60" y="56" textAnchor="middle" className="fill-[#0F172A] dark:fill-white font-mono font-bold text-[15px]">
+                  {achievementPct}%
+                </text>
+              </svg>
+            </div>
+
+            {/* Recovery Realization Speedometer Gauge */}
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 sm:p-5 border border-[#E2E8F0] dark:border-slate-700/80 flex items-center justify-between gap-4">
+              <div className="min-w-0 space-y-1">
+                <div className="text-[11px] font-mono uppercase tracking-wider text-[#EA580C] dark:text-orange-400 font-semibold">
+                  Collection Gauge
+                </div>
+                <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                  Monthly Recovery Goal
+                </h2>
+                <p className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400">
+                  PKR {monthlyRecoveryValue.toLocaleString()} / {monthlyRecoveryTarget.toLocaleString()}
+                </p>
+              </div>
+              <svg viewBox="0 0 120 72" className="w-28 h-20 shrink-0 overflow-visible" aria-label={`Monthly Recovery Attainment ${mtdRecoveryPct}%`}>
+                <path
+                  d="M 14 60 A 46 46 0 0 1 106 60"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  className="text-slate-100 dark:text-slate-800"
+                />
+                <path
+                  d="M 14 60 A 46 46 0 0 1 106 60"
+                  fill="none"
+                  stroke="#EA580C"
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  strokeDasharray={Math.PI * 46}
+                  strokeDashoffset={Math.PI * 46 * (1 - mtdRecoveryPct / 100)}
+                />
+                <text x="60" y="56" textAnchor="middle" className="fill-[#0F172A] dark:fill-white font-mono font-bold text-[15px]">
+                  {mtdRecoveryPct}%
+                </text>
+              </svg>
+            </div>
+          </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           {/* Left: Average SKU/Bill + Visit Productivity Ring */}
           <div className="lg:col-span-6 h-full bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 space-y-4">
@@ -441,7 +526,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
               <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
                 Today&apos;s Field Productivity
               </h2>
-              <span className="text-xs text-[#3B82F6] dark:text-blue-400 font-semibold">Live</span>
+              <span className="text-xs text-[#16A34A] dark:text-emerald-400 font-semibold">Live</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
@@ -456,8 +541,8 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
                     row.avgSku === 0
                       ? 'bg-slate-200 dark:bg-slate-700'
                       : row.avgSku < 3
-                      ? 'bg-[#F97316]'
-                      : 'bg-[#3B82F6]';
+                      ? 'bg-[#EA580C]'
+                      : 'bg-[#16A34A]';
                   return (
                     <div key={row.label} className="flex items-center gap-2 text-xs">
                       <span className="w-16 text-right text-slate-600 dark:text-slate-400 truncate shrink-0">
@@ -495,7 +580,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
                       cy="54"
                       r={ringR}
                       fill="none"
-                      stroke="#3B82F6"
+                      stroke="#16A34A"
                       strokeWidth="7"
                       strokeDasharray={ringCirc}
                       strokeDashoffset={ringOffset}
@@ -513,13 +598,23 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
             </div>
           </div>
 
-          {/* Right: Sales Trend (Value) Line Chart */}
+          {/* Right: Sales & Recovery Dual Trend Line Chart */}
           <div className="lg:col-span-6 h-full bg-white dark:bg-[#1E293B] rounded-2xl p-5 border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between space-y-4">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                Sales Trend (Value)
-              </h2>
-              <span className="text-xs font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                  7-Day Sales vs Recovery Trend
+                </h2>
+                <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#16A34A]" /> Sales
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#EA580C]" /> Recovery
+                  </span>
+                </div>
+              </div>
+              <span className="text-xs font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400">
                 PKR {monthlySalesValue.toLocaleString()}
               </span>
             </div>
@@ -529,16 +624,22 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
                 {salesTrendPoints.map((pt, idx) => {
                   const x = 24 + idx * 52;
                   const y = 96 - (pt.value / maxTrendVal) * 68;
+                  const yRec = 96 - (pt.recovery / maxTrendVal) * 68;
                   const next = salesTrendPoints[idx + 1];
                   const nextX = 24 + (idx + 1) * 52;
                   const nextY = next ? 96 - (next.value / maxTrendVal) * 68 : y;
+                  const nextYRec = next ? 96 - (next.recovery / maxTrendVal) * 68 : yRec;
                   return (
                     <g key={pt.label}>
                       <line x1={x} y1="14" x2={x} y2="100" stroke="currentColor" className="text-slate-200 dark:text-slate-700" strokeWidth="1" />
                       {next && (
-                        <line x1={x} y1={y} x2={nextX} y2={nextY} stroke="#3B82F6" strokeWidth="2.5" />
+                        <>
+                          <line x1={x} y1={y} x2={nextX} y2={nextY} stroke="#16A34A" strokeWidth="2.5" />
+                          <line x1={x} y1={yRec} x2={nextX} y2={nextYRec} stroke="#EA580C" strokeWidth="2" strokeDasharray="3 2" />
+                        </>
                       )}
-                      <circle cx={x} cy={y} r="4.5" fill="#F97316" stroke="#0F172A" strokeWidth="1.5" />
+                      <circle cx={x} cy={yRec} r="3.5" fill="#EA580C" />
+                      <circle cx={x} cy={y} r="4.5" fill="#16A34A" stroke="#FFFFFF" strokeWidth="1.5" />
                       <text
                         x={x}
                         y={y - 9}
@@ -562,6 +663,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
             </div>
           </div>
         </div>
+        </div>
       )}
 
       {/* 3B. SUMMARY SUB-TAB */}
@@ -572,7 +674,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
             <div className="text-2xl font-bold font-mono tabular-nums text-[#0F172A] dark:text-white truncate">
               PKR {monthlySalesValue.toLocaleString()}
             </div>
-            <span className="mt-auto text-xs text-[#3B82F6] dark:text-blue-400 font-semibold">
+            <span className="mt-auto text-xs text-[#16A34A] dark:text-emerald-400 font-semibold">
               {monthlyOrders.length} Orders Booked
             </span>
           </div>
@@ -610,7 +712,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
                 KPI Scorecard ({kpiPeriod})
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Total Score: <strong className="font-mono tabular-nums text-[#3B82F6] dark:text-blue-400">{scorecard.totalPoints} / {scorecard.maxPoints} pts</strong>
+                Total Score: <strong className="font-mono tabular-nums text-[#16A34A] dark:text-emerald-400">{scorecard.totalPoints} / {scorecard.maxPoints} pts</strong>
               </p>
             </div>
 
@@ -625,7 +727,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
                   }}
                   className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                     kpiPeriod === p
-                      ? 'bg-[#3B82F6] text-white'
+                      ? 'bg-[#16A34A] text-white'
                       : 'text-slate-500 dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white'
                   }`}
                 >
@@ -637,7 +739,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {scorecard.metrics.map((item) => {
-              const meta = kpiIconMap[item.id] || { icon: ListChecks, color: 'bg-[#3B82F6]' };
+              const meta = kpiIconMap[item.id] || { icon: ListChecks, color: 'bg-[#16A34A]' };
               const Icon = meta.icon;
               const isOpen = expandedCriteria === item.id;
               return (
@@ -718,7 +820,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search Dealer / Distributor or town..."
-                className="w-full min-h-[44px] pl-9 pr-10 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs text-[#0F172A] dark:text-white focus:outline-none focus:border-[#3B82F6]"
+                className="w-full min-h-[44px] pl-9 pr-10 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-slate-700 text-xs text-[#0F172A] dark:text-white focus:outline-none focus:border-[#16A34A]"
               />
               {searchQuery && (
                 <button
@@ -803,7 +905,7 @@ export const MobileHomeDashboardView: React.FC<MobileHomeDashboardViewProps> = (
           }}
           className="btn-outline min-h-[44px]"
         >
-          <MapPin className="w-4 h-4 text-[#3B82F6]" />
+          <MapPin className="w-4 h-4 text-[#16A34A]" />
           <span>GPS Visit</span>
         </button>
       </div>

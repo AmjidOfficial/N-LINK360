@@ -155,7 +155,7 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
               health.tier === 'EXCELLENT'
                 ? 'bg-emerald-600'
                 : health.tier === 'GOOD'
-                ? 'bg-[#3B82F6]'
+                ? 'bg-[#16A34A]'
                 : health.tier === 'MODERATE_RISK'
                 ? 'bg-[#F97316]'
                 : 'bg-rose-600'
@@ -232,7 +232,7 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
         <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between relative overflow-hidden">
           <div className="flex justify-between items-start gap-2">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-[#3B82F6]" />
+              <Clock className="w-3.5 h-3.5 text-[#16A34A]" />
               Average Payment Delay
             </span>
             <span
@@ -345,7 +345,7 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
         {/* Core Metric Card 3: Velocity Comparison Matrix */}
         <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-4 rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 flex flex-col justify-between">
           <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-[#3B82F6]" />
+            <Calendar className="w-3.5 h-3.5 text-[#16A34A]" />
             Credit Terms vs Actual
           </span>
 
@@ -357,7 +357,7 @@ export const CreditHealthIndicator: React.FC<CreditHealthIndicatorProps> = ({
 
             <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80">
               <span className="text-xs text-slate-600 dark:text-slate-400">Actual Turnaround:</span>
-              <span className="font-mono tabular-nums font-bold text-[#3B82F6] dark:text-blue-400">
+              <span className="font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400">
                 {health.avgPaymentTurnaroundDays} Days
               </span>
             </div>
