@@ -206,7 +206,7 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
                   Automated scan of relationship integrity, credit safeguards, and price list linkages.
                 </p>
               </div>
-              <StatusBadge variant={skusWithoutPrices.length === 0 ? 'emerald' : 'amber'} dot>
+              <StatusBadge variant={skusWithoutPrices.length === 0 ? 'emerald' : 'amber'} >
                 {skusWithoutPrices.length === 0 ? 'Optimal System Health' : 'Issues Detected'}
               </StatusBadge>
             </div>
@@ -405,7 +405,7 @@ export const SuperAdminControlCenter: React.FC<SuperAdminControlCenterProps> = (
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <StatusBadge variant="emerald" dot>
+                          <StatusBadge variant="emerald" >
                             Active
                           </StatusBadge>
                         </td>

@@ -525,8 +525,11 @@ export default function App() {
     return [];
   });
 
-  // Load cached database on mount & purge all mock/dummy data
+  // Load and reconcile data only after an authenticated user is available.
+  // The previous mount-only effect queried RLS-protected tables before first login,
+  // so fresh devices could see empty remote results and fall back to seed dealers.
   useEffect(() => {
+    if (!currentUser) return;
     const initData = async () => {
       let localCusts: Customer[] = [];
       let localOrders: SalesOrder[] = [];
@@ -740,16 +743,21 @@ export default function App() {
     };
 
     initData();
-  }, []);
+  }, [currentUser?.id]);
 
   // Synchronize state changes to cache
   const syncToCache = (newCusts: Customer[], newOrds: SalesOrder[], newRecs: Recovery[]) => {
+    // Preserve operational datasets that this helper does not own. Passing empty
+    // arrays here previously erased cached visits and attendance on every order,
+    // recovery, or customer save.
+    const previousCache = getLocalDatabaseCache();
     saveLocalDatabaseCache({
+      ...previousCache,
       customers: newCusts,
       orders: newOrds,
       recoveries: newRecs,
-      visits: [],
-      attendance: [],
+      visits: previousCache.visits || [],
+      attendance: previousCache.attendance || [],
       lastUpdated: new Date().toISOString(),
     });
   };
