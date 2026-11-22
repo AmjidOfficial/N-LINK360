@@ -75,6 +75,47 @@ The exact list must be confirmed against the final selected runtime and code ref
 
 Never use a `VITE_` prefix for private keys. Never commit real values. Never include secrets in an AI prompt. Record configuration status only, not the value.
 
+
+## Live Supabase project check (read-only, 2026-11-22)
+
+The connected Supabase account contains the matching project `N-LINK360` (region `ap-south-1`, status `ACTIVE_HEALTHY`). This identifies the production-linked project reference used in the repository's Google Sheets integration docs.
+
+A direct read-only count query returned:
+
+| Table | Rows |
+|---|---:|
+| employees | 0 |
+| customers | 0 |
+| parties | 3 |
+| sales_orders | 0 |
+| orders | 0 |
+| invoices | 0 |
+| ledger_entries | 0 |
+| party_ledgers | 0 |
+| recoveries | 0 |
+| products | 0 |
+| skus | 0 |
+| erp_products | 4 |
+| profiles | 4 |
+| field_attendance | 0 |
+| google_sheet_sync_tokens | 1 |
+
+The project has 55 public tables and RLS is enabled on all 55 according to the table inventory. This does **not** prove that the policies enforce the intended role/territory rules. Most core transactional tables currently have zero rows. The 3 rows in `parties`, 4 in `profiles`, and 4 in `erp_products` are the only non-zero counts in the checked business/auth tables.
+
+Important: do not import, seed, or restore data yet. First identify the actual live master data source (existing Google Sheet, local/offline stores, backups, or another database), compare stable IDs, and produce a dry-run reconciliation report. These counts may indicate that the app's previously entered business data is not currently persisted in this Supabase project.
+
+### Supabase advisor findings
+
+- Security: 8 `SECURITY DEFINER` RPC functions are executable by the `authenticated` role. Review each function body, authorization checks, grants, and RLS interaction before deciding whether access is intentional.
+- Security: leaked-password protection is disabled in Supabase Auth.
+- Performance: 59 foreign keys lack covering indexes.
+- Performance: 7 RLS policies have an auth-function initialization-plan warning.
+- Performance: 15 indexes are reported unused; do not remove them without workload evidence.
+- Performance: `field_attendance` has multiple permissive policies for INSERT, SELECT, and UPDATE, plus duplicate indexes. Review policy semantics before consolidating them.
+- Health advisor returned no lints.
+
+No Supabase data, schema, secrets, or Auth settings were changed during this check.
+
 ## Changes made by this audit pass
 
 - Added `GEMINI_AI_STUDIO_MASTER_PROMPT.md` to guide the next full engineering pass.
@@ -108,7 +149,8 @@ Never use a `VITE_` prefix for private keys. Never commit real values. Never inc
 | Netlify Git connection and auto-publishing | Not verified |
 | Netlify production deploy after changes | Not verified |
 | Production API health | Not verified |
-| Supabase production schema / RLS / data integrity | Not verified |
+| Supabase project status, table inventory, row counts, and advisors | Read-only checks completed; issues documented |
+| Supabase RLS policy correctness and RPC authorization | Not verified; requires function/policy review |
 | Google Sheets live two-way sync | Not verified |
 | Credential rotation | Not performed |
 
