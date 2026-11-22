@@ -104,6 +104,14 @@ The project has 55 public tables and RLS is enabled on all 55 according to the t
 
 Important: do not import, seed, or restore data yet. First identify the actual live master data source (existing Google Sheet, local/offline stores, backups, or another database), compare stable IDs, and produce a dry-run reconciliation report. These counts may indicate that the app's previously entered business data is not currently persisted in this Supabase project.
 
+
+### Google Sheets integration state
+
+- Supabase has active Edge Functions `employee-hierarchy-assign`, `employee-provision`, and `sync-master-data-from-sheets`.
+- The `sync-master-data-from-sheets` function has JWT verification disabled at the platform layer but implements its own sheet-token or authenticated-user checks in its source. Keep that application-level check mandatory.
+- The database currently has 1 active Google Sheets sync token, but `google_sheet_sync_runs` has 0 records and the recorded applied-row total is 0.
+- Therefore, a configured token/function is not proof that any live Google Sheet data has been imported. Do not assume the sheet sync has populated employees, dealers, products, or financial records.
+
 ### Supabase advisor findings
 
 - Security: 8 `SECURITY DEFINER` RPC functions are executable by the `authenticated` role. Review each function body, authorization checks, grants, and RLS interaction before deciding whether access is intentional.
@@ -151,7 +159,8 @@ No Supabase data, schema, secrets, or Auth settings were changed during this che
 | Production API health | Not verified |
 | Supabase project status, table inventory, row counts, and advisors | Read-only checks completed; issues documented |
 | Supabase RLS policy correctness and RPC authorization | Not verified; requires function/policy review |
-| Google Sheets live two-way sync | Not verified |
+| Google Sheets token/function configured | Active token and inbound function exist |
+| Google Sheets sync execution/data import | Not verified; sync run count is zero |
 | Credential rotation | Not performed |
 
 This report is intentionally strict. A green frontend build alone is not enough to mark N-LINK 360 production-ready.
