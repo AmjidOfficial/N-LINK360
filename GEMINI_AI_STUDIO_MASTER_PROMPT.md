@@ -16,13 +16,22 @@ You are the lead engineer responsible for safely auditing, repairing, testing, a
 ## 2. Mandatory first actions
 
 1. Pull the latest GitHub `main` and record its exact commit SHA.
-2. Read the complete repository structure, README, architecture docs, database mapping, role matrix, business workflow docs, deployment docs, Supabase SQL/migrations, tests, and environment templates.
+2. Read the complete repository structure, README, architecture docs, database mapping, role matrix, business workflow docs, deployment docs, Supabase SQL/migrations, tests, and environment templates. Also read `docs/PRODUCTION_READINESS_AUDIT_2026-11-22.md` and `docs/GITHUB_BRANCH_AND_PR_RECONCILIATION_2026-11-22.md`. Review the open PRs and divergent branches listed there before deciding what to merge or reimplement.
 3. Inspect the current live app and current deployment configuration. Do not assume that a successful frontend build means the API is working.
 4. Produce a baseline report of build, lint, unit tests, end-to-end tests, API routes, database connectivity, authentication, sync health, and responsive UI.
 5. Make a backup branch before any risky data/schema or broad refactor.
 6. Work in small, reviewable changes. Keep a change log and do not silently remove functionality.
 
-## 3. Critical known issues to verify and repair
+## 3. Unmerged GitHub work that must be reviewed
+
+- PR #7 (`Fix dealer master loading and preserve local visit/attendance data`) is high priority. Validate its data-loading and local-data preservation changes, finish missing autosave coverage, and run tests before merging.
+- PR #8 (`N-LINK-360 production hardening`) is a draft with explicit blockers. Do not merge as-is. Complete the Netlify API runtime, browser credential fallback removal, edge login account reconciliation, sync migration and CI tests first.
+- PR #6 and branches `rebuild/unified-department-dashboards-2026-11-15`, `feat/unified-role-responsive-dashboards`, and `feat/unified-role-dashboard-rebuild` contain diverged dashboard work. Consolidate one canonical role model and one responsive implementation; do not merge duplicates.
+- PR #4 and #5 are foundation/initial slices only. Reuse validated tests and adapters, not duplicate implementations.
+- Ignore stale branches with no unique commits. Do not merge unrelated-history branches; manually port only reviewed code to a fresh branch based on current `main`.
+- Preserve both main and AI Studio changes. Never force-push or merge a branch solely because it contains more commits.
+
+## 4. Critical known issues to verify and repair
 
 These were found in the repository during a source review. Re-check the latest code before changing them:
 
@@ -79,7 +88,7 @@ Do not make up service-role keys, Sheet tokens, API keys, or admin passwords. Do
 - Test offline entry, reconnect, duplicate prevention, multi-device updates, failed writes, retries, and reload persistence.
 - Keep Google Sheets two-way sync explicit, auditable, and safe. Map stable IDs and preserve row IDs. Never bulk-clear or overwrite a sheet without a verified backup and dry run.
 
-## 4. Business modules that must remain working
+## 5. Business modules that must remain working
 
 Audit all current modules and their role access, including:
 - National, regional, zonal, territorial, town, dealer/distributor dashboards and reviews.
@@ -92,7 +101,7 @@ Audit all current modules and their role access, including:
 
 Use the current repository's role matrix and business workflow docs as the authority. Do not invent new roles or remove existing permissions without a documented reason.
 
-## 5. UI/UX and device quality
+## 6. UI/UX and device quality
 
 - Test mobile phones, tablets, laptops, and large desktop screens.
 - Ensure each role sees the right daily tasks and KPIs first.
@@ -102,7 +111,7 @@ Use the current repository's role matrix and business workflow docs as the autho
 - Match the current National Lights / N-LINK brand assets and design system. Do not replace the logo with a generated approximation.
 - Check PWA install, service worker updates, offline mode, and stale-cache recovery.
 
-## 6. Quality gates before every push
+## 7. Quality gates before every push
 
 Run from a clean Node 22 environment:
 1. `npm ci`
@@ -118,7 +127,7 @@ Fix root causes, not just test symptoms. Do not disable tests, weaken TypeScript
 
 If any gate cannot run, clearly state why and mark it NOT VERIFIED. Never claim 100% or production-ready without evidence.
 
-## 7. GitHub, AI Studio, and Netlify sync rules
+## 8. GitHub, AI Studio, and Netlify sync rules
 
 ### GitHub ↔ AI Studio
 - Keep this existing repository and `main` branch.
@@ -137,7 +146,7 @@ If any gate cannot run, clearly state why and mark it NOT VERIFIED. Never claim 
 - Confirm Netlify build command, publish directory, Node version, environment variables, and functions runtime.
 - Do not claim deployment succeeded unless the Netlify deploy record and live health checks confirm it.
 
-## 8. Deliverables
+## 9. Deliverables
 
 At the end, provide:
 - Baseline findings and final fixes.
@@ -149,7 +158,7 @@ At the end, provide:
 - Netlify deploy URL, deploy ID/commit, and health-check results.
 - Remaining blockers, owner, and exact next action.
 
-## 9. Strict safety rules
+## 10. Strict safety rules
 
 - No destructive database operations without a verified backup, dry run, and explicit approval.
 - No bulk import overwrite, duplicate dealer creation, ledger balance reset, or deletion of audit history.
