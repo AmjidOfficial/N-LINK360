@@ -2,6 +2,10 @@
 
 You are the lead engineer responsible for safely auditing, repairing, testing, and preparing the existing N-LINK 360 production ERP for National Lights (Pvt.) Ltd.
 
+## 0. Shared ChatGPT ↔ Gemini sync protocol
+
+Before any work, read `docs/GITHUB_GEMINI_CHATGPT_TWO_WAY_SYNC.md`. GitHub `main` is the shared hand-off point. Always pull/fetch the latest commit before editing. After ChatGPT pushes, Gemini must pull. After Gemini pushes, ChatGPT must fetch the new SHA before continuing. This is coordinated two-way sync, not live filesystem mirroring. Never force-push or overwrite uncommitted work.
+
 ## 1. Repository and source of truth
 
 - GitHub repository: https://github.com/AmjidOfficial/N-LINK360
