@@ -42,7 +42,7 @@ Confirmed:
 - The root dependency declarations differ between `package.json` and `package-lock.json`.
 - The current GitHub Pages workflow uses `npm ci`, which requires the lockfile to match the package manifest.
 
-Regenerate and commit the lockfile using Node 22 and the repository's intended npm version. Verify `npm ci` from a clean checkout.
+A workflow correction has now been committed: `.github/workflows/deploy-pages.yml` regenerates the lockfile with the Node 22 npm toolchain, commits it if changed, and then runs `npm ci`. This is not yet verified; inspect the latest workflow run and confirm the generated lockfile commit and clean install.
 
 ### 4. Two deployment paths exist
 
@@ -78,6 +78,7 @@ Never use a `VITE_` prefix for private keys. Never commit real values. Never inc
 ## Changes made by this audit pass
 
 - Added `GEMINI_AI_STUDIO_MASTER_PROMPT.md` to guide the next full engineering pass.
+- Updated `.github/workflows/deploy-pages.yml` to reconcile and commit the npm lockfile before strict `npm ci` installation.
 - No production secrets were created or changed.
 - No database records, schemas, employee accounts, dealer records, ledgers, invoices, or other business data were modified.
 - No Netlify account settings were changed.
@@ -88,7 +89,7 @@ Never use a `VITE_` prefix for private keys. Never commit real values. Never inc
 1. Rotate all credentials exposed in public source, using the owning service's secure settings.
 2. Remove hardcoded password fallbacks and default signing keys from server, Cloudflare function, and browser authentication code.
 3. Choose and complete a single supported Netlify API/runtime architecture.
-4. Regenerate and commit `package-lock.json`; verify `npm ci`, lint, tests, and production build.
+4. Verify the updated GitHub Actions run regenerates and commits `package-lock.json`, then passes `npm ci`; run lint, tests, and the production build.
 5. Verify Netlify Git connection to this repository and `main`, then confirm a push creates a new production deploy.
 6. Connect the existing repository in Google AI Studio Build mode. Pull before work and push only reviewed changes. Never force-push a divergent branch.
 7. Run role-based, financial-ledger, dealer/distributor, offline autosave, Google Sheets sync, and responsive regression tests against backed-up data.
@@ -100,7 +101,8 @@ Never use a `VITE_` prefix for private keys. Never commit real values. Never inc
 | GitHub repository read access | Verified |
 | Repository source findings above | Verified by source inspection |
 | Master prompt committed | Verified |
-| Clean install / npm ci | Not verified |
+| Lockfile workflow repair committed | Verified in GitHub source |
+| Clean install / npm ci after repair | Pending workflow verification |
 | Lint and unit tests | Not verified |
 | End-to-end tests | Not verified |
 | Netlify Git connection and auto-publishing | Not verified |
