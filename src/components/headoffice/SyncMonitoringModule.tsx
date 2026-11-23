@@ -17,7 +17,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import { Customer, LedgerEntry, Recovery, SalesOrder, SKU } from '../../types';
+import { Customer, LedgerEntry, Recovery, SalesOrder, SKU, SyncConflictRecord, SyncOutboxItem } from '../../types';
 import {
   getSyncMonitorSnapshot,
   markAllPendingEventsSynced,
@@ -32,10 +32,22 @@ import {
 } from '../../services/SyncService';
 import { buildReconciliationReport } from '../../services/reconciliationService';
 import { getPendingUploads } from '../../services/googleSheetsTwoWaySyncService';
+import {
+  getOutboxItems,
+  retryOutboxItem,
+  runCoordinatedBackgroundSync,
+  subscribeBackgroundSync,
+} from '../../services/universalSubmissionService';
+import {
+  getConflictsSnapshot,
+  subscribeSyncConflicts,
+} from '../../services/syncConflictManager';
+import { SyncConflictManager } from '../sync/SyncConflictManager';
 import { formatKarachiDateTime, formatKarachiDate } from '../../utils/dateTime';
 import { safeApiFetch } from '../../lib/safeFetch';
 
 export interface SyncMonitoringModuleProps {
+  currentUser?: { email?: string; role?: string } | null;
   customers: Customer[];
   orders: SalesOrder[];
   recoveries: Recovery[];
@@ -70,6 +82,7 @@ const OP_STATUS_BADGE: Record<SyncOperationStatus, { label: string; classes: str
 };
 
 export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
+  currentUser,
   customers,
   orders,
   recoveries,
@@ -85,20 +98,34 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
     return syncService.getSnapshot();
   });
   const [statusFilter, setStatusFilter] = useState<'ALL' | SyncOperationStatus>('ALL');
+  const [outboxItems, setOutboxItems] = useState<SyncOutboxItem[]>([]);
+  const [outboxFilter, setOutboxFilter] = useState<'ALL' | 'PENDING' | 'FAILED' | 'COMPLETED'>('ALL');
+  const [conflicts, setConflicts] = useState<SyncConflictRecord[]>(() => getConflictsSnapshot());
+  const [isFlushingOutbox, setIsFlushingOutbox] = useState(false);
   const [serverTelemetry, setServerTelemetry] = useState<{
     lastDbSavedAt?: string | null;
     lastGoogleSyncedAt?: string | null;
     duplicatesPrevented?: number;
   } | null>(null);
   const [retryFeedback, setRetryFeedback] = useState<{ tone: 'success' | 'warning'; text: string } | null>(null);
-  const [activeView, setActiveView] = useState<'EVENTS' | 'RECONCILIATION' | 'GHAFFAR_AUDIT'>('EVENTS');
+  const [activeView, setActiveView] = useState<
+    'EVENTS' | 'OUTBOX' | 'CONFLICTS' | 'RECONCILIATION' | 'GHAFFAR_AUDIT'
+  >('EVENTS');
 
   useEffect(() => {
     const unsubMonitor = subscribeSyncMonitor((next) => setMonitorSnapshot(next));
     const unsubService = syncService.subscribe((next) => setServiceSnapshot(next));
+    const refreshOutbox = () => {
+      void getOutboxItems().then((items) => setOutboxItems(items));
+    };
+    refreshOutbox();
+    const unsubBg = subscribeBackgroundSync(() => refreshOutbox());
+    const unsubConflicts = subscribeSyncConflicts((list) => setConflicts(list));
     return () => {
       unsubMonitor();
       unsubService();
+      unsubBg();
+      unsubConflicts();
     };
   }, []);
 
@@ -248,6 +275,55 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
     if (statusFilter === 'ALL') return serviceSnapshot.history;
     return serviceSnapshot.history.filter((op) => op.status === statusFilter);
   }, [serviceSnapshot.history, statusFilter]);
+
+  const filteredOutbox = useMemo(() => {
+    if (outboxFilter === 'ALL') return outboxItems;
+    return outboxItems.filter((item) => item.status === outboxFilter);
+  }, [outboxItems, outboxFilter]);
+
+  const openConflictsCount = useMemo(
+    () => conflicts.filter((c) => c.status === 'OPEN').length,
+    [conflicts]
+  );
+
+  const pendingOrFailedOutboxCount = useMemo(
+    () => outboxItems.filter((i) => i.status === 'PENDING' || i.status === 'FAILED').length,
+    [outboxItems]
+  );
+
+  const handleFlushOutbox = async () => {
+    setIsFlushingOutbox(true);
+    setRetryFeedback(null);
+    try {
+      const res = await runCoordinatedBackgroundSync({ forceAllOutbox: true });
+      const items = await getOutboxItems();
+      setOutboxItems(items);
+      setRetryFeedback({
+        tone: res.outboxFailed > 0 ? 'warning' : 'success',
+        text: `Outbox flush complete: ${res.outboxCompleted} synchronized, ${res.outboxFailed} deferred (${res.offlineSynced} offline replayed).`,
+      });
+    } catch (err: any) {
+      setRetryFeedback({
+        tone: 'warning',
+        text: `Outbox flush notice: ${err?.message || 'Unable to reach remote Google Sheets gateway right now.'}`,
+      });
+    } finally {
+      setIsFlushingOutbox(false);
+    }
+  };
+
+  const handleRetryOutboxSingle = async (item: SyncOutboxItem) => {
+    setRetryFeedback(null);
+    const res = await retryOutboxItem(item.id);
+    const items = await getOutboxItems();
+    setOutboxItems(items);
+    setRetryFeedback({
+      tone: res.success ? 'success' : 'warning',
+      text: res.success
+        ? `Outbox item ${item.transactionId} pushed to ${item.sheetTab}.`
+        : `Outbox retry deferred for ${item.transactionId}: ${res.error || 'Error'}`,
+    });
+  };
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200 text-xs">
@@ -436,6 +512,33 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
         </button>
         <button
           type="button"
+          onClick={() => setActiveView('OUTBOX')}
+          className={`min-h-[44px] px-4 py-2 rounded-lg font-bold cursor-pointer whitespace-nowrap transition-colors ${
+            activeView === 'OUTBOX'
+              ? 'bg-[#16A34A] text-white shadow-xs'
+              : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          Durable Outbox ({pendingOrFailedOutboxCount}/{outboxItems.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveView('CONFLICTS')}
+          className={`min-h-[44px] px-4 py-2 rounded-lg font-bold cursor-pointer whitespace-nowrap transition-colors inline-flex items-center gap-2 ${
+            activeView === 'CONFLICTS'
+              ? 'bg-[#16A34A] text-white shadow-xs'
+              : 'bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+          }`}
+        >
+          <span>Conflict Quarantine</span>
+          {openConflictsCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded-md bg-[#F97316] text-white font-mono tabular-nums text-[10px]">
+              {openConflictsCount}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveView('RECONCILIATION')}
           className={`min-h-[44px] px-4 py-2 rounded-lg font-bold cursor-pointer whitespace-nowrap transition-colors ${
             activeView === 'RECONCILIATION'
@@ -457,6 +560,99 @@ export const SyncMonitoringModule: React.FC<SyncMonitoringModuleProps> = ({
           M Ghaffar Tools &amp; Date Forensics ({reconciliation.mGhaffarToolsStatus.invoiceCount})
         </button>
       </div>
+
+      {/* TAB: DURABLE OUTBOX INSPECTOR */}
+      {activeView === 'OUTBOX' && (
+        <div className="bg-white dark:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 overflow-hidden">
+          <div className="p-4 border-b border-[#E2E8F0] dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="font-bold text-[#0F172A] dark:text-white text-sm">
+                Durable Sheet Outbox Queue ({outboxItems.length})
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Keyed UPSERT deliveries queued after authoritative database commits. Retries automatically with exponential backoff.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(['ALL', 'PENDING', 'FAILED', 'COMPLETED'] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setOutboxFilter(st)}
+                  className={`min-h-[36px] px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer whitespace-nowrap transition-colors ${
+                    outboxFilter === st
+                      ? 'bg-[#0F172A] dark:bg-[#16A34A] text-white'
+                      : 'bg-[#F8FAFC] dark:bg-[#0F172A] text-slate-600 dark:text-slate-300 border border-[#E2E8F0] dark:border-slate-700'
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+              <button
+                type="button"
+                disabled={isFlushingOutbox || !isOnline}
+                onClick={() => void handleFlushOutbox()}
+                className="min-h-[36px] px-3 py-1 rounded-md bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isFlushingOutbox ? 'animate-spin' : ''}`} />
+                <span>Flush Outbox</span>
+              </button>
+            </div>
+          </div>
+
+          {filteredOutbox.length === 0 ? (
+            <div className="p-10 text-center text-slate-400">
+              No outbox records match this filter.
+            </div>
+          ) : (
+            <div className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
+              {filteredOutbox.slice(0, 80).map((item) => (
+                <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
+                        {item.transactionId}
+                      </span>
+                      <span className="text-[11px] font-bold text-[#16A34A] dark:text-emerald-400">
+                        {item.entityType} → {item.sheetTab}
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                        {item.status} (retries: {item.retryCount}/{item.maxRetries})
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-mono tabular-nums text-slate-400">
+                      Key: {item.idempotencyKey} · Created: {formatKarachiDateTime(item.createdAt)}
+                    </div>
+                    {item.lastError && (
+                      <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium break-words">
+                        Last Error: {item.lastError}
+                      </div>
+                    )}
+                  </div>
+                  {item.status !== 'COMPLETED' && (
+                    <button
+                      type="button"
+                      onClick={() => void handleRetryOutboxSingle(item)}
+                      disabled={isFlushingOutbox || !isOnline}
+                      className="min-h-[40px] px-3.5 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs cursor-pointer disabled:opacity-60 shrink-0"
+                    >
+                      Retry UPSERT
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: AUTHORITATIVE CONFLICT QUARANTINE */}
+      {activeView === 'CONFLICTS' && (
+        <SyncConflictManager
+          actorEmail={currentUser?.email || ''}
+          actorRole={currentUser?.role || 'MANAGEMENT'}
+        />
+      )}
 
       {/* TAB 1: TRANSACTION HISTORY DATA TABLE */}
       {activeView === 'EVENTS' && (

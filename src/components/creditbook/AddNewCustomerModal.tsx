@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { X, Building2, User as UserIcon, Phone, MapPin, DollarSign, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react';
-import { Customer, User } from '../../types';
+import { Customer, SubmissionLifecycleState, User } from '../../types';
+import { UniversalSubmitButton } from '../sync/UniversalSubmitButton';
+import { SubmissionStatus } from '../sync/SubmissionStatus';
 
 interface AddNewCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (customer: Customer) => void;
+  onSubmit: (customer: Customer) => void | Promise<any>;
   currentUser: User;
   availableTowns?: string[];
 }
@@ -43,6 +45,8 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
   const [creditLimit, setCreditLimit] = useState('500000');
   const [creditDays, setCreditDays] = useState('30');
   const [error, setError] = useState('');
+  const [submissionState, setSubmissionState] = useState<SubmissionLifecycleState>('IDLE');
+  const [submissionMsg, setSubmissionMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -53,9 +57,11 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
     (currentUser.role as string) === 'EXECUTIVE_DIRECTOR' ||
     (currentUser.role as string) === 'MANAGEMENT';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submissionState === 'SUBMITTING') return;
     setError('');
+    setSubmissionMsg(null);
 
     const cleanName = businessName.trim();
     if (!cleanName) {
@@ -107,8 +113,22 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
       updatedAt: new Date().toISOString(),
     };
 
-    onSubmit(newCust);
-    onClose();
+    setSubmissionState('SUBMITTING');
+    try {
+      const maybeOutcome = await Promise.resolve(onSubmit(newCust) as any);
+      if (maybeOutcome && typeof maybeOutcome === 'object' && maybeOutcome.success === false) {
+        setSubmissionState('SUBMISSION_FAILED');
+        setSubmissionMsg(maybeOutcome.error || 'Dealer registration rejected.');
+        setError(maybeOutcome.error || 'Dealer registration rejected.');
+        return;
+      }
+      setSubmissionState('IDLE');
+      onClose();
+    } catch (err: any) {
+      setSubmissionState('SUBMISSION_FAILED');
+      setSubmissionMsg(err?.message || 'Unable to register dealer.');
+      setError(err?.message || 'Unable to register dealer.');
+    }
   };
 
   return (
@@ -330,6 +350,10 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
             </div>
           </div>
 
+          {submissionState !== 'IDLE' && (
+            <SubmissionStatus state={submissionState} message={submissionMsg} />
+          )}
+
           {/* Action Buttons */}
           <div className="pt-2 flex items-center justify-end gap-2.5">
             <button
@@ -340,13 +364,12 @@ export const AddNewCustomerModal: React.FC<AddNewCustomerModalProps> = ({
               Cancel
             </button>
 
-            <button
+            <UniversalSubmitButton
               type="submit"
-              className="btn-primary min-h-[44px] text-xs"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>{isShahzadOrAdmin ? 'Register & Approve' : 'Submit for Approval'}</span>
-            </button>
+              label={isShahzadOrAdmin ? 'Register & Approve' : 'Submit for Approval'}
+              state={submissionState}
+              icon={<CheckCircle2 className="w-4 h-4" />}
+            />
           </div>
         </form>
       </div>

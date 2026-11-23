@@ -44,11 +44,13 @@ import { NationalLightLogo } from '../NationalLightLogo';
 import { findNearestTown } from '../../utils/geoUtils';
 import { triggerHaptic } from '../../utils/haptics';
 import { NatureSkeleton } from '../ui/NatureSkeleton';
-import { BrandHeader } from '../BrandHeader';
+import { AnimatedOrderStatusBadge } from '../ui/AnimatedOrderStatusBadge';
 import { getCanonicalDashboardRole } from '../../lib/permissions';
+import { getRoleAdaptiveMobileTabs, type MobileNavTabId } from '../../lib/mobileNavConfig';
 import { RoleBasedDashboardShell } from '../dashboard/engine';
 import { exportSalesSummaryCsv } from '../../utils/reportExport';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
+import { SyncNotificationCenter } from '../sync/SyncNotificationCenter';
 
 const Customer360Screen = React.lazy(() => import('./Customer360Screen').then((m) => ({ default: m.Customer360Screen })));
 const BulkSkuOrderForm = React.lazy(() => import('./BulkSkuOrderForm').then((m) => ({ default: m.BulkSkuOrderForm })));
@@ -560,26 +562,29 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
 
   return (
     <div className="flex-1 min-h-0 h-full bg-[#F8FAFC] dark:bg-[#0B1120] text-[#0F172A] dark:text-[#F8FAFC] flex overflow-hidden antialiased">
-      {/* Persistent Frozen Left Side Menu (Desktop / Large Screens lg+) */}
+      {/* Persistent Frozen Left Navy Side Menu (Desktop / Large Screens lg+) */}
       <aside
-        className={`hidden lg:flex flex-col h-full bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-slate-800 shrink-0 overflow-hidden transition-all duration-200 ${
+        className={`hidden lg:flex flex-col h-full bg-[#0F172A] dark:bg-[#0B1120] border-r border-slate-800/90 text-slate-100 shrink-0 overflow-hidden transition-all duration-200 ${
           isSidebarCollapsed ? 'w-[72px]' : 'w-64'
         }`}
       >
         <div className="flex-1 min-h-0 flex flex-col">
           {/* Brand + Collapse Toggle */}
-          <div className="p-4 bg-[#0F172A] dark:bg-[#0B1120] border-b border-slate-800 text-white flex items-center justify-between gap-2 min-h-[60px] shrink-0">
+          <div className="h-14 px-3.5 border-b border-slate-800/90 text-white flex items-center justify-between gap-2 shrink-0">
             {!isSidebarCollapsed && (
-              <div className="min-w-0">
-                <div className="text-sm font-bold tracking-tight truncate text-[#F8FAFC]">N-LINK 360</div>
-                <div className="text-[11px] font-mono text-slate-400 truncate">{currentUser.fullName}</div>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <NationalLightLogo size="sm" showGlow={false} />
+                <div className="min-w-0">
+                  <div className="text-sm font-bold tracking-tight truncate text-white">N-LINK 360</div>
+                  <div className="text-[10px] font-medium text-emerald-400 truncate">{currentUser.fullName}</div>
+                </div>
               </div>
             )}
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed((prev) => !prev)}
               aria-label={isSidebarCollapsed ? 'Expand side menu' : 'Collapse side menu'}
-              className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center shrink-0 cursor-pointer mx-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F97316]"
+              className="w-9 h-9 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white flex items-center justify-center shrink-0 cursor-pointer ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F97316]"
               title={isSidebarCollapsed ? 'Expand Menu' : 'Collapse Menu'}
             >
               <ArrowRight className={`w-4 h-4 transition-transform ${isSidebarCollapsed ? '' : 'rotate-180'}`} />
@@ -590,10 +595,11 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             {(
               [
                 { id: 'DASHBOARD', label: 'Home Dashboard', icon: LayoutDashboard },
-                { id: 'ORDERING', label: 'Entry', icon: ShoppingBag },
-                { id: 'INVOICES', label: 'Invoices', icon: Receipt },
-                { id: 'LEDGER', label: 'Ledgers', icon: BookOpen },
-                { id: 'CUSTOMERS', label: 'Dealers / Distributors', icon: Users },
+                { id: 'ORDERING', label: 'Order & Entry', icon: ShoppingBag },
+                { id: 'INVOICES', label: 'Invoices & Bills', icon: Receipt },
+                { id: 'LEDGER', label: 'Party Ledgers', icon: BookOpen },
+                { id: 'CUSTOMERS', label: 'Dealers Network', icon: Users },
+                { id: 'ATTENDANCE', label: 'Attendance & GPS', icon: Clock },
               ] as const
             ).map((item) => {
               const Icon = item.icon;
@@ -608,20 +614,20 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     scrollMainToTop('smooth');
                   }}
                   title={item.label}
-                  className={`w-full min-h-[44px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                  className={`w-full min-h-[42px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
                     active
                       ? 'bg-[#16A34A] text-white shadow-sm'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
+                      : 'text-slate-300 hover:bg-white/8 hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-400'}`} />
                   {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                 </button>
               );
             })}
 
-            {/* Unified 1-Click Sync CTA (Sync Up + Sync Down merged; Google Sheets auto in background) */}
-            <div className="pt-2 mt-2 border-t border-[#E2E8F0] dark:border-slate-800">
+            {/* Unified 1-Click Sync CTA (Sync Up + Sync Down merged) */}
+            <div className="pt-2 mt-2 border-t border-slate-800/90">
               <button
                 type="button"
                 disabled={isSyncingSheet}
@@ -635,13 +641,13 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   pushNotification(`Sync completed at ${ts}`, 'success');
                 }}
                 title="Sync Up & Sync Down"
-                className={`w-full min-h-[44px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-[#0F172A] dark:text-white cursor-pointer transition-colors`}
+                className={`w-full min-h-[42px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-white cursor-pointer transition-colors`}
               >
-                <RefreshCw className={`w-4 h-4 text-[#16A34A] shrink-0 ${isSyncingSheet ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 text-emerald-400 shrink-0 ${isSyncingSheet ? 'animate-spin' : ''}`} />
                 {!isSidebarCollapsed && (
                   <div className="text-left min-w-0">
-                    <div className="text-xs font-bold">{isSyncingSheet ? 'Syncing...' : 'Sync'}</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate tabular-nums">{lastSyncAt}</div>
+                    <div className="text-xs font-bold">{isSyncingSheet ? 'Syncing...' : 'Sync Data'}</div>
+                    <div className="text-[10px] text-slate-400 truncate tabular-nums">{lastSyncAt}</div>
                   </div>
                 )}
               </button>
@@ -655,24 +661,24 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 scrollMainToTop('smooth');
               }}
               title="Settings & Profile"
-              className={`w-full min-h-[44px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+              className={`w-full min-h-[42px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
                 activeTab === 'MORE'
                   ? 'bg-[#16A34A] text-white'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
+                  : 'text-slate-300 hover:bg-white/8 hover:text-white'
               }`}
             >
-              <SlidersHorizontal className={`w-4 h-4 shrink-0 ${activeTab === 'MORE' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-              {!isSidebarCollapsed && <span className="truncate">Settings &amp; Profile</span>}
+              <SlidersHorizontal className={`w-4 h-4 shrink-0 ${activeTab === 'MORE' ? 'text-white' : 'text-slate-400'}`} />
+              {!isSidebarCollapsed && <span className="truncate">Settings &amp; More</span>}
             </button>
           </nav>
         </div>
 
-        <div className="p-2.5 border-t border-[#E2E8F0] dark:border-slate-800 shrink-0">
+        <div className="p-2.5 border-t border-slate-800/90 shrink-0">
           <button
             type="button"
             onClick={onSignOut}
             title="Log out"
-            className={`w-full min-h-[44px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2.5 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer`}
+            className={`w-full min-h-[42px] flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2 rounded-xl text-xs font-semibold text-rose-300 hover:text-rose-200 hover:bg-rose-500/15 cursor-pointer`}
           >
             <LogOut className="w-4 h-4 shrink-0" />
             {!isSidebarCollapsed && <span>Log out</span>}
@@ -682,8 +688,8 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
 
       {/* Main Column */}
       <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
-      {/* Frozen Top App Bar */}
-      <header className="shrink-0 z-30 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-slate-800 px-3 sm:px-4 py-2 flex items-center justify-between text-[#0F172A] dark:text-[#F8FAFC]">
+      {/* Compact Frozen Top App Bar (52px for Mobile Chrome Budget <= 15%) */}
+      <header className="shrink-0 z-30 h-[52px] bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-slate-800 px-2.5 sm:px-4 flex items-center justify-between text-[#0F172A] dark:text-[#F8FAFC]">
         <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
@@ -692,38 +698,40 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
               setIsNavDrawerOpen(true);
             }}
             aria-label="Open navigation menu"
-            className="lg:hidden w-11 h-11 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shrink-0"
+            className="lg:hidden w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer shrink-0"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <NationalLightLogo size="sm" showGlow />
+          <NationalLightLogo size="xs" showGlow={false} />
           <div className="min-w-0">
-            <span className="text-base font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] block truncate">
+            <span className="text-sm sm:text-base font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] block truncate">
               {activeTab === 'DASHBOARD'
-                ? 'Home Dashboard'
+                ? 'Home'
                 : activeTab === 'ORDERING'
-                ? 'Entry'
+                ? 'Order & Entry'
                 : activeTab === 'INVOICES'
                 ? 'Invoices'
                 : activeTab === 'LEDGER'
                 ? 'Ledgers'
                 : activeTab === 'CUSTOMERS'
-                ? 'Dealers / Distributors'
+                ? 'Dealers'
                 : activeTab === 'ATTENDANCE'
                 ? 'Attendance'
-                : 'Menu'}
+                : 'More & Settings'}
             </span>
           </div>
         </div>
 
-        {/* Header Quick Actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Header Quick Actions (Clean Utility Cluster) */}
+        <div className="flex items-center gap-1 shrink-0">
+          <SyncNotificationCenter userEmail={currentUser.email} />
+
           <button
             type="button"
             onClick={handleToggleTheme}
             aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             title={isDarkMode ? 'Light Mode' : 'Dark Mode'}
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
           >
             {isDarkMode ? <Sun className="w-4 h-4 text-[#F97316]" /> : <Moon className="w-4 h-4" />}
           </button>
@@ -739,40 +747,27 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 setLastSyncAt(ts);
                 pushNotification(`Sync completed at ${ts}`, 'success');
               }}
-              className="btn-outline px-2.5 py-1.5 min-h-[44px] text-xs whitespace-nowrap"
+              className="btn-outline px-2.5 py-1.5 min-h-[40px] text-xs whitespace-nowrap"
               title="Bidirectional Sync"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400 ${isSyncingSheet ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{isSyncingSheet ? 'Syncing...' : 'Sync'}</span>
             </button>
           )}
-
-          <button
-            type="button"
-            onClick={() => setIsNotifLogOpen(true)}
-            aria-label="Open notification log"
-            className="relative w-11 h-11 rounded-xl flex items-center justify-center text-[#0F172A] dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-          >
-            <Bell className="w-5 h-5" />
-            {(notificationLog.length > 0 || orders.some((o) => o.status === 'PENDING_APPROVAL')) && (
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#F97316]" />
-            )}
-          </button>
-
         </div>
       </header>
 
-      {/* Slide-Out Side Menu Drawer (All Tabs & Merged 2-Way Sync) */}
+      {/* Slide-Out Navy Side Menu Drawer (All Modules & Merged 2-Way Sync) */}
       {isNavDrawerOpen && (
         <div className="fixed inset-0 z-50 flex">
           <div
             className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
             onClick={() => setIsNavDrawerOpen(false)}
           />
-          <aside className="relative z-10 w-76 max-w-[84vw] bg-white dark:bg-[#0F172A] h-full flex flex-col justify-between border-r border-[#E2E8F0] dark:border-slate-800 shadow-2xl animate-in slide-in-from-left duration-200 overflow-y-auto">
+          <aside className="relative z-10 w-76 max-w-[84vw] bg-[#0F172A] dark:bg-[#0B1120] text-slate-100 h-full flex flex-col justify-between border-r border-slate-800 shadow-2xl animate-in slide-in-from-left duration-200 overflow-y-auto">
             <div>
               {/* Drawer Officer Profile Header */}
-              <div className="p-4 bg-[#0F172A] dark:bg-[#0B1120] border-b border-slate-800 text-white space-y-3">
+              <div className="p-4 border-b border-slate-800 text-white space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-11 h-11 rounded-xl bg-[#16A34A] text-white flex items-center justify-center font-bold shrink-0">
@@ -808,10 +803,11 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                 {(
                   [
                     { id: 'DASHBOARD', label: 'Home Dashboard', icon: LayoutDashboard },
-                    { id: 'ORDERING', label: 'Entry', icon: ShoppingBag },
-                    { id: 'INVOICES', label: 'Invoices', icon: Receipt },
-                    { id: 'LEDGER', label: 'Ledgers', icon: BookOpen },
-                    { id: 'CUSTOMERS', label: 'Dealers / Distributors', icon: Users },
+                    { id: 'ORDERING', label: 'Order & Recovery Entry', icon: ShoppingBag },
+                    { id: 'INVOICES', label: 'Invoices & Bills', icon: Receipt },
+                    { id: 'LEDGER', label: 'Party Ledgers', icon: BookOpen },
+                    { id: 'CUSTOMERS', label: 'Dealers Network', icon: Users },
+                    { id: 'ATTENDANCE', label: 'Attendance & GPS Check-In', icon: Clock },
                   ] as const
                 ).map((item) => {
                   const Icon = item.icon;
@@ -829,17 +825,17 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                       className={`w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
                         active
                           ? 'bg-[#16A34A] text-white'
-                          : 'text-[#0F172A] dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          : 'text-slate-200 hover:bg-white/10 hover:text-white'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                      <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-400'}`} />
                       <span>{item.label}</span>
                     </button>
                   );
                 })}
 
-                {/* Merged 1-Click 2-Way Sync CTA (Auto-Syncs with Google Sheets in background) */}
-                <div className="pt-2 mt-2 border-t border-[#E2E8F0] dark:border-slate-800">
+                {/* Merged 1-Click 2-Way Sync CTA */}
+                <div className="pt-2 mt-2 border-t border-slate-800">
                   <button
                     type="button"
                     disabled={isSyncingSheet}
@@ -853,15 +849,15 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                       pushNotification(`Sync completed at ${ts}`, 'success');
                       setIsNavDrawerOpen(false);
                     }}
-                    className="w-full min-h-[44px] flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left bg-emerald-500/10 hover:bg-emerald-500/20 text-[#0F172A] dark:text-white cursor-pointer transition-colors"
+                    className="w-full min-h-[44px] flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left bg-emerald-500/15 hover:bg-emerald-500/25 text-white cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <RefreshCw className={`w-4 h-4 text-[#16A34A] shrink-0 ${isSyncingSheet ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`w-4 h-4 text-emerald-400 shrink-0 ${isSyncingSheet ? 'animate-spin' : ''}`} />
                       <div>
                         <div className="text-sm font-bold">
-                          {isSyncingSheet ? 'Syncing...' : 'Sync'}
+                          {isSyncingSheet ? 'Syncing...' : 'Sync Now'}
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+                        <div className="text-[11px] text-slate-400 tabular-nums">
                           Last Sync: {lastSyncAt}
                         </div>
                       </div>
@@ -880,16 +876,16 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   className={`w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${
                     activeTab === 'MORE'
                       ? 'bg-[#16A34A] text-white'
-                      : 'text-[#0F172A] dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      : 'text-slate-200 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <SlidersHorizontal className={`w-4 h-4 ${activeTab === 'MORE' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <SlidersHorizontal className={`w-4 h-4 ${activeTab === 'MORE' ? 'text-white' : 'text-slate-400'}`} />
                   <span>Settings &amp; Profile</span>
                 </button>
               </nav>
             </div>
 
-            <div className="p-4 border-t border-[#E2E8F0] dark:border-slate-800 space-y-2">
+            <div className="p-4 border-t border-slate-800 space-y-2">
               {canInstallPwa && (
                 <button
                   type="button"
@@ -912,7 +908,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   setIsNavDrawerOpen(false);
                   onSignOut();
                 }}
-                className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
+                className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-rose-300 hover:text-rose-200 hover:bg-rose-500/15 cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Log out</span>
@@ -1371,7 +1367,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                     <div className="md:hidden space-y-3">
                       {orders
                         .filter((o) => canSwitchTown || displayedCustomers.some((c) => c.id === o.customerId || c.companyName === o.customerName))
-                        .map((o) => {
+                        .map((o, idx) => {
                           const cust = customers.find((c) => c.id === o.customerId || c.companyName === o.customerName);
                           return (
                             <div key={o.id || o.orderNumber} className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E2E8F0] dark:border-slate-700/80 shadow-sm space-y-3">
@@ -1381,15 +1377,12 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                   <div className="font-bold text-[#0F172A] dark:text-white truncate">{o.customerName}</div>
                                   <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">{o.orderDate || o.createdAt?.slice(0, 10)}</div>
                                 </div>
-                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border shrink-0 ${
-                                  o.status === 'APPROVED'
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                    : o.status === 'REJECTED'
-                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                                    : 'bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border-orange-500/20'
-                                }`}>
-                                  {o.status || 'SUBMITTED'}
-                                </span>
+                                <AnimatedOrderStatusBadge
+                                  status={o.status}
+                                  shahzadApproval={o.shahzadApproval}
+                                  dualApprovalStatus={o.dualApprovalStatus}
+                                  index={idx}
+                                />
                               </div>
                               <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-700/60">
                                 <div className="text-xs">
@@ -1456,7 +1449,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                           <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
                             {orders
                               .filter((o) => canSwitchTown || displayedCustomers.some((c) => c.id === o.customerId || c.companyName === o.customerName))
-                              .map((o) => {
+                              .map((o, idx) => {
                                 const cust = customers.find((c) => c.id === o.customerId || c.companyName === o.customerName);
                                 return (
                                   <tr key={o.id || o.orderNumber} className="hover:bg-[#F8FAFC] dark:hover:bg-slate-800/60">
@@ -1474,15 +1467,12 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                                       PKR {Number(o.totalAmount || 0).toLocaleString()}
                                     </td>
                                     <td className="py-2.5 px-3 text-center">
-                                      <span className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
-                                        o.status === 'APPROVED'
-                                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                          : o.status === 'REJECTED'
-                                          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                                          : 'bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border-orange-500/20'
-                                      }`}>
-                                        {o.status || 'SUBMITTED'}
-                                      </span>
+                                      <AnimatedOrderStatusBadge
+                                        status={o.status}
+                                        shahzadApproval={o.shahzadApproval}
+                                        dualApprovalStatus={o.dualApprovalStatus}
+                                        index={idx}
+                                      />
                                     </td>
                                     <td className="py-2.5 px-3 text-center">
                                       <div className="flex items-center justify-center gap-1.5">
@@ -2892,7 +2882,7 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
         />
       )}
 
-      {/* Fixed 5-Tab Mobile Bottom Navigation Bar (<= 15% viewport height, 44px+ touch targets) */}
+      {/* Role-Adaptive 4-Tab Mobile Bottom Navigation Bar (<= 15% viewport height, 48px touch targets) */}
       <nav
         aria-label="Mobile Primary Navigation"
         className={`lg:hidden fixed z-40 h-16 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-[#E2E8F0] dark:border-slate-800 ${
@@ -2901,17 +2891,17 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
             : 'bottom-0 inset-x-0 border-t pb-safe'
         }`}
       >
-        <div className="max-w-lg mx-auto h-full grid grid-cols-5 items-center px-1">
-          {(
-            [
-              { id: 'DASHBOARD', label: 'Home', icon: LayoutDashboard },
-              { id: 'ORDERING', label: 'Entry', icon: ShoppingBag },
-              { id: 'INVOICES', label: 'Invoices', icon: Receipt },
-              { id: 'LEDGER', label: 'Ledgers', icon: BookOpen },
-              { id: 'CUSTOMERS', label: 'Dealers', icon: Users },
-            ] as const
-          ).map((item) => {
-            const Icon = item.icon;
+        <div className="max-w-lg mx-auto h-full grid grid-cols-4 items-center px-1.5 gap-1">
+          {getRoleAdaptiveMobileTabs(currentUser.role).map((item) => {
+            const TAB_ICONS: Record<MobileNavTabId, React.ComponentType<{ className?: string }>> = {
+              DASHBOARD: LayoutDashboard,
+              ORDERING: ShoppingBag,
+              INVOICES: Receipt,
+              LEDGER: BookOpen,
+              CUSTOMERS: Users,
+              MORE: Menu,
+            };
+            const Icon = TAB_ICONS[item.id] || LayoutDashboard;
             const active = activeTab === item.id;
             return (
               <button
@@ -2925,14 +2915,14 @@ export const FieldMobileExperience: React.FC<FieldMobileExperienceProps> = ({
                   scrollMainToTop('smooth');
                 }}
                 aria-current={active ? 'page' : undefined}
-                className={`min-h-[48px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+                className={`min-h-[48px] flex flex-col items-center justify-center gap-1 rounded-xl transition-colors cursor-pointer ${
                   active
                     ? 'text-[#16A34A] dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 font-bold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium'
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-[10px] leading-none whitespace-nowrap">{item.label}</span>
+                <span className="text-[11px] leading-none whitespace-nowrap">{item.label}</span>
               </button>
             );
           })}

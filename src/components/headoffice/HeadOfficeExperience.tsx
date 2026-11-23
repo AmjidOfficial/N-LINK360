@@ -49,7 +49,9 @@ import { FinancialTrendBarChart } from '../dashboard/FinancialTrendBarChart';
 import { MiniCalendarWidget } from '../dashboard/MiniCalendarWidget';
 import { MoreActionsMenu } from '../ui/MoreActionsMenu';
 import { NatureSkeleton } from '../ui/NatureSkeleton';
+import { AnimatedOrderStatusBadge } from '../ui/AnimatedOrderStatusBadge';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
+import { SyncNotificationCenter } from '../sync/SyncNotificationCenter';
 
 const EmployeeManagementModule = React.lazy(() => import('./EmployeeManagementModule').then((m) => ({ default: m.EmployeeManagementModule })));
 const InventoryWarehouseModule = React.lazy(() => import('./InventoryWarehouseModule').then((m) => ({ default: m.InventoryWarehouseModule })));
@@ -199,6 +201,7 @@ export interface HeadOfficeExperienceProps {
   onSubmitLeaveRequest?: (req: Omit<LeaveRequest, 'id' | 'status' | 'createdAt'>) => void;
   onReviewLeaveRequest?: (requestId: string, decision: 'APPROVED' | 'REJECTED', notes?: string) => void;
   onOpenChangePassword?: () => void;
+  onSwitchToFieldMobile?: () => void;
 }
 
 export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
@@ -256,6 +259,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
   onSubmitLeaveRequest,
   onReviewLeaveRequest,
   onOpenChangePassword,
+  onSwitchToFieldMobile,
 }) => {
   const [activeTab, setActiveTab] = useState<HeadOfficeTab>('OVERVIEW');
   const [approvalsSubTab, setApprovalsSubTab] = useState<'ORDERS' | 'RECOVERIES' | 'CUSTOMERS' | 'PROFILE_EDITS' | 'AUDIT'>('ORDERS');
@@ -641,26 +645,26 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
         />
       )}
 
-      {/* 1. FROZEN COLLAPSIBLE SIDEBAR (256px Expanded / 72px Rail on Desktop >=1024px, Auto-Closing Drawer on <1024px) */}
+      {/* 1. FROZEN COLLAPSIBLE NAVY SIDEBAR (256px Expanded / 72px Rail on Desktop >=1024px, Auto-Closing Drawer on <1024px) */}
       <aside
         aria-label="ERP Sidebar Navigation"
         className={`fixed inset-y-0 left-0 z-50 w-64 ${
           isSidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-64'
-        } bg-white dark:bg-[#0F172A] border-r border-[#E2E8F0] dark:border-slate-800 flex flex-col shrink-0 transition-all duration-200 lg:relative lg:h-full lg:translate-x-0 ${
+        } bg-[#0F172A] dark:bg-[#0B1120] border-r border-slate-800/90 text-slate-100 flex flex-col shrink-0 transition-all duration-200 lg:relative lg:h-full lg:translate-x-0 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header & Desktop Collapse Toggle */}
-        <div className="h-14 px-3 bg-[#0F172A] dark:bg-[#0B1120] border-b border-slate-800 flex items-center justify-between shrink-0 text-white">
+        <div className="h-14 px-3.5 border-b border-slate-800/90 flex items-center justify-between shrink-0 text-white">
           {!isSidebarCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
               <NationalLightLogo size="sm" showGlow={false} />
               <div className="flex flex-col leading-tight min-w-0">
                 <span className="font-bold text-sm tracking-tight text-white font-display whitespace-nowrap">
-                  N-Link 360
+                  N-LINK 360
                 </span>
-                <span className="text-[10px] font-semibold text-[#F97316] whitespace-nowrap">
-                  Head Office
+                <span className="text-[10px] font-semibold text-emerald-400 whitespace-nowrap">
+                  National Light ERP
                 </span>
               </div>
             </div>
@@ -669,7 +673,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-              className="hidden lg:flex w-10 h-10 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white items-center justify-center cursor-pointer"
+              className="hidden lg:flex w-9 h-9 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white items-center justify-center cursor-pointer"
               title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
               aria-label={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             >
@@ -691,7 +695,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
           {sidebarGroups.map((group) => (
             <div key={group.title}>
               {!isSidebarCollapsed && (
-                <div className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                   {group.title}
                 </div>
               )}
@@ -710,11 +714,11 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                       } py-2 rounded-xl text-xs font-semibold flex items-center transition-colors cursor-pointer ${
                         active
                           ? 'bg-[#16A34A] text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-white'
+                          : 'text-slate-300 hover:bg-white/8 hover:text-white'
                       }`}
                     >
                       <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-2.5 min-w-0'}`}>
-                        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-400'}`} />
                         {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                       </div>
                       {!isSidebarCollapsed && 'badge' in item && item.badge !== undefined && (
@@ -733,25 +737,36 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
           ))}
         </nav>
 
-        {/* Sidebar Footer: Account & Mode Switch */}
-        <div className="p-2.5 border-t border-[#E2E8F0] dark:border-slate-800 space-y-2 shrink-0">
+        {/* Sidebar Footer: Account, View Switch & Sign Out */}
+        <div className="p-2.5 border-t border-slate-800/90 space-y-1.5 shrink-0">
           {!isSidebarCollapsed && (
-            <div className="px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 flex items-center gap-2.5">
+            <div className="px-2.5 py-2 rounded-xl bg-white/5 border border-slate-800 flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-[#16A34A] text-white font-bold text-xs flex items-center justify-center shrink-0">
                 {currentUser.avatarInitials || 'NL'}
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-xs font-semibold text-slate-900 dark:text-white truncate block">
+                <span className="text-xs font-semibold text-white truncate block">
                   {currentUser.fullName}
                 </span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
+                <span className="text-[10px] text-slate-400 block truncate">
                   {isShahzad ? 'Sole Executive Approver' : currentUser.roleTitle || 'Head Office'}
                 </span>
               </div>
             </div>
           )}
 
-          <div className={isSidebarCollapsed ? 'flex flex-col gap-1.5' : 'grid grid-cols-1 gap-1.5'}>
+          <div className={isSidebarCollapsed ? 'flex flex-col gap-1' : 'grid grid-cols-1 gap-1'}>
+            {onSwitchToFieldMobile && (
+              <button
+                type="button"
+                onClick={onSwitchToFieldMobile}
+                title="Switch to Field Mobile Mode"
+                className="min-h-[40px] py-2 px-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Smartphone className="w-3.5 h-3.5 shrink-0" />
+                {!isSidebarCollapsed && <span>Field Mobile View</span>}
+              </button>
+            )}
             {canInstallPwa && (
               <button
                 type="button"
@@ -760,7 +775,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   if (ok) setIsSidebarOpen(false);
                 }}
                 title="Install N-LINK 360 App"
-                className="btn-primary min-h-[44px] py-2 px-2.5 text-xs"
+                className="btn-primary min-h-[40px] py-2 px-2.5 text-xs"
               >
                 <Download className="w-3.5 h-3.5" />
                 {!isSidebarCollapsed && <span>Install Desktop App</span>}
@@ -771,9 +786,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 type="button"
                 onClick={onOpenChangePassword}
                 title="Change Password"
-                className="min-h-[44px] py-2 px-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:text-[#16A34A] hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="min-h-[40px] py-2 px-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <KeyRound className="w-3.5 h-3.5" />
+                <KeyRound className="w-3.5 h-3.5 shrink-0" />
                 {!isSidebarCollapsed && <span>Change Password</span>}
               </button>
             )}
@@ -781,9 +796,9 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
               type="button"
               onClick={onSignOut}
               title="Sign Out"
-              className="min-h-[44px] py-2 px-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="min-h-[40px] py-2 px-2.5 rounded-xl text-rose-300 hover:text-rose-200 hover:bg-rose-500/15 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-3.5 h-3.5 shrink-0" />
               {!isSidebarCollapsed && <span>Sign Out</span>}
             </button>
           </div>
@@ -792,10 +807,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
       {/* 2. MAIN CONTENT VIEWPORT */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-        {/* Frozen 3-Zone Top App Bar */}
-        <header className="shrink-0 z-30 h-14 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-slate-800 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-3">
-          {/* Left: Tablet Menu Trigger + Contextual Breadcrumb */}
-          <div className="flex items-center gap-2.5 min-w-0">
+        {/* Clean Single-Row Top Utility Bar (Search · Notifications · Theme · Sync · User) */}
+        <header className="shrink-0 z-30 h-14 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-slate-800 px-3 sm:px-5 lg:px-6 flex items-center justify-between gap-3">
+          {/* Left: Mobile/Tablet Drawer Trigger + Page Title + Quick Search */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <button
               type="button"
               onClick={() => setIsSidebarOpen(true)}
@@ -804,32 +819,36 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
             >
               <SlidersHorizontal className="w-4 h-4" />
             </button>
-            <div className="flex items-baseline gap-2 truncate">
-              <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">N-Link</span>
-              <span className="text-xs text-slate-400 hidden sm:inline">/</span>
-              <h1 className="text-lg sm:text-xl font-bold text-[#0F172A] dark:text-[#F8FAFC] capitalize truncate tracking-tight">
-                {activeTab.toLowerCase().replace(/_/g, ' ')}
-              </h1>
+
+            <h1 className="text-base sm:text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC] capitalize truncate tracking-tight">
+              {activeTab.toLowerCase().replace(/_/g, ' ')}
+            </h1>
+
+            <div className="hidden md:flex items-center relative max-w-xs w-full ml-2">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
+              <input
+                type="search"
+                value={customerFilterQuery}
+                onChange={(e) => {
+                  setCustomerFilterQuery(e.target.value);
+                  if (e.target.value.trim() && activeTab === 'OVERVIEW') {
+                    setActiveTab('CUSTOMERS');
+                  }
+                }}
+                placeholder="Search dealers, towns, codes..."
+                aria-label="Global dealer search"
+                className="w-full h-9 pl-8 pr-3 rounded-xl bg-slate-100/90 dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#16A34A]"
+              />
             </div>
           </div>
 
-          {/* Center: Unboxed Sync & Authority Metadata */}
-          <div className="hidden xl:flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
-            <span>Supabase Authoritative</span>
-            <span aria-hidden="true">&middot;</span>
-            <span>Google Sheets Sync</span>
-            <span aria-hidden="true">&middot;</span>
-            <span className="text-[#0F172A] dark:text-[#F8FAFC] font-medium">
-              Approver: Shahzad Ullah
-            </span>
-          </div>
-
-          {/* Right: Theme Toggle & Primary Action */}
+          {/* Right: Notifications, Theme Toggle, Sync & Primary Action */}
           <div className="flex items-center gap-2 shrink-0">
+            <SyncNotificationCenter userEmail={currentUser.email} />
             <button
               type="button"
               onClick={handleToggleTheme}
-              className="btn-outline px-2.5 min-h-[44px]"
+              className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl border border-[#E2E8F0] dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center cursor-pointer transition-colors"
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
@@ -841,7 +860,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                 type="button"
                 onClick={() => onSyncGoogleSheet()}
                 disabled={isSyncingSheet}
-                className="btn-outline min-h-[44px]"
+                className="btn-outline min-h-[40px] px-3 text-xs"
                 title="Sync Google Sheets"
               >
                 <RefreshCw className={`w-3.5 h-3.5 text-[#16A34A] dark:text-emerald-400 ${isSyncingSheet ? 'animate-spin' : ''}`} />
@@ -852,10 +871,10 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
             <button
               type="button"
               onClick={() => setIsAddCustomerModalOpen(true)}
-              className="btn-primary min-h-[44px]"
+              className="btn-primary min-h-[40px] px-3.5 text-xs"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add Customer</span>
+              <span className="hidden sm:inline">Add Dealer</span>
             </button>
           </div>
         </header>
@@ -2055,7 +2074,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
-                            {orders.map((o) => {
+                            {orders.map((o, idx) => {
                               const c = customers.find((cust) => cust.id === o.customerId || cust.companyName === o.customerName);
                               return (
                                 <tr key={o.id || o.orderNumber} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
@@ -2078,17 +2097,12 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                     PKR {Number(o.totalAmount || 0).toLocaleString()}
                                   </td>
                                   <td className="py-3 px-4 text-center">
-                                    <span
-                                      className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
-                                        o.status === 'APPROVED'
-                                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400'
-                                          : o.status === 'REJECTED'
-                                          ? 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400'
-                                          : 'bg-orange-500/10 text-[#EA580C] border-orange-500/20 dark:text-[#F97316]'
-                                      }`}
-                                    >
-                                      {o.status || 'SUBMITTED'}
-                                    </span>
+                                    <AnimatedOrderStatusBadge
+                                      status={o.status}
+                                      shahzadApproval={o.shahzadApproval}
+                                      dualApprovalStatus={o.dualApprovalStatus}
+                                      index={idx}
+                                    />
                                   </td>
                                   <td className="py-3 px-4 text-center">
                                     <div className="flex items-center justify-center gap-1.5">
@@ -2165,7 +2179,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
                       {/* Mobile/Tablet Card View (< lg) */}
                       <div className="lg:hidden divide-y divide-slate-100 dark:divide-slate-700/80">
-                        {orders.map((o) => {
+                        {orders.map((o, idx) => {
                           const c = customers.find((cust) => cust.id === o.customerId || cust.companyName === o.customerName);
                           return (
                             <div key={o.id || o.orderNumber} className="p-4 space-y-3">
@@ -2175,15 +2189,12 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                   <div className="font-bold text-slate-900 dark:text-white text-[13px] truncate">{o.customerName}</div>
                                   <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">By {o.salesUserName} &bull; {o.orderDate || o.createdAt?.slice(0, 10)}</div>
                                 </div>
-                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border shrink-0 ${
-                                  o.status === 'APPROVED'
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                    : o.status === 'REJECTED'
-                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                                    : 'bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border-orange-500/20'
-                                }`}>
-                                  {o.status || 'SUBMITTED'}
-                                </span>
+                                <AnimatedOrderStatusBadge
+                                  status={o.status}
+                                  shahzadApproval={o.shahzadApproval}
+                                  dualApprovalStatus={o.dualApprovalStatus}
+                                  index={idx}
+                                />
                               </div>
                               <div className="flex justify-between items-center bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                                 <div>
@@ -2283,7 +2294,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#E2E8F0] dark:divide-slate-700/80">
-                          {recoveries.map((r) => (
+                          {recoveries.map((r, idx) => (
                             <tr key={r.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
                               <td className="frozen-first-col bg-white dark:bg-[#1E293B] py-3 px-4 font-mono tabular-nums font-bold text-[#16A34A] dark:text-emerald-400">
                                 #{r.id}
@@ -2306,17 +2317,12 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 -PKR {r.amount.toLocaleString()} CR
                               </td>
                               <td className="py-3 px-4 text-center">
-                                <span
-                                  className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
-                                    r.status === 'APPROVED' || r.status === 'VERIFIED'
-                                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400'
-                                      : r.status === 'REJECTED'
-                                      ? 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:text-rose-400'
-                                      : 'bg-orange-500/10 text-[#EA580C] border-orange-500/20 dark:text-[#F97316]'
-                                  }`}
-                                >
-                                  {r.status || 'PENDING'}
-                                </span>
+                                <AnimatedOrderStatusBadge
+                                  status={r.status}
+                                  shahzadApproval={r.shahzadApproval}
+                                  dualApprovalStatus={r.dualApprovalStatus}
+                                  index={idx}
+                                />
                               </td>
                               <td className="py-3 px-4 text-center">
                                 <button
@@ -2337,7 +2343,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
 
                     {/* Mobile/Tablet Card View (< lg) */}
                     <div className="lg:hidden divide-y divide-slate-100 dark:divide-slate-700/80">
-                      {recoveries.map((r) => {
+                      {recoveries.map((r, idx) => {
                         const c = customers.find((cust) => cust.id === r.customerId || cust.companyName === r.customerName);
                         return (
                           <div key={r.id} className="p-4 space-y-3">
@@ -2347,13 +2353,12 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                                 <div className="font-bold text-slate-900 dark:text-white text-[13px] truncate">{r.customerName}</div>
                                 <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{r.salesUserName} &bull; {r.recordedAt?.slice(0, 10)}</div>
                               </div>
-                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border shrink-0 ${
-                                r.status === 'APPROVED' || r.status === 'VERIFIED'
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                  : 'bg-orange-500/10 text-[#EA580C] dark:text-[#F97316] border-orange-500/20'
-                              }`}>
-                                {r.status || 'PENDING'}
-                              </span>
+                              <AnimatedOrderStatusBadge
+                                status={r.status}
+                                shahzadApproval={r.shahzadApproval}
+                                dualApprovalStatus={r.dualApprovalStatus}
+                                index={idx}
+                              />
                             </div>
                             <div className="flex justify-between items-center bg-slate-50 dark:bg-[#0F172A] p-2.5 rounded-xl border border-[#E2E8F0] dark:border-slate-800">
                               <div>
@@ -2707,6 +2712,7 @@ export const HeadOfficeExperience: React.FC<HeadOfficeExperienceProps> = ({
                   {isManagementOrSuperAdmin ? (
                     <Suspense fallback={<NatureSkeleton variant="card" count={3} />}>
                       <SyncMonitoringModule
+                        currentUser={currentUser}
                         customers={customers}
                         orders={orders}
                         recoveries={recoveries}

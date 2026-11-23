@@ -30,9 +30,10 @@ import {
 } from '../lib/offlineIndexedDb';
 import { generateIdempotencyUuid, isValidUuid } from '../utils/idGenerator';
 import {
-  buildTransactionFingerprint,
+  computeSyncFingerprintHash,
   detectDuplicateTransaction,
   generateDeterministicTransactionId,
+  TransactionDomainPrefix,
 } from '../utils/transactionSignature';
 import { safeApiFetch } from '../lib/safeFetch';
 import { supabase, isSupabaseConfigured } from './supabase';
@@ -42,7 +43,8 @@ import {
   recordSyncLifecycleEvent,
 } from './autoSaveSyncService';
 import { publishUserNotification } from './syncNotificationService';
-import { getGoogleSheetsWebhookUrl, TARGET_SPREADSHEET_ID } from './google-sheets';
+import { getGoogleSheetsWebhookUrl } from './google-sheets';
+import { TARGET_SPREADSHEET_ID } from './googleSheetsLiveService';
 
 export interface SubmissionContext<TPayload = Record<string, unknown>, TDbResult = unknown> {
   module: string;
@@ -114,8 +116,19 @@ export interface BackgroundSyncSnapshot {
 export type OfflineReplayExecutor = (item: UniversalOfflineRecord) => Promise<{ entityId: string; dbRecord?: Record<string, unknown> }>;
 
 const inFlightIdempotencyKeys = new Set<string>();
+const recentFingerprintTxns = new Map<string, string>();
 const backgroundListeners = new Set<(snap: BackgroundSyncSnapshot) => void>();
 const offlineReplayHandlers = new Map<string, OfflineReplayExecutor>();
+
+function resolveTransactionPrefix(moduleName: string, entityType: string): TransactionDomainPrefix {
+  const combined = `${moduleName} ${entityType}`.toUpperCase();
+  if (combined.includes('RECOVERY') || combined.includes('PAY')) return 'PAY';
+  if (combined.includes('INVOICE') || combined.includes('INV')) return 'INV';
+  if (combined.includes('LEDGER') || combined.includes('LED')) return 'LED';
+  if (combined.includes('RETURN') || combined.includes('RET')) return 'RET';
+  if (combined.includes('ORDER') || combined.includes('ORD')) return 'ORD';
+  return 'SYN';
+}
 
 let outboxCache: SyncOutboxItem[] = [];
 let offlineCache: UniversalOfflineRecord[] = [];
@@ -401,11 +414,15 @@ async function processSingleOutboxItem(
   try {
     const res = customTransport ? await customTransport(processingItem) : await defaultSheetUpsertTransport(processingItem);
     const doneIso = new Date().toISOString();
+    const resolvedSheetId =
+      (res && typeof res === 'object' && 'externalSheetId' in res ? res.externalSheetId : undefined) ||
+      processingItem.externalSheetId ||
+      TARGET_SPREADSHEET_ID;
     const completedItem: SyncOutboxItem = {
       ...processingItem,
       status: 'COMPLETED',
       lastError: undefined,
-      externalSheetId: res?.externalSheetId || processingItem.externalSheetId || TARGET_SPREADSHEET_ID,
+      externalSheetId: resolvedSheetId,
       syncedAt: doneIso,
       updatedAt: doneIso,
     };
@@ -524,19 +541,16 @@ export async function executeUniversalSubmission<TPayload extends Record<string,
 
   const transactionId =
     ctx.transactionId ||
-    generateDeterministicTransactionId({
-      module: ctx.module,
-      customerCode: String((ctx.payload as any)?.customerCode || (ctx.payload as any)?.customerId || ''),
-      amount: Number((ctx.payload as any)?.totalAmount || (ctx.payload as any)?.amount || 0),
-      uniqueSalt: idempotencyKey.slice(0, 8),
-    });
+    generateDeterministicTransactionId(
+      resolveTransactionPrefix(ctx.module, ctx.entityType)
+    );
 
   const fingerprintHash = ctx.fingerprintFields
-    ? buildTransactionFingerprint({
+    ? computeSyncFingerprintHash({
         module: ctx.module,
         ...ctx.fingerprintFields,
       })
-    : buildTransactionFingerprint({
+    : computeSyncFingerprintHash({
         module: ctx.module,
         entityType: ctx.entityType,
         idempotencyKey,
@@ -557,8 +571,13 @@ export async function executeUniversalSubmission<TPayload extends Record<string,
   }
 
   if (ctx.fingerprintFields) {
-    const dupCheck = detectDuplicateTransaction(fingerprintHash);
-    if (dupCheck.isDuplicate) {
+    const knownDupTxnId = recentFingerprintTxns.get(fingerprintHash);
+    const dupCheck = detectDuplicateTransaction(
+      { idempotencyKey, transactionId, fingerprintHash },
+      [...outboxCache, ...offlineCache]
+    );
+    if (knownDupTxnId || dupCheck.isDuplicate) {
+      const originalRef = knownDupTxnId || dupCheck.existingRecord?.transactionId || transactionId;
       incrementDuplicatesPrevented(`Duplicate fingerprint blocked for ${ctx.recordLabel}`);
       emitState('SUBMISSION_FAILED', `Duplicate ${ctx.recordLabel} prevented.`);
       return {
@@ -567,7 +586,7 @@ export async function executeUniversalSubmission<TPayload extends Record<string,
         transactionId,
         idempotencyKey,
         isDuplicateBlocked: true,
-        error: `Duplicate ${ctx.recordLabel} detected (${dupCheck.originalTransactionId || transactionId}).`,
+        error: `Duplicate ${ctx.recordLabel} detected (${originalRef}).`,
       };
     }
   }
@@ -638,6 +657,9 @@ export async function executeUniversalSubmission<TPayload extends Record<string,
 
     const entityId = dbOutcome.entityId || transactionId;
     lastDbSavedAt = new Date().toISOString();
+    if (ctx.fingerprintFields) {
+      recentFingerprintTxns.set(fingerprintHash, transactionId);
+    }
 
     recordSyncLifecycleEvent({
       module: ctx.module,
@@ -971,8 +993,11 @@ export async function retryOutboxItem(
 
 export function resetUniversalSubmissionStoreForTests(): void {
   inFlightIdempotencyKeys.clear();
+  recentFingerprintTxns.clear();
   outboxCache = [];
   offlineCache = [];
+  void idbReplaceAll('sync_outbox', []);
+  void idbReplaceAll('offline_queue', []);
   lastDbSavedAt = null;
   lastSheetSyncedAt = null;
   lastStateMessage = null;

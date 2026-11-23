@@ -7,8 +7,6 @@ import {
   Plus,
   Receipt,
   Settings2,
-  Sun,
-  Moon,
   Truck,
   UserCheck,
   BookOpen,
@@ -20,8 +18,8 @@ export interface DashboardHeaderProps {
   scope: UserDataScope;
   userName: string;
   dateRangeLabel: string;
-  isDarkMode: boolean;
-  onToggleTheme: () => void;
+  isDarkMode?: boolean;
+  onToggleTheme?: () => void;
   canConfigure?: boolean;
   onOpenConfigDrawer?: () => void;
   onQuickAction?: (actionId: QuickActionId) => void;
@@ -54,75 +52,66 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   scope,
   userName,
   dateRangeLabel,
-  isDarkMode,
-  onToggleTheme,
   canConfigure = false,
   onOpenConfigDrawer,
   onQuickAction,
 }) => {
-  const quickActions = config.allowedQuickActions.slice(0, 4);
+  const quickActions = config.allowedQuickActions.slice(0, 3);
   let primaryAssigned = false;
 
   return (
-    <header className="rounded-2xl border border-[#E2E8F0] dark:border-slate-700/80 bg-white dark:bg-[#0F172A] px-4 py-4 sm:px-6 sm:py-5">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <header
+      aria-label="Dashboard Top Bar"
+      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-3.5 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-slate-700/80 rounded-2xl shadow-xs"
+    >
+      <div className="min-w-0 flex items-center gap-3">
         <div className="min-w-0">
-          <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-[#16A34A] dark:text-emerald-400">
-            {config.roleKey.replace(/_/g, ' ')} · {formatScopeBreadCrumb(scope)} · PKT (Asia/Karachi)
-          </div>
-          <h1 className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] truncate">
-            {config.title}
-          </h1>
-          <p className="mt-0.5 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-            {userName} · {config.subtitle} · Period:{' '}
-            <span className="font-mono tabular-nums font-semibold text-[#0F172A] dark:text-slate-100">
-              {dateRangeLabel}
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-base sm:text-lg font-bold tracking-tight text-[#0F172A] dark:text-white truncate">
+              {config.title}
+            </h1>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-emerald-50 text-[#16A34A] dark:bg-emerald-950/60 dark:text-emerald-300 rounded-md border border-emerald-200 dark:border-emerald-800/60 shrink-0">
+              {config.roleKey.replace(/_/g, ' ')}
             </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+            {userName} &bull; {formatScopeBreadCrumb(scope)} &bull; <span className="font-mono tabular-nums">{dateRangeLabel}</span>
           </p>
         </div>
+      </div>
 
-        <div className="flex items-center flex-wrap gap-2 shrink-0">
-          {quickActions.map((actionId) => {
-            const meta = ACTION_META[actionId];
-            if (!meta) return null;
-            const Icon = meta.icon;
-            const isPrimary = Boolean(meta.primary && !primaryAssigned);
-            if (isPrimary) primaryAssigned = true;
+      <div className="flex items-center flex-wrap gap-2 shrink-0">
+        {quickActions.map((actionId) => {
+          const meta = ACTION_META[actionId];
+          if (!meta) return null;
+          const Icon = meta.icon;
+          const isPrimary = Boolean(meta.primary && !primaryAssigned);
+          if (isPrimary) primaryAssigned = true;
 
-            return (
-              <button
-                key={actionId}
-                type="button"
-                onClick={() => onQuickAction?.(actionId)}
-                className={`${isPrimary ? 'btn-primary' : 'btn-outline'} min-h-[44px]`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span>{meta.label}</span>
-              </button>
-            );
-          })}
-
-          {canConfigure && onOpenConfigDrawer && (
+          return (
             <button
+              key={actionId}
               type="button"
-              onClick={onOpenConfigDrawer}
-              title="Configure role dashboard widgets"
-              className="btn-outline min-h-[44px]"
+              onClick={() => onQuickAction?.(actionId)}
+              className={`${isPrimary ? 'btn-primary' : 'btn-outline'} min-h-[40px] px-3 text-xs`}
             >
-              <Settings2 className="w-4 h-4 shrink-0" />
-              <span className="hidden sm:inline">Customize</span>
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              <span>{meta.label}</span>
             </button>
-          )}
+          );
+        })}
 
+        {canConfigure && onOpenConfigDrawer && (
           <button
             type="button"
-            onClick={onToggleTheme}
-            aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="btn-outline min-h-[44px] min-w-[44px] px-0!"
+            onClick={onOpenConfigDrawer}
+            title="Configure role dashboard widgets"
+            className="btn-outline min-h-[40px] px-3 text-xs"
           >
-            {isDarkMode ? <Sun className="w-4 h-4 text-[#F97316]" /> : <Moon className="w-4 h-4 text-[#16A34A]" />}
+            <Settings2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Settings</span>
           </button>
-        </div>
+        )}
       </div>
     </header>
   );

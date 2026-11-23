@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, Suspense } from 'react';
 import {
   computeDashboardMetrics,
   filterDashboardDatasetByScope,
@@ -26,7 +26,6 @@ import { DashboardHeader } from './DashboardHeader';
 import { DashboardFilters } from './DashboardFilters';
 import { KPIGrid } from './KPIGrid';
 import { KPIDrillDownModal } from './KPIDrillDownModal';
-import { PerformanceChart } from './PerformanceChart';
 import { PendingActions } from './PendingActions';
 import { RecentTransactions } from './RecentTransactions';
 import { DashboardAlerts } from './DashboardAlerts';
@@ -34,8 +33,12 @@ import { DashboardConfigDrawer } from './DashboardConfigDrawer';
 import { HierarchyBreakdownPanel } from './HierarchyBreakdownPanel';
 import { ExecutiveStockExpensePanel } from './ExecutiveStockExpensePanel';
 import { FieldOperationsPanel, type FieldLiveContext } from './FieldOperationsPanel';
-import { ExecutiveBiGraphicsPanel } from './ExecutiveBiGraphicsPanel';
-import { ThirtyDaySalesRecoverySection } from './ThirtyDaySalesRecoverySection';
+import { NatureSkeleton } from '../../ui/NatureSkeleton';
+import { SalesVsTargetChart } from './SalesVsTargetChart';
+
+const PerformanceChart = React.lazy(() => import('./PerformanceChart').then((m) => ({ default: m.PerformanceChart })));
+const ExecutiveBiGraphicsPanel = React.lazy(() => import('./ExecutiveBiGraphicsPanel').then((m) => ({ default: m.ExecutiveBiGraphicsPanel })));
+const ThirtyDaySalesRecoverySection = React.lazy(() => import('./ThirtyDaySalesRecoverySection').then((m) => ({ default: m.ThirtyDaySalesRecoverySection })));
 
 export interface RoleBasedDashboardShellProps {
   currentUser: NLinkUser;
@@ -229,13 +232,23 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
           />
         )}
 
-        {summary.config.layoutSections.includes('CHARTS') && summary.biSummary && (
-          <ExecutiveBiGraphicsPanel
-            biSummary={summary.biSummary}
-            teamBreakdown={summary.hierarchyBreakdowns?.byTeam || []}
+        {summary.config.layoutSections.includes('CHARTS') && summary.trendSeries && summary.trendSeries.length > 0 && (
+          <SalesVsTargetChart
+            trendSeries={summary.trendSeries}
+            dataset={effectiveDataset}
             dateRangeLabel={summary.dateRange.label}
-            onSelectCustomer={onSelectCustomer}
           />
+        )}
+
+        {summary.config.layoutSections.includes('CHARTS') && summary.biSummary && (
+          <Suspense fallback={<NatureSkeleton variant="card" count={2} />}>
+            <ExecutiveBiGraphicsPanel
+              biSummary={summary.biSummary}
+              teamBreakdown={summary.hierarchyBreakdowns?.byTeam || []}
+              dateRangeLabel={summary.dateRange.label}
+              onSelectCustomer={onSelectCustomer}
+            />
+          </Suspense>
         )}
 
         {summary.config.layoutSections.includes('CHARTS') &&
@@ -243,17 +256,19 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
           summary.thirtyDayTrendSeries &&
           summary.thirtyDaySummary &&
           summary.config.roleKey !== 'FIELD_SALES_USER' && (
-            <ThirtyDaySalesRecoverySection
-              series={summary.thirtyDayTrendSeries}
-              summary={summary.thirtyDaySummary}
-              scopeTitle={summary.config.title}
-            />
+            <Suspense fallback={<NatureSkeleton variant="card" />}>
+              <ThirtyDaySalesRecoverySection
+                series={summary.thirtyDayTrendSeries}
+                summary={summary.thirtyDaySummary}
+                scopeTitle={summary.config.title}
+              />
+            </Suspense>
           )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           <div className="lg:col-span-8 space-y-5">
             {summary.config.layoutSections.includes('CHARTS') && summary.config.allowedCharts.length > 0 && (
-              <>
+              <Suspense fallback={<NatureSkeleton variant="card" />}>
                 {showTrendChart && (
                   <PerformanceChart
                     title="Sales & Recovery Trend (7-Day PKT)"
@@ -281,7 +296,7 @@ export const RoleBasedDashboardShell: React.FC<RoleBasedDashboardShellProps> = (
                     mode="TERRITORY_RANKING"
                   />
                 )}
-              </>
+              </Suspense>
             )}
 
             {summary.config.layoutSections.includes('RECENT_TRANSACTIONS') && (

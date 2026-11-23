@@ -2,6 +2,7 @@ import React from 'react';
 import { Receipt, FileText, ArrowRight } from 'lucide-react';
 import { formatCurrencyPKR } from '../../../lib/dashboard';
 import type { RecentTransactionRow } from '../../../lib/dashboard';
+import { AnimatedOrderStatusBadge } from '../../ui/AnimatedOrderStatusBadge';
 
 export interface RecentTransactionsProps {
   transactions: RecentTransactionRow[];
@@ -34,7 +35,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
         </div>
       ) : (
         <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
-          {transactions.map((tx) => {
+          {transactions.map((tx, idx) => {
             const isRecovery = tx.type === 'RECOVERY';
             return (
               <div
@@ -56,20 +57,25 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({
                       {tx.partyName}
                     </div>
                     <div className="text-xs font-mono tabular-nums text-slate-500 dark:text-slate-400 truncate">
-                      {tx.reference} · {tx.date} · {tx.status}
+                      {tx.reference} · {tx.date}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <div
-                    className={`font-mono tabular-nums text-sm font-bold ${
-                      isRecovery
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-[#0F172A] dark:text-white'
-                    }`}
-                  >
-                    {isRecovery ? `-${formatCurrencyPKR(tx.amount)} CR` : formatCurrencyPKR(tx.amount)}
+                  <div className="text-right">
+                    <div
+                      className={`font-mono tabular-nums text-sm font-bold ${
+                        isRecovery
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-[#0F172A] dark:text-white'
+                      }`}
+                    >
+                      {isRecovery ? `-${formatCurrencyPKR(tx.amount)} CR` : formatCurrencyPKR(tx.amount)}
+                    </div>
+                    <div className="mt-0.5 flex justify-end">
+                      <AnimatedOrderStatusBadge status={tx.status} index={idx} />
+                    </div>
                   </div>
                   {tx.customerId && onSelectCustomer && (
                     <button

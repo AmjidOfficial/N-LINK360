@@ -51,10 +51,12 @@ export async function loadSupabaseAppData(_currentUser?: any): Promise<SupabaseA
 
   const db = supabase;
   try {
-    const [customerResult, skuResult, balanceResult, orderResult, invoiceResult, recoveryResult, ledgerResult, dispatchResult, returnResult, visitResult] = await Promise.all([
+    const [customerResult, partyResult, skuResult, erpProductResult, balanceResult, orderResult, invoiceResult, recoveryResult, ledgerResult, dispatchResult, returnResult, visitResult] = await Promise.all([
       db.from('customers').select('*').order('name'),
+      db.from('parties').select('*').order('business_name'),
       db.from('skus').select('*,products(name,model,wattage)').eq('status', true).order('sku_code')
         .then((r) => (r.error ? db.from('skus').select('*').eq('status', true).order('sku_code') : r)),
+      db.from('erp_products').select('*').eq('is_active', true).order('sku_code'),
       db.from('inventory_balances').select('*,warehouses(name),skus(sku_code,sku_name)').order('updated_at', { ascending: false })
         .then((r) => (r.error ? db.from('inventory_balances').select('*').order('updated_at', { ascending: false }) : r)),
       db.from('sales_orders').select('*,customers(customer_code,name),employees(full_name),sales_order_items(*,skus(sku_code,sku_name))').order('created_at', { ascending: false })
@@ -73,7 +75,7 @@ export async function loadSupabaseAppData(_currentUser?: any): Promise<SupabaseA
         .then((r) => (r.error ? db.from('customer_visits').select('*').order('visit_at', { ascending: false }) : r)),
     ]);
 
-    const firstError = [customerResult, skuResult, balanceResult, orderResult, invoiceResult, recoveryResult, ledgerResult, dispatchResult, returnResult, visitResult].find((r) => r.error)?.error;
+    const firstError = [customerResult, partyResult, skuResult, erpProductResult, balanceResult, orderResult, invoiceResult, recoveryResult, ledgerResult, dispatchResult, returnResult, visitResult].find((r) => r.error)?.error;
     if (firstError) {
       const errMsg = String(firstError.message || firstError);
       if (
@@ -133,6 +135,44 @@ export async function loadSupabaseAppData(_currentUser?: any): Promise<SupabaseA
     updatedAt: r.updated_at,
   }));
 
+  // Merge dealer/distributor master records from public.parties non-destructively.
+  // Prefer canonical public.customers rows on matches.
+  const customerKeys = new Set(customers.flatMap((c) => [
+    String(c.customerCode || '').trim().toUpperCase(),
+    String(c.companyName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''),
+  ]).filter(Boolean));
+  for (const p of partyResult.data || []) {
+    const code = String((p as any).party_code || '').trim().toUpperCase();
+    const nameKey = String((p as any).business_name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if ((code && customerKeys.has(code)) || (nameKey && customerKeys.has(nameKey))) continue;
+    customers.push({
+      id: String((p as any).id),
+      customerCode: String((p as any).party_code || (p as any).id),
+      companyName: String((p as any).business_name || ''),
+      contactPerson: String((p as any).contact_person || ''),
+      phone: String((p as any).phone || ''),
+      address: '',
+      city: String((p as any).city || ''),
+      town: String((p as any).city || ''),
+      area: '',
+      territory: String((p as any).territory || ''),
+      region: String((p as any).region || ''),
+      type: String((p as any).party_type || 'DEALER').toUpperCase(),
+      creditLimit: money((p as any).credit_limit),
+      creditDays: 0,
+      openingBalance: money((p as any).opening_balance),
+      currentBalance: money((p as any).current_balance ?? (p as any).opening_balance),
+      isCreditLocked: false,
+      isActive: Boolean((p as any).is_active),
+      approvalStatus: (p as any).is_active ? 'APPROVED' : 'PENDING_APPROVAL',
+      status: (p as any).is_active ? 'NORMAL' : 'PENDING_APPROVAL',
+      createdAt: (p as any).created_at,
+      updatedAt: (p as any).created_at,
+    } as Customer);
+    if (code) customerKeys.add(code);
+    if (nameKey) customerKeys.add(nameKey);
+  }
+
   const skus: SKU[] = (skuResult.data || []).map((r: any) => ({
     id: r.id,
     productId: r.product_id,
@@ -151,7 +191,24 @@ export async function loadSupabaseAppData(_currentUser?: any): Promise<SupabaseA
     reorderLevel: money(r.reorder_level),
     isActive: Boolean(r.status),
   }));
-  const skuMap = new Map(skus.map((s) => [s.id, s]));
+  const erpSkus: SKU[] = (erpProductResult.data || []).map((r: any) => ({
+    id: String(r.id),
+    productId: String(r.id),
+    productName: String(r.item_name || ''),
+    skuCode: String(r.sku_code || ''),
+    name: String(r.item_name || ''),
+    skuName: String(r.item_name || ''),
+    category: String(r.category || ''),
+    packagingUnit: 'CARTON',
+    cartonQuantity: money(r.carton_size) || 1,
+    tradePrice: money(r.trade_price),
+    retailPrice: money(r.retail_price),
+    minimumPrice: money(r.trade_price),
+    reorderLevel: money(r.reorder_level),
+    isActive: Boolean(r.is_active),
+  } as SKU));
+  const effectiveSkus = skus.length > 0 ? skus : erpSkus;
+  const skuMap = new Map(effectiveSkus.map((s) => [s.id, s]));
 
   const inventoryBalances: InventoryBalance[] = (balanceResult.data || []).map((r: any) => ({
     id: r.id,
@@ -331,7 +388,7 @@ export async function loadSupabaseAppData(_currentUser?: any): Promise<SupabaseA
 
     return {
       customers: customers.length > 0 ? customers : initialCustomers,
-      skus: skus.length > 0 ? skus : initialSKUs,
+      skus: effectiveSkus.length > 0 ? effectiveSkus : initialSKUs,
       inventoryBalances: inventoryBalances.length > 0 ? inventoryBalances : initialInventoryBalances,
       salesOrders: salesOrders.length > 0 ? salesOrders : initialSalesOrders,
       invoices: invoices.length > 0 ? invoices : initialInvoices,

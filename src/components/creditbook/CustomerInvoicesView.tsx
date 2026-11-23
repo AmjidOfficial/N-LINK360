@@ -31,6 +31,7 @@ import {
 import { downloadSalesInvoicePdf, buildInvoiceWhatsAppText } from '../../utils/exportInvoicePdf';
 import { formatKarachiDate, formatKarachiDateTime } from '../../utils/dateTime';
 import { NationalLightHeaderBrand, DocumentCenterWatermark } from '../NationalLightLogo';
+import { AnimatedOrderStatusBadge } from '../ui/AnimatedOrderStatusBadge';
 
 export interface CustomerInvoicesViewProps {
   customer: Customer;
@@ -328,10 +329,7 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
             <p className="mt-1">No sales orders or invoices match your filter.</p>
           </div>
         ) : (
-          filteredOrders.map((order) => {
-            const isApproved = order.status === 'APPROVED';
-            const isRejected = order.status === 'REJECTED';
-
+          filteredOrders.map((order, idx) => {
             return (
               <div
                 key={order.id || order.orderNumber}
@@ -344,29 +342,12 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                     <span className="text-sm font-mono tabular-nums font-bold text-[#0F172A] dark:text-white">
                       #{order.orderNumber || order.id?.slice(-6)}
                     </span>
-                    <span
-                      className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md inline-flex items-center gap-1 border ${
-                        isApproved
-                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
-                          : isRejected
-                          ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60'
-                          : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
-                      }`}
-                    >
-                      {isApproved ? (
-                        <>
-                          <CheckCircle2 className="w-3 h-3" /> Approved (ShahzadUllah)
-                        </>
-                      ) : isRejected ? (
-                        <>
-                          <XCircle className="w-3 h-3" /> Rejected
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-3 h-3" /> Pending ShahzadUllah
-                        </>
-                      )}
-                    </span>
+                    <AnimatedOrderStatusBadge
+                      status={order.status}
+                      shahzadApproval={order.shahzadApproval}
+                      dualApprovalStatus={order.dualApprovalStatus}
+                      index={idx}
+                    />
                   </div>
 
                   <div className="text-right">
@@ -383,17 +364,20 @@ export const CustomerInvoicesView: React.FC<CustomerInvoicesViewProps> = ({
                 </div>
 
                 {/* Rejection Details & Reason if Rejected */}
-                {isRejected && (
-                  <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-900 dark:text-rose-200 space-y-1">
-                    <div className="flex items-center gap-1.5 font-bold text-rose-800 dark:text-rose-300">
-                      <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                      <span>Executive Sign-Off Rejection (Shahzad Ullah)</span>
+                {(() => {
+                  const isRejected = order.status === 'REJECTED' || order.shahzadApproval === 'REJECTED';
+                  return isRejected ? (
+                    <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-900 dark:text-rose-200 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-rose-800 dark:text-rose-300">
+                        <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                        <span>Executive Sign-Off Rejection (Shahzad Ullah)</span>
+                      </div>
+                      <p className="text-[11px] text-rose-700 dark:text-rose-300 font-medium">
+                        Reason: {order.rejectionReason || 'Sanctioned credit ceiling reached. Settle past due balance before re-booking.'}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-rose-700 dark:text-rose-300 font-medium">
-                      Reason: {order.rejectionReason || 'Sanctioned credit ceiling reached. Settle past due balance before re-booking.'}
-                    </p>
-                  </div>
-                )}
+                  ) : null;
+                })()}
 
                 {/* Line Items Brief */}
                 <div className="bg-[#F8FAFC] dark:bg-[#0F172A] p-3 rounded-xl border border-[#E2E8F0] dark:border-slate-700/80 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">

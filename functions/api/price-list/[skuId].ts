@@ -15,7 +15,7 @@ export async function onRequest(ctx: CfContext): Promise<Response> {
 
   const authHeader = ctx.request.headers.get('authorization') || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-  const secret = ctx.env.NLINK_SESSION_SECRET || 'nlink-360-cloudflare-edge-default-key';
+  const secret = String(ctx.env.NLINK_SESSION_SECRET || '').trim();
   const session = await verifyEdgeSessionToken(token, secret);
 
   if (!session) {

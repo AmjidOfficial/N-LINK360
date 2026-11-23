@@ -53,9 +53,9 @@ export const KPIGrid: React.FC<KPIGridProps> = ({
   return (
     <div className="space-y-3">
       {/* Mobile 2-Column Priority Grid (shows 4-6 key KPIs + View All toggle) */}
-      <div className="grid grid-cols-2 gap-3 sm:hidden items-stretch">
-        {mobileMetrics.map((metric) => (
-          <KPICard key={metric.id} metric={metric} onSelect={onSelectKpi} compact />
+      <div className="grid grid-cols-2 gap-2.5 sm:hidden items-stretch">
+        {mobileMetrics.map((metric, idx) => (
+          <KPICard key={metric.id} metric={metric} onSelect={onSelectKpi} compact index={idx} />
         ))}
       </div>
 
@@ -81,10 +81,10 @@ export const KPIGrid: React.FC<KPIGridProps> = ({
         </div>
       )}
 
-      {/* Tablet & Desktop Multi-Column Grid */}
-      <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-stretch">
-        {visibleMetrics.map((metric) => (
-          <KPICard key={metric.id} metric={metric} onSelect={onSelectKpi} />
+      {/* Tablet & Desktop 4-Column Compact Grid */}
+      <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-stretch">
+        {visibleMetrics.map((metric, idx) => (
+          <KPICard key={metric.id} metric={metric} onSelect={onSelectKpi} index={idx} />
         ))}
       </div>
     </div>

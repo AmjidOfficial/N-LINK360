@@ -2613,7 +2613,23 @@ console.log('\n🌐 [27/27] Testing Netlify Static HTML Fallback & Client Auth S
 
   try {
     const { safeApiFetch, parseJsonResponse } = await import('../src/lib/safeFetch');
-    const { authenticateWithCredentials, changeUserPassword } = await import('../src/services/auth');
+    const {
+      authenticateWithCredentials,
+      changeUserPassword,
+      setClientCredentialHash,
+    } = await import('../src/services/auth');
+
+    const runSuffix = Date.now().toString(36);
+    const testAdminPass = ['NlTestAdmin', runSuffix, '!9'].join('_');
+    const testTempPass = ['NlTestTemp', runSuffix, '!7'].join('_');
+    const testRotatedPass = ['NlRotatedPass', runSuffix, '!8'].join('#');
+
+    await setClientCredentialHash('amjid.bisconni@gmail.com', testAdminPass, false);
+    await setClientCredentialHash('amjid@nationallight.pk', testAdminPass, false);
+    await setClientCredentialHash('nationallights2026@gmail.com', testAdminPass, true);
+    await setClientCredentialHash('shahzadullah@nationallight.pk', testTempPass, true);
+    await setClientCredentialHash('syedzain@nationallight.pk', testTempPass, true);
+    await setClientCredentialHash('arshadkhan@nationallight.pk', testTempPass, true);
 
     const htmlRes = await fetch('/api/auth/login');
     const parsedNull = await parseJsonResponse(htmlRes);
@@ -2629,7 +2645,7 @@ console.log('\n🌐 [27/27] Testing Netlify Static HTML Fallback & Client Auth S
       'safeApiFetch intercepts Netlify HTTP 200 HTML response and marks isStaticFallback=true'
     );
 
-    const amjidUser = await authenticateWithCredentials('amjid.bisconni@gmail.com', 'Amjid@1947');
+    const amjidUser = await authenticateWithCredentials('amjid.bisconni@gmail.com', testAdminPass);
     assert(
       amjidUser.email === 'amjid.bisconni@gmail.com' &&
         amjidUser.role === 'SUPER_ADMIN' &&
@@ -2637,34 +2653,34 @@ console.log('\n🌐 [27/27] Testing Netlify Static HTML Fallback & Client Auth S
       'amjid.bisconni@gmail.com authenticates cleanly in Netlify static mode with zero JSON parse errors'
     );
 
-    const amjidNlUser = await authenticateWithCredentials('amjid@nationallight.pk', 'Amjid@1947');
+    const amjidNlUser = await authenticateWithCredentials('amjid@nationallight.pk', testAdminPass);
     assert(
       amjidNlUser.email === 'amjid@nationallight.pk' && amjidNlUser.role === 'SUPER_ADMIN',
       'amjid@nationallight.pk authenticates cleanly in Netlify static mode'
     );
 
-    const centralUser = await authenticateWithCredentials('nationallights2026@gmail.com', 'Amjid@1947');
+    const centralUser = await authenticateWithCredentials('nationallights2026@gmail.com', testAdminPass);
     assert(
       centralUser.email === 'nationallights2026@gmail.com' && centralUser.mustChangePassword === true,
       'nationallights2026@gmail.com authenticates cleanly in Netlify static mode'
     );
 
-    const shahzadUser = await authenticateWithCredentials('shahzadullah@nationallight.pk', 'N@link360');
+    const shahzadUser = await authenticateWithCredentials('shahzadullah@nationallight.pk', testTempPass);
     assert(
       shahzadUser.email === 'shahzadullah@nationallight.pk' && shahzadUser.mustChangePassword === true,
-      'shahzadullah@nationallight.pk authenticates with N@link360 temp password and flags mustChangePassword=true'
+      'shahzadullah@nationallight.pk authenticates with seeded temp password and flags mustChangePassword=true'
     );
 
-    const zainUser = await authenticateWithCredentials('syedzain@nationallight.pk', 'N@link360');
+    const zainUser = await authenticateWithCredentials('syedzain@nationallight.pk', testTempPass);
     assert(
       zainUser.email === 'syedzain@nationallight.pk' && zainUser.mustChangePassword === true,
-      'syedzain@nationallight.pk authenticates with N@link360 temp password and flags mustChangePassword=true'
+      'syedzain@nationallight.pk authenticates with seeded temp password and flags mustChangePassword=true'
     );
 
-    const arshadUser = await authenticateWithCredentials('arshadkhan@nationallight.pk', 'N@link360');
+    const arshadUser = await authenticateWithCredentials('arshadkhan@nationallight.pk', testTempPass);
     assert(
       arshadUser.email === 'arshadkhan@nationallight.pk' && arshadUser.mustChangePassword === true,
-      'arshadkhan@nationallight.pk authenticates with N@link360 temp password in static mode'
+      'arshadkhan@nationallight.pk authenticates with seeded temp password in static mode'
     );
 
     let badPassRejected = false;
@@ -2680,8 +2696,8 @@ console.log('\n🌐 [27/27] Testing Netlify Static HTML Fallback & Client Auth S
       'Wrong password in static mode throws clean Invalid credentials message (never <!DOCTYPE JSON error)'
     );
 
-    await changeUserPassword('syedzain@nationallight.pk', 'N@link360', 'Zain@National2026!', true);
-    const zainRotated = await authenticateWithCredentials('syedzain@nationallight.pk', 'Zain@National2026!');
+    await changeUserPassword('syedzain@nationallight.pk', testTempPass, testRotatedPass, true);
+    const zainRotated = await authenticateWithCredentials('syedzain@nationallight.pk', testRotatedPass);
     assert(
       zainRotated.email === 'syedzain@nationallight.pk' && zainRotated.mustChangePassword === false,
       'Static mode password rotation updates hash and clears mustChangePassword=false'
@@ -2689,7 +2705,7 @@ console.log('\n🌐 [27/27] Testing Netlify Static HTML Fallback & Client Auth S
 
     let oldTempRejected = false;
     try {
-      await authenticateWithCredentials('syedzain@nationallight.pk', 'N@link360');
+      await authenticateWithCredentials('syedzain@nationallight.pk', testTempPass);
     } catch {
       oldTempRejected = true;
     }

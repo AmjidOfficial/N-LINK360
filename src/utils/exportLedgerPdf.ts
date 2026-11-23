@@ -5,7 +5,6 @@
  * Generates high-fidelity, audit-ready vector PDF transaction statements for offline analysis.
  */
 
-import jsPDF from 'jspdf';
 import { Customer } from '../types';
 
 export interface LedgerPdfEntry {
@@ -62,7 +61,8 @@ export const downloadCustomerLedgerPdf = async (
       : customer.currentBalance || openingBalance;
 
   // Initialize PDF (A4 Portrait: 210mm x 297mm)
-  const doc = new jsPDF({
+  const { default: JsPdf } = await import('jspdf');
+  const doc = new JsPdf({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',

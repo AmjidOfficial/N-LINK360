@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Customer, SalesOrder, SalesOrderItem, SKU } from '../../types';
+import { Customer, SalesOrder, SalesOrderItem, SKU, SubmissionLifecycleState } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import { getCentralPriceList, subscribePriceList } from '../../services/priceListService';
 import { scheduleDebouncedAutoSave, cancelDebouncedAutoSave, flushAllAutoSaves } from '../../services/autoSaveSyncService';
@@ -16,6 +16,8 @@ import { getKarachiDateString } from '../../utils/dateTime';
 import { buildTransactionFingerprint, generateDeterministicTransactionId } from '../../utils/transactionSignature';
 import { triggerHaptic } from '../../utils/haptics';
 import { generateUniqueOrderId, generateUniqueOrderItemId, generateIdempotencyUuid } from '../../utils/idGenerator';
+import { UniversalSubmitButton } from '../sync/UniversalSubmitButton';
+import { SubmissionStatus } from '../sync/SubmissionStatus';
 import {
   Search,
   ShoppingBag,
@@ -34,7 +36,7 @@ export interface BulkSkuOrderFormProps {
   currentUser: NLinkUser;
   availableCustomers: Customer[];
   preselectedCustomer?: Customer | null;
-  onPlaceOrder: (order: SalesOrder) => void;
+  onPlaceOrder: (order: SalesOrder) => void | Promise<any>;
   onDownloadPdf?: (order: SalesOrder, customer: Customer) => void;
   onPreviewPdf?: (order: SalesOrder, customer: Customer) => void;
   onWhatsAppShare?: (order: SalesOrder, customer: Customer) => void;
@@ -88,6 +90,9 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
   } | null>(null);
   const [draftIdempotencyKey, setDraftIdempotencyKey] = useState<string>(() => generateIdempotencyUuid());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionState, setSubmissionState] = useState<SubmissionLifecycleState>('IDLE');
+  const [submissionTxId, setSubmissionTxId] = useState<string | undefined>(undefined);
+  const [submissionMsg, setSubmissionMsg] = useState<string | null>(null);
   const submitLockRef = useRef(false);
 
   useEffect(() => {
@@ -256,10 +261,12 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
     return { activeSkuCount, totalCartons, totalPacks, totalQty, grossAmount, netAmount, discountAmount };
   }, [skuEntries, catalogSkus]);
 
-  const handleSubmitOrder = () => {
+  const handleSubmitOrder = async () => {
     if (!activeCustomer || orderSummary.totalQty <= 0 || submitLockRef.current || isSubmitting) return;
     submitLockRef.current = true;
     setIsSubmitting(true);
+    setSubmissionState('SUBMITTING');
+    setSubmissionMsg(null);
 
     try {
       const orderNumber = generateUniqueOrderId();
@@ -353,11 +360,22 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
       try {
         localStorage.removeItem(ORDER_DRAFT_STORAGE_KEY);
       } catch {}
-      onPlaceOrder(newOrder);
+      setSubmissionTxId(txnId);
       setBookedOrder({ order: newOrder, customer: activeCustomer });
       if (onOrderCompleted) {
         onOrderCompleted(newOrder);
       }
+      const maybeOutcome = await Promise.resolve(onPlaceOrder(newOrder) as any);
+      if (maybeOutcome && typeof maybeOutcome === 'object' && 'state' in maybeOutcome) {
+        setSubmissionState(maybeOutcome.state);
+        setSubmissionTxId(maybeOutcome.transactionId || txnId);
+        setSubmissionMsg(maybeOutcome.error || null);
+      } else {
+        setSubmissionState('DATABASE_SAVED');
+      }
+    } catch (err: any) {
+      setSubmissionState('SUBMISSION_FAILED');
+      setSubmissionMsg(err?.message || 'Unable to submit order.');
     } finally {
       setIsSubmitting(false);
       submitLockRef.current = false;
@@ -369,6 +387,9 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
     setSkuEntries({});
     setOrderNotes('');
     setBookedOrder(null);
+    setSubmissionState('IDLE');
+    setSubmissionTxId(undefined);
+    setSubmissionMsg(null);
     cancelDebouncedAutoSave('bulk-order-draft');
     try {
       localStorage.removeItem(ORDER_DRAFT_STORAGE_KEY);
@@ -408,6 +429,13 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
             </span>
           </div>
         </div>
+
+        <SubmissionStatus
+          state={submissionState}
+          transactionId={submissionTxId}
+          message={submissionMsg}
+          className="max-w-md mx-auto text-left"
+        />
 
         <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
           {onPreviewPdf && (
@@ -633,6 +661,15 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
         </div>
 
         {/* Sticky Order Summary & Submit Footer */}
+        {submissionState !== 'IDLE' && (
+          <div className="px-4 pt-3">
+            <SubmissionStatus
+              state={submissionState}
+              transactionId={submissionTxId}
+              message={submissionMsg}
+            />
+          </div>
+        )}
         <div className="p-4 border-t border-[#E2E8F0] dark:border-slate-700/80 bg-[#F8FAFC] dark:bg-[#0F172A] rounded-b-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-4 text-xs">
             <div>
@@ -665,15 +702,14 @@ export const BulkSkuOrderForm: React.FC<BulkSkuOrderFormProps> = ({
                 Clear
               </button>
             )}
-            <button
-              type="button"
+            <UniversalSubmitButton
+              label="Submit Order"
+              state={submissionState}
               disabled={!activeCustomer || orderSummary.totalQty <= 0 || isSubmitting}
-              onClick={handleSubmitOrder}
-              className="btn-primary min-h-[44px] text-xs flex-1 sm:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>{isSubmitting ? 'Submitting...' : 'Submit Order'}</span>
-            </button>
+              onClick={() => void handleSubmitOrder()}
+              icon={<ShoppingBag className="w-4 h-4" />}
+              className="flex-1 sm:flex-none"
+            />
           </div>
         </div>
       </div>

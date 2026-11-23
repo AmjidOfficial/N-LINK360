@@ -1,5 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 
+const TEST_ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || 'amjid.bisconni@gmail.com';
+const TEST_ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || '';
+const TEST_FIELD_EMAIL = process.env.TEST_FIELD_EMAIL || 'syedzain@nationallight.pk';
+const TEST_FIELD_TEMP_PASSWORD = process.env.TEST_FIELD_TEMP_PASSWORD || '';
+const TEST_ROTATED_PASSWORD = process.env.TEST_ROTATED_PASSWORD || `FieldRot@${Date.now().toString(36)}!`;
+
 const REQUIRED_VIEWPORTS = [
   { width: 320, height: 640 },
   { width: 360, height: 740 },
@@ -21,16 +27,26 @@ async function signInAs(page: Page, email: string, password: string) {
   await page.fill('#login-email', email);
   await page.fill('#login-password', password);
   await page.locator('form button[type="submit"]').click();
-  // Wait for AuthGate to clear
   await expect(page.locator('#nlink-auth-gate-container')).toHaveCount(0, { timeout: 15_000 });
 }
 
 test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', () => {
-  test('API Gateway: Health, Idempotent /api/sync replay, UUID validation & Rate Limiting', async ({ request }) => {
+  test('API Gateway: Health, Auth Gate on /api/sync, UUID validation & Rate Limiting', async ({ request }) => {
     const health = await request.get('/api/health');
     expect(health.ok()).toBeTruthy();
     const healthJson = await health.json();
     expect(healthJson.status).toBe('healthy');
+
+    // Unauthenticated POST /api/sync must return 401
+    const unauthSync = await request.post('/api/sync', {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': crypto.randomUUID(),
+        'X-Forwarded-For': '198.51.100.10',
+      },
+      data: { type: 'ORDER', id: 'SO-UNAUTH-1' },
+    });
+    expect(unauthSync.status()).toBe(401);
 
     // Invalid X-Idempotency-Key returns 400
     const badIdem = await request.post('/api/sync', {
@@ -43,34 +59,50 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
     });
     expect(badIdem.status()).toBe(400);
 
-    // Valid RFC-4122 UUID v4 deduplicates repeated POST /api/sync submissions
-    const uuid = crypto.randomUUID();
-    const firstSync = await request.post('/api/sync', {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Idempotency-Key': uuid,
-        'X-Forwarded-For': '198.51.100.12',
-      },
-      data: { type: 'ORDER', id: 'SO-IDEM-01' },
-    });
-    expect(firstSync.status()).toBe(200);
-    expect(firstSync.headers()['x-ratelimit-tier']).toBe('FINANCIAL_WRITE');
-    const firstBody = await firstSync.json();
-    expect(firstBody.idempotencyKey).toBe(uuid);
-    expect(firstBody.idempotentReplay).toBeUndefined();
+    // Unknown /api/* route must return strict JSON 404 (not HTML)
+    const unknownApi = await request.get('/api/nonexistent-endpoint-check');
+    expect(unknownApi.status()).toBe(404);
+    expect(unknownApi.headers()['content-type'] || '').toContain('application/json');
 
-    const replaySync = await request.post('/api/sync', {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Idempotency-Key': uuid,
-        'X-Forwarded-For': '198.51.100.12',
-      },
-      data: { type: 'ORDER', id: 'SO-IDEM-01' },
-    });
-    expect(replaySync.status()).toBe(200);
-    const replayBody = await replaySync.json();
-    expect(replayBody.idempotentReplay).toBe(true);
-    expect(replayBody.receivedAt).toBe(firstBody.receivedAt);
+    if (TEST_ADMIN_PASSWORD) {
+      const loginRes = await request.post('/api/auth/login', {
+        headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.12' },
+        data: { email: TEST_ADMIN_EMAIL, password: TEST_ADMIN_PASSWORD },
+      });
+      expect(loginRes.ok()).toBeTruthy();
+      const loginJson = await loginRes.json();
+
+      // Valid RFC-4122 UUID v4 deduplicates repeated authenticated POST /api/sync submissions
+      const uuid = crypto.randomUUID();
+      const firstSync = await request.post('/api/sync', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${loginJson.sessionToken}`,
+          'X-Idempotency-Key': uuid,
+          'X-Forwarded-For': '198.51.100.12',
+        },
+        data: { type: 'ORDER', id: 'SO-IDEM-01' },
+      });
+      expect(firstSync.status()).toBe(200);
+      expect(firstSync.headers()['x-ratelimit-tier']).toBe('FINANCIAL_WRITE');
+      const firstBody = await firstSync.json();
+      expect(firstBody.idempotencyKey).toBe(uuid);
+      expect(firstBody.idempotentReplay).toBeUndefined();
+
+      const replaySync = await request.post('/api/sync', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${loginJson.sessionToken}`,
+          'X-Idempotency-Key': uuid,
+          'X-Forwarded-For': '198.51.100.12',
+        },
+        data: { type: 'ORDER', id: 'SO-IDEM-01' },
+      });
+      expect(replaySync.status()).toBe(200);
+      const replayBody = await replaySync.json();
+      expect(replayBody.idempotentReplay).toBe(true);
+      expect(replayBody.receivedAt).toBe(firstBody.receivedAt);
+    }
 
     // Auth rate limit burst test using isolated test IP (AUTH tier = 12/min -> 13th returns 429 + Retry-After)
     let hit429 = false;
@@ -105,13 +137,13 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
   });
 
   test('Head Office Portal: All 13 Viewports (320px–1920px), Frozen Header/Drawer & Tab Scroll Reset', async ({ page }) => {
+    test.skip(!TEST_ADMIN_PASSWORD, 'Set TEST_ADMIN_PASSWORD to run authenticated Head Office E2E');
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
-    await signInAs(page, 'amjid.bisconni@gmail.com', 'Amjid@1947');
+    await signInAs(page, TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
     await expect(page.locator('header')).toBeVisible({ timeout: 10_000 });
 
-    // Check zero horizontal overflow across all 13 target viewports
     for (const vp of REQUIRED_VIEWPORTS) {
       await page.setViewportSize(vp);
       await page.waitForTimeout(80);
@@ -125,7 +157,6 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
       ).toBeLessThanOrEqual(metrics.innerWidth + 2);
     }
 
-    // Desktop frozen header + scroll reset check at 1280x800
     await page.setViewportSize({ width: 1280, height: 800 });
     const sidebar = page.getByLabel('ERP Sidebar Navigation');
     await expect(sidebar).toBeVisible();
@@ -159,25 +190,23 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
   });
 
   test('Field Mobile Portal: Single 5-Tab Bottom Nav, Frozen Header, Drawer & Zero Overflow (320px–480px)', async ({ page, request }) => {
+    test.skip(!TEST_ADMIN_PASSWORD || !TEST_FIELD_TEMP_PASSWORD, 'Set TEST_ADMIN_PASSWORD and TEST_FIELD_TEMP_PASSWORD to run Field Mobile E2E');
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
-    // Verify unauthenticated admin reset is strictly rejected (401)
     const unauthReset = await request.post('/api/employees/admin-reset-password', {
       headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.43' },
-      data: { email: 'syedzain@nationallight.pk', temporaryPassword: 'National@link360' },
+      data: { email: TEST_FIELD_EMAIL, temporaryPassword: TEST_FIELD_TEMP_PASSWORD },
     });
     expect(unauthReset.status()).toBe(401);
 
-    // Authenticate as Super Admin before triggering admin password reset setup
     const adminLoginRes = await request.post('/api/auth/login', {
       headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.44' },
-      data: { email: 'amjid.bisconni@gmail.com', password: 'Amjid@1947' },
+      data: { email: TEST_ADMIN_EMAIL, password: TEST_ADMIN_PASSWORD },
     });
     expect(adminLoginRes.ok()).toBeTruthy();
     const adminLoginJson = await adminLoginRes.json();
 
-    // Ensure clean initial password state before first-login rotation check
     const setupResetRes = await request.post('/api/employees/admin-reset-password', {
       headers: {
         'Content-Type': 'application/json',
@@ -185,8 +214,8 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
         'X-Forwarded-For': '198.51.100.44',
       },
       data: {
-        email: 'syedzain@nationallight.pk',
-        temporaryPassword: 'National@link360',
+        email: TEST_FIELD_EMAIL,
+        temporaryPassword: TEST_FIELD_TEMP_PASSWORD,
         resetBy: 'E2E Test Setup',
       },
     });
@@ -194,12 +223,10 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    // Also exercises domain typo auto-correction (@nationalight.com -> @nationallight.pk)
-    await page.fill('#login-email', 'syedzain@nationalight.com');
-    await page.fill('#login-password', 'National@link360');
+    await page.fill('#login-email', TEST_FIELD_EMAIL.replace('@nationallight.pk', '@nationalight.com'));
+    await page.fill('#login-password', TEST_FIELD_TEMP_PASSWORD);
     await page.locator('form button[type="submit"]').click();
 
-    // Wait for either first-login password rotation modal (#cp-new) OR mobile bottom nav
     await page.waitForSelector('#cp-new, [aria-label="Mobile Primary Navigation"]', {
       state: 'visible',
       timeout: 15_000,
@@ -207,17 +234,14 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
 
     const cpNew = page.locator('#cp-new');
     if (await cpNew.isVisible()) {
-      await cpNew.fill('Zain@National2026!');
-      await page.locator('#cp-confirm').fill('Zain@National2026!');
+      await cpNew.fill(TEST_ROTATED_PASSWORD);
+      await page.locator('#cp-confirm').fill(TEST_ROTATED_PASSWORD);
       await page.locator('button[type="submit"]:has-text("Set Permanent Password")').click();
       await expect(page.locator('#cp-new')).toHaveCount(0, { timeout: 10_000 });
     }
 
-    // Verify Field Mobile rendered with authoritative single 5-tab bar
     const mobileNav = page.getByLabel('Mobile Primary Navigation');
     await expect(mobileNav).toBeVisible({ timeout: 15_000 });
-
-    // Strictly 1 primary mobile bottom nav with exactly 5 tab buttons
     await expect(mobileNav).toHaveCount(1);
     await expect(mobileNav.locator('button')).toHaveCount(5);
 
@@ -227,7 +251,6 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
       expect(box.height).toBeLessThanOrEqual(80);
     }
 
-    // Navigate via 5-tab bar to Entry, then Invoices, checking overflow at 320px and 390px
     await mobileNav.getByRole('button', { name: 'Entry' }).click();
     for (const vp of [
       { width: 320, height: 640 },
@@ -244,14 +267,12 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
       expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth + 2);
     }
 
-    // Open drawer, press Escape -> closes
     const drawerToggle = page.getByRole('button', { name: /Open menu/i });
     if (await drawerToggle.isVisible().catch(() => false)) {
       await drawerToggle.click();
       await page.keyboard.press('Escape');
     }
 
-    // Restore initial temporary credential so management onboarding credential stays valid
     await request.post('/api/employees/admin-reset-password', {
       headers: {
         'Content-Type': 'application/json',
@@ -259,8 +280,8 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
         'X-Forwarded-For': '198.51.100.45',
       },
       data: {
-        email: 'syedzain@nationallight.pk',
-        temporaryPassword: 'National@link360',
+        email: TEST_FIELD_EMAIL,
+        temporaryPassword: TEST_FIELD_TEMP_PASSWORD,
         resetBy: 'E2E Test Cleanup',
       },
     });
@@ -269,14 +290,25 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
   });
 
   test('Auto-Sync Duplicate Signature Guard & Central 30-SKU Price List RBAC APIs + Head Office UI', async ({ page, request }) => {
+    test.skip(!TEST_ADMIN_PASSWORD, 'Set TEST_ADMIN_PASSWORD to run authenticated Price List & Sync Monitor E2E');
     const pageErrors: string[] = [];
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
-    // 1. Transaction Signature / Fingerprint Duplicate Prevention on POST /api/sync
+    const loginRes = await request.post('/api/auth/login', {
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.78' },
+      data: { email: TEST_ADMIN_EMAIL, password: TEST_ADMIN_PASSWORD },
+    });
+    expect(loginRes.ok()).toBeTruthy();
+    const loginJson = await loginRes.json();
+
     const uniqueFp = `fp_e2e_${Date.now()}`;
     const txnSig = `NLINK-PAY-20261115-${Math.floor(100000 + Math.random() * 899999)}`;
     const firstPost = await request.post('/api/sync', {
-      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.77' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${loginJson.sessionToken}`,
+        'X-Forwarded-For': '198.51.100.77',
+      },
       data: {
         type: 'PAYMENT_RECOVERY',
         id: txnSig,
@@ -289,9 +321,12 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
     const firstJson = await firstPost.json();
     expect(firstJson.duplicatePrevented).toBe(false);
 
-    // Retry with DIFFERENT idempotency key but SAME fingerprintHash -> MUST prevent duplicate
     const dupFpPost = await request.post('/api/sync', {
-      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.77' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${loginJson.sessionToken}`,
+        'X-Forwarded-For': '198.51.100.77',
+      },
       data: {
         type: 'PAYMENT_RECOVERY',
         id: `${txnSig}-RETRY`,
@@ -305,39 +340,30 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
     expect(dupFpJson.duplicatePrevented).toBe(true);
     expect(dupFpJson.originalTransactionId).toBe(txnSig);
 
-    const syncStatusRes = await request.get('/api/sync/status');
+    const syncStatusRes = await request.get('/api/sync/status', {
+      headers: { Authorization: `Bearer ${loginJson.sessionToken}` },
+    });
     expect(syncStatusRes.ok()).toBeTruthy();
     const syncStatusJson = await syncStatusRes.json();
     expect(syncStatusJson.duplicatesPrevented).toBeGreaterThanOrEqual(1);
 
-    // 2. Price List GET (30 SKUs) & PUT RBAC Check
     const priceListRes = await request.get('/api/price-list');
     expect(priceListRes.ok()).toBeTruthy();
     const priceListJson = await priceListRes.json();
     expect(priceListJson.count).toBe(30);
 
-    // Unauthenticated PUT -> 401
     const unauthPut = await request.put('/api/price-list/NL-BULB-05W', {
       data: { tradePrice: 999, listPrice: 850, reason: 'Unauth test' },
     });
     expect(unauthPut.status()).toBe(401);
 
-    // Authenticated SUPER_ADMIN login + authorized price edit + revert
-    const loginRes = await request.post('/api/auth/login', {
-      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.78' },
-      data: { email: 'amjid.bisconni@gmail.com', password: 'Amjid@1947' },
-    });
-    expect(loginRes.ok()).toBeTruthy();
-    const loginJson = await loginRes.json();
     const originalBulb = priceListJson.items.find((i: any) => i.id === 'NL-BULB-05W');
-
     const authPut = await request.put('/api/price-list/NL-BULB-05W', {
       headers: { Authorization: `Bearer ${loginJson.sessionToken}` },
       data: { tradePrice: 400, listPrice: 340, reason: 'E2E Verification Rate Test' },
     });
     expect(authPut.status()).toBe(200);
 
-    // Restore original rate cleanly
     await request.put('/api/price-list/NL-BULB-05W', {
       headers: { Authorization: `Bearer ${loginJson.sessionToken}` },
       data: {
@@ -347,9 +373,8 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
       },
     });
 
-    // 3. Head Office UI Navigation: Price List & SKUs (30 SKUs + Integrity Banner) & System Sync (Transaction History Table + Retry Control + 3 Tabs)
     await page.setViewportSize({ width: 1280, height: 800 });
-    await signInAs(page, 'amjid.bisconni@gmail.com', 'Amjid@1947');
+    await signInAs(page, TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
     const sidebar = page.getByLabel('ERP Sidebar Navigation');
     await expect(sidebar).toBeVisible();
 
@@ -380,4 +405,3 @@ test.describe('N-LINK 360 Enterprise Audit, Idempotency & Multi-Viewport E2E', (
     expect(pageErrors).toEqual([]);
   });
 });
-

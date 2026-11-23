@@ -37,12 +37,15 @@ function isServiceRoleJwt(token: string): boolean {
 
 const rawSupabaseUrl = getEnv('VITE_SUPABASE_URL');
 const supabaseUrl = normalizeSupabaseUrl(rawSupabaseUrl);
-const rawSupabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY').trim();
+const rawSupabaseAnonKey = (
+  getEnv('VITE_SUPABASE_PUBLISHABLE_KEY') ||
+  getEnv('VITE_SUPABASE_ANON_KEY')
+).trim();
 const hasServiceRoleLeak = isServiceRoleJwt(rawSupabaseAnonKey);
 
 if (hasServiceRoleLeak && typeof console !== 'undefined') {
   console.error(
-    '[N-LINK 360 Security] VITE_SUPABASE_ANON_KEY contains a service_role key. Refusing to initialize browser client with service_role privileges; please use your Supabase anon/publishable key instead.'
+    '[N-LINK 360 Security] Browser Supabase key contains a service_role JWT. Refusing to initialize browser client with service_role privileges; please use your Supabase anon/publishable key instead.'
   );
 }
 

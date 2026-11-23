@@ -222,39 +222,6 @@ interface ClientCredEntry {
   mustChangePassword?: boolean;
 }
 
-const PRE_SEEDED_CLIENT_CREDS: Record<string, ClientCredEntry> = {
-  'amjid.bisconni@gmail.com': {
-    salt: 'nlink_salt_usr003',
-    hash: 'a775b83dcd320446f65e6cc185156130fe218cf8dc6730d4fa13e061823e5286',
-    mustChangePassword: false,
-  },
-  'amjid@nationallight.pk': {
-    salt: 'nlink_salt_usr003nl',
-    hash: 'fa9db484282c95e48803d503d3cadf5f98d297218ad5a83d0509cd8324b33429',
-    mustChangePassword: false,
-  },
-  'nationallights2026@gmail.com': {
-    salt: 'nlink_salt_usr000',
-    hash: 'f05454903e4b93135a1cfab355f6e033cbfa9e2313922c56ad9fe4464c729dbb',
-    mustChangePassword: true,
-  },
-  'shahzadullah@nationallight.pk': {
-    salt: 'nlink_salt_usr001',
-    hash: '612aafa1f8255874132972ec36c58eee49cc5ffb7e24af3ae0426de92b3368e3',
-    mustChangePassword: true,
-  },
-  'syedzain@nationallight.pk': {
-    salt: 'nlink_salt_usr002',
-    hash: '011e3c790d5a9b19f5c9d0cce9b78e8abdf42a5e3938e263a1a7b28014b90f33',
-    mustChangePassword: true,
-  },
-  'arshadkhan@nationallight.pk': {
-    salt: 'nlink_salt_arshad',
-    hash: 'b8eb913a5c25d21c63427d706860de8ea570b810484006065add8e33fe93f01e',
-    mustChangePassword: true,
-  },
-};
-
 function sha256FallbackHex(ascii: string): string {
   const rightRotate = (value: number, amount: number) => (value >>> amount) | (value << (32 - amount));
   const mathPow = Math.pow;
@@ -341,13 +308,13 @@ async function hashClientCredential(salt: string, password: string): Promise<str
 
 function getClientCredStore(): Record<string, ClientCredEntry> {
   try {
-    if (typeof localStorage === 'undefined') return { ...PRE_SEEDED_CLIENT_CREDS };
+    if (typeof localStorage === 'undefined') return {};
     const raw = localStorage.getItem(CLIENT_CRED_STORAGE_KEY);
-    if (!raw) return { ...PRE_SEEDED_CLIENT_CREDS };
+    if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return { ...PRE_SEEDED_CLIENT_CREDS, ...(parsed || {}) };
+    return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
-    return { ...PRE_SEEDED_CLIENT_CREDS };
+    return {};
   }
 }
 
@@ -380,20 +347,8 @@ async function verifyClientCredential(
   const entry = store[cleanEmail];
   if (!entry) return { valid: false, mustChangePassword: false };
   const computed = await hashClientCredential(entry.salt, plainPassword);
-  const isManagementInitialPass =
-    Boolean(entry.mustChangePassword) &&
-    (cleanEmail === 'shahzadullah@nationallight.pk' ||
-     cleanEmail === 'syedzain@nationallight.pk' ||
-     cleanEmail === 'arshadkhan@nationallight.pk') &&
-    (plainPassword === 'National@link360' || plainPassword === 'N@link360');
-  const isSuperAdminPass =
-    (cleanEmail === 'amjid.bisconni@gmail.com' ||
-     cleanEmail === 'nationallights2026@gmail.com' ||
-     cleanEmail === 'amjid@nationallight.pk') &&
-    plainPassword === 'Amjid@1947';
-
   return {
-    valid: computed === entry.hash || isManagementInitialPass || isSuperAdminPass,
+    valid: computed === entry.hash,
     mustChangePassword: Boolean(entry.mustChangePassword),
   };
 }
@@ -754,15 +709,7 @@ export async function signInWithGoogleSheetEmailAndPhone(
     return emailMatch && phoneMatch;
   });
 
-  // Executive fallback for primary authority accounts if email matches
-  const isExecutiveEmail =
-    cleanEmail === 'shahzadullah@nationallight.pk' ||
-    cleanEmail === 'syedzain@nationallight.pk' ||
-    cleanEmail === 'amjid.bisconni@gmail.com' ||
-    cleanEmail === 'nationallights2026@gmail.com' ||
-    cleanEmail === 'amjid@nationallight.pk';
-
-  if (!matchedUser && !isExecutiveEmail) {
+  if (!matchedUser) {
     throw new Error(
       `Access Denied: The Email '${cleanEmail}' and Phone Number '${phone}' combination was not found in the registered Google Sheet User Management roster.`
     );
@@ -857,7 +804,7 @@ export async function getCurrentUser(): Promise<User | null> {
               .eq('id', employee.role_id)
               .maybeSingle();
 
-            const mappedRole = roleMap[role?.role_code || ''] || 'SUPER_ADMIN';
+            const mappedRole = roleMap[role?.role_code || ''] || 'SALES_RECOVERY';
             const finalRole = (isMultiRoleEligibleEmail(cleanUserEmail) && savedRoleOverride) ? savedRoleOverride : mappedRole;
 
             return {
@@ -905,7 +852,7 @@ export async function getCurrentUser(): Promise<User | null> {
       } catch {}
     }
 
-    const finalRole = savedRoleOverride || baseUser?.role || 'SUPER_ADMIN';
+    const finalRole = savedRoleOverride || baseUser?.role || 'SALES_RECOVERY';
 
     return {
       id: baseUser?.id || `usr_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`,

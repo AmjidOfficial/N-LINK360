@@ -8,6 +8,8 @@
 import React from 'react';
 import { NationalLightLogo } from './NationalLightLogo';
 import { NLinkUser } from '../data/nlink-users-team';
+import { SyncStatusIndicator } from './sync/SyncStatusIndicator';
+import { SyncNotificationCenter } from './sync/SyncNotificationCenter';
 
 export interface BrandHeaderProps {
   title?: string;
@@ -46,8 +48,15 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({
       </div>
 
       {/* Zone 3: User Persona & Context Controls */}
-      <div className="flex items-center gap-2.5 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         {children}
+
+        {currentUser && (
+          <>
+            <SyncStatusIndicator compact />
+            <SyncNotificationCenter userEmail={currentUser.email} />
+          </>
+        )}
 
         {currentUser && (
           <div className="hidden md:flex items-center gap-2.5 bg-slate-50 dark:bg-[#1E293B] px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80">

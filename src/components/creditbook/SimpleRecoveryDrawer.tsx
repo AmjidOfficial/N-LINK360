@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Customer, Recovery } from '../../types';
+import { Customer, Recovery, SubmissionLifecycleState } from '../../types';
 import { NLinkUser } from '../../data/nlink-users-team';
 import {
   X,
@@ -28,13 +28,15 @@ import { triggerHaptic } from '../../utils/haptics';
 import { generateUniqueRecoveryId, generateIdempotencyUuid } from '../../utils/idGenerator';
 import { getKarachiDateString, formatKarachiDateTime } from '../../utils/dateTime';
 import { buildTransactionFingerprint, generateDeterministicTransactionId } from '../../utils/transactionSignature';
+import { UniversalSubmitButton } from '../sync/UniversalSubmitButton';
+import { SubmissionStatus } from '../sync/SubmissionStatus';
 
 export interface SimpleRecoveryDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   customer: Customer;
   currentUser: NLinkUser;
-  onRecordRecovery: (recovery: Recovery) => void;
+  onRecordRecovery: (recovery: Recovery) => void | Promise<any>;
 }
 
 export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
@@ -53,6 +55,9 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
   const [submittedRecovery, setSubmittedRecovery] = useState<Recovery | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionState, setSubmissionState] = useState<SubmissionLifecycleState>('IDLE');
+  const [submissionTxId, setSubmissionTxId] = useState<string | undefined>(undefined);
+  const [submissionMsg, setSubmissionMsg] = useState<string | null>(null);
   const [draftIdempotencyKey, setDraftIdempotencyKey] = useState<string>(() => generateIdempotencyUuid());
   const submitLockRef = useRef(false);
 
@@ -71,6 +76,9 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
     setSubmittedRecovery(null);
     setValidationError(null);
     setIsSubmitting(false);
+    setSubmissionState('IDLE');
+    setSubmissionTxId(undefined);
+    setSubmissionMsg(null);
     submitLockRef.current = false;
     setDraftIdempotencyKey(generateIdempotencyUuid());
     onClose();
@@ -81,6 +89,9 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
     setDraftIdempotencyKey(generateIdempotencyUuid());
     setValidationError(null);
     setIsSubmitting(false);
+    setSubmissionState('IDLE');
+    setSubmissionTxId(undefined);
+    setSubmissionMsg(null);
     submitLockRef.current = false;
 
     const prevOverflow = document.body.style.overflow;
@@ -95,7 +106,7 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
     };
   }, [isOpen]);
 
-  const handleSubmitRecovery = () => {
+  const handleSubmitRecovery = async () => {
     if (submitLockRef.current || isSubmitting) return;
     if (paymentAmount <= 0) {
       setValidationError('Please enter a valid recovery amount greater than 0 PKR.');
@@ -105,6 +116,8 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
     setValidationError(null);
     submitLockRef.current = true;
     setIsSubmitting(true);
+    setSubmissionState('SUBMITTING');
+    setSubmissionMsg(null);
 
     try {
       const recoveryId = generateUniqueRecoveryId();
@@ -152,8 +165,19 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
       };
 
       triggerHaptic('success');
-      onRecordRecovery(newRec);
+      setSubmissionTxId(txnId);
       setSubmittedRecovery(newRec);
+      const maybeOutcome = await Promise.resolve(onRecordRecovery(newRec) as any);
+      if (maybeOutcome && typeof maybeOutcome === 'object' && 'state' in maybeOutcome) {
+        setSubmissionState(maybeOutcome.state);
+        setSubmissionTxId(maybeOutcome.transactionId || txnId);
+        setSubmissionMsg(maybeOutcome.error || null);
+      } else {
+        setSubmissionState('DATABASE_SAVED');
+      }
+    } catch (err: any) {
+      setSubmissionState('SUBMISSION_FAILED');
+      setSubmissionMsg(err?.message || 'Unable to log recovery.');
     } finally {
       setIsSubmitting(false);
       submitLockRef.current = false;
@@ -280,6 +304,13 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
                   </span>
                 </div>
               </div>
+
+              <SubmissionStatus
+                state={submissionState}
+                transactionId={submissionTxId}
+                message={submissionMsg}
+                className="text-left"
+              />
 
               <button
                 type="button"
@@ -481,25 +512,31 @@ export const SimpleRecoveryDrawer: React.FC<SimpleRecoveryDrawerProps> = ({
 
         {/* Sticky Footer Actions (Cancel left, Confirm right) */}
         {!submittedRecovery && (
-          <div className="p-4 border-t border-[#E2E8F0] dark:border-slate-700/80 bg-white dark:bg-[#0F172A] flex items-center justify-between gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={handleResetAndClose}
-              className="btn-outline min-h-[44px] text-xs px-4"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmitRecovery}
-              disabled={paymentAmount <= 0 || isSubmitting}
-              className="btn-primary flex-1 min-h-[44px] text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span className="tabular-nums truncate">
-                {isSubmitting ? 'Submitting...' : `Confirm & Log (PKR ${paymentAmount.toLocaleString()})`}
-              </span>
-            </button>
+          <div className="p-4 border-t border-[#E2E8F0] dark:border-slate-700/80 bg-white dark:bg-[#0F172A] space-y-2.5 shrink-0">
+            {submissionState !== 'IDLE' && (
+              <SubmissionStatus
+                state={submissionState}
+                transactionId={submissionTxId}
+                message={submissionMsg}
+              />
+            )}
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleResetAndClose}
+                className="btn-outline min-h-[44px] text-xs px-4"
+              >
+                Cancel
+              </button>
+              <UniversalSubmitButton
+                label={`Confirm & Log (PKR ${paymentAmount.toLocaleString()})`}
+                state={submissionState}
+                disabled={paymentAmount <= 0 || isSubmitting}
+                onClick={() => void handleSubmitRecovery()}
+                icon={<CheckCircle2 className="w-4 h-4" />}
+                className="flex-1"
+              />
+            </div>
           </div>
         )}
       </div>

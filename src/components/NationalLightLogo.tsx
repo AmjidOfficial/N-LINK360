@@ -7,7 +7,6 @@
  */
 
 import React, { useState } from 'react';
-import logoAsset from '../assets/images/national_light_logo_1789302224221.jpg';
 
 export interface NationalLightLogoProps {
   /** Size preset or pixel dimension */
@@ -36,7 +35,7 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
   showGlow = false,
   className = '',
   alt = 'National Light Official Brand Logo',
-  variant = 'image',
+  variant = 'vector',
 }) => {
   const [imageError, setImageError] = useState(false);
   const isPreset = typeof size === 'string' && size in sizeMap;
@@ -148,8 +147,9 @@ export const NationalLightLogo: React.FC<NationalLightLogoProps> = ({
         <div className="w-full h-full rounded-full overflow-hidden bg-white flex items-center justify-center">
           {variant === 'image' && !imageError ? (
             <img
-              src={logoAsset || '/national_light_logo.jpg'}
+              src={`${import.meta.env.BASE_URL}national_light_logo.jpg`}
               alt={alt}
+              loading="lazy"
               className="w-full h-full object-cover rounded-full"
               referrerPolicy="no-referrer"
               onError={() => setImageError(true)}

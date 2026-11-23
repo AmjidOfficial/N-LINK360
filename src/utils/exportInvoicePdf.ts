@@ -6,7 +6,7 @@
  * and bulk multi-order consolidated dispatch bundles.
  */
 
-import jsPDF from 'jspdf';
+import type jsPDF from 'jspdf';
 import { Customer, SalesOrder } from '../types';
 import { calculateInvoiceMetrics } from '../hooks/useSkuInvoicePricing';
 
@@ -618,7 +618,8 @@ const renderInvoiceOnDoc = (
 export const generateSalesInvoicePdfDoc = async (
   options: InvoicePdfOptions
 ): Promise<GeneratedPdfResult> => {
-  const doc = new jsPDF({
+  const { default: JsPdf } = await import('jspdf');
+  const doc = new JsPdf({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
@@ -647,8 +648,9 @@ export const generateSalesInvoicePdfDoc = async (
 /**
  * Generates a single sales invoice PDF Blob directly
  */
-export const generateSalesInvoicePdfBlob = (options: InvoicePdfOptions): Blob => {
-  const doc = new jsPDF({
+export const generateSalesInvoicePdfBlob = async (options: InvoicePdfOptions): Promise<Blob> => {
+  const { default: JsPdf } = await import('jspdf');
+  const doc = new JsPdf({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
@@ -876,7 +878,8 @@ export const generateBulkSalesInvoicesPdfDoc = async (
   invoices: InvoicePdfOptions[],
   bundleTitle = 'National Lights Bulk Sales Invoices Dispatch Manifest'
 ): Promise<GeneratedPdfResult> => {
-  const doc = new jsPDF({
+  const { default: JsPdf } = await import('jspdf');
+  const doc = new JsPdf({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',

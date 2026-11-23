@@ -10,11 +10,10 @@
  */
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { MotionConfig } from 'motion/react';
 import { NLinkUser, TEAM_USERS, getStoredUsers, NLINK_TEAM_ROSTER } from './data/nlink-users-team';
 import { Customer, SalesOrder, Recovery, User, EmployeeAttendance, UserProfileUpdateRequest, TownNode, LedgerEntry, InventoryBalance, InventoryTransaction, InventoryTransactionType, LeaveRequest } from './types';
 import { AuthGate } from './components/AuthGate';
-import { ChangePasswordModal } from './components/ChangePasswordModal';
-import { BrandHeader } from './components/BrandHeader';
 import { NatureSkeleton } from './components/ui/NatureSkeleton';
 import type { DispatchInvoiceCompletionPayload } from './components/headoffice/OperationalDispatchInvoiceModal';
 
@@ -24,9 +23,12 @@ const NationalLightRateListModal = React.lazy(() => import('./components/stitch/
 const GoogleSheetSyncModal = React.lazy(() => import('./components/GoogleSheetSyncModal').then((m) => ({ default: m.GoogleSheetSyncModal })));
 const InvoicePdfPreviewModal = React.lazy(() => import('./components/stitch/InvoicePdfPreviewModal').then((m) => ({ default: m.InvoicePdfPreviewModal })));
 const TodaySalesAuditModal = React.lazy(() => import('./components/creditbook/TodaySalesAuditModal').then((m) => ({ default: m.TodaySalesAuditModal })));
+const ChangePasswordModal = React.lazy(() => import('./components/ChangePasswordModal').then((m) => ({ default: m.ChangePasswordModal })));
+const TeamShareModal = React.lazy(() => import('./components/TeamShareModal').then((m) => ({ default: m.TeamShareModal })));
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { calculateInvoiceMetrics } from './hooks/useSkuInvoicePricing';
 import { fallbackAppData, SupabaseAppData, loadSupabaseAppData } from './services/supabase-data';
+import { isSupabaseConfigured } from './lib/supabase';
 import { SEED_LEDGER_ENTRIES } from './data/seed-ledger-data';
 import { initialInventoryBalances, initialInventoryTransactions } from './services/store';
 import { logAuditEvent } from './services/auditLog';
@@ -53,7 +55,6 @@ import { getStoredTownNodes, saveTownNodes, PAKISTAN_TOWN_COORDINATES } from './
 import { generateUniqueOrderId, generateUniqueRecoveryId, generateIdempotencyUuid } from './utils/idGenerator';
 import { persistAttendanceRecord } from './services/attendance';
 import { executeOrderCancellationOrReversal, executeRecoveryCancellationOrReversal, isEntryConfirmedByAccountsOrNsm } from './utils/entryManagement';
-import { TeamShareModal } from './components/TeamShareModal';
 import { detectDeviceExperience, isMobileDevice } from './utils/deviceDetection';
 import {
   checkMidnightCutoff,
@@ -76,6 +77,19 @@ import {
   getSyncMonitorSnapshot,
 } from './services/autoSaveSyncService';
 import { getCentralPriceList, subscribePriceList } from './services/priceListService';
+import {
+  executeUniversalSubmission,
+  hydrateUnifiedSyncStores,
+  registerAuthSessionValidator,
+  registerOfflineReplayHandler,
+  startUnifiedBackgroundSync,
+} from './services/universalSubmissionService';
+import { realtimeSyncCoordinator } from './services/realtimeSyncCoordinator';
+import {
+  hydrateNotificationsForUser,
+  setNotificationUserContext,
+} from './services/syncNotificationService';
+import { hydrateSyncConflicts } from './services/syncConflictManager';
 
 export default function App() {
   // Experience Mode: 'FIELD_MOBILE' | 'HEAD_OFFICE'
@@ -238,9 +252,15 @@ export default function App() {
         details: `${currentUser.fullName} signed out.`,
       });
     }
+    realtimeSyncCoordinator.stop();
+    setNotificationUserContext(null);
     setCurrentUser(null);
     try {
       localStorage.removeItem('nlink_active_logged_user');
+      localStorage.removeItem('nlink_active_user_session');
+      localStorage.removeItem('nlink_registered_email_session');
+      localStorage.removeItem('nlink_sec_token');
+      localStorage.removeItem('nlink_auth_token');
     } catch (e) {}
   };
 
@@ -315,6 +335,7 @@ export default function App() {
   const handleCheckIn = (townName: string) => {
     const todayDateStr = new Date().toISOString().slice(0, 10);
     const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const idemKey = generateIdempotencyUuid();
 
     setIsCheckedIn(true);
     setCheckedInTime(nowTimeStr);
@@ -345,23 +366,45 @@ export default function App() {
     setAttendanceRecords((prev) => [newRecord, ...prev.filter((r) => !(r.employeeId === currentUser?.id && r.date === todayDateStr))]);
     setLedgerToastMessage(`✓ Checked In successfully at ${nowTimeStr} in ${townName}`);
 
-    // Persist to master Supabase field_attendance table
+    // Persist to master Supabase field_attendance table + Sheet Outbox
     const townCoords = PAKISTAN_TOWN_COORDINATES[townName] || { lat: 34.0151, lng: 71.5249 };
-    persistAttendanceRecord({
+    const attendancePayload = {
       date: todayDateStr,
       checkInTime: nowTimeStr,
       town: townName,
       lat: townCoords.lat,
       lng: townCoords.lng,
       accuracy: 5,
-      status: 'CHECKED_IN',
+      status: 'CHECKED_IN' as const,
       userName: currentUser?.fullName || 'Field Officer',
+    };
+    void executeUniversalSubmission({
+      module: 'ATTENDANCE',
+      entityType: 'ATTENDANCE',
+      sheetTab: 'Attendance',
+      recordLabel: `Check-In (${townName})`,
+      payload: { ...newRecord, ...attendancePayload } as unknown as Record<string, unknown>,
+      userEmail: currentUser?.email,
+      userId: currentUser?.id,
+      userName: currentUser?.fullName,
+      existingIdempotencyKey: idemKey,
+      commitDb: async () => {
+        const res = await persistAttendanceRecord(attendancePayload);
+        if (!res.success && isSupabaseConfigured) {
+          throw new Error(res.error || 'Attendance check-in DB write deferred');
+        }
+        return {
+          entityId: newRecord.id,
+          dbRecord: { ...newRecord, ...attendancePayload } as unknown as Record<string, unknown>,
+        };
+      },
     }).catch((err) => console.warn('Attendance check-in sync:', err));
   };
 
   const handleCheckOut = (townName: string) => {
     const todayDateStr = new Date().toISOString().slice(0, 10);
     const nowTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const idemKey = generateIdempotencyUuid();
 
     setIsCheckedIn(false);
     setCheckedOutTime(nowTimeStr);
@@ -385,17 +428,38 @@ export default function App() {
     );
     setLedgerToastMessage(`✓ Checked Out successfully at ${nowTimeStr}`);
 
-    // Persist check-out to master Supabase field_attendance table
+    // Persist check-out to master Supabase field_attendance table + Sheet Outbox
     const townCoords = PAKISTAN_TOWN_COORDINATES[townName] || { lat: 34.0151, lng: 71.5249 };
-    persistAttendanceRecord({
+    const checkoutPayload = {
       date: todayDateStr,
       checkOutTime: nowTimeStr,
       town: townName,
       lat: townCoords.lat,
       lng: townCoords.lng,
       accuracy: 5,
-      status: 'CHECKED_OUT',
+      status: 'CHECKED_OUT' as const,
       userName: currentUser?.fullName || 'Field Officer',
+    };
+    void executeUniversalSubmission({
+      module: 'ATTENDANCE',
+      entityType: 'ATTENDANCE',
+      sheetTab: 'Attendance',
+      recordLabel: `Check-Out (${townName})`,
+      payload: checkoutPayload as unknown as Record<string, unknown>,
+      userEmail: currentUser?.email,
+      userId: currentUser?.id,
+      userName: currentUser?.fullName,
+      existingIdempotencyKey: idemKey,
+      commitDb: async () => {
+        const res = await persistAttendanceRecord(checkoutPayload);
+        if (!res.success && isSupabaseConfigured) {
+          throw new Error(res.error || 'Attendance check-out DB write deferred');
+        }
+        return {
+          entityId: `att-out-${todayDateStr}-${currentUser?.id || 'usr'}`,
+          dbRecord: checkoutPayload as unknown as Record<string, unknown>,
+        };
+      },
     }).catch((err) => console.warn('Attendance check-out sync:', err));
   };
 
@@ -536,8 +600,9 @@ export default function App() {
     return [];
   });
 
-  // Load cached database on mount & purge all mock/dummy data
+  // Load cached database when authenticated & purge all mock/dummy data
   useEffect(() => {
+    if (!currentUser) return;
     const initData = async () => {
       let localCusts: Customer[] = [];
       let localOrders: SalesOrder[] = [];
@@ -751,16 +816,17 @@ export default function App() {
     };
 
     initData();
-  }, []);
+  }, [currentUser?.id]);
 
-  // Synchronize state changes to cache
+  // Synchronize state changes to cache while preserving visits & attendance
   const syncToCache = (newCusts: Customer[], newOrds: SalesOrder[], newRecs: Recovery[]) => {
+    const prev = getLocalDatabaseCache();
     saveLocalDatabaseCache({
       customers: newCusts,
       orders: newOrds,
       recoveries: newRecs,
-      visits: [],
-      attendance: [],
+      visits: prev?.visits || [],
+      attendance: prev?.attendance || [],
       lastUpdated: new Date().toISOString(),
     });
   };
@@ -773,7 +839,7 @@ export default function App() {
     salesOrders: orders,
     invoices: fallbackAppData.invoices,
     recoveries,
-    ledgerEntries: fallbackAppData.ledgerEntries,
+    ledgerEntries: ledgerEntries.length > 0 ? ledgerEntries : fallbackAppData.ledgerEntries,
     dispatches: fallbackAppData.dispatches,
     stockReturns: fallbackAppData.stockReturns,
     visits: fallbackAppData.visits,
@@ -781,7 +847,198 @@ export default function App() {
 
   useEffect(() => {
     registerAppDataProvider(() => currentAppData);
-  }, [customers, orders, recoveries, inventoryBalances]);
+  }, [customers, orders, recoveries, inventoryBalances, ledgerEntries, catalogSkus]);
+
+  // Unified Sync Lifecycle: Hydrate IndexedDB queues, Per-User Notifications, Conflicts, Offline Replay & Realtime Sync
+  useEffect(() => {
+    if (!currentUser) {
+      realtimeSyncCoordinator.stop();
+      setNotificationUserContext(null);
+      return;
+    }
+
+    setNotificationUserContext(currentUser.email);
+    void hydrateUnifiedSyncStores();
+    void hydrateNotificationsForUser(currentUser.email);
+    void hydrateSyncConflicts();
+
+    registerAuthSessionValidator(() => {
+      try {
+        return Boolean(localStorage.getItem('nlink_active_logged_user'));
+      } catch {
+        return Boolean(currentUser);
+      }
+    });
+
+    registerOfflineReplayHandler('SALES_ORDER', async (item) => {
+      const orderPayload = item.payload as unknown as SalesOrder;
+      const ok = await syncOrderToSupabase(orderPayload);
+      if (!ok && isSupabaseConfigured) {
+        throw new Error('Supabase order replay deferred — retrying automatically.');
+      }
+      return {
+        entityId: String(orderPayload.id || item.transactionId),
+        dbRecord: orderPayload as unknown as Record<string, unknown>,
+      };
+    });
+
+    registerOfflineReplayHandler('INVOICE', async (item) => {
+      const orderPayload = item.payload as unknown as SalesOrder;
+      const ok = await syncOrderToSupabase(orderPayload);
+      if (!ok && isSupabaseConfigured) {
+        throw new Error('Supabase invoice replay deferred — retrying automatically.');
+      }
+      return {
+        entityId: String(orderPayload.invoiceNumber || orderPayload.id || item.transactionId),
+        dbRecord: orderPayload as unknown as Record<string, unknown>,
+      };
+    });
+
+    registerOfflineReplayHandler('DISPATCH', async (item) => {
+      const orderPayload = item.payload as unknown as SalesOrder;
+      const ok = await syncOrderToSupabase(orderPayload);
+      if (!ok && isSupabaseConfigured) {
+        throw new Error('Supabase dispatch replay deferred — retrying automatically.');
+      }
+      return {
+        entityId: String(orderPayload.dispatchNoteNumber || orderPayload.id || item.transactionId),
+        dbRecord: orderPayload as unknown as Record<string, unknown>,
+      };
+    });
+
+    registerOfflineReplayHandler('RECOVERY', async (item) => {
+      const recPayload = item.payload as unknown as Recovery;
+      const ok = await syncRecoveryToSupabase(recPayload);
+      if (!ok && isSupabaseConfigured) {
+        throw new Error('Supabase recovery replay deferred — retrying automatically.');
+      }
+      return {
+        entityId: String(recPayload.id || item.transactionId),
+        dbRecord: recPayload as unknown as Record<string, unknown>,
+      };
+    });
+
+    registerOfflineReplayHandler('CUSTOMER', async (item) => {
+      const custPayload = item.payload as unknown as Customer;
+      const ok = await syncCustomerToSupabase(custPayload);
+      if (!ok && isSupabaseConfigured) {
+        throw new Error('Supabase customer replay deferred — retrying automatically.');
+      }
+      return {
+        entityId: String(custPayload.id || custPayload.customerCode || item.transactionId),
+        dbRecord: custPayload as unknown as Record<string, unknown>,
+      };
+    });
+
+    registerOfflineReplayHandler('ATTENDANCE', async (item) => {
+      const p = item.payload as any;
+      const res = await persistAttendanceRecord({
+        date: String(p.date || new Date().toISOString().slice(0, 10)),
+        checkInTime: p.checkInTime,
+        checkOutTime: p.checkOutTime,
+        town: String(p.town || 'Abbottabad'),
+        lat: Number(p.lat || 34.0151),
+        lng: Number(p.lng || 71.5249),
+        accuracy: Number(p.accuracy || 5),
+        status: p.status === 'CHECKED_OUT' ? 'CHECKED_OUT' : 'CHECKED_IN',
+        userName: String(p.userName || currentUser.fullName || 'Field Officer'),
+      });
+      if (!res.success && isSupabaseConfigured) {
+        throw new Error(res.error || 'Supabase attendance replay deferred.');
+      }
+      return {
+        entityId: String(p.id || item.transactionId),
+        dbRecord: item.payload,
+      };
+    });
+
+    const stopBgSync = startUnifiedBackgroundSync(60_000);
+    realtimeSyncCoordinator.start(currentUser.email);
+
+    const unsubRtEvents = realtimeSyncCoordinator.subscribeEvents((evt) => {
+      if (evt.table === 'sync_conflicts') {
+        void hydrateSyncConflicts();
+      } else if (evt.table === 'user_notifications') {
+        void hydrateNotificationsForUser(currentUser.email);
+      } else if (evt.table === 'sales_orders' && evt.newRecord && evt.eventType !== 'DELETE') {
+        const rec = evt.newRecord as any;
+        const incomingId = String(rec.order_code || rec.order_number || rec.id || '').trim();
+        if (!incomingId) return;
+        setOrders((prev) =>
+          prev.map((o) => {
+            if (o.id === incomingId || o.orderNumber === incomingId || o.id === rec.id) {
+              const incomingApproved = rec.status === 'APPROVED' || o.shahzadApproval === 'APPROVED';
+              return {
+                ...o,
+                status: (rec.status || o.status) as SalesOrder['status'],
+                shahzadApproval: incomingApproved ? 'APPROVED' : o.shahzadApproval,
+                updatedAt: String(rec.updated_at || o.updatedAt || new Date().toISOString()),
+              };
+            }
+            return o;
+          })
+        );
+      } else if (evt.table === 'recoveries' && evt.newRecord && evt.eventType !== 'DELETE') {
+        const rec = evt.newRecord as any;
+        const incomingId = String(rec.recovery_code || rec.recovery_number || rec.id || '').trim();
+        if (!incomingId) return;
+        setRecoveries((prev) =>
+          prev.map((r) => {
+            if (r.id === incomingId || (r as any).recoveryNumber === incomingId || r.id === rec.id) {
+              const incomingApproved = rec.status === 'VERIFIED' || rec.status === 'APPROVED' || r.shahzadApproval === 'APPROVED';
+              return {
+                ...r,
+                status: (rec.status || r.status) as Recovery['status'],
+                shahzadApproval: incomingApproved ? 'APPROVED' : r.shahzadApproval,
+                updatedAt: String(rec.updated_at || r.updatedAt || new Date().toISOString()),
+              };
+            }
+            return r;
+          })
+        );
+      } else if (evt.table === 'customers' && evt.newRecord && evt.eventType !== 'DELETE') {
+        const rec = evt.newRecord as any;
+        const incomingCode = String(rec.customer_code || rec.id || '').trim();
+        if (!incomingCode) return;
+        setCustomers((prev) =>
+          prev.map((c) => {
+            if (c.customerCode === incomingCode || c.id === incomingCode || c.id === rec.id) {
+              return {
+                ...c,
+                currentBalance:
+                  rec.current_balance !== undefined ? Number(rec.current_balance) : c.currentBalance,
+                updatedAt: String(rec.updated_at || c.updatedAt || new Date().toISOString()),
+              };
+            }
+            return c;
+          })
+        );
+      }
+    });
+
+    const unsubReconnect = realtimeSyncCoordinator.onReconnectCatchup(async () => {
+      try {
+        const liveData = await loadSupabaseAppData(currentUser as any);
+        if (liveData) {
+          if (liveData.customers.length > 0) setCustomers((prev) => (prev.length === 0 ? liveData.customers : prev));
+          if (liveData.ledgerEntries && liveData.ledgerEntries.length > 0) {
+            setLedgerEntries(liveData.ledgerEntries);
+          }
+        }
+        await hydrateNotificationsForUser(currentUser.email);
+        await hydrateSyncConflicts();
+      } catch {
+        // Non-blocking reconnect catchup
+      }
+    });
+
+    return () => {
+      stopBgSync();
+      unsubRtEvents();
+      unsubReconnect();
+      realtimeSyncCoordinator.stop();
+    };
+  }, [currentUser?.id, currentUser?.email]);
 
   // Ensure M. Ghaffar Tool Center is permanently assigned to Syed Zain (USR-002)
   useEffect(() => {
@@ -978,56 +1235,33 @@ export default function App() {
     setOrders(updatedOrders);
     syncToCache(customers, updatedOrders, recoveries);
 
-    recordSyncLifecycleEvent({
-      module: 'SALES_ORDERS',
-      recordType: 'SalesOrder',
-      databaseId: effectiveOrder.id,
-      transactionId: txnSig,
-      idempotencyKey: idemKey,
-      fingerprintHash: fpHash,
-      syncStatus: isOnline ? 'SAVED_IN_DB' : 'PENDING_GOOGLE_SYNC',
-      summary: `Order #${effectiveOrder.orderNumber} (${effectiveOrder.customerName}) Rs. ${(effectiveOrder.totalAmount || 0).toLocaleString()}`,
-    });
-
-    if (isOnline) {
-      syncOrderToSupabase(effectiveOrder)
-        .then((ok) => {
-          if (!ok) {
-            syncManager.enqueue('ORDERS', 'CREATE', { order: effectiveOrder, recoveryAmount: 0 }, idemKey);
-          }
-          recordSyncLifecycleEvent({
-            module: 'SALES_ORDERS',
-            recordType: 'SalesOrder',
-            databaseId: effectiveOrder.id,
-            transactionId: txnSig,
-            idempotencyKey: idemKey,
-            fingerprintHash: fpHash,
-            syncStatus: ok ? 'PENDING_GOOGLE_SYNC' : 'SYNC_FAILED',
-            errorMessage: ok ? undefined : 'Supabase write queued for retry',
-            summary: `Order #${effectiveOrder.orderNumber} (${effectiveOrder.customerName})`,
-          });
-        })
-        .catch((err) => {
-          syncManager.enqueue('ORDERS', 'CREATE', { order: effectiveOrder, recoveryAmount: 0 }, idemKey);
-          recordSyncLifecycleEvent({
-            module: 'SALES_ORDERS',
-            recordType: 'SalesOrder',
-            databaseId: effectiveOrder.id,
-            transactionId: txnSig,
-            idempotencyKey: idemKey,
-            fingerprintHash: fpHash,
-            syncStatus: 'SYNC_FAILED',
-            errorMessage: String(err?.message || err),
-            summary: `Order #${effectiveOrder.orderNumber} (${effectiveOrder.customerName})`,
-          });
-        });
-    } else {
-      syncManager.enqueue('ORDERS', 'CREATE', { order: effectiveOrder, recoveryAmount: 0 }, idemKey);
-    }
-
     setLedgerToastMessage(
       `✓ Order #${effectiveOrder.orderNumber} (${txnSig}) booked. Awaiting Shahzad Ullah's executive review.`
     );
+
+    return executeUniversalSubmission({
+      module: 'SALES_ORDERS',
+      entityType: 'SALES_ORDER',
+      sheetTab: 'Sales_Orders',
+      recordLabel: `Order #${effectiveOrder.orderNumber}`,
+      payload: effectiveOrder as unknown as Record<string, unknown>,
+      userEmail: currentUser?.email,
+      userId: currentUser?.id,
+      userName: currentUser?.fullName,
+      existingIdempotencyKey: idemKey,
+      transactionId: txnSig,
+      commitDb: async () => {
+        const ok = await syncOrderToSupabase(effectiveOrder);
+        if (!ok && isSupabaseConfigured) {
+          syncManager.enqueue('ORDERS', 'CREATE', { order: effectiveOrder, recoveryAmount: 0 }, idemKey);
+          throw new Error('Supabase order write deferred — queued for retry.');
+        }
+        return {
+          entityId: effectiveOrder.id,
+          dbRecord: effectiveOrder as unknown as Record<string, unknown>,
+        };
+      },
+    });
   };
 
   // Recovery Logging Handler: Entry Flow Step 1 & Confirmation Rule
@@ -1091,56 +1325,33 @@ export default function App() {
     setRecoveries(updatedRecoveries);
     syncToCache(customers, orders, updatedRecoveries);
 
-    recordSyncLifecycleEvent({
-      module: 'RECOVERY',
-      recordType: 'Recovery',
-      databaseId: effectiveRecovery.id,
-      transactionId: txnSig,
-      idempotencyKey: idemKey,
-      fingerprintHash: fpHash,
-      syncStatus: isOnline ? 'SAVED_IN_DB' : 'PENDING_GOOGLE_SYNC',
-      summary: `Payment ${txnSig} (${effectiveRecovery.customerName}) Rs. ${(effectiveRecovery.amount || 0).toLocaleString()}`,
-    });
-
-    if (isOnline) {
-      syncRecoveryToSupabase(effectiveRecovery)
-        .then((ok) => {
-          if (!ok) {
-            syncManager.enqueue('RECOVERY', 'CREATE', effectiveRecovery as unknown as Record<string, unknown>, idemKey);
-          }
-          recordSyncLifecycleEvent({
-            module: 'RECOVERY',
-            recordType: 'Recovery',
-            databaseId: effectiveRecovery.id,
-            transactionId: txnSig,
-            idempotencyKey: idemKey,
-            fingerprintHash: fpHash,
-            syncStatus: ok ? 'PENDING_GOOGLE_SYNC' : 'SYNC_FAILED',
-            errorMessage: ok ? undefined : 'Supabase write queued for retry',
-            summary: `Payment ${txnSig} (${effectiveRecovery.customerName})`,
-          });
-        })
-        .catch((err) => {
-          syncManager.enqueue('RECOVERY', 'CREATE', effectiveRecovery as unknown as Record<string, unknown>, idemKey);
-          recordSyncLifecycleEvent({
-            module: 'RECOVERY',
-            recordType: 'Recovery',
-            databaseId: effectiveRecovery.id,
-            transactionId: txnSig,
-            idempotencyKey: idemKey,
-            fingerprintHash: fpHash,
-            syncStatus: 'SYNC_FAILED',
-            errorMessage: String(err?.message || err),
-            summary: `Payment ${txnSig} (${effectiveRecovery.customerName})`,
-          });
-        });
-    } else {
-      syncManager.enqueue('RECOVERY', 'CREATE', effectiveRecovery as unknown as Record<string, unknown>, idemKey);
-    }
-
     setLedgerToastMessage(
       `✓ Recovery #${effectiveRecovery.id} (${txnSig}) logged (Status: PENDING). Awaiting Shahzad Ullah's confirmation before adding to Ledger.`
     );
+
+    return executeUniversalSubmission({
+      module: 'RECOVERY',
+      entityType: 'RECOVERY',
+      sheetTab: 'Recoveries',
+      recordLabel: `Recovery #${effectiveRecovery.id}`,
+      payload: effectiveRecovery as unknown as Record<string, unknown>,
+      userEmail: currentUser?.email,
+      userId: currentUser?.id,
+      userName: currentUser?.fullName,
+      existingIdempotencyKey: idemKey,
+      transactionId: txnSig,
+      commitDb: async () => {
+        const ok = await syncRecoveryToSupabase(effectiveRecovery);
+        if (!ok && isSupabaseConfigured) {
+          syncManager.enqueue('RECOVERY', 'CREATE', effectiveRecovery as unknown as Record<string, unknown>, idemKey);
+          throw new Error('Supabase recovery write deferred — queued for retry.');
+        }
+        return {
+          entityId: effectiveRecovery.id,
+          dbRecord: effectiveRecovery as unknown as Record<string, unknown>,
+        };
+      },
+    });
   };
 
   // Executive Approval Handlers: Shahzad Ullah sole executive signing authority
@@ -1309,20 +1520,36 @@ export default function App() {
         recoveries: recoveries,
       };
 
-      // 1. Immediately push approval to Google Sheets Webhook
-      syncToGoogleSheetsWebhook(getGoogleSheetsWebhookUrl(), updatedAppData).catch((err) => {
-        console.warn('Google Sheets Webhook live sync note:', err);
-      });
-
-      // 2. Trigger auto-ledger sync
+      // 1. Trigger auto-ledger sync
       triggerLedgerApprovalSync('INVOICE_APPROVED', effectiveOrd.orderNumber || effectiveOrd.id, effectiveOrd.customerId, updatedAppData);
 
-      // 3. Persist to Supabase if connected
-      if (isOnline) {
-        syncOrderToSupabase(effectiveOrd).catch((err) => {
-          console.warn('Supabase order upload note:', err);
-        });
-      }
+      // 2. Commit DB & enqueue single outbox UPSERT via Universal Submission Pipeline
+      void executeUniversalSubmission({
+        module: 'SALES_ORDERS',
+        entityType: 'SALES_ORDER',
+        sheetTab: 'Sales_Orders',
+        recordLabel: `Approved Order #${effectiveOrd.orderNumber || effectiveOrd.id}`,
+        payload: effectiveOrd as unknown as Record<string, unknown>,
+        userEmail: currentUser?.email,
+        userId: currentUser?.id,
+        userName: currentUser?.fullName,
+        existingIdempotencyKey: generateIdempotencyUuid(),
+        transactionId: effectiveOrd.transactionId || effectiveOrd.orderNumber || effectiveOrd.id,
+        commitDb: async () => {
+          const ok = await syncOrderToSupabase(effectiveOrd);
+          if (!ok && isSupabaseConfigured) {
+            throw new Error('Supabase approval persistence deferred.');
+          }
+          return {
+            entityId: effectiveOrd.id,
+            dbRecord: effectiveOrd as unknown as Record<string, unknown>,
+          };
+        },
+        pushSheet: async () => {
+          await syncToGoogleSheetsWebhook(getGoogleSheetsWebhookUrl(), updatedAppData);
+          return { externalSheetId: '1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo' };
+        },
+      });
     }
 
     setLedgerToastMessage(`✓ Order approved by Shahzad Ullah. Official ledger updated & synced to Google Sheets.`);
@@ -1496,20 +1723,36 @@ export default function App() {
         inventoryBalances: nextInventoryBalances,
       };
 
-      // 1. Immediately push approval to Google Sheets Webhook
-      syncToGoogleSheetsWebhook(getGoogleSheetsWebhookUrl(), updatedAppData).catch((err) => {
-        console.warn('Google Sheets Webhook live sync note:', err);
-      });
-
-      // 2. Trigger auto-ledger sync
+      // 1. Trigger auto-ledger sync
       triggerLedgerApprovalSync('INVOICE_APPROVED', effectiveOrd.orderNumber || effectiveOrd.id, effectiveOrd.customerId, updatedAppData);
 
-      // 3. Persist to Supabase if connected
-      if (isOnline) {
-        syncOrderToSupabase(effectiveOrd).catch((err) => {
-          console.warn('Supabase order upload note:', err);
-        });
-      }
+      // 2. Persist to DB + Outbox Sheet UPSERT via Universal Submission Pipeline
+      void executeUniversalSubmission({
+        module: 'INVOICING',
+        entityType: 'INVOICE',
+        sheetTab: 'Invoices',
+        recordLabel: `Dispatch & Invoice #${effectiveOrd.orderNumber || effectiveOrd.id}`,
+        payload: effectiveOrd as unknown as Record<string, unknown>,
+        userEmail: currentUser?.email,
+        userId: currentUser?.id,
+        userName: currentUser?.fullName,
+        existingIdempotencyKey: generateIdempotencyUuid(),
+        transactionId: effectiveOrd.transactionId || payload.dispatchNoteNumber || effectiveOrd.id,
+        commitDb: async () => {
+          const ok = await syncOrderToSupabase(effectiveOrd);
+          if (!ok && isSupabaseConfigured) {
+            throw new Error('Supabase dispatch-invoice persistence deferred.');
+          }
+          return {
+            entityId: effectiveOrd.id,
+            dbRecord: effectiveOrd as unknown as Record<string, unknown>,
+          };
+        },
+        pushSheet: async () => {
+          await syncToGoogleSheetsWebhook(getGoogleSheetsWebhookUrl(), updatedAppData);
+          return { externalSheetId: '1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo' };
+        },
+      });
 
       logAuditEvent({
         userId: currentUser?.id,
@@ -1707,20 +1950,36 @@ export default function App() {
         recoveries: updatedRecoveries,
       };
 
-      // 1. Immediately push verified recovery to Google Sheets Webhook
-      syncToGoogleSheetsWebhook(getGoogleSheetsWebhookUrl(), updatedAppData).catch((err) => {
-        console.warn('Google Sheets Webhook recovery sync note:', err);
-      });
-
-      // 2. Trigger auto-ledger sync
+      // 1. Trigger auto-ledger sync
       triggerLedgerApprovalSync('RECOVERY_VERIFIED', effectiveRec.id, effectiveRec.customerId, updatedAppData);
 
-      // 3. Persist to Supabase if connected
-      if (isOnline) {
-        syncRecoveryToSupabase(effectiveRec).catch((err) => {
-          console.warn('Supabase recovery upload note:', err);
-        });
-      }
+      // 2. Persist to DB + Outbox Sheet UPSERT via Universal Submission Pipeline
+      void executeUniversalSubmission({
+        module: 'RECOVERY',
+        entityType: 'RECOVERY',
+        sheetTab: 'Recoveries',
+        recordLabel: `Verified Recovery #${(effectiveRec as any).recoveryNumber || effectiveRec.id}`,
+        payload: effectiveRec as unknown as Record<string, unknown>,
+        userEmail: currentUser?.email,
+        userId: currentUser?.id,
+        userName: currentUser?.fullName,
+        existingIdempotencyKey: generateIdempotencyUuid(),
+        transactionId: effectiveRec.transactionId || effectiveRec.id,
+        commitDb: async () => {
+          const ok = await syncRecoveryToSupabase(effectiveRec);
+          if (!ok && isSupabaseConfigured) {
+            throw new Error('Supabase recovery approval write deferred.');
+          }
+          return {
+            entityId: effectiveRec.id,
+            dbRecord: effectiveRec as unknown as Record<string, unknown>,
+          };
+        },
+        pushSheet: async () => {
+          await syncToGoogleSheetsWebhook(getGoogleSheetsWebhookUrl(), updatedAppData);
+          return { externalSheetId: '1NUW0aUOE3sJVvNCJOvHI1ia4-CGDIByJZoyzKZUSwoo' };
+        },
+      });
 
       logAuditEvent({
         userId: currentUser?.id,
@@ -2299,6 +2558,32 @@ export default function App() {
       localStorage.setItem('nlink_inventory_transactions', JSON.stringify(nextTxs));
     } catch {}
 
+    const postedOrder = updatedOrders.find((o) => o.id === order.id);
+    if (postedOrder) {
+      void executeUniversalSubmission({
+        module: 'INVOICING',
+        entityType: 'INVOICE',
+        sheetTab: 'Invoices',
+        recordLabel: `Invoice ${invNumber}`,
+        payload: postedOrder as unknown as Record<string, unknown>,
+        userEmail: currentUser?.email,
+        userId: currentUser?.id,
+        userName: currentUser?.fullName,
+        existingIdempotencyKey: generateIdempotencyUuid(),
+        transactionId: invNumber,
+        commitDb: async () => {
+          const ok = await syncOrderToSupabase(postedOrder);
+          if (!ok && isSupabaseConfigured) {
+            throw new Error('Supabase invoice write deferred.');
+          }
+          return {
+            entityId: invNumber,
+            dbRecord: postedOrder as unknown as Record<string, unknown>,
+          };
+        },
+      });
+    }
+
     logAuditEvent({
       userId: currentUser?.id,
       userName: currentUser?.fullName,
@@ -2347,6 +2632,31 @@ export default function App() {
     syncToCache(customers, updatedOrders, recoveries);
 
     const ord = updatedOrders.find((o) => o.id === orderId);
+    if (ord) {
+      void executeUniversalSubmission({
+        module: 'DISPATCH',
+        entityType: 'DISPATCH',
+        sheetTab: 'Dispatch',
+        recordLabel: `Dispatch ${payload.dispatchNoteNumber}`,
+        payload: ord as unknown as Record<string, unknown>,
+        userEmail: currentUser?.email,
+        userId: currentUser?.id,
+        userName: currentUser?.fullName,
+        existingIdempotencyKey: generateIdempotencyUuid(),
+        transactionId: payload.dispatchNoteNumber || ord.orderNumber || ord.id,
+        commitDb: async () => {
+          const ok = await syncOrderToSupabase(ord);
+          if (!ok && isSupabaseConfigured) {
+            throw new Error('Supabase dispatch write deferred.');
+          }
+          return {
+            entityId: payload.dispatchNoteNumber || ord.id,
+            dbRecord: ord as unknown as Record<string, unknown>,
+          };
+        },
+      });
+    }
+
     logAuditEvent({
       userId: currentUser?.id,
       userName: currentUser?.fullName,
@@ -2644,10 +2954,11 @@ export default function App() {
 
   // Customer Management & Sole Approval (Shahzad Ullah) Handlers
   const handleAddCustomer = (newCust: Customer) => {
+    const idemKey = generateIdempotencyUuid();
     const customerRecord: Customer = {
       ...newCust,
-      status: 'PENDING_APPROVAL',
-      approvalStatus: 'PENDING_APPROVAL',
+      status: newCust.status || 'PENDING_APPROVAL',
+      approvalStatus: newCust.approvalStatus || 'PENDING_APPROVAL',
       registeredBy: currentUser?.fullName || 'Field Force',
       createdAt: newCust.createdAt || new Date().toISOString(),
     };
@@ -2655,12 +2966,6 @@ export default function App() {
     const updated = [customerRecord, ...customers];
     setCustomers(updated);
     syncToCache(updated, orders, recoveries);
-
-    if (isOnline) {
-      syncCustomerToSupabase(customerRecord).catch((err) => {
-        console.warn('Supabase customer upload failed:', err);
-      });
-    }
 
     logAuditEvent({
       userId: currentUser?.id,
@@ -2676,6 +2981,29 @@ export default function App() {
     setLedgerToastMessage(
       `✓ Dealer "${customerRecord.companyName}" registered. Awaiting Shahzad Ullah's approval.`
     );
+
+    return executeUniversalSubmission({
+      module: 'CUSTOMERS',
+      entityType: 'CUSTOMER',
+      sheetTab: 'Dealers',
+      recordLabel: `Dealer ${customerRecord.companyName}`,
+      payload: customerRecord as unknown as Record<string, unknown>,
+      userEmail: currentUser?.email,
+      userId: currentUser?.id,
+      userName: currentUser?.fullName,
+      existingIdempotencyKey: idemKey,
+      transactionId: customerRecord.customerCode || customerRecord.id,
+      commitDb: async () => {
+        const ok = await syncCustomerToSupabase(customerRecord);
+        if (!ok && isSupabaseConfigured) {
+          throw new Error('Supabase dealer registration deferred.');
+        }
+        return {
+          entityId: customerRecord.customerCode || customerRecord.id,
+          dbRecord: customerRecord as unknown as Record<string, unknown>,
+        };
+      },
+    });
   };
 
   const handleUpdateCustomerCoordinates = (updatedCustomer: Customer) => {
@@ -2843,30 +3171,40 @@ export default function App() {
   }, []);
 
   // PDF Generation & Live Preview Handlers
-  const handleDownloadInvoicePdf = (order: SalesOrder, customer: Customer) => {
-    downloadSalesInvoicePdf({
-      customer,
-      order,
-      previousBalance: customer.currentBalance ?? customer.openingBalance ?? 0,
-      preparedByName: currentUser?.fullName || 'Field Officer',
-    });
+  const handleDownloadInvoicePdf = async (order: SalesOrder, customer: Customer) => {
+    try {
+      await downloadSalesInvoicePdf({
+        customer,
+        order,
+        previousBalance: customer.currentBalance ?? customer.openingBalance ?? 0,
+        preparedByName: currentUser?.fullName || 'Field Officer',
+      });
+    } catch (err) {
+      console.error('Invoice PDF download failed:', err);
+      setLedgerToastMessage('Unable to generate invoice PDF. Please retry.');
+    }
   };
 
-  const handlePreviewInvoicePdf = (order: SalesOrder, customer: Customer) => {
-    const blob = generateSalesInvoicePdfBlob({
-      customer,
-      order,
-      previousBalance: customer.currentBalance ?? customer.openingBalance ?? 0,
-      preparedByName: currentUser?.fullName || 'Field Officer',
-    });
-    const url = URL.createObjectURL(blob);
-    setPreviewPdfData({
-      isOpen: true,
-      dataUrl: url,
-      filename: `National_Lights_Invoice_${(order.orderNumber || order.id).replace('#', '')}.pdf`,
-      order,
-      customer,
-    });
+  const handlePreviewInvoicePdf = async (order: SalesOrder, customer: Customer) => {
+    try {
+      const blob = await generateSalesInvoicePdfBlob({
+        customer,
+        order,
+        previousBalance: customer.currentBalance ?? customer.openingBalance ?? 0,
+        preparedByName: currentUser?.fullName || 'Field Officer',
+      });
+      const url = URL.createObjectURL(blob);
+      setPreviewPdfData({
+        isOpen: true,
+        dataUrl: url,
+        filename: `National_Lights_Invoice_${(order.orderNumber || order.id).replace('#', '')}.pdf`,
+        order,
+        customer,
+      });
+    } catch (err) {
+      console.error('Invoice PDF preview failed:', err);
+      setLedgerToastMessage('Unable to load invoice preview.');
+    }
   };
 
   const handleWhatsAppShareInvoice = (order: SalesOrder, customer: Customer) => {
@@ -2910,17 +3248,20 @@ export default function App() {
 
   if (!currentUser) {
     return (
-      <AuthGate
-        currentUser={null}
-        onSignIn={handleSignIn}
-        onSignOut={handleSignOut}
-      >
-        <div />
-      </AuthGate>
+      <MotionConfig reducedMotion="user">
+        <AuthGate
+          currentUser={null}
+          onSignIn={handleSignIn}
+          onSignOut={handleSignOut}
+        >
+          <div />
+        </AuthGate>
+      </MotionConfig>
     );
   }
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="h-dvh bg-[#F8FAFC] dark:bg-[#0B1120] text-[#0F172A] dark:text-slate-100 font-sans antialiased max-w-full overflow-hidden flex flex-col relative">
       {/* Live Toast Message */}
       {ledgerToastMessage && (
@@ -2949,16 +3290,6 @@ export default function App() {
             </span>
           )}
         </div>
-      )}
-
-      {/* Frozen Top-Level Official National Light BrandHeader (Head Office Desktop Portal) */}
-      {experienceMode === 'HEAD_OFFICE' && (
-        <BrandHeader
-          currentUser={currentUser}
-          experienceMode={experienceMode}
-          onToggleExperience={() => setExperienceMode('FIELD_MOBILE')}
-          className="shrink-0 z-40"
-        />
       )}
 
       {/* Viewport-Locked Experience Workspace Container */}
@@ -3063,43 +3394,47 @@ export default function App() {
             onSubmitLeaveRequest={handleSubmitLeaveRequest}
             onReviewLeaveRequest={handleReviewLeaveRequest}
             onOpenChangePassword={() => setIsChangePasswordOpen(true)}
+            onSwitchToFieldMobile={() => setExperienceMode('FIELD_MOBILE')}
           />
         )}
         </Suspense>
       </div>
 
-      {/* Forced First-Login / Reset or Self-Service Change Password Modal */}
-      {currentUser && (Boolean(currentUser.mustChangePassword) || isChangePasswordOpen) && (
-        <ChangePasswordModal
-          isOpen={true}
-          email={currentUser.email}
-          fullName={currentUser.fullName}
-          forced={Boolean(currentUser.mustChangePassword)}
-          onClose={() => setIsChangePasswordOpen(false)}
-          onSignOut={handleSignOut}
-          onSuccess={() => {
-            const updatedUser: NLinkUser = {
-              ...currentUser,
-              mustChangePassword: false,
-              initialPasswordStatus: 'CHANGED',
-            };
-            setCurrentUser(updatedUser);
-            try {
-              localStorage.setItem('nlink_active_logged_user', JSON.stringify(updatedUser));
-              localStorage.setItem('nlink_active_user_session', JSON.stringify(updatedUser));
-            } catch {}
-            setIsChangePasswordOpen(false);
-            setLedgerToastMessage('✓ Password updated successfully.');
-          }}
-        />
-      )}
+      {/* Forced First-Login / Reset or Self-Service Change Password & Team Share Lazy Modals */}
+      <Suspense fallback={null}>
+        {currentUser && (Boolean(currentUser.mustChangePassword) || isChangePasswordOpen) && (
+          <ChangePasswordModal
+            isOpen={true}
+            email={currentUser.email}
+            fullName={currentUser.fullName}
+            forced={Boolean(currentUser.mustChangePassword)}
+            onClose={() => setIsChangePasswordOpen(false)}
+            onSignOut={handleSignOut}
+            onSuccess={() => {
+              const updatedUser: NLinkUser = {
+                ...currentUser,
+                mustChangePassword: false,
+                initialPasswordStatus: 'CHANGED',
+              };
+              setCurrentUser(updatedUser);
+              try {
+                localStorage.setItem('nlink_active_logged_user', JSON.stringify(updatedUser));
+                localStorage.setItem('nlink_active_user_session', JSON.stringify(updatedUser));
+              } catch {}
+              setIsChangePasswordOpen(false);
+              setLedgerToastMessage('✓ Password updated successfully.');
+            }}
+          />
+        )}
 
-      {/* Team Share Working Link Modal */}
-      <TeamShareModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        currentUser={currentUser}
-      />
+        {isShareModalOpen && (
+          <TeamShareModal
+            isOpen={isShareModalOpen}
+            onClose={() => setIsShareModalOpen(false)}
+            currentUser={currentUser}
+          />
+        )}
+      </Suspense>
 
       {/* Lazy Modals (loaded on demand when opened) */}
       <Suspense fallback={null}>
@@ -3148,5 +3483,6 @@ export default function App() {
         )}
       </Suspense>
     </div>
+    </MotionConfig>
   );
 }
